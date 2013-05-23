@@ -1,0 +1,59 @@
+BUILDING:
+
+Follow the instructions for building libzca.a, first.  After that, you
+can do a simple "make" in the cilkprof directory to create the
+cilkprof.so pintool:
+
+% cd cilkutil/cilkprof
+% make
+
+The tool will be placed in your target directory (linux64, by default).
+
+USING:
+
+Ensure the pintool's lib-ext directory (for your platform: ia32 or
+intel64) is in your LD_LIBRARY_PATH.  For example:
+
+% export LD_LIBRARY_PATH=/path/to/3rdparty/pintool/ia32/lib-ext:$LD_LIBRARY_PATH
+
+Set the CILKPROF_BB_OUT and CILKPROF_CC_OUT environment variables to the
+output files:
+
+% export CILKPROF_BB_OUT=my_prog.bb.csv
+% export CILKPROF_CC_OUT=my_prog.cc.csv
+
+Compile your program and make sure it runs without Cilkprof.
+
+% icc foo.cpp
+% ./a.out
+Hello World!
+% echo $?
+0
+
+Then use Cilkprof like so:
+
+% ./pinbin -t cilkprof.so -- ./a.out arg1 arg2 arg3 etc.
+
+Anything after the "--" is your normal program invocation.
+
+If it isn't working, the big culprit is typically your LD_LIBRARY_PATH
+which needs to have the lib-ext directory in it, and also the path to
+your Cilk runtime, in all likelihood.  Also, when you invoke pinbin, it
+is always good to verify that both it and the cilkprof.so library are in
+your directory.
+
+The utility csv2xls.py is provided to automate converting the CSV files
+create by Cilkprof to worksheets in an Excel workbook.  In addition to
+converting the files, the script does the following:
+* Adds columns to calculate the Parallelism (Work on Work / Span on Work)
+  and Span Parallelism (Span on Work / Span on Span)
+* Hides columns containing the unmangled caller and callee names
+* Hides column containing the full paths
+
+To use csv2xls, you'll need:
+* Python 2.3 - 2.7
+* A copy of the xlwt package which is used to create Excel workbooks.  A
+  pointer to the package download URL is available at
+  http://pypi.python.org/pypi/xlwt .  To install the package, untar it,
+  cd into the directory you just created, and issue the command
+  "python setup.py install"
