@@ -21,3 +21,12 @@ all:
 
 $(PINVER).tar.gz:
 	wget http://software.intel.com/sites/landingpage/pintool/downloads/$(PINVER).tar.gz
+
+
+#-----------------------------------------
+
+pin-example:
+#	source install_env_vars.sh
+	(cd 3rdparty/pintool/source/tools/Insmix/; $(MAKE))
+	(cd 3rdparty/pintool; ./pin -t source/tools/Insmix/obj-intel64/insmix.so -- /bin/ls)
+	head 3rdparty/pintool/insmix.out
