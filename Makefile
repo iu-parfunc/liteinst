@@ -9,8 +9,10 @@ INCLUDES= -I libzca-src-195/zca/include/ -I 3rdparty/pintool/source/include/pin/
 DEFS= -DTARGET_IA32E -DTARGET_LINUX -DFUND_TC_HOSTCPU=FUND_CPU_INTEL64
 
 
-all: 3rdparty/$(PINVER)
-#	if [ -d 3rdparty/pin-2.12-58423-gcc.4.4.7-linux ] 
+# Uh, doing Make's job for it a bit here.  Setting
+# "3rdparty/$(PINVER)" as a dependency didn't work.
+all: 
+	if ! [ -d 3rdparty/$(PINVER) ]; then $(MAKE) 3rdparty/$(PINVER); fi
 	icc test.cpp $(INCLUDES) $(DEFS)
 
 3rdparty/$(PINVER): $(PINVER).tar.gz
