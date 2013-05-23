@@ -46,6 +46,7 @@ INCLUDE  = -I ../include
 INCLUDE += -I $(PINDIR)/source/include -I $(PINDIR)/source/include/gen
 INCLUDE += -I $(PINDIR)/extras/xed2-$(PIN_TARGET_ARCH)/include
 INCLUDE += -I $(PINDIR)/extras/components/include
+INCLUDE += -I $(PINDIR)/source/include/pin -I $(PINDIR)/source/include/pin/gen
 
 # Pin binary to copy
 PINBIN = pinbin
