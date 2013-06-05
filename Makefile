@@ -15,6 +15,9 @@ all:
 	if ! [ -d 3rdparty/$(PINVER) ]; then $(MAKE) 3rdparty/$(PINVER); fi
 	icc test.cpp $(INCLUDES) $(DEFS)
 
+tool:
+	icc test_pin.cpp $(INCLUDES) $(DEFS)
+
 3rdparty/$(PINVER): $(PINVER).tar.gz
 	tar xzvf $(PINVER).tar.gz 
 	mv $(PINVER) 3rdparty/
