@@ -8,15 +8,20 @@ INCLUDES= -I libzca-src-195/zca/include/ -I 3rdparty/pintool/source/include/pin/
 
 DEFS= -DTARGET_IA32E -DTARGET_LINUX -DFUND_TC_HOSTCPU=FUND_CPU_INTEL64
 
+LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
+LDFLAGS += -L $(PINDIR)/$(PIN_TARGET_ARCH)/lib
+LDFLAGS += -L $(PINDIR)/$(PIN_TARGET_ARCH)/lib-ext
+LDFLAGS += -L $(PINDIR)/extras/xed2-$(PIN_TARGET_ARCH)/lib
+LDFLAGS += -L $(TOP)/zca/src/$(BUILDDIR)
 
 # Uh, doing Make's job for it a bit here.  Setting
 # "3rdparty/$(PINVER)" as a dependency didn't work.
 all: 
 	if ! [ -d 3rdparty/$(PINVER) ]; then $(MAKE) 3rdparty/$(PINVER); fi
-	icc test.cpp $(INCLUDES) $(DEFS)
+	icc test.cpp $(INCLUDES) $(DEFS) -o test.out
 
 tool:
-	icc test_pin.cpp $(INCLUDES) $(DEFS)
+	icc test_pin.cpp $(INCLUDES) $(DEFS) $(LDFLAGS) -o tool.out
 
 3rdparty/$(PINVER): $(PINVER).tar.gz
 	tar xzvf $(PINVER).tar.gz 
