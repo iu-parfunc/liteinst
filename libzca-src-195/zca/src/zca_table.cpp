@@ -38,6 +38,7 @@
 #include <cstdlib>
 #include "metadata.h"
 #include "zca_table.h"
+#include "api.h"
 
 #ifdef _WIN32
 #define SNPRINTF _snprintf
@@ -331,6 +332,17 @@ void ZCA::zca_table::insert_annotation_calls (const char *name,
                                               LEVEL_PINCLIENT::AFUNPTR afun,
                                               ...)
 {
+  ZCA::METADATA m = GetMetadata(img);
+  if (ZCA::METADATA_Invalid() == m)
+    {
+      return;
+    }
+
+  
+}
+
+/*
+{
     IARGLIST arglist = IARGLIST_Alloc();
     va_list list;
     va_start(list, afun);
@@ -421,5 +433,5 @@ void ZCA::zca_table::insert_annotation_calls (const char *name,
     va_end(list);
 
     annotations.push_back(callback(name, afun, arglist));
-}
+    }*/
 
