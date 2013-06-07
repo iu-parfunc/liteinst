@@ -22,15 +22,15 @@ int main (int argc, char *argv[])
   }
 
   zca.initialize();
-
+  
   zca.insert_annotation_calls("cilk_detach_end",
-			      (AFUNPTR)fun1,
-			      IARG_END);
-
+  			      (AFUNPTR)fun1,
+  			      IARG_END);
+  
   zca.insert_annotation_calls("exited",
 			      (AFUNPTR)fun2,
-			      IARG_END);
-    
+  			      IARG_END);
+  
   PIN_StartProgram();
   return 0;
 }
