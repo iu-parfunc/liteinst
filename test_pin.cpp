@@ -6,12 +6,12 @@ static ZCA::zca_table zca;
 
 void fun1()
 {
-  printf("Lower your shields and surrender your ships.\n");
+  printf("[tool] Lower your shields and surrender your ships.\n");
 }
 
 void fun2()
 {
-  printf("Resistance is futile.\n");
+  printf("[tool] Resistance is futile.\n");
 }
 
 int main (int argc, char *argv[])
