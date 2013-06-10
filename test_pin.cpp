@@ -16,14 +16,15 @@ void fun2()
 
 int main (int argc, char *argv[])
 {
-  PIN_InitSymbols();
+  printf(" [pintool] In main...\n");
+  // PIN_InitSymbols();
   if (PIN_Init(argc, argv)) {
     printf("pin couldn't parse args\n");
   }
-
+  printf(" [pintool] about to call zca.initialize...\n");
   zca.initialize();
   
-  zca.insert_annotation_calls("cilk_detach_end",
+  zca.insert_annotation_calls("entered region",
   			      (AFUNPTR)fun1,
   			      IARG_END);
   
@@ -34,3 +35,4 @@ int main (int argc, char *argv[])
   PIN_StartProgram();
   return 0;
 }
+
