@@ -26,6 +26,9 @@ all:
 tool:
 	icc test_pin.cpp $(INCLUDES) $(DEFS) $(LDFLAGS) $(LDLIBS) -o tool.so
 
+run:
+	./3rdparty/pintool/pin -t tool.so -- ./test.exe
+
 3rdparty/$(PINVER): $(PINVER).tar.gz
 	tar xzvf $(PINVER).tar.gz 
 	mv $(PINVER) 3rdparty/
