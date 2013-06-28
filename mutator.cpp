@@ -31,7 +31,7 @@ int main()
   BPatch_funcCallExpr testCall(*(function_insertions[0]), args);
   
   // Insert the snippet
-  app-insertSnippet(testCall, *points);
+  app->insertSnippet(testCall, *points);
   
   /*
   BPatch_variableExpr *intCounter = app->malloc(*(appImage->findType("int")));
