@@ -35,6 +35,11 @@ tool:
 $(PINVER).tar.gz:
 	wget http://software.intel.com/sites/landingpage/pintool/downloads/$(PINVER).tar.gz
 
+#-----------------------------------------
+# Dyninst:
+
+dyninst:
+	gcc mutator.cpp -std=c++0x -ldyninstAPI
 
 #-----------------------------------------
 

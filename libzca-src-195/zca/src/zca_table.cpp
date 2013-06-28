@@ -232,8 +232,8 @@ void ZCA::zca_table::load (LEVEL_PINCLIENT::IMG img, void *arg)
     {
         return;
     }
-//    fprintf(stderr, "\n\n\nFound metadata in %s:\n", IMG_Name(img).c_str());
-//    PrintMetadata(m);
+    //    fprintf(stderr, "\n\n\nFound metadata in %s:\n", IMG_Name(img).c_str());
+    //    PrintMetadata(m);
 
     // Track this image for when the time comes to unload all of the
     // metadata.
