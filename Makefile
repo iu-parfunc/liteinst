@@ -5,6 +5,8 @@ PINVER=pin-2.12-58423-gcc.4.4.7-linux
 PIN_TARGET_ARCH = intel64
 
 PINDIR=./3rdparty/$(PINVER)
+BUILDDIR=linux64
+ZCADIR=./libzca-src-195/zca
 
 INCLUDES= -I libzca-src-195/zca/include/ -I 3rdparty/pintool/source/include/pin/ -I 3rdparty/pintool/source/include/pin/gen/ -I 3rdparty/pintool/extras/components/include/util/ -I 3rdparty/pintool/extras/components/include/ -I 3rdparty/pintool/extras/xed2-intel64/include/
 
@@ -14,7 +16,7 @@ LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 LDFLAGS += -L $(PINDIR)/$(PIN_TARGET_ARCH)/lib
 LDFLAGS += -L $(PINDIR)/$(PIN_TARGET_ARCH)/lib-ext
 LDFLAGS += -L $(PINDIR)/extras/xed2-$(PIN_TARGET_ARCH)/lib
-LDFLAGS += -L $(TOP)/zca/src/$(BUILDDIR)
+LDFLAGS += -L $(ZCADIR)/src/$(BUILDDIR)
 LDLIBS = -lpin -lxed -ldwarf -lelf -ldl -lpthread -lzca
 
 # Uh, doing Make's job for it a bit here.  Setting
