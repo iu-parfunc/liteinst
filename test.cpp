@@ -1,6 +1,11 @@
 #include <stdio.h>
 #include <zca.h>
 
+void testInsert()
+{
+  printf("Dyninst insert worked.\n");
+}
+
 int main(void)
 {
   int x = 5;
