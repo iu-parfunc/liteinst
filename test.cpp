@@ -12,16 +12,38 @@ int main(int argc, char *argv[])
 
   printf("[app] Done.\n");
 
+  /* Instrumentation comes here */
+  typedef unsigned char BYTE;
   FILE *file = NULL;
+  FILE *out = NULL;
+  BYTE *fileBuf;
   
+  // Need to open in r+b
   if ((file = fopen(argv[0], "rb")) == NULL)
     cout << "Could not open specified file" << endl;
   else
     cout << "File opened successfully" << endl;
 
+  if ((out = fopen("out.exe", "wb")) == NULL)
+    cout << "Could not open out file" << endl;
+  else
+    cout << "File out opened successfully" << endl;
+  
   fseek(file, 0, SEEK_END);
-  cout << ftell(file) << endl;
+  unsigned long fileSize = ftell(file);
+  cout << fileSize << endl;
+  fseek(file, 0, SEEK_SET);
+  
+  //fseek(file, 0, 0x400ab0);
+  //cout << ftell(file) << endl;
 
-  fseek(file, 0, 0x400ab0);
-  cout << ftell(file) << endl;
+  fileBuf = new BYTE[fileSize];
+  fread(fileBuf, 1, fileSize, file);
+  
+  fwrite(fileBuf, 1, fileSize, out);
+  
+  fclose(file);
+  fclose(out);
+    
+  delete[] fileBuf;
 }

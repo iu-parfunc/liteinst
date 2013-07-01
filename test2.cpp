@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
     cout << "Could not open specified file" << endl;
   else
     cout << "File opened successfully" << endl;
-
+  
   fseek(file, 0, SEEK_END);
   cout << ftell(file) << endl;  
 }
