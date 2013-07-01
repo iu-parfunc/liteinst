@@ -12,9 +12,9 @@ using namespace ZCA;
 int main(int argc, char *argv[])
 {
   int x = 5;
-  // __notify_intrinsic((void*)"entered region", (void*)&x);
+  __notify_intrinsic((void*)"entered region", (void*)&x);
   printf("[app] We are the borg.\n");
-  // __notify_intrinsic((void*)"exited", &x);
+  __notify_intrinsic((void*)"exited", &x);
 
   LEVEL_PINCLIENT::IMG img; 
   METADATA met = GetMetadata(img); 

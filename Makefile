@@ -32,6 +32,10 @@ test3:
 	if ! [ -d $(PINDIR) ]; then $(MAKE) $(PINDIR); fi
 	icc test3_print_own_zca.cpp $(INCLUDES) $(DEFS) $(LDPATHS) $(LDLIBS) -o test3.exe
 
+test4:
+	if ! [ -d $(PINDIR) ]; then $(MAKE) $(PINDIR); fi
+	icc -g -O0 test4_libelf.cpp $(INCLUDES) $(DEFS) -lelf -o test4.exe
+
 tool:
 	icc test_pin.cpp $(INCLUDES) $(DEFS) $(LDFLAGS) $(LDPATHS) $(LDLIBS) -o tool.so
 
