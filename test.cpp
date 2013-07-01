@@ -17,20 +17,21 @@ int main(int argc, char *argv[])
   FILE *file = NULL;
   FILE *out = NULL;
   BYTE *fileBuf;
+  unsigned long fileSize;
   
   // Need to open in r+b
   if ((file = fopen(argv[0], "rb")) == NULL)
-    cout << "Could not open specified file" << endl;
+    cout << "Could not open binary" << endl;
   else
-    cout << "File opened successfully" << endl;
+    cout << "Binary opened successfully" << endl;
 
   if ((out = fopen("out.exe", "wb")) == NULL)
-    cout << "Could not open out file" << endl;
+    cout << "Could not open output file" << endl;
   else
-    cout << "File out opened successfully" << endl;
+    cout << "Output file opened successfully" << endl;
   
   fseek(file, 0, SEEK_END);
-  unsigned long fileSize = ftell(file);
+  fileSize = ftell(file);
   cout << fileSize << endl;
   fseek(file, 0, SEEK_SET);
   
