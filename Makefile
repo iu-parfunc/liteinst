@@ -21,9 +21,15 @@ LDLIBS = -lpin -lxed -ldwarf -lelf -ldl -lpthread -lzca
 
 # Uh, doing Make's job for it a bit here.  Setting
 # "3rdparty/$(PINVER)" as a dependency didn't work.
-all: 
+all: test test3
+
+test:
 	if ! [ -d $(PINDIR) ]; then $(MAKE) $(PINDIR); fi
 	icc test.cpp $(INCLUDES) $(DEFS) -o test.exe
+
+test3:
+	if ! [ -d $(PINDIR) ]; then $(MAKE) $(PINDIR); fi
+	icc test3_print_own_zca.cpp $(INCLUDES) $(DEFS) $(LDFLAGS) -o test3.exe
 
 tool:
 	icc test_pin.cpp $(INCLUDES) $(DEFS) $(LDFLAGS) $(LDLIBS) -o tool.so
