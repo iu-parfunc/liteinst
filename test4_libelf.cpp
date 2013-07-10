@@ -422,21 +422,19 @@ void retrieve_data() {
       struct zca_header_11_t *table  = (struct zca_header_11_t*) section_data;
       zca_row_11_t *row = (struct zca_row_11_t*) ((byte*) table + sizeof(*table));
       const char *str = (const char *) ((byte*) table + table->strings + row->annotation);
-      const unsigned char *expr = (const unsigned char *) ((byte*) table + table->exprs + row->expr);
-      
+      const unsigned char *expr = (const unsigned char *) ((byte*) table + table->exprs + row->expr);      
       unsigned int reg = 200;
       int32_t offset = 200;
-      dwarf_expr_to_pin(expr, &reg, &offset);
 
-      cout << reg << ", " << offset << endl;
+      // Put tag parameter regester and offset data into &reg and &offset
+      dwarf_expr_to_pin(expr, &reg, &offset);
       
+      // cout that shit
+      cout << reg << ", " << offset << endl;
       cout << table << ", " << row << ", " << (byte*) row - (byte*) table << ", "
       	   << sizeof(*table) << endl;
-      
       cout << row << ", " << str << ", " << (byte*) str - (byte*) table << ", "
 	   << table->strings << ", " << row->annotation << endl;
-      
-      
 
       // End the loop (if we only need this section)
       break;
