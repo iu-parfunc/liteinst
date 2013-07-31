@@ -21,3 +21,41 @@ Address of tag argument is DWARF encoded. Looking into libdwarf to read this dat
 #### Pintool ####
 Previously created a pintool utilizing libzca to insert function calls into test program.
 Working on fixing "undefined reference" compiler error.
+
+
+
+
+7-31-13: Ryan trying various libraries
+=================================================
+
+I'm experimenting with libffi, asmjit, jitasm, LuaJit/DynAsm, and Xed.
+Here are the rough outcomes from each:
+
+  * libffi - has interpretive overhead on every call, doesn't really
+    JIT a stub.
+    
+  * asmJit - beta release only; cmake build didn't work but very easy
+             to directly embed sources.  The directly-supported
+             behavior is to generate complete functions, not
+             fragments.
+  
+  * jitAsm - a single header.
+
+  * Xed - encodes ONE instruction at a time.  Nice.  Unfortunotely,
+    closed source.
+
+
+Other systems seem to have too much baggage or are overkill:
+
+  * Pin - specific instrumentation methodology, don't see how
+    we can use for precise pinpoint emission of x86 instructions.    
+  * Dynamo/RIO ? Seem to be in the same bucket as Pin.  Intercepts all
+    basic blocks in the application.
+  * DynInst - built to connect to a separate process.  How do you
+    transparently self-instrument?
+    
+  * LLVM - how do you use it for direct emission of machine code in a
+    specific spot?  I suppose constructing the LLVM IR would be ok for
+    the function call stub, but in other places we need specific
+    control---inserting a SINGLE direct jump at the probe-ready site.
+
