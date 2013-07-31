@@ -176,6 +176,13 @@ void generated_jmp_there(Assembler& a)
   // generated code.   Rather this is just a redirection.
   a2.jmp(imm((sysint_t)((void*)fn)));
 
+  printf("Generated the jmp that we will need to splice into the probe_ready.  Size/offset %d %d\n", 
+	 a2.getCodeSize(), a2.getOffset());
+
+  // Why is it creating a 19-byte jmp??
+  // It should be 6 bytes for an x86_64 jump.  The low cost annotations guide lists this:
+  // Inte64 6 bytes -- jmp *.Lx(%rip)      Encoding:  FF 25 xx xx xx xx
+
   MyFn fn2 = function_cast<MyFn>(a2.make());
   fn2();
   // MemoryManager::getGlobal()->free((void*)fn);  
