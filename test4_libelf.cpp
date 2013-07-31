@@ -294,7 +294,7 @@ int dwarf_expr_to_pin(const unsigned char *expression,
 
     // Extract the opcode
     unsigned char opcode = *expression;
-    printf("%u\n", opcode);
+    printf("Opcode: %u\n", opcode);
     // If this is a simple register, decode it
     if ((opcode >= DW_OP_reg0) && (opcode <= DW_OP_reg31))
     {
@@ -368,7 +368,7 @@ const char *__progname;
 // This code is taken from:
 // http://stackoverflow.com/questions/12159595/how-to-get-a-pointer-to-an-specific-section-of-a-program-from-within-itself-ma
 
-void retrieve_data() {
+zca_row_11_t * retrieve_data() {
   int fd;       // File descriptor for the executable ELF file
   char *section_name, path[256];
   size_t shstrndx;
@@ -397,6 +397,7 @@ void retrieve_data() {
 
   scn = NULL;
 
+  zca_row_11_t * row;
   // Loop over all sections in the ELF object
   while((scn = elf_nextscn(e, scn))!=NULL) {
     // Given a Elf Scn pointer, retrieve the associated section header
@@ -420,7 +421,7 @@ void retrieve_data() {
       
       // Cast section data
       struct zca_header_11_t *table  = (struct zca_header_11_t*) section_data;
-      zca_row_11_t *row = (struct zca_row_11_t*) ((byte*) table + sizeof(*table));
+      row = (struct zca_row_11_t*) ((byte*) table + sizeof(*table));
       const char *str = (const char *) ((byte*) table + table->strings + row->annotation);
       const unsigned char *expr = (const unsigned char *) ((byte*) table + table->exprs + row->expr);      
       unsigned int reg = 200;
@@ -430,11 +431,14 @@ void retrieve_data() {
       dwarf_expr_to_pin(expr, &reg, &offset);
       
       // cout that shit
-      cout << reg << ", " << offset << endl;
-      cout << table << ", " << row << ", " << (byte*) row - (byte*) table << ", "
+      cout << "reg/offset: " << reg << ", " << offset << endl;
+      cout << "table " << table << ", row " << row << ", row byteoffset " << (byte*) row - (byte*) table << ", table_size "
       	   << sizeof(*table) << endl;
-      cout << row << ", " << str << ", " << (byte*) str - (byte*) table << ", "
-	   << table->strings << ", " << row->annotation << endl;
+      cout << "row "<< row << ": label \"" << str << "\", str offset " << (byte*) str - (byte*) table << ", strings "
+	   << table->strings << ", annotation " << row->annotation 
+           << ", probespace " << row->probespace
+           << ", IP " << (void*)(row->anchor)
+           << endl;
 
       // End the loop (if we only need this section)
       break;
@@ -443,18 +447,18 @@ void retrieve_data() {
 
   elf_end(e);
   close(fd);
+  return row;
+}
+
+
+static void print_fn() { 
+  printf("MADE IT -- to the print function!\n");
+  return; 
 }
 
 
 int main(int argc, char *argv[])
 {
-  int x = 5;
-  __notify_intrinsic((void*)"entered region", (void*)&x);
-  printf("[app] We are the borg.\n");
-  __notify_intrinsic((void*)"exited", &x);
-
-  printf("[app] Done.\n");
-
   // Instrumentation comes here 
   typedef unsigned char BYTE;
   FILE *file = NULL;
@@ -465,8 +469,17 @@ int main(int argc, char *argv[])
   __progname = argv[0];
 
   printf("Calling retrieve_data ... \n");
-  retrieve_data();
-  printf("Done \n");
+  zca_row_11_t *row = retrieve_data();
+  printf("Done, got row IP %p, probespace %d\n", row->anchor, row->probespace);
+
+
+  //------------------------------------------------------------
+  int x = 5;
+  __notify_intrinsic((void*)"entered region", (void*)&x);
+  printf("[app] We are the borg.\n");
+  __notify_intrinsic((void*)"exited", &x);
+  printf("[app] Done.\n");  
+  //------------------------------------------------------------
     
   // Need to open in r+b
   /*
