@@ -10,6 +10,8 @@
 #include <unistd.h>
 #include <cstdio>
 
+#include <sys/mman.h>
+
 using namespace std;
 
 /* ZCA table stuff */
@@ -431,10 +433,10 @@ zca_row_11_t * retrieve_data() {
       dwarf_expr_to_pin(expr, &reg, &offset);
       
       // cout that shit
-      cout << "reg/offset: " << reg << ", " << offset << endl;
-      cout << "table " << table << ", row " << row << ", row byteoffset " << (byte*) row - (byte*) table << ", table_size "
+      cout << "  reg/offset: " << reg << ", " << offset << endl;
+      cout << "  table " << table << ", row " << row << ", row byteoffset " << (byte*) row - (byte*) table << ", table_size "
       	   << sizeof(*table) << endl;
-      cout << "row "<< row << ": label \"" << str << "\", str offset " << (byte*) str - (byte*) table << ", strings "
+      cout << "  row "<< row << ": label \"" << str << "\", str offset " << (byte*) str - (byte*) table << ", strings "
 	   << table->strings << ", annotation " << row->annotation 
            << ", probespace " << row->probespace
            << ", IP " << (void*)(row->anchor)
@@ -470,8 +472,43 @@ int main(int argc, char *argv[])
 
   printf("Calling retrieve_data ... \n");
   zca_row_11_t *row = retrieve_data();
-  printf("Done, got row IP %p, probespace %d\n", row->anchor, row->probespace);
+  printf("  Done with retrieve, got row IP %p, probespace %d\n", (void*)row->anchor, row->probespace);
 
+  printf("Now to self-modify... first set perms\n");
+  unsigned char* ip = (unsigned char*)row->anchor;
+  int page = 4096;   /* size of a page */
+  // int code = mprotect(ip, page, PROT_READ | PROT_WRITE | PROT_EXEC);
+  unsigned long ipn = (unsigned long)ip;
+  // I think we need to mprotect a page-aligned address:
+  int code = mprotect((void*)(ipn - (ipn%4096)), page, PROT_READ | PROT_WRITE | PROT_EXEC);
+  if (code) {
+      /* current code page is now writable and code from it is allowed for execution */
+      fprintf(stderr,"mprotect was not successfull! code %d\n", code);
+      return 1;
+  }
+
+  ip[0] = 0xFF;
+  ip[1] = 0x25;
+  // Jump to a dummy addr:
+  // ip[2] = 0x0; ip[3] = 0x0; ip[4] = 0x0; ip[5] = 0x0;
+
+  uint32_t plain_addr = (uint32_t)(void*)(&print_fn);
+  printf("  32 bit converted addr %p / %d\n", plain_addr, plain_addr);
+  *(uint32_t*)(ip+2) = plain_addr;
+
+  // Test: put all NOPs in:
+  ip[0] = 0x90;
+  ip[1] = 0x90;
+  ip[2] = 0x90;
+  ip[3] = 0x90;
+  ip[4] = 0x90;
+  ip[5] = 0x90;
+
+  for(int i=0; i<6; i++) 
+    printf("   Byte %d of probe space = %d = %p\n", i, ip[i], ip[i]);
+
+  printf("Destination function lives at %p.\n", &print_fn);
+  printf("Finished mutating ourselves... enter the danger zone.\n");
 
   //------------------------------------------------------------
   int x = 5;
