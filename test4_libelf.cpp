@@ -479,7 +479,7 @@ typedef void (*MyFn)();
 // Hardcoded for now:
 #define PROBESIZE 6
 
-void* gen_stub_code(unsigned char* addr, unsigned char* probe_loc)
+void* gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_fn)
 {
     using namespace AsmJit;
 
@@ -490,8 +490,15 @@ void* gen_stub_code(unsigned char* addr, unsigned char* probe_loc)
     a.setLogger(&logger);
     a2.setLogger(&logger);
 
-    a.call(imm((sysint_t)print_fn));
-    a.call(imm((sysint_t)print_fn)); // This is safe.  We can do it twice.
+    // Push all volatile registers:
+    a.push(rax); a.push(rcx); a.push(rdx);
+    a.push(r8); a.push(r9); a.push(r10); a.push(r11);
+    a.call(imm((sysint_t)target_fn));
+    // Restore all volatile registers:
+    a.pop(r11); a.pop(r10); a.pop(r9); a.pop(r8); 
+    a.pop(rdx); a.pop(rcx); a.pop(rax);
+
+    // a.call(imm((sysint_t)print_fn)); // This is safe.  We can do it twice.
 
     printf("  Next let's use the memory manager...\n");
     MemoryManager* memmgr = MemoryManager::getGlobal();
@@ -592,7 +599,8 @@ int main(int argc, char *argv[])
   // Third,
   //------------------------------------------------------------
 
-  void* dst = gen_stub_code((unsigned char*)(base + 4), ip);
+  // Here we repoint the probe site to the function print_fn, but any other function would work to!
+  void* dst = gen_stub_code((unsigned char*)(base + 4), ip, &print_fn);
   printf("Done generating stub code at %p\n", dst);
 
 #if 0
