@@ -513,17 +513,10 @@ int main(int argc, char *argv[])
       return 1;
   }
 
+#if 0
   // This is an ABSOLUTE, indirect jump:
   ip[0] = 0xFF;
   ip[1] = 0x25;
-
-  // uint32_t plain_addr = (uint32_t)(void*)(&print_fn);
-  // printf("  32 bit converted addr %p / %d\n", plain_addr, plain_addr);
-  int relative = (int)(long)(((unsigned char*)(void*)&print_fn) - ip);
-  // long relative = (long)(((unsigned char*)(void*)&print_fn) - ip);
-  printf("  Relative offset of dest from starting addr: %p  %d\n", relative, relative);
-  // *(uint32_t*)(ip+2) = plain_addr;
-  // *(uint32_t*)(ip+2) = relative;
 
   unsigned long addraddr = (unsigned long) & row->anchor;
   printf("  Address containing the dest addr: %d / %p\n", addraddr, addraddr);
@@ -531,36 +524,17 @@ int main(int argc, char *argv[])
     printf("Address is more than 32 bits! %ld", addraddr);
     return 1;
   }
-
   // Here we write the ADDRESS to read the location from, not the location itself:
   *(uint32_t*)(ip+2) = (uint32_t)(unsigned long)& row->anchor;
-  unsigned long test = 0;
-  *(uint32_t*)(ip+2) = (uint32_t)&test;
+#else
 
-  // Another test:
-  // Here we write what is ALREADY there: 66 0f 1f 44 00 00 -- nopw   0x0(%rax,%rax,1)
-  ip[0] = 0x66;
-  ip[1] = 0x0f;  
-  ip[2] = 0x1f;
-  ip[3] = 0x44;  
-  ip[4] = 0x00;  
-  ip[5] = 0x00;
-  // That worked!
-
-  // Now how about a relative jump that does nothing?
-  // ip[0] = 0xE9;   ip[1] = 0xcd;
-  ip[0] = 0xEB; 
-  ip[1] = 0x0;
-  ip[2] = 0x0; 
-
-  ip[3] = 0x0;
-  ip[4] = 0x0;
+  // This does a relative jump:
+  ip[0] = 0xE9;
+  int relative = (int)(long)(((unsigned char*)(void*)&print_fn) - ip);
+  printf("  Relative offset of dest from starting addr: %p  %d\n", relative, relative);
+  *(uint32_t*)(ip+1) = relative;
   ip[5] = 0x0;
-
-  // ip[3] = 0x90;
-  // ip[4] = 0x90;
-  // ip[5] = 0x90;
-
+#endif
 
   for(int i=-4; i<12; i++) 
     printf("   Byte %d of probe space = %d = %p\n", i, ip[i], ip[i]);
