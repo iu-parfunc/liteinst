@@ -476,33 +476,48 @@ static void print_fn() {
 
 typedef void (*MyFn)();
 
+// Hardcoded for now:
 #define PROBESIZE 6
 
-void* gen_stub_code(void* addr) 
+void* gen_stub_code(unsigned char* addr, unsigned char* probe_loc)
 {
     using namespace AsmJit;
 
     // This aims to make the same one-way jump as manual_jmp_there, except from JITed code.
     // --------------------------------------------------------------------------------
-    Assembler a;
+    Assembler a, a2;
     FileLogger logger(stderr);
     a.setLogger(&logger);
+    a2.setLogger(&logger);
 
-    // a.jmp(imm((sysint_t)((void*)fn)));
     a.call(imm((sysint_t)print_fn));
+    a.call(imm((sysint_t)print_fn)); // This is safe.  We can do it twice.
 
     printf("  Next let's use the memory manager...\n");
     MemoryManager* memmgr = MemoryManager::getGlobal();
-    int sz = a.getCodeSize() + PROBESIZE;
+    int codesz = a.getCodeSize();
     // This works just as well, don't need the function_cast magic:
-    void* fn = memmgr->alloc(sz, MEMORY_ALLOC_FREEABLE);
+    void* fn = memmgr->alloc(codesz + PROBESIZE, MEMORY_ALLOC_FREEABLE);
     //    sysuint_t code = a.relocCode((char*)fn);
     sysuint_t code = a.relocCode(addr);
 
-    // Fill with NOOPS:
-    for(int i=0; i<1000; i++)
-      (((char*)addr) + sz)[i] = 0x90;
+    // Copy over the displaced probe bytes:
+    for(int i=0; i<PROBESIZE; i++)
+      addr[codesz + i] = probe_loc[i];
 
+    // Next generate the jump back home:
+    a2.jmp(imm((sysint_t)(void*)(probe_loc + PROBESIZE)));
+    int sz2 = a2.getCodeSize();
+    a2.relocCode(addr + codesz + PROBESIZE);
+
+    // TEMP: Fill with NOOPS:
+    for(int i=0; i<1000; i++)
+      addr[codesz + PROBESIZE + sz2 + i] = 0x90;
+
+    printf("  Size of return jmp %d, total size %d\n", sz2, codesz + PROBESIZE + sz2);
+    for(int i=0; i<codesz + PROBESIZE + sz2; i++) 
+      printf("  %p", addr[i]);
+    printf("\n");
     // printf("  Relocated the code to location %p, return code: %d, next call it!\n", (void*)fn, code);
     // return fn;
     return addr;
@@ -577,7 +592,7 @@ int main(int argc, char *argv[])
   // Third,
   //------------------------------------------------------------
 
-  void* dst = gen_stub_code(base + 4);
+  void* dst = gen_stub_code((unsigned char*)(base + 4), ip);
   printf("Done generating stub code at %p\n", dst);
 
 #if 0
