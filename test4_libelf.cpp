@@ -525,7 +525,7 @@ int main(int argc, char *argv[])
   unsigned long test = 0;
   *(uint32_t*)(ip+2) = (uint32_t)&test;
 
-  // One more test!
+  // Another test:
   // Here we write what is ALREADY there: 66 0f 1f 44 00 00 -- nopw   0x0(%rax,%rax,1)
   ip[0] = 0x66;
   ip[1] = 0x0f;  
@@ -533,8 +533,19 @@ int main(int argc, char *argv[])
   ip[3] = 0x44;  
   ip[4] = 0x00;  
   ip[5] = 0x00;
+  // That worked!
 
-  for(int i=0; i<6; i++) 
+  // Now how about a relative jump that does nothing?
+  // ip[0] = 0xE9;   ip[1] = 0xcd;
+  ip[0] = 0xEB; ip[1] = 0xcb;
+  ip[2] = 0x02;
+
+  ip[3] = 0x90;
+  ip[4] = 0x90;
+  ip[5] = 0x90;
+
+
+  for(int i=-4; i<12; i++) 
     printf("   Byte %d of probe space = %d = %p\n", i, ip[i], ip[i]);
 
   printf("Destination function lives at %p.\n", &print_fn);
