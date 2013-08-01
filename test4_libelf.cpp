@@ -10,7 +10,11 @@
 #include <unistd.h>
 #include <cstdio>
 
+#include <errno.h>
+
 #include <sys/mman.h>
+
+#include <AsmJit/AsmJit.h>
 
 using namespace std;
 
@@ -469,6 +473,41 @@ static void print_fn() {
 //     *reinterpret_cast<DWORD *>(opcodes + 6) = reinterpret_cast<DWORD>(jmpdest);
 // }
 
+
+typedef void (*MyFn)();
+
+#define PROBESIZE 6
+
+void* gen_stub_code(void* addr) 
+{
+    using namespace AsmJit;
+
+    // This aims to make the same one-way jump as manual_jmp_there, except from JITed code.
+    // --------------------------------------------------------------------------------
+    Assembler a;
+    FileLogger logger(stderr);
+    a.setLogger(&logger);
+
+    // a.jmp(imm((sysint_t)((void*)fn)));
+    a.call(imm((sysint_t)print_fn));
+
+    printf("  Next let's use the memory manager...\n");
+    MemoryManager* memmgr = MemoryManager::getGlobal();
+    int sz = a.getCodeSize() + PROBESIZE;
+    // This works just as well, don't need the function_cast magic:
+    void* fn = memmgr->alloc(sz, MEMORY_ALLOC_FREEABLE);
+    //    sysuint_t code = a.relocCode((char*)fn);
+    sysuint_t code = a.relocCode(addr);
+
+    // Fill with NOOPS:
+    for(int i=0; i<1000; i++)
+      (((char*)addr) + sz)[i] = 0x90;
+
+    // printf("  Relocated the code to location %p, return code: %d, next call it!\n", (void*)fn, code);
+    // return fn;
+    return addr;
+}
+
 int main(int argc, char *argv[])
 {
 #if 0
@@ -480,20 +519,24 @@ int main(int argc, char *argv[])
    asm("jmp 0x4020fa");
    // This generates:   401ce9:	e9 0c 04 00 00  jmpq   4020fa <itt_notify_magic+0x54>
    // Notice that it still uses four bytes.  
-   // And I don't know what the "E9 cw" opcode is supposed to mean.
+   // And I don't know what the "E9 cw" opcode is supposed to mean, I
+   // don't see where the "cw" shows up or has any effect.
 
    asm("jmp *7(%rip)");
 
    //  asm(".intel_syntax;" "JMP rel32 7");
    // 
 #else
-  // Instrumentation comes here 
+
+  //------------------------------------------------------------
+  // First, retrieve the ZCA table information:
+  //------------------------------------------------------------
+
   typedef unsigned char BYTE;
   FILE *file = NULL;
   FILE *out = NULL;
   BYTE *fileBuf;
   unsigned long fileSize;
-
   __progname = argv[0];
 
   printf("Calling retrieve_data ... \n");
@@ -513,33 +556,69 @@ int main(int argc, char *argv[])
       return 1;
   }
 
+  //------------------------------------------------------------
+  // Second, create a 32-bit addressable scratch area.
+  //------------------------------------------------------------
+
+  unsigned long* base = (unsigned long*)0x01230000;
+  //  base = (unsigned long*)mmap(base, 4096, PROT_READ | PROT_WRITE | PROT_EXEC, 0, MAP_PRIVATE, 0);
+  //  base = (unsigned long*)mmap(base, 4096, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS | MAP_FIXED, 0,0);
+  //  base = (unsigned long*)mmap(base, 4096, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_ANONYMOUS, -1,0);
+  base = (unsigned long*)mmap(base, 4096, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1,0);
+  if (base == MAP_FAILED) {
+    int err = errno;
+    printf("Got error on mmap: %s\n", strerror(err));
+    exit(1);
+  }
+  printf("Mmap'd scratch region starting at %p\n", base);
+  
+
+  //------------------------------------------------------------
+  // Third,
+  //------------------------------------------------------------
+
+  void* dst = gen_stub_code(base + 4);
+  printf("Done generating stub code at %p\n", dst);
+
 #if 0
   // This is an ABSOLUTE, indirect jump:
   ip[0] = 0xFF;
   ip[1] = 0x25;
 
-  unsigned long addraddr = (unsigned long) & row->anchor;
-  printf("  Address containing the dest addr: %d / %p\n", addraddr, addraddr);
-  if (addraddr != (unsigned long)(unsigned int)addraddr) {
-    printf("Address is more than 32 bits! %ld", addraddr);
+  base[0] = (unsigned long) (& print_fn);
+  // unsigned long addraddr
+  printf("  Address containing the dest addr: %d / %p\n", base, base);
+  if ((unsigned long)base != (unsigned long)(unsigned int)base) {
+    printf("Address is more than 32 bits! %ld", base);
     return 1;
   }
   // Here we write the ADDRESS to read the location from, not the location itself:
-  *(uint32_t*)(ip+2) = (uint32_t)(unsigned long)& row->anchor;
+  *(uint32_t*)(ip+2) = (uint32_t)base;
+  // This results in:
+  // ==1035== Invalid read of size 8
+  // ==1035==    at 0x431659: main (test4_libelf.cpp:608)
+  // ==1035==  Address 0x166165f is not stack'd, malloc'd or (recently) free'd
+  // Which is weird, because that 0x166165f comes from nowhere 
+  //  (the final dest is 0x4310c2, and its stored in 0x1230000)
 #else
 
   // This does a relative jump:
   ip[0] = 0xE9;
-  int relative = (int)(long)(((unsigned char*)(void*)&print_fn) - ip);
-  printf("  Relative offset of dest from starting addr: %p  %d\n", relative, relative);
-  *(uint32_t*)(ip+1) = relative;
+  // Size of the JMP we insert is 5.  So +5 points to the following instruction.
+  long relative = (long)(((unsigned char*)(void*) dst) - ip - 5);
+  printf("  Relative offset of dest from starting addr: %p %d, 32 bit: %p\n", relative, relative, (int)relative);
+  *(uint32_t*)(ip+1) = (int)relative;
   ip[5] = 0x0;
+
+  // The problem with this approach is that the JIT'd code lives far
+  // away by default, and would require an ljmp.
 #endif
 
   for(int i=-4; i<12; i++) 
     printf("   Byte %d of probe space = %d = %p\n", i, ip[i], ip[i]);
 
-  printf("Destination function lives at %p.\n", &print_fn);
+  printf("Ultimate destination function lives at %p.\n", &print_fn);
+  printf("JITed stub lives at %p.\n", dst);
   printf("Finished mutating ourselves... enter the danger zone.\n");
 
   //------------------------------------------------------------
