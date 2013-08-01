@@ -36,6 +36,10 @@ test4:
 	if ! [ -d $(PINDIR) ]; then $(MAKE) $(PINDIR); fi
 	icc -g -O0 test4_libelf.cpp $(INCLUDES) $(DEFS) -lelf -o test4.exe
 
+test5:
+	if ! [ -d $(PINDIR) ]; then $(MAKE) $(PINDIR); fi
+	icc -g -O0 test5.cpp $(INCLUDES) $(DEFS) -lelf -o test5.exe
+
 tool:
 	icc test_pin.cpp $(INCLUDES) $(DEFS) $(LDFLAGS) $(LDPATHS) $(LDLIBS) -o tool.so
 
