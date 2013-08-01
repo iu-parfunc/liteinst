@@ -14,46 +14,44 @@
 
 int main(int argc, char **argv)
 {
- int (*my_printf) (const char *format, ...);
- void (*my_exit) (int);
- void *page =
-     (void *) ((unsigned long) (&&checkpoint) &
-        ~(getpagesize() - 1));
+  int (*my_printf) (const char *format, ...);
+  void (*my_exit) (int);
+  void *page = (void *) ((unsigned long) (&&checkpoint) & ~(getpagesize() - 1));
 
- /* mark the code section we are going to overwrite
-  * as writable.
-  */
- mprotect(page, getpagesize(), PROT_READ | PROT_WRITE | PROT_EXEC);
+  /* mark the code section we are going to overwrite
+   * as writable.
+   */
+  mprotect(page, getpagesize(), PROT_READ | PROT_WRITE | PROT_EXEC);
 
- /* Use the labels to avoid having GCC
-  * optimize them out */
- switch (argc) {
-   case 33:
-     goto checkpoint;
-   case 44:
-     goto newcode;
-   case 55:
-     goto newcode_end;
-   default:
-     break;
- }
+  /* Use the labels to avoid having GCC
+   * optimize them out */
+  switch (argc) {
+  case 33:
+    goto checkpoint;
+  case 44:
+    goto newcode;
+  case 55:
+    goto newcode_end;
+  default:
+    break;
+  }
 
- /* Replace code in checkpoint with code from
-  * newcode.
-  */
- memcpy(&&checkpoint, &&newcode, &&newcode_end - &&newcode);
+  /* Replace code in checkpoint with code from
+   * newcode.
+   */
+  memcpy(&&checkpoint, &&newcode, &&newcode_end - &&newcode);
 
-checkpoint:
- printf("Good morning!\n");
- return 1;
+ checkpoint:
+  printf("Good morning!\n");
+  return 1;
 
-newcode:
- my_printf = &printf;
- (*(my_printf)) ("Good evening\n");
+ newcode:
+  my_printf = &printf;
+  (*(my_printf)) ("Good evening\n");
 
- my_exit = &exit;
- (*(my_exit)) (0);
+  my_exit = &exit;
+  (*(my_exit)) (0);
 
-newcode_end:
- return 2;
+ newcode_end:
+  return 2;
 }
