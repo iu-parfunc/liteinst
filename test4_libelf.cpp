@@ -474,6 +474,18 @@ int main(int argc, char *argv[])
 #if 0
   // This works as expected:
    asm("jmp *%0"::"r"(print_fn):);
+
+   asm("jmp 7");
+
+   asm("jmp 0x4020fa");
+   // This generates:   401ce9:	e9 0c 04 00 00  jmpq   4020fa <itt_notify_magic+0x54>
+   // Notice that it still uses four bytes.  
+   // And I don't know what the "E9 cw" opcode is supposed to mean.
+
+   asm("jmp *7(%rip)");
+
+   //  asm(".intel_syntax;" "JMP rel32 7");
+   // 
 #else
   // Instrumentation comes here 
   typedef unsigned char BYTE;
@@ -537,12 +549,17 @@ int main(int argc, char *argv[])
 
   // Now how about a relative jump that does nothing?
   // ip[0] = 0xE9;   ip[1] = 0xcd;
-  ip[0] = 0xEB; ip[1] = 0xcb;
-  ip[2] = 0x02;
+  ip[0] = 0xEB; 
+  ip[1] = 0x0;
+  ip[2] = 0x0; 
 
-  ip[3] = 0x90;
-  ip[4] = 0x90;
-  ip[5] = 0x90;
+  ip[3] = 0x0;
+  ip[4] = 0x0;
+  ip[5] = 0x0;
+
+  // ip[3] = 0x90;
+  // ip[4] = 0x90;
+  // ip[5] = 0x90;
 
 
   for(int i=-4; i<12; i++) 
