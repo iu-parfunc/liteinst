@@ -522,7 +522,17 @@ int main(int argc, char *argv[])
 
   // Here we write the ADDRESS to read the location from, not the location itself:
   *(uint32_t*)(ip+2) = (uint32_t)(unsigned long)& row->anchor;
-  *(uint32_t*)(ip+2) = 0;
+  unsigned long test = 0;
+  *(uint32_t*)(ip+2) = (uint32_t)&test;
+
+  // One more test!
+  // Here we write what is ALREADY there: 66 0f 1f 44 00 00 -- nopw   0x0(%rax,%rax,1)
+  ip[0] = 0x66;
+  ip[1] = 0x0f;  
+  ip[2] = 0x1f;
+  ip[3] = 0x44;  
+  ip[4] = 0x00;  
+  ip[5] = 0x00;
 
   for(int i=0; i<6; i++) 
     printf("   Byte %d of probe space = %d = %p\n", i, ip[i], ip[i]);
