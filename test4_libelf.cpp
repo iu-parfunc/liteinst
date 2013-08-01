@@ -459,6 +459,16 @@ static void print_fn() {
 }
 
 
+// void write_abs_jump(unsigned char *opcodes, const void *jmpdest)
+// {
+//     opcodes[0] = 0xFF; 
+//     opcodes[1] = 0x25;
+
+//     // Whoa... does this stomp on 
+//     *reinterpret_cast<DWORD *>(opcodes + 2) = reinterpret_cast<DWORD>(opcodes + 6);
+//     *reinterpret_cast<DWORD *>(opcodes + 6) = reinterpret_cast<DWORD>(jmpdest);
+// }
+
 int main(int argc, char *argv[])
 {
 #if 0
@@ -491,27 +501,28 @@ int main(int argc, char *argv[])
       return 1;
   }
 
+  // This is an ABSOLUTE, indirect jump:
   ip[0] = 0xFF;
   ip[1] = 0x25;
-
-  // Test: put all NOPs in:
-  // ip[0] = 0x90; ip[1] = 0x90; ip[2] = 0x90; ip[3] = 0x90; ip[4] = 0x90; ip[5] = 0x90;
-
-  // Note, if we jmp there with inline assembly, we get this code... which alas is 7 bytes:
-  // 401cdd:	b8 ae 1c 40 00       	mov    $0x401cae,%eax
-  // 401ce2:	ff e0                	jmpq   *%rax
-  // ip[2] = 0xae;
-  // ip[3] = 0x1c;
-  // ip[4] = 0x40;
-  // ip[5] = 0x00;
 
   // uint32_t plain_addr = (uint32_t)(void*)(&print_fn);
   // printf("  32 bit converted addr %p / %d\n", plain_addr, plain_addr);
   int relative = (int)(long)(((unsigned char*)(void*)&print_fn) - ip);
   // long relative = (long)(((unsigned char*)(void*)&print_fn) - ip);
-  printf("  Relative offset of dest from starting addr: %p  %d  %d\n", relative, relative, (int) relative);
+  printf("  Relative offset of dest from starting addr: %p  %d\n", relative, relative);
   // *(uint32_t*)(ip+2) = plain_addr;
-  *(uint32_t*)(ip+2) = relative;
+  // *(uint32_t*)(ip+2) = relative;
+
+  unsigned long addraddr = (unsigned long) & row->anchor;
+  printf("  Address containing the dest addr: %d / %p\n", addraddr, addraddr);
+  if (addraddr != (unsigned long)(unsigned int)addraddr) {
+    printf("Address is more than 32 bits! %ld", addraddr);
+    return 1;
+  }
+
+  // Here we write the ADDRESS to read the location from, not the location itself:
+  *(uint32_t*)(ip+2) = (uint32_t)(unsigned long)& row->anchor;
+  *(uint32_t*)(ip+2) = 0;
 
   for(int i=0; i<6; i++) 
     printf("   Byte %d of probe space = %d = %p\n", i, ip[i], ip[i]);
