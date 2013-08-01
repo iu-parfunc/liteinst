@@ -498,14 +498,8 @@ void* gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_
     a.pop(r11); a.pop(r10); a.pop(r9); a.pop(r8); 
     a.pop(rdx); a.pop(rcx); a.pop(rax);
 
-    // a.call(imm((sysint_t)print_fn)); // This is safe.  We can do it twice.
-
-    printf("  Next let's use the memory manager...\n");
-    MemoryManager* memmgr = MemoryManager::getGlobal();
     int codesz = a.getCodeSize();
     // This works just as well, don't need the function_cast magic:
-    void* fn = memmgr->alloc(codesz + PROBESIZE, MEMORY_ALLOC_FREEABLE);
-    //    sysuint_t code = a.relocCode((char*)fn);
     sysuint_t code = a.relocCode(addr);
 
     // Copy over the displaced probe bytes:
@@ -525,8 +519,6 @@ void* gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_
     for(int i=0; i<codesz + PROBESIZE + sz2; i++) 
       printf("  %p", addr[i]);
     printf("\n");
-    // printf("  Relocated the code to location %p, return code: %d, next call it!\n", (void*)fn, code);
-    // return fn;
     return addr;
 }
 
