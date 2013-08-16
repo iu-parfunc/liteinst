@@ -9,7 +9,8 @@
 #include <sysexits.h>
 #include <unistd.h>
 #include <cstdio>
-
+#include "cycle.h"
+#include <unordered_map>
 #include <errno.h>
 
 #include <sys/mman.h>
@@ -98,6 +99,28 @@ const uint64_t zca_c_have_probe_region = 0x02;  // ZCA table row has field
                                                 // be used for a probe
 
 const uint64_t zca_c_32bit_anchor=0x04;         // The anchor address is 32bits
+
+struct ann_data
+{
+  unsigned long* location;
+  void (*func)();
+  byte* ip;
+  uint32_t probespace;
+  const unsigned char* expr;
+
+  ann_data(unsigned long int* l, void (*f)(), byte* i, uint32_t ps, const unsigned char* e)
+  {
+    location = l;
+    func = f;
+    ip = i;
+    probespace = ps;
+    expr = e;
+  }
+};
+
+// global hashtable for annotations
+typedef unordered_map<string, ann_data*> ann_table;
+ann_table at;
 
 //-----------------------------------------------------------------------------------
 /* DWARF stuff */
@@ -367,6 +390,33 @@ int dwarf_expr_to_pin(const unsigned char *expression,
     return 1;
 }
 
+// ---------------------------------------------------
+// Convenience functions for dealing with rows
+// REMINDER: CONVERT TO MACROS
+uint32_t getProbespace(zca_row_11_t* row)
+{
+  return
+    row->probespace;
+}
+
+byte* getIP(zca_row_11_t* row)
+{
+  return
+    (byte*) row->anchor;
+}
+
+const unsigned char* getExpr(zca_header_11_t* table, zca_row_11_t* row)
+{
+  return
+    (const unsigned char*) ((byte*) table + table->exprs + row->expr);
+}
+
+const char* getAnnotation(zca_header_11_t *table, zca_row_11_t *row)
+{
+  return
+    (const char*) ((byte*) table + table->strings + row->annotation);
+}
+
 // --------------------------------------------------------------------------------
 // A global variable which stores the executable file name
 const char *__progname;
@@ -374,11 +424,12 @@ const char *__progname;
 // This code is taken from:
 // http://stackoverflow.com/questions/12159595/how-to-get-a-pointer-to-an-specific-section-of-a-program-from-within-itself-ma
 
-zca_row_11_t * retrieve_data() {
+zca_row_11_t* retrieve_data() {
   int fd;       // File descriptor for the executable ELF file
   char *section_name, path[256];
   size_t shstrndx;
-
+  zca_row_11_t* row;
+  
   Elf *e;           // ELF struct
   Elf_Scn *scn;     // Section index struct
   Elf64_Shdr *shdr;     // Section struct
@@ -403,7 +454,6 @@ zca_row_11_t * retrieve_data() {
 
   scn = NULL;
 
-  zca_row_11_t * row;
   // Loop over all sections in the ELF object
   while((scn = elf_nextscn(e, scn))!=NULL) {
     // Given a Elf Scn pointer, retrieve the associated section header
@@ -426,8 +476,8 @@ zca_row_11_t * retrieve_data() {
       printf("Yep, got itt_notify... data is at addr %p.  Now to parse it!\n", section_data);
       
       // Cast section data
-      struct zca_header_11_t *table  = (struct zca_header_11_t*) section_data;
-      row = (struct zca_row_11_t*) ((byte*) table + sizeof(*table));
+      zca_header_11_t *table  = (zca_header_11_t*) section_data;
+      row = (zca_row_11_t*) ((byte*) table + sizeof(*table));
       const char *str = (const char *) ((byte*) table + table->strings + row->annotation);
       const unsigned char *expr = (const unsigned char *) ((byte*) table + table->exprs + row->expr);      
       unsigned int reg = 200;
@@ -436,7 +486,26 @@ zca_row_11_t * retrieve_data() {
       // Put tag parameter regester and offset data into &reg and &offset
       dwarf_expr_to_pin(expr, &reg, &offset);
       
-      // cout that shit
+      // Create hashtable<annotation, memory location+row data>
+      typedef unordered_map<string, ann_data*> ann_table;
+      ann_table at;
+      
+      for (int i = 0; i < table->entry_count; i++)
+	{
+	  cout << getAnnotation(table, row) << endl;
+	  cout << getIP(row) << endl;
+	  unsigned long* base = (unsigned long*)0x01230000;
+	  ann_data ad = ann_data(base, NULL, getIP(row), getProbespace(row), getExpr(table, row));
+	  
+	  at.insert(ann_table::value_type(getAnnotation(table, row),
+					  &ad));
+	  // Move to next row
+	  row = (zca_row_11_t*) ((byte*) row + sizeof(*row));
+	}
+      row = (zca_row_11_t*) ((byte*) table + sizeof(*table));
+
+      /*
+      cout that shit
       cout << "  reg/offset: " << reg << ", " << offset << endl;
       cout << "  table " << table << ", row " << row << ", row byteoffset " << (byte*) row - (byte*) table << ", table_size "
       	   << sizeof(*table) << endl;
@@ -445,7 +514,16 @@ zca_row_11_t * retrieve_data() {
            << ", probespace " << row->probespace
            << ", IP " << (void*)(row->anchor)
            << endl;
+      */
 
+      cout << "size: " << at.size() << endl;
+      cout << "ip: " << (byte*) row->anchor << endl;
+      cout << "ip_ht*: " << at["exited"]->ip << endl;
+      cout << "probespace: " << row->probespace << endl;
+      cout << "ps_ht: " << at["exited"]->probespace << endl;
+      cout << "expr: " << getExpr(table, row) << endl;
+      cout << "expr_ht: " << at["entered region"]->expr << endl;
+      
       // End the loop (if we only need this section)
       break;
     }
@@ -522,6 +600,11 @@ void* gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_
     return addr;
 }
 
+void activateProbe(const char* ann)
+{
+
+}
+
 int main(int argc, char *argv[])
 {
 #if 0
@@ -592,7 +675,19 @@ int main(int argc, char *argv[])
   //------------------------------------------------------------
 
   // Here we repoint the probe site to the function print_fn, but any other function would work to!
-  void* dst = gen_stub_code((unsigned char*)(base + 4), ip, &print_fn);
+  ticks start;
+  ticks end;
+  double taken;
+  void* dst;
+  
+  start = getticks();
+  dst = gen_stub_code((unsigned char*)(base + 4), ip, &print_fn);
+  end = getticks();
+  taken += elapsed(end, start);
+
+  taken = taken;
+  cout << "time taken: " << taken << endl;
+  
   printf("Done generating stub code at %p\n", dst);
 
 #if 0
@@ -664,4 +759,3 @@ int main(int argc, char *argv[])
   */    
 #endif
 }
-
