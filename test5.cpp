@@ -118,7 +118,7 @@ struct ann_data
 };
 
 // Create hashtable<annotation, memory location+row data>
-typedef unordered_map<const char*, ann_data*> ann_table;
+typedef unordered_map<string, ann_data*> ann_table;
 ann_table at;      
 
 //-----------------------------------------------------------------------------------
@@ -593,7 +593,7 @@ void* gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_
 int activateProbe(const char* ann)
 {
   cout << "here" << endl;
-  cout << at["probe1" << endl;
+  cout << at["probe1"] << endl;
   cout << at["probe1"]->ip << endl;
   byte* ip = at[ann]->ip;
   unsigned long ipn = (unsigned long)ip;
