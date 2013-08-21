@@ -119,7 +119,7 @@ struct ann_data
 
 // Create hashtable<annotation, memory location+row data>
 typedef unordered_map<const char*, ann_data*> ann_table;
-ann_table at;      
+ann_table globalAnnTable;      
 
 //-----------------------------------------------------------------------------------
 /* DWARF stuff */
@@ -490,7 +490,7 @@ void populateHT(const char* progname)
 	  cout << getIP(row) << endl;
 	  ann_data ad = ann_data(NULL, NULL, getIP(row), getProbespace(row), getExpr(table, row));
 	  
-	  at.insert(ann_table::value_type(getAnnotation(table, row),
+	  globalAnnTable.insert(ann_table::value_type(getAnnotation(table, row),
 					  &ad));
 	  // Move to next row
 	  row = (zca_row_11_t*) ((byte*) row + sizeof(*row));
@@ -509,10 +509,10 @@ void populateHT(const char* progname)
            << endl;
       */
       
-      cout << "size: " << at.size() << endl;
-      cout << at["probe1"] << endl;
-      cout << "ip: " << at["probe1"]->ip << endl;
-      cout << "probespace: " << at["probe1"]->probespace << endl;
+      cout << "size: " << globalAnnTable.size() << endl;
+      cout << globalAnnTable["probe1"] << endl;
+      cout << "ip: " << globalAnnTable["probe1"]->ip << endl;
+      cout << "probespace: " << globalAnnTable["probe1"]->probespace << endl;
       cout << "expr: " << getExpr(table, row) << endl;
       
       // End the loop (if we only need this section)
@@ -593,9 +593,9 @@ void* gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_
 int activateProbe(const char* ann)
 {
   cout << "here" << endl;
-  cout << at["probe1" << endl;
-  cout << at["probe1"]->ip << endl;
-  byte* ip = at[ann]->ip;
+  cout << globalAnnTable["probe1"] << endl;
+  cout << globalAnnTable["probe1"]->ip << endl;
+  byte* ip = globalAnnTable[ann]->ip;
   unsigned long ipn = (unsigned long)ip;
   int page = 4096;   /* size of a page */
   
@@ -610,7 +610,7 @@ int activateProbe(const char* ann)
 
   // Assign memory for stub code and add to HT
   unsigned long* base = (unsigned long*)0x01230000;
-  at[ann]->location = base;
+  globalAnnTable[ann]->location = base;
   base = (unsigned long*)mmap(base, 4096, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1,0);
   if (base == MAP_FAILED) {
     int err = errno;
@@ -663,7 +663,7 @@ int main(int argc, char *argv[])
 
   printf("Calling populateHT(argv[0]) ... \n");
   populateHT(argv[0]);
-  cout << at["probe1"] << endl;
+  cout << globalAnnTable["probe1"] << endl;
   printf("  Done .");
 
   printf("Now to self-modify... call activateProbe(\"probe1\")\n");
