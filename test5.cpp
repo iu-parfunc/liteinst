@@ -489,9 +489,9 @@ void populateHT(const char* progname)
 	  cout << getAnnotation(table, row) << endl;
 	  cout << getIP(row) << endl;
 	  ann_data ad = ann_data(NULL, NULL, getIP(row), getProbespace(row), getExpr(table, row));
-	  
-	  globalAnnTable.insert(ann_table::value_type(getAnnotation(table, row),
-					  &ad));
+
+          const char* str = getAnnotation(table, row);
+	  globalAnnTable.insert(ann_table::value_type(string(str), &ad));
 	  // Move to next row
 	  row = (zca_row_11_t*) ((byte*) row + sizeof(*row));
 	}
@@ -510,8 +510,11 @@ void populateHT(const char* progname)
       */
       
       cout << "size: " << globalAnnTable.size() << endl;
-      cout << globalAnnTable["probe1"] << endl;
-      cout << "ip: " << globalAnnTable["probe1"]->ip << endl;
+
+      ann_data* tstann = globalAnnTable["probe1"];
+      printf("Populating table, annotation 'probe1': struct is at addr %p, reading IP %p (from %p)\n", 
+	     tstann, tstann->ip, &(tstann->ip));
+
       cout << "probespace: " << globalAnnTable["probe1"]->probespace << endl;
       cout << "expr: " << getExpr(table, row) << endl;
       
@@ -592,9 +595,9 @@ void* gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_
 
 int activateProbe(const char* ann)
 {
-  cout << "here" << endl;
-  cout << globalAnnTable["probe1"] << endl;
-  cout << globalAnnTable["probe1"]->ip << endl;
+  ann_data* tstann = globalAnnTable["probe1"];
+  printf("Activating probe: test annotation 'probe1': struct is at addr %p, reading IP %p (from %p)\n", 
+	 tstann, tstann->ip, &(tstann->ip));
   byte* ip = globalAnnTable[ann]->ip;
   unsigned long ipn = (unsigned long)ip;
   int page = 4096;   /* size of a page */
