@@ -118,8 +118,8 @@ struct ann_data
 };
 
 // Create hashtable<annotation, memory location+row data>
-typedef unordered_map<const char*, ann_data*> ann_table;
-ann_table globalAnnTable;      
+typedef unordered_map<string, ann_data*> ann_table;
+ann_table globalAnnTable;
 
 //-----------------------------------------------------------------------------------
 /* DWARF stuff */
