@@ -9,6 +9,13 @@
 #include <sysexits.h>
 #include <unistd.h>
 #include <cstdio>
+#include "cycle.h"
+#include <unordered_map>
+#include <errno.h>
+
+#include <sys/mman.h>
+
+#include <AsmJit/AsmJit.h>
 
 using namespace std;
 
@@ -92,6 +99,28 @@ const uint64_t zca_c_have_probe_region = 0x02;  // ZCA table row has field
                                                 // be used for a probe
 
 const uint64_t zca_c_32bit_anchor=0x04;         // The anchor address is 32bits
+
+struct ann_data
+{
+  unsigned long* location;
+  void (*func)();
+  byte* ip;
+  uint32_t probespace;
+  const unsigned char* expr;
+
+  ann_data(unsigned long int* l, void (*f)(), byte* i, uint32_t ps, const unsigned char* e)
+  {
+    location = l;
+    func = f;
+    ip = i;
+    probespace = ps;
+    expr = e;
+  }
+};
+
+// Create hashtable<annotation, memory location+row data>
+typedef unordered_map<string, ann_data*> ann_table;
+ann_table at;      
 
 //-----------------------------------------------------------------------------------
 /* DWARF stuff */
@@ -294,7 +323,7 @@ int dwarf_expr_to_pin(const unsigned char *expression,
 
     // Extract the opcode
     unsigned char opcode = *expression;
-    printf("%u\n", opcode);
+    printf("Opcode: %u\n", opcode);
     // If this is a simple register, decode it
     if ((opcode >= DW_OP_reg0) && (opcode <= DW_OP_reg31))
     {
@@ -361,18 +390,45 @@ int dwarf_expr_to_pin(const unsigned char *expression,
     return 1;
 }
 
+// ---------------------------------------------------
+// Convenience functions for dealing with rows
+// REMINDER: CONVERT TO MACROS
+uint32_t getProbespace(zca_row_11_t* row)
+{
+  return
+    row->probespace;
+}
+
+byte* getIP(zca_row_11_t* row)
+{
+  return
+    (byte*) row->anchor;
+}
+
+const unsigned char* getExpr(zca_header_11_t* table, zca_row_11_t* row)
+{
+  return
+    (const unsigned char*) ((byte*) table + table->exprs + row->expr);
+}
+
+const char* getAnnotation(zca_header_11_t *table, zca_row_11_t *row)
+{
+  return
+    (const char*) ((byte*) table + table->strings + row->annotation);
+}
+
 // --------------------------------------------------------------------------------
 // A global variable which stores the executable file name
-const char *__progname;
-
 // This code is taken from:
 // http://stackoverflow.com/questions/12159595/how-to-get-a-pointer-to-an-specific-section-of-a-program-from-within-itself-ma
 
-void retrieve_data(uint64_t *ip) {
+void populateHT(const char* progname)
+{
   int fd;       // File descriptor for the executable ELF file
   char *section_name, path[256];
   size_t shstrndx;
-
+  zca_row_11_t* row;
+  
   Elf *e;           // ELF struct
   Elf_Scn *scn;     // Section index struct
   Elf64_Shdr *shdr;     // Section struct
@@ -380,7 +436,7 @@ void retrieve_data(uint64_t *ip) {
   // Create the full path of the executable
   getcwd(path, 255);
   strcat(path, "/");
-  strcat(path, __progname);
+  strcat(path, progname);
 
   if(elf_version(EV_CURRENT)==EV_NONE)
     errx(EXIT_FAILURE, "ELF library iinitialization failed: %s", elf_errmsg(-1));
@@ -419,25 +475,47 @@ void retrieve_data(uint64_t *ip) {
       printf("Yep, got itt_notify... data is at addr %p.  Now to parse it!\n", section_data);
       
       // Cast section data
-      struct zca_header_11_t *table  = (struct zca_header_11_t*) section_data;
-      zca_row_11_t *row = (struct zca_row_11_t*) ((byte*) table + sizeof(*table));
+      zca_header_11_t *table  = (zca_header_11_t*) section_data;
+      row = (zca_row_11_t*) ((byte*) table + sizeof(*table));
       const char *str = (const char *) ((byte*) table + table->strings + row->annotation);
-      const unsigned char *expr = (const unsigned char *) ((byte*) table + table->exprs + row->expr);
-      *ip = row->anchor;
+      const unsigned char *expr = (const unsigned char *) ((byte*) table + table->exprs + row->expr);      
       unsigned int reg = 200;
       int32_t offset = 200;
 
       // Put tag parameter regester and offset data into &reg and &offset
       dwarf_expr_to_pin(expr, &reg, &offset);
       
-      // cout that shit
-      cout << "ip: " << *ip << endl;
-      cout << reg << ", " << offset << endl;
-      cout << table << ", " << row << ", " << (byte*) row - (byte*) table << ", "
+      for (int i = 0; i < table->entry_count; i++)
+	{
+	  cout << getAnnotation(table, row) << endl;
+	  cout << getIP(row) << endl;
+	  ann_data ad = ann_data(NULL, NULL, getIP(row), getProbespace(row), getExpr(table, row));
+	  
+	  at.insert(ann_table::value_type(getAnnotation(table, row),
+					  &ad));
+	  // Move to next row
+	  row = (zca_row_11_t*) ((byte*) row + sizeof(*row));
+	}
+      row = (zca_row_11_t*) ((byte*) table + sizeof(*table));
+      
+      /*
+      cout that shit
+      cout << "  reg/offset: " << reg << ", " << offset << endl;
+      cout << "  table " << table << ", row " << row << ", row byteoffset " << (byte*) row - (byte*) table << ", table_size "
       	   << sizeof(*table) << endl;
-      cout << row << ", " << str << ", " << (byte*) str - (byte*) table << ", "
-	   << table->strings << ", " << row->annotation << endl;
-
+      cout << "  row "<< row << ": label \"" << str << "\", str offset " << (byte*) str - (byte*) table << ", strings "
+	   << table->strings << ", annotation " << row->annotation 
+           << ", probespace " << row->probespace
+           << ", IP " << (void*)(row->anchor)
+           << endl;
+      */
+      
+      cout << "size: " << at.size() << endl;
+      cout << at["probe1"] << endl;
+      cout << "ip: " << at["probe1"]->ip << endl;
+      cout << "probespace: " << at["probe1"]->probespace << endl;
+      cout << "expr: " << getExpr(table, row) << endl;
+      
       // End the loop (if we only need this section)
       break;
     }
@@ -448,22 +526,158 @@ void retrieve_data(uint64_t *ip) {
 }
 
 
-int main(int argc, char *argv[])
-{
-  int x = 5;
-  uint64_t ip;
-  __notify_intrinsic((void*)"entered region", (void*)&x);
-  printf("[app] We are the borg.\n");
-  __notify_intrinsic((void*)"exited", &x);
-
-  printf("[app] Done.\n");
-
-  __progname = argv[0];
-
-  printf("Calling retrieve_data ... \n");
-  retrieve_data(&ip);
-  printf("Done \n");
-
-  __asm__("jmp 4201564");
+static void print_fn() { 
+  printf("MADE IT -- to the print function!\n");
+  return; 
 }
 
+
+// void write_abs_jump(unsigned char *opcodes, const void *jmpdest)
+// {
+//     opcodes[0] = 0xFF; 
+//     opcodes[1] = 0x25;
+
+//     // Whoa... does this stomp on 
+//     *reinterpret_cast<DWORD *>(opcodes + 2) = reinterpret_cast<DWORD>(opcodes + 6);
+//     *reinterpret_cast<DWORD *>(opcodes + 6) = reinterpret_cast<DWORD>(jmpdest);
+// }
+
+
+typedef void (*MyFn)();
+
+// Hardcoded for now:
+#define PROBESIZE 6
+
+void* gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_fn)
+{
+    using namespace AsmJit;
+
+    // This aims to make the same one-way jump as manual_jmp_there, except from JITed code.
+    // --------------------------------------------------------------------------------
+    Assembler a, a2;
+    FileLogger logger(stderr);
+    a.setLogger(&logger);
+    a2.setLogger(&logger);
+
+    // Push all volatile registers:
+    a.push(rax); a.push(rcx); a.push(rdx);
+    a.push(r8); a.push(r9); a.push(r10); a.push(r11);
+    a.call(imm((sysint_t)target_fn));
+    // Restore all volatile registers:
+    a.pop(r11); a.pop(r10); a.pop(r9); a.pop(r8); 
+    a.pop(rdx); a.pop(rcx); a.pop(rax);
+
+    int codesz = a.getCodeSize();
+    // This works just as well, don't need the function_cast magic:
+    sysuint_t code = a.relocCode(addr);
+
+    // Copy over the displaced probe bytes:
+    for(int i=0; i<PROBESIZE; i++)
+      addr[codesz + i] = probe_loc[i];
+
+    // Next generate the jump back home:
+    a2.jmp(imm((sysint_t)(void*)(probe_loc + PROBESIZE)));
+    int sz2 = a2.getCodeSize();
+    a2.relocCode(addr + codesz + PROBESIZE);
+
+    // TEMP: Fill with NOOPS:
+    for(int i=0; i<1000; i++)
+      addr[codesz + PROBESIZE + sz2 + i] = 0x90;
+
+    printf("  Size of return jmp %d, total size %d\n", sz2, codesz + PROBESIZE + sz2);
+    for(int i=0; i<codesz + PROBESIZE + sz2; i++) 
+      printf("  %p", addr[i]);
+    printf("\n");
+    return addr;
+}
+
+int activateProbe(const char* ann)
+{
+  cout << "here" << endl;
+  cout << at["probe1"]->ip << endl;
+  byte* ip = at[ann]->ip;
+  unsigned long ipn = (unsigned long)ip;
+  int page = 4096;   /* size of a page */
+  
+  // I think we need to mprotect a page-aligned address:
+  int code = mprotect((void*)(ipn - (ipn%4096)), page, PROT_READ | PROT_WRITE | PROT_EXEC);
+  if (code)
+    {
+      /* current code page is now writable and code from it is allowed for execution */
+      fprintf(stderr,"mprotect was not successfull! code %d\n", code);
+      return 1;
+    }
+
+  // Assign memory for stub code and add to HT
+  unsigned long* base = (unsigned long*)0x01230000;
+  at[ann]->location = base;
+  base = (unsigned long*)mmap(base, 4096, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1,0);
+  if (base == MAP_FAILED) {
+    int err = errno;
+    printf("Got error on mmap: %s\n", strerror(err));
+    exit(1);
+  }
+  printf("Mmap'd scratch region starting at %p\n", base);
+
+  // Here we repoint the probe site to the function print_fn, but any other function would work to!
+  void* dst = gen_stub_code((unsigned char*)(base + 4), ip, &print_fn);
+  printf("Done generating stub code at %p\n", dst);
+  
+  // This does a relative jump:
+  ip[0] = 0xE9;
+  // Size of the JMP we insert is 5.  So +5 points to the following instruction.
+  long relative = (long)(((unsigned char*)(void*) dst) - ip - 5);
+  printf("  Relative offset of dest from starting addr: %p %d, 32 bit: %p\n", relative, relative, (int)relative);
+  *(uint32_t*)(ip+1) = (int)relative;
+  ip[5] = 0x0;
+  
+  for(int i=-4; i<12; i++) 
+    printf("   Byte %d of probe space = %d = %p\n", i, ip[i], ip[i]);
+
+  printf("Ultimate destination function lives at %p.\n", &print_fn);
+  printf("JITed stub lives at %p.\n", dst);
+  printf("Finished mutating ourselves... enter the danger zone.\n");
+
+  return 0;
+}
+
+int main(int argc, char *argv[])
+{
+#if 0
+  // This works as expected:
+   asm("jmp *%0"::"r"(print_fn):);
+
+   asm("jmp 7");
+
+   asm("jmp 0x4020fa");
+   // This generates:   401ce9:	e9 0c 04 00 00  jmpq   4020fa <itt_notify_magic+0x54>
+   // Notice that it still uses four bytes.  
+   // And I don't know what the "E9 cw" opcode is supposed to mean, I
+   // don't see where the "cw" shows up or has any effect.
+
+   asm("jmp *7(%rip)");
+
+   //  asm(".intel_syntax;" "JMP rel32 7");
+   // 
+#else
+
+  printf("Calling populateHT(argv[0]) ... \n");
+  populateHT(argv[0]);
+  cout << at["probe1"] << endl;
+  printf("  Done .");
+
+  printf("Now to self-modify... call activateProbe(\"probe1\")\n");
+  int status = activateProbe("probe1");
+
+  //------------------------------------------------------------
+  int x = 5;
+  __notify_intrinsic((void*)"probe1", (void*)&x);
+  printf("[app] We are the borg.\n");
+  __notify_intrinsic((void*)"probe2", &x);
+  printf("[app] Done.\n");  
+  //------------------------------------------------------------
+
+#endif
+
+  return 1;
+}
