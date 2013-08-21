@@ -34,11 +34,11 @@ test3:
 
 test4:
 	if ! [ -d $(PINDIR) ]; then $(MAKE) $(PINDIR); fi
-	icc -g -IAsmJit-1.0-beta4/ AsmJit-1.0-beta4/AsmJit/*.cpp -O0 test4_libelf.cpp $(INCLUDES) $(DEFS) -lelf -o test4.exe
+	icc -g -IAsmJit-1.0-beta4/ AsmJit-1.0-beta4/AsmJit/*.cpp -O0 -std=c++11 test4_libelf.cpp $(INCLUDES) $(DEFS) -lelf -o test4.exe
 
 test5:
 	if ! [ -d $(PINDIR) ]; then $(MAKE) $(PINDIR); fi
-	icc -g -O0 test5.cpp $(INCLUDES) $(DEFS) -lelf -o test5.exe
+	icc -g -IAsmJit-1.0-beta4/ AsmJit-1.0-beta4/AsmJit/*.cpp -O0 -std=c++11 test5.cpp $(INCLUDES) $(DEFS) -lelf -o test5.exe
 
 tool:
 	icc test_pin.cpp $(INCLUDES) $(DEFS) $(LDFLAGS) $(LDPATHS) $(LDLIBS) -o tool.so
