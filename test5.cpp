@@ -103,11 +103,13 @@ struct ann_data
 {
   unsigned long* location;
   void (*func)();
-  byte* ip;
-  uint32_t probespace;
+  byte* const ip;
+  const uint32_t probespace;
   const unsigned char* expr;
 
-  ann_data(unsigned long int* l, void (*f)(), byte* i, uint32_t ps, const unsigned char* e)
+  ann_data(unsigned long int* l, void (*f)(), byte* const i, const uint32_t ps,
+	   const unsigned char* e): location(l), func(f), ip(i), probespace(ps), expr(e) {}
+  /*
   {
     location = l;
     func = f;
@@ -115,11 +117,13 @@ struct ann_data
     probespace = ps;
     expr = e;
   }
+  */
 };
 
 // Create hashtable<annotation, memory location+row data>
 typedef unordered_map<string, ann_data*> ann_table;
 ann_table globalAnnTable;
+// zca_row_11_t* row1;
 
 //-----------------------------------------------------------------------------------
 /* DWARF stuff */
@@ -496,6 +500,7 @@ void populateHT(const char* progname)
 	  row = (zca_row_11_t*) ((byte*) row + sizeof(*row));
 	}
       row = (zca_row_11_t*) ((byte*) table + sizeof(*table));
+      row1 = row;
       
       /*
       cout that shit
@@ -595,10 +600,12 @@ void* gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_
 
 int activateProbe(const char* ann)
 {
-  ann_data* tstann = globalAnnTable["probe1"];
+  cout << "activateProbe(" << ann << ")" << endl;
+  //  cout << getIP(row1) << endl;
+  ann_data* tstann = globalAnnTable[string(ann)];
   printf("Activating probe: test annotation 'probe1': struct is at addr %p, reading IP %p (from %p)\n", 
 	 tstann, tstann->ip, &(tstann->ip));
-  byte* ip = globalAnnTable[ann]->ip;
+  byte* ip = globalAnnTable[string(ann)]->ip;
   unsigned long ipn = (unsigned long)ip;
   int page = 4096;   /* size of a page */
   
