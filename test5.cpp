@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <cstdio>
 #include <unordered_map>
+#include <stack>
 #include <errno.h>
 
 #include <sys/mman.h>
@@ -120,11 +121,13 @@ struct ann_data
   */
 };
 
-// Create hashtable<annotation, memory location+row data>
-typedef unordered_map<string, ann_data*> ann_table;
+// Create hashtable<annotation, row>
+typedef unordered_map<string, zca_row_11_t*> ann_table;
 ann_table globalAnnTable;
-// zca_row_11_t* row1;
+zca_header_11_t* globalZCATable;
 
+// Create stack for stub memory locations
+stack<unsigned long*> globalStubMemoryStack;
 //-----------------------------------------------------------------------------------
 /* DWARF stuff */
 #if ! defined(_MSC_VER) || (_MSC_VER >= 1600)
@@ -395,7 +398,7 @@ int dwarf_expr_to_pin(const unsigned char *expression,
 
 // ---------------------------------------------------
 // Convenience functions for dealing with rows
-// REMINDER: CONVERT TO MACROS
+// REMINDER: CONVERT TO INLINE FUNCTIONS
 uint32_t getProbespace(zca_row_11_t* row)
 {
   return
@@ -408,16 +411,16 @@ byte* getIP(zca_row_11_t* row)
     (byte*) row->anchor;
 }
 
-const unsigned char* getExpr(zca_header_11_t* table, zca_row_11_t* row)
+const unsigned char* getExpr(zca_row_11_t* row)
 {
   return
-    (const unsigned char*) ((byte*) table + table->exprs + row->expr);
+    (const unsigned char*) ((byte*) globalZCATable + globalZCATable->exprs + row->expr);
 }
 
-const char* getAnnotation(zca_header_11_t *table, zca_row_11_t *row)
+const char* getAnnotation(zca_row_11_t *row)
 {
   return
-    (const char*) ((byte*) table + table->strings + row->annotation);
+    (const char*) ((byte*) globalZCATable + globalZCATable->strings + row->annotation);
 }
 
 // --------------------------------------------------------------------------------
@@ -479,6 +482,7 @@ void populateHT(const char* progname)
       
       // Cast section data
       zca_header_11_t *table  = (zca_header_11_t*) section_data;
+      globalZCATable = table;
       row = (zca_row_11_t*) ((byte*) table + sizeof(*table));
       const char *str = (const char *) ((byte*) table + table->strings + row->annotation);
       const unsigned char *expr = (const unsigned char *) ((byte*) table + table->exprs + row->expr);      
@@ -490,17 +494,18 @@ void populateHT(const char* progname)
       
       for (int i = 0; i < table->entry_count; i++)
 	{
+	  /*
 	  cout << getAnnotation(table, row) << endl;
 	  cout << getIP(row) << endl;
 	  ann_data ad = ann_data(NULL, NULL, getIP(row), getProbespace(row), getExpr(table, row));
-
           const char* str = getAnnotation(table, row);
-	  globalAnnTable.insert(ann_table::value_type(string(str), &ad));
+	  */
+	  
+	  globalAnnTable.insert(ann_table::value_type(string(str), row));
 	  // Move to next row
 	  row = (zca_row_11_t*) ((byte*) row + sizeof(*row));
 	}
       row = (zca_row_11_t*) ((byte*) table + sizeof(*table));
-      row1 = row;
       
       /*
       cout that shit
@@ -512,16 +517,16 @@ void populateHT(const char* progname)
            << ", probespace " << row->probespace
            << ", IP " << (void*)(row->anchor)
            << endl;
-      */
       
       cout << "size: " << globalAnnTable.size() << endl;
-
+      
       ann_data* tstann = globalAnnTable["probe1"];
       printf("Populating table, annotation 'probe1': struct is at addr %p, reading IP %p (from %p)\n", 
 	     tstann, tstann->ip, &(tstann->ip));
 
       cout << "probespace: " << globalAnnTable["probe1"]->probespace << endl;
       cout << "expr: " << getExpr(table, row) << endl;
+      */
       
       // End the loop (if we only need this section)
       break;
@@ -552,10 +557,7 @@ static void print_fn() {
 
 typedef void (*MyFn)();
 
-// Hardcoded for now:
-#define PROBESIZE 6
-
-void* gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_fn)
+void* gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_fn, uint32_t probespace)
 {
     using namespace AsmJit;
 
@@ -579,20 +581,20 @@ void* gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_
     sysuint_t code = a.relocCode(addr);
 
     // Copy over the displaced probe bytes:
-    for(int i=0; i<PROBESIZE; i++)
+    for(int i=0; i<probespace; i++)
       addr[codesz + i] = probe_loc[i];
 
     // Next generate the jump back home:
-    a2.jmp(imm((sysint_t)(void*)(probe_loc + PROBESIZE)));
+    a2.jmp(imm((sysint_t)(void*)(probe_loc + probespace)));
     int sz2 = a2.getCodeSize();
-    a2.relocCode(addr + codesz + PROBESIZE);
+    a2.relocCode(addr + codesz + probespace);
 
     // TEMP: Fill with NOOPS:
     for(int i=0; i<1000; i++)
-      addr[codesz + PROBESIZE + sz2 + i] = 0x90;
+      addr[codesz + probespace + sz2 + i] = 0x90;
 
-    printf("  Size of return jmp %d, total size %d\n", sz2, codesz + PROBESIZE + sz2);
-    for(int i=0; i<codesz + PROBESIZE + sz2; i++) 
+    printf("  Size of return jmp %d, total size %d\n", sz2, codesz + probespace + sz2);
+    for(int i=0; i<codesz + probespace + sz2; i++) 
       printf("  %p", addr[i]);
     printf("\n");
     return addr;
@@ -601,11 +603,13 @@ void* gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_
 int activateProbe(const char* ann)
 {
   cout << "activateProbe(" << ann << ")" << endl;
-  //  cout << getIP(row1) << endl;
+  cout << getIP(globalAnnTable[string(ann)]) << endl;
+  /*
   ann_data* tstann = globalAnnTable[string(ann)];
   printf("Activating probe: test annotation 'probe1': struct is at addr %p, reading IP %p (from %p)\n", 
 	 tstann, tstann->ip, &(tstann->ip));
-  byte* ip = globalAnnTable[string(ann)]->ip;
+  */
+  byte* ip = getIP(globalAnnTable[string(ann)]);
   unsigned long ipn = (unsigned long)ip;
   int page = 4096;   /* size of a page */
   
@@ -618,9 +622,16 @@ int activateProbe(const char* ann)
       return 1;
     }
 
-  // Assign memory for stub code and add to HT
-  unsigned long* base = (unsigned long*)0x01230000;
-  globalAnnTable[ann]->location = base;
+  // Assign memory for stub code
+  unsigned long* base;
+  if (globalStubMemoryStack.empty())
+    base = (unsigned long*)0x01230000;
+  else
+    {
+      base = globalStubMemoryStack.top();
+      globalStubMemoryStack.pop();
+    }
+  
   base = (unsigned long*)mmap(base, 4096, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1,0);
   if (base == MAP_FAILED) {
     int err = errno;
@@ -630,7 +641,7 @@ int activateProbe(const char* ann)
   printf("Mmap'd scratch region starting at %p\n", base);
 
   // Here we repoint the probe site to the function print_fn, but any other function would work to!
-  void* dst = gen_stub_code((unsigned char*)(base + 4), ip, &print_fn);
+  void* dst = gen_stub_code((unsigned char*)(base + 4), ip, &print_fn, getProbespace(globalAnnTable[string(ann)]));
   printf("Done generating stub code at %p\n", dst);
   
   // This does a relative jump:
