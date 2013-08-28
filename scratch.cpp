@@ -5,6 +5,8 @@
 
 using namespace std;
 
+/* Compile using c++11 */
+
 struct foo
 {
   int x;
