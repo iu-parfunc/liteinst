@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <unordered_map>
 #include <stack>
+#include <utility>
 #include <errno.h>
 
 #include <sys/mman.h>
@@ -122,7 +123,7 @@ struct ann_data
 };
 
 // Create hashtable<annotation, row>
-typedef unordered_map<string, zca_row_11_t*> ann_table;
+typedef unordered_map<string, pair<zca_row_11_t*, unsigned long*>> ann_table;
 ann_table globalAnnTable;
 zca_header_11_t* globalZCATable;
 
@@ -494,19 +495,17 @@ void populateHT(const char* progname)
       
       for (int i = 0; i < table->entry_count; i++)
 	{
-	  /*
-	  cout << getAnnotation(table, row) << endl;
-	  cout << getIP(row) << endl;
-	  ann_data ad = ann_data(NULL, NULL, getIP(row), getProbespace(row), getExpr(table, row));
-          const char* str = getAnnotation(table, row);
-	  */
+	  cout << getAnnotation(row) << endl;
+	  printf("%p\n", getIP(row));
+	  //	  ann_data ad = ann_data(NULL, NULL, getIP(row), getProbespace(row), getExpr(table, row));
+          const char* str = getAnnotation(row);
 	  
-	  globalAnnTable.insert(ann_table::value_type(string(str), row));
+	  globalAnnTable.insert(ann_table::value_type(string(str), pair<zca_row_11_t*, unsigned long*>(row, nullptr)));
 	  // Move to next row
 	  row = (zca_row_11_t*) ((byte*) row + sizeof(*row));
 	}
       row = (zca_row_11_t*) ((byte*) table + sizeof(*table));
-      
+
       /*
       cout that shit
       cout << "  reg/offset: " << reg << ", " << offset << endl;
@@ -518,8 +517,6 @@ void populateHT(const char* progname)
            << ", IP " << (void*)(row->anchor)
            << endl;
       
-      cout << "size: " << globalAnnTable.size() << endl;
-      
       ann_data* tstann = globalAnnTable["probe1"];
       printf("Populating table, annotation 'probe1': struct is at addr %p, reading IP %p (from %p)\n", 
 	     tstann, tstann->ip, &(tstann->ip));
@@ -527,7 +524,9 @@ void populateHT(const char* progname)
       cout << "probespace: " << globalAnnTable["probe1"]->probespace << endl;
       cout << "expr: " << getExpr(table, row) << endl;
       */
-      
+
+      cout << "this is location of the zca row for 'probe1' obtained from the HT during populateHT(): " << globalAnnTable["probe1"].first << endl;
+
       // End the loop (if we only need this section)
       break;
     }
@@ -603,13 +602,13 @@ void* gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_
 int activateProbe(const char* ann)
 {
   cout << "activateProbe(" << ann << ")" << endl;
-  cout << getIP(globalAnnTable[string(ann)]) << endl;
-  /*
-  ann_data* tstann = globalAnnTable[string(ann)];
-  printf("Activating probe: test annotation 'probe1': struct is at addr %p, reading IP %p (from %p)\n", 
-	 tstann, tstann->ip, &(tstann->ip));
-  */
-  byte* ip = getIP(globalAnnTable[string(ann)]);
+  cout << "this is the location of the row for 'probe1' obtained from the HT during activateProbe(): " << globalAnnTable[ann].first << endl;
+  cout << getIP(globalAnnTable[string(ann)].first) << endl;
+
+  pair<zca_row_11_t*, unsigned long*>* tstann = &(globalAnnTable[string(ann)]);
+  //  printf("Activating probe: test annotation 'probe1': struct is at addr %p, reading IP %p (from %p)\n", tstann, tstann->ip, &(tstann->ip));
+
+  byte* ip = getIP(tstann->first);
   unsigned long ipn = (unsigned long)ip;
   int page = 4096;   /* size of a page */
   
@@ -624,24 +623,26 @@ int activateProbe(const char* ann)
 
   // Assign memory for stub code
   unsigned long* base;
-  if (globalStubMemoryStack.empty())
-    base = (unsigned long*)0x01230000;
-  else
+  if (tstann->second == nullptr)
     {
-      base = globalStubMemoryStack.top();
-      globalStubMemoryStack.pop();
-    }
-  
-  base = (unsigned long*)mmap(base, 4096, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1,0);
-  if (base == MAP_FAILED) {
-    int err = errno;
-    printf("Got error on mmap: %s\n", strerror(err));
-    exit(1);
-  }
-  printf("Mmap'd scratch region starting at %p\n", base);
+      base = (unsigned long*)0x01230000;
+      base = (unsigned long*)mmap(base, 4096, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1,0);
 
-  // Here we repoint the probe site to the function print_fn, but any other function would work to!
-  void* dst = gen_stub_code((unsigned char*)(base + 4), ip, &print_fn, getProbespace(globalAnnTable[string(ann)]));
+      if (base == MAP_FAILED)
+	{
+	  int err = errno;
+	  printf("Got error on mmap: %s\n", strerror(err));
+	  exit(1);
+	}
+      
+      tstann->second = base;
+      printf("Mmap'd scratch region starting at %p\n", base);
+    }
+  else
+    base = tstann->second;
+
+  // Here we repoint the probe site to the function print_fn, but any other function would work too!
+  void* dst = gen_stub_code((unsigned char*)(base + 4), ip, &print_fn, getProbespace(tstann->first));
   printf("Done generating stub code at %p\n", dst);
   
   // This does a relative jump:
@@ -660,6 +661,11 @@ int activateProbe(const char* ann)
   printf("Finished mutating ourselves... enter the danger zone.\n");
 
   return 0;
+}
+
+int deactivateProbe(const char* ann)
+{
+  
 }
 
 int main(int argc, char *argv[])
@@ -684,7 +690,7 @@ int main(int argc, char *argv[])
 
   printf("Calling populateHT(argv[0]) ... \n");
   populateHT(argv[0]);
-  cout << globalAnnTable["probe1"] << endl;
+  //  cout << globalAnnTable["probe1"] << endl;
   printf("  Done .");
 
   printf("Now to self-modify... call activateProbe(\"probe1\")\n");
