@@ -7,8 +7,12 @@ void myFunc() {
     return;
 }
 
+int activateProbe(const char* ann) {
+  return 0;
+}
+
 /* This function is called automatically when the library is loaded */
-void myInit() {
+void initZCAService() {
     printf("This text is printed before reaching \"main\".\n");
     return;
 }
