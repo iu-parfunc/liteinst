@@ -1,3 +1,12 @@
+
+/* 
+
+  I am not sure what the main purpose of this test was vis-a-vis test4.
+  But it look like it was a continued, incremental development over the previous.
+   -RRN
+
+ */
+
 #include <stdio.h>
 #include <iostream>
 #include <cstddef>
@@ -15,8 +24,8 @@
 #include <errno.h>
 
 #include <sys/mman.h>
-
 #include <AsmJit/AsmJit.h>
+
 
 using namespace std;
 
