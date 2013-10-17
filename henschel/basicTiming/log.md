@@ -5,6 +5,20 @@
   - If you add two notify intrinsics, one for the enter and one for the leave, it increases 
     the time to 7 cycles.
   - So two notify intrinsics cost about 1 cycle.
+- If you add only one notify intrinsic, it also increases the runtime by one cycle
+  - So the second notify intrinsic is free (at least if you have them right next to each other)
+- Also interesting, if you have an empty function, and include a #pragma noinline
+  in the source, the compiler will still remove the empty function call.
+  - However, if you have an empty function with a notify intrinsic inside, the compiler will
+    actually create a function call
+- Here is the new master table
+  - Function call:                                         6 cycles
+  - Function call with two notify intrinsics:              7 cycles    (+1)
+  - Function call with two additional function calls:     15 cycles    (+9)
+  - Function call with VampirTrace, filtered:            196 cycles  (+190) 
+  - Function call with VampirTrace, output to /dev/shm:  891 cycles  (+885) 
+  - Function call with VampirTrace, output to Lustre:   1146 cycles (+1140)
+
 
 2013-09-29
 ==========
