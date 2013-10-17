@@ -1,5 +1,13 @@
 2013-09-29
 ==========
+- Added measurement for a function call with a notify intrinsic
+  - A basic function call costs 6 cylces
+  - If you add two notify intrinsics, one for the enter and one for the leave, it increases 
+    the time to 7 cycles.
+  - So two notify intrinsics cost about 1 cycle.
+
+2013-09-29
+==========
 - Things to keep in mind when doing measurements:
   - The compiler creates highly optimized binaries, eliminating all "empty" code parts
     - This makes benchmarking a call to an "empty" function really difficult
