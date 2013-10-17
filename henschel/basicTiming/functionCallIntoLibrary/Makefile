@@ -1,16 +1,16 @@
 CC = icc
 #CFLAGS =-lrt -Fa  //this will keep the assembly file around
-CFLAGS =-lrt 
+CFLAGS =-lrt  -Fa
 AR = ar
 RM = rm
 
 all: myLibrary.o libMyLibrary.so libMyLibrary.a mainDynamic.exe mainStatic.exe
 
 myLibrary.o: myLibrary.c
-	$(CC) -fPIC -g -c -Wall myLibrary.c
+	$(CC) $(CFLAGS) -fPIC -g -c -Wall myLibrary.c
 
 libMyLibrary.so: myLibrary.o
-	$(CC) -shared -Wl,-soname,libMyLibrary.so -Wl,-init,myInit -o libMyLibrary.so myLibrary.o -lc
+	$(CC) $(CFLAGS) -shared -Wl,-soname,libMyLibrary.so -Wl,-init,myInit -o libMyLibrary.so myLibrary.o -lc
 
 libMyLibrary.a: myLibrary.o
 	$(AR) rc libMyLibrary.a myLibrary.o
