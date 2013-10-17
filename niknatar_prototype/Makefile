@@ -20,24 +20,26 @@ LDPATHS += -L $(ZCADIR)/src/$(BUILDDIR)
 LDLIBS = ./3rdparty/pin-2.12-58423-gcc.4.4.7-linux/intel64/lib/libpin.a -lxed -ldwarf -lelf -ldl -lpthread -lzca
 #LDLIBS = -lpin -lxed -ldwarf ./3rdparty/pin-2.12-58423-gcc.4.4.7-linux/intel64/runtime/libelf.so.0 -ldl -lpthread -lzca
 
-# Uh, doing Make's job for it a bit here.  Setting
-# "3rdparty/$(PINVER)" as a dependency didn't work.
-all: test test3
+.PHONY: all test test3 test4 test5
 
-test:
-	if ! [ -d $(PINDIR) ]; then $(MAKE) $(PINDIR); fi
+all: getpin test test4 test5
+# test3 disabled ... [2013.10.17] Test3 is not working for me, Pin related error -RRN
+
+test:  test.exe
+test3: test3.exe
+test4: test4.exe
+test5: test5.exe
+
+test.exe: test.cpp
 	icc test.cpp $(INCLUDES) $(DEFS) -o test.exe
 
-test3:
-	if ! [ -d $(PINDIR) ]; then $(MAKE) $(PINDIR); fi
+test3.exe: test3_print_own_zca.cpp
 	icc test3_print_own_zca.cpp $(INCLUDES) $(DEFS) $(LDPATHS) $(LDLIBS) -o test3.exe
 
-test4:
-	if ! [ -d $(PINDIR) ]; then $(MAKE) $(PINDIR); fi
+test4.exe: test4_libelf.cpp
 	icc -g -IAsmJit-1.0-beta4/ AsmJit-1.0-beta4/AsmJit/*.cpp -O0 -std=c++11 test4_libelf.cpp $(INCLUDES) $(DEFS) -lelf -o test4.exe
 
-test5:
-	if ! [ -d $(PINDIR) ]; then $(MAKE) $(PINDIR); fi
+test5.exe: test5.cpp
 	icc -g -IAsmJit-1.0-beta4/ AsmJit-1.0-beta4/AsmJit/*.cpp -O0 -std=c++11 test5.cpp $(INCLUDES) $(DEFS) -lelf -o test5.exe
 
 tool:
@@ -46,9 +48,18 @@ tool:
 run:
 	./3rdparty/pintool/pin -t tool.so -- ./test.exe
 
+#------------------------------------------------------------
+# BUILDING PIN
+
+.PHONY: getpin libpin
+getpin: 
+        # Uh, doing Make's job for it a bit here.  Setting
+        # "3rdparty/$(PINVER)" as a dependency didn't work.
+	if ! [ -d $(PINDIR) ]; then $(MAKE) $(PINDIR); fi
+	if ! [ -f 3rdparty/$(PINVER)/intel64/lib/libpin.a ]; then $(MAKE) 3rdparty/$(PINVER); fi
+
 3rdparty/$(PINVER): $(PINVER).tar.gz
-	tar xzvf $(PINVER).tar.gz 
-	mv $(PINVER) 3rdparty/
+	cd 3rdparty; tar xzvf ../$(PINVER).tar.gz 
 
 $(PINVER).tar.gz:
 	wget http://software.intel.com/sites/landingpage/pintool/downloads/$(PINVER).tar.gz
