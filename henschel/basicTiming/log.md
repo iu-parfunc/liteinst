@@ -11,8 +11,16 @@
   in the source, the compiler will still remove the empty function call.
   - However, if you have an empty function with a notify intrinsic inside, the compiler will
     actually create a function call
+- Meassured time for call into an empty function located in a dynamic or static library
+  - For the static library, there is no change, 6 cycles.
+  - For the dynamic library, it goes up to 9 cycles.
+  - The good thing is though, one can now really call an empty function, it is not
+    required that the function returns a value just to trick the compiler into not optimizing it
 - Here is the new master table
-  - Function call:                                         6 cycles
+  - Function call (function in the same source file):      6 cycles
+  - Function call (function in a static library):          6 cycles
+  - Function call (function in a dynacmi library):         9 cycles
+  - The following is all based on a function call into the same source file
   - Function call with two notify intrinsics:              7 cycles    (+1)
   - Function call with two additional function calls:     15 cycles    (+9)
   - Function call with VampirTrace, filtered:            196 cycles  (+190) 
