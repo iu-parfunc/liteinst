@@ -3,6 +3,6 @@
 int main () {
 
     printf("And this text is printed from the top of \"main\".\n");
-    myFunc();
+    // myFunc();
     return 0;
 }

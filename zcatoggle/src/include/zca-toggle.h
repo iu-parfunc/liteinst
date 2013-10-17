@@ -26,17 +26,19 @@
 
 //! @brief Architure definition of the MUX
 //! @details More details about this mux element.
-extern void myFunc();
+
+
 
 /** Inject a function call at a probe point.
  *  Returns the success code.
  */
-extern int activateProbe(const char* ann);
+extern int activateProbe(const char* ann, void (*fptr)(const char*, void*));
 
 /** Runs at startup-time and reads the current binary's ELF headers.
  */
 extern void initZCAService() __attribute__((constructor));
 
-
+// TODO: the basic toggling functionality should be separated from the
+// retriev-own-ELF-headers hack.
 
 #endif  // zcaToggle_h_
