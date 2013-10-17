@@ -1,4 +1,4 @@
-2013-09-29
+2013-10-17
 ==========
 - Added measurement for a function call with a notify intrinsic
   - A basic function call costs 6 cylces
