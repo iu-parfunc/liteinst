@@ -20,8 +20,8 @@
  * 
  */
 
-#ifndef zcaToggle_h__
-#define zcaToggle_h__
+#ifndef _ZCA_TOGGLE_H_
+#define _ZCA_TOGGLE_H_
 
 
 //! @brief Architure definition of the MUX
@@ -41,4 +41,4 @@ extern void initZCAService() __attribute__((constructor));
 // TODO: the basic toggling functionality should be separated from the
 // retriev-own-ELF-headers hack.
 
-#endif  // zcaToggle_h_
+#endif  // _ZCA_TOGGLE_H_

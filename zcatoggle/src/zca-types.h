@@ -1,9 +1,71 @@
 
+/** 
+ * 
+ * @brief Typedefs modeling the structure of the ZCA ELF headers.
+ * 
+ * @details
+ * This code was taken from Intel's released "libzca", specifically libzca-src-195:
+ *
+ * http://software.intel.com/en-us/articles/download-intel-cilk-plus-software-development-kit
+ *
+ * Therefore, the license for this code is:
+ *
+     Copyright (C) 2012 Intel Corporation
+     All rights reserved.
 
+     Redistribution and use in source and binary forms, with or without
+     modification, are permitted provided that the following conditions
+     are met:
 
-// http://software.intel.com/en-us/articles/download-intel-cilk-plus-software-development-kit
+     * Redistributions of source code must retain the above copyright
+       notice, this list of conditions and the following disclaimer.
+     * Redistributions in binary form must reproduce the above copyright
+       notice, this list of conditions and the following disclaimer in
+       the documentation and/or other materials provided with the
+       distribution.
+     * Neither the name of Intel Corporation nor the names of its
+       contributors may be used to endorse or promote products derived
+       from this software without specific prior written permission.
 
-using namespace std;
+     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+     "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+     LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+     A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+     HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+     INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+     BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+     OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+     AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+     LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY
+     WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+     POSSIBILITY OF SUCH DAMAGE.
+
+ *                           -*- C language -*-
+ */
+
+#ifndef _ZCA_TYPES_H_
+#define _ZCA_TYPES_H_
+
+// #include <stdio.h>
+// // #include <cstddef> 
+
+// #include <string.h>
+// #include <err.h>
+// #include <fcntl.h>
+// #include <stdlib.h>
+// #include <sysexits.h>
+// #include <unistd.h>
+// // #include <cstdio.h>
+// // #include <stack>
+// // #include <utility>
+// #include <errno.h>
+
+// #include "types.h"
+#include <inttypes.h>
+
+// --------------------------------------------------------------------------------
+
+// using namespace std;
 
 
 /* ZCA table stuff */
@@ -17,7 +79,8 @@ typedef unsigned char byte;
  */
 struct zca_header_11_t
 {
-    static const std::size_t magic_sz = 16;
+  // static const std::size_t magic_sz = 16;
+    #define magic_sz 16
 
     uint8_t     magic[magic_sz];// Magic value - ".itt_notify_tab"
     uint16_t    version;        // Major/Minor version number
@@ -32,7 +95,8 @@ const uint16_t ZCA_INVALID_VERSION=0xffff;
 const uint16_t ZCA_1_1_VERSION=0x0101;
 
 // Zero-padded magic value in an itt_notify annotation group
-const char itt_notify_magic[zca_header_11_t::magic_sz] = ".itt_notify_tab";
+// const char itt_notify_magic[zca_header_11_t::magic_sz] = ".itt_notify_tab";
+const char itt_notify_magic[magic_sz] = ".itt_notify_tab";
 
 /*
  * Annotation within a V1.1 table of metadata
@@ -62,7 +126,8 @@ __attribute__((packed));
  */
 struct zca_header_12_t
 {
-    static const std::size_t magic_sz = 16;
+  // static const std::size_t magic_sz = 16;
+  // size_t      magic_sz = 16;
     
     uint8_t     magic[magic_sz];// Magic value - ".itt_notify_tab"
     uint16_t    version;        // Major/Minor version number
@@ -108,4 +173,4 @@ struct ann_data
   */
 };
 
-
+#endif  // _ZCA_TYPES_H_
