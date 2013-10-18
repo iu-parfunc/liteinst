@@ -45,6 +45,10 @@
 
 #ifndef _ZCA_TYPES_H_
 #define _ZCA_TYPES_H_
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 
 // #include <stdio.h>
 // // #include <cstddef> 
@@ -173,4 +177,7 @@ struct ann_data
   */
 };
 
+#ifdef __cplusplus
+}
+#endif
 #endif  // _ZCA_TYPES_H_
