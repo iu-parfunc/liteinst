@@ -1,9 +1,15 @@
 
+/** 
+ * @brief test file descr
+ * @details detailed descr
+ */
+
 #include <stdio.h>
 #include "zca-toggle.h"
 #include "zca-types.h"
 
-int activateProbe(const char* ann, void (*fptr)(const char*, void*)) {
+extern int activateProbe(const probe_t* label, probe_callable_t callback)
+{
   return 0;
 }
 

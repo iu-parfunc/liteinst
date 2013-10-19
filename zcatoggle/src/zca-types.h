@@ -50,21 +50,6 @@ extern "C"
 {
 #endif
 
-// #include <stdio.h>
-// // #include <cstddef> 
-
-// #include <string.h>
-// #include <err.h>
-// #include <fcntl.h>
-// #include <stdlib.h>
-// #include <sysexits.h>
-// #include <unistd.h>
-// // #include <cstdio.h>
-// // #include <stack>
-// // #include <utility>
-// #include <errno.h>
-
-// #include "types.h"
 #include <inttypes.h>
 
 // --------------------------------------------------------------------------------

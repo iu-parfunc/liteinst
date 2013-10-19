@@ -28,19 +28,43 @@ extern "C"
 #endif
 
 
-//! @brief Architure definition of the MUX
-//! @details More details about this mux element.
+  // @brief  @details 
 
+/** A probe-able location in the instruction stream.
+ *
+ *  This is a a datatype representing a point in the instruction
+ *  stream that can have a function call attached via `activateProbe`.
+ */
+typedef struct probe {
+  const char* label;  // the label for this probe point, may be shared by many probe points
+  char* addr;         // instruction address  
+} probe_t;
 
+/** A function that can be called from a `probe_t` site.
+ * 
+ *  A function called from a dynamically inserted probesite call
+ *  receives two arguments: (1) the name or label of the probe, and
+ *  (2) the dynamic argument received at the probe site.  These
+ *  correspond to the two arguments provided to the
+ *  `__notify_intrinsic` itself.  
+ */
+typedef void (*probe_callable_t)(const char* label, void* arg);
 
 /** Inject a function call at a probe point.
- *  Returns the success code.
+ *
+ *  Returns the success code.  Note that multiple consecutive calls to
+ *  `activateProbe` on the *same* probe will result in the new
+ *  callback function atomically replacing the old.
  */
-extern int activateProbe(const char* ann, void (*fptr)(const char*, void*));
+extern int activateProbe(const probe_t* label, probe_callable_t callback);
 
 /** Runs at startup-time and reads the current binary's ELF headers.
  */
 extern void initZCAService() __attribute__((constructor));
+
+
+
+
 
 // TODO: the basic toggling functionality should be separated from the
 // retriev-own-ELF-headers hack.
