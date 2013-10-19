@@ -1,4 +1,6 @@
-### 6-29-13 ###
+
+
+### 6-29-13 Nikhil ###
 
 #### Self-reading binary ####
 Working on getting the program to its binary through fopen(). Was unable to open in r+ (read/write). Also attempted to use ios:out with fstream, but that did not work eiter. Going to copy contents to buffer, modify buffer, and write to a new binary until I can

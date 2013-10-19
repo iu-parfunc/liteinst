@@ -1,0 +1,10 @@
+.#*
+*~
+*.exe
+*.a
+*.so
+*.o
+html/
+latex/
+./example/mainDynamic
+./example/mainStatic
