@@ -452,11 +452,15 @@ void populateHT(const char* progname)
   getcwd(path, 255);
   strcat(path, "/");
   strcat(path, progname);
+ 
+  printf("Reading ELF data from path: %s\n", path);
 
   if(elf_version(EV_CURRENT)==EV_NONE)
     errx(EXIT_FAILURE, "ELF library iinitialization failed: %s", elf_errmsg(-1));
 
-  if((fd = open(path, O_RDONLY, 0))<0)
+  // if((fd = open("/u/rrnewton/zcatoggle/src/hello_notify.exe", O_RDONLY, 0))<0) // TEMP
+   if((fd = open("/nfs/nfs3/home/rrnewton/working_copies/onlineProfiling/onlineProfiling/niknatar_prototype/test5.exe", O_RDONLY, 0))<0) // TEMP
+  // if((fd = open(path, O_RDONLY, 0))<0)
     err(EXIT_FAILURE, "open \"%s\" failed", path);
 
   if((e = elf_begin(fd, ELF_C_READ, NULL))==NULL)
@@ -486,13 +490,20 @@ void populateHT(const char* progname)
       // We can use the section adress as a pointer, since it corresponds to the actual
       // adress where the section is placed in the virtual memory
       struct data_t * section_data = (struct data_t *) shdr->sh_addr;
-
       printf("Yep, got itt_notify... data is at addr %p.  Now to parse it!\n", section_data);
       
       // Cast section data
       zca_header_11_t *table  = (zca_header_11_t*) section_data;
+      printf(" [read-zca] check for magic value: %d %d %d %d \n", 
+	       table->magic[0], table->magic[1], table->magic[2], table->magic[3]);
+      printf(" should be %d %d %d %d\n", '.','i','t','t');
+
       globalZCATable = table;
       row = (zca_row_11_t*) ((byte*) table + sizeof(*table));
+
+      printf(" - First row offset from start of table: %d\n", (long)row - (long)table);
+
+
       const char *str = (const char *) ((byte*) table + table->strings + row->annotation);
       const unsigned char *expr = (const unsigned char *) ((byte*) table + table->exprs + row->expr);      
       unsigned int reg = 200;

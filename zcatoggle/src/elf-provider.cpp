@@ -81,6 +81,8 @@ ann_table* read_zca_probes(const char* path)
 
   scn = NULL;
 
+  dbgprint(" LOADING ELF HEADER FOR FILE %s\n", path);
+
   // Loop over all sections in the ELF object
   while((scn = elf_nextscn(e, scn))!=NULL) {
     // Given a Elf Scn pointer, retrieve the associated section header
@@ -98,27 +100,29 @@ ann_table* read_zca_probes(const char* path)
 
       // We can use the section adress as a pointer, since it corresponds to the actual
       // adress where the section is placed in the virtual memory
-      struct data_t * section_data = (struct data_t *) shdr->sh_addr;
-      out_table = new ann_table();      
-
-      dbgprint("\n [read-zca] got itt_notify... data is at addr %p.  Now to parse it!  Out table %p\n", section_data, out_table);
+      struct data_t * section_data = (struct data_t *) shdr->sh_addr; // This seems bogus!
+      dbgprint("\n [read-zca] got itt_notify... section data is at addr %p, header at %p.\n", section_data, shdr);
 
       // Cast section data
       zca_header_11_t *table  = (zca_header_11_t*) section_data;  
+      dbgprint(" [read-zca] check for magic value at %p: %d %d %d %d \n", 
+	       &(table->magic), table->magic[0], table->magic[1], table->magic[2], table->magic[3]);
+      dbgprint(" should be %d %d %d %d\n", '.','i','t','t');
+
       // Here we skip the header and move on to the actual rows:
       row = (zca_row_11_t*) ((byte*) table + sizeof(*table));
       // const unsigned char *expr = (const unsigned char *) ((byte*) table + table->exprs + row->expr);      
       dbgprint(" [read-zca] found first row at %p, offset %d\n", row, ((long)row - (long)table));
 
-      dbgprint(" [read-zca] check for magic value: %s", table);
-
       const char *str = getAnnotation(table,row);
-      printf("  -> Got the annotation for this row: %s\n", str);
+      dbgprint("  -> Got the annotation for this row: %s\n", str);
 
       // const unsigned char *expr = getExpr(table,row);      
 
       unsigned int reg = 200;
       int32_t offset = 200;
+
+      //      out_table = new ann_table();      
 
       // const char *str = (const char *) ((byte*) table + table->strings + row->annotation);
 
