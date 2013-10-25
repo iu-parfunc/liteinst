@@ -418,13 +418,10 @@ const char* getAnnotation(zca_header_11_t *table, zca_row_11_t *row)
 }
 
 // --------------------------------------------------------------------------------
-// A global variable which stores the executable file name
-const char *__progname;
-
 // This code is taken from:
 // http://stackoverflow.com/questions/12159595/how-to-get-a-pointer-to-an-specific-section-of-a-program-from-within-itself-ma
 
-zca_row_11_t* retrieve_data() {
+zca_row_11_t* retrieve_data(const char* progname) {
   int fd;       // File descriptor for the executable ELF file
   char *section_name, path[256];
   size_t shstrndx;
@@ -437,7 +434,7 @@ zca_row_11_t* retrieve_data() {
   // Create the full path of the executable
   getcwd(path, 255);
   strcat(path, "/");
-  strcat(path, __progname);
+  strcat(path, progname);
 
   if(elf_version(EV_CURRENT)==EV_NONE)
     errx(EXIT_FAILURE, "ELF library iinitialization failed: %s", elf_errmsg(-1));
@@ -518,11 +515,12 @@ zca_row_11_t* retrieve_data() {
 
       cout << "size: " << at.size() << endl;
       cout << "ip: " << (byte*) row->anchor << endl;
-      cout << "ip_ht*: " << at["exited"]->ip << endl;
+      cout << "at[\"entered region\"]->ip: " << at["entered region"]->ip << endl;
       cout << "probespace: " << row->probespace << endl;
-      cout << "ps_ht: " << at["exited"]->probespace << endl;
+      cout << "at[\"entered region\"]->probespace: " << at["entered region"]->probespace
+	   << endl;
       cout << "expr: " << getExpr(table, row) << endl;
-      cout << "expr_ht: " << at["entered region"]->expr << endl;
+      cout << "at[\"entered region\"]->expr: " << at["entered region"]->expr << endl;
       
       // End the loop (if we only need this section)
       break;
@@ -634,10 +632,9 @@ int main(int argc, char *argv[])
   FILE *out = NULL;
   BYTE *fileBuf;
   unsigned long fileSize;
-  __progname = argv[0];
 
   printf("Calling retrieve_data ... \n");
-  zca_row_11_t *row = retrieve_data();
+  zca_row_11_t *row = retrieve_data(argv[0]);
   printf("  Done with retrieve, got row IP %p, probespace %d\n", (void*)row->anchor, row->probespace);
 
   printf("Now to self-modify... first set perms\n");

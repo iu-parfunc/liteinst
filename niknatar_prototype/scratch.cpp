@@ -19,10 +19,10 @@ int main()
   typedef unordered_map<string, foo> map;
   map m1;
   
-  foo bar(1);
+  foo* bar = new foo(1);
   cout << bar.x << endl;
-  m1.insert(map::value_type("bar", bar));
-  cout << m1["bar"].x << endl;
+  //  m1.insert(map::value_type("bar", bar));
+  //  cout << m1["bar"].x << endl;
   
   //  foo* f = &(m1["foo"]);
   //  f->x = 10;
