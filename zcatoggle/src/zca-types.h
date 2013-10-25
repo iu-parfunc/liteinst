@@ -1,4 +1,6 @@
 
+/*                           -*- C language -*-                    */
+
 /** 
  * 
  * @brief Typedefs modeling the structure of the ZCA ELF headers.
@@ -40,7 +42,6 @@
      WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
      POSSIBILITY OF SUCH DAMAGE.
 
- *                           -*- C language -*-
  */
 
 #ifndef _ZCA_TYPES_H_
@@ -176,18 +177,15 @@ struct ann_data
 //     (byte*) row->anchor;
 // }
 
-// inline const unsigned char* getExpr(struct zca_row_11_t* row)
-// {
-//   return
-//     (const unsigned char*) ((byte*) globalZCATable + globalZCATable->exprs + row->expr);
-// }
+inline const unsigned char* getExpr(struct zca_header_11_t* table, struct zca_row_11_t* row)
+{
+  return (const unsigned char*) ((byte*) table + table->exprs + row->expr);
+}
 
-// inline const char* getAnnotation(struct zca_row_11_t *row)
-// {
-//   return
-//     (const char*) ((byte*) globalZCATable + globalZCATable->strings + row->annotation);
-// }
-
+inline const char* getAnnotation(struct zca_header_11_t* table, struct zca_row_11_t *row)
+{
+  return (const char*) ((byte*) table + table->strings + row->annotation);
+}
 
 #ifdef __cplusplus
 }

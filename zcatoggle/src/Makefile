@@ -30,6 +30,13 @@ install: build
 	if ! [ -d $(INSTALLD) ]; then mkdir -p $(INSTALLD); fi	
 	cp $(LIBSOUT) $(INSTALLD)
 
+test: build test.cpp hello_notify.exe elf-provider.o
+	$(CPP) test.cpp libzca-toggle.a $(LIBS) -o test.exe
+	./test.exe
+
+hello_notify.exe: hello_notify.c
+	$(CC) hello_notify.c -o hello_notify.exe
+
 .c.o:
 	$(CC) -fPIC -g -c -Wall -o $@ $<
 .cpp.o:

@@ -1,11 +1,13 @@
 
 
-all: install docs
+default: test
+
+all: install docs test
 
 install:
 	(cd src; $(MAKE) install)
 
-test: install docs 
+test: install 
 	(cd example; $(MAKE))
 
 docs:
