@@ -162,6 +162,33 @@ struct ann_data
   */
 };
 
+// --------------------------------------------------------------------------------
+// Convenience functions for dealing with rows
+
+// inline uint32_t getProbespace(struct zca_row_11_t* row)
+// {
+//   return row->probespace;
+// }
+
+// inline byte* getIP(zca_row_11_t* row)
+// {
+//   return
+//     (byte*) row->anchor;
+// }
+
+// inline const unsigned char* getExpr(struct zca_row_11_t* row)
+// {
+//   return
+//     (const unsigned char*) ((byte*) globalZCATable + globalZCATable->exprs + row->expr);
+// }
+
+// inline const char* getAnnotation(struct zca_row_11_t *row)
+// {
+//   return
+//     (const char*) ((byte*) globalZCATable + globalZCATable->strings + row->annotation);
+// }
+
+
 #ifdef __cplusplus
 }
 #endif

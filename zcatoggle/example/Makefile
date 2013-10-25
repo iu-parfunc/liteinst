@@ -34,3 +34,6 @@ test3:
 	@echo "Test3: LD_PRELOAD method with preexisting binary"
 	@echo "================================================================================"
 	LD_PRELOAD=$(TOP)/build/libzca-toggle.so ls
+
+clean:
+	rm -rf mainDynamic mainStatic
