@@ -151,7 +151,7 @@ void ZCA::zca_table::insert_call (ZCA::ANN ann,
     // one we're looking for
     ADDRINT addr = ANN_Address(ann);
 
-//    fprintf(stderr, "insert_call for %s at %p\n", ANN_Name(ann), addr);
+    fprintf(stderr, "insert_call for %s at %p\n", ANN_Name(ann), addr);
 
     RTN rtn = RTN_FindByAddress(addr);
     if (RTN_Valid(rtn))
@@ -232,8 +232,8 @@ void ZCA::zca_table::load (LEVEL_PINCLIENT::IMG img, void *arg)
     {
         return;
     }
-    //    fprintf(stderr, "\n\n\nFound metadata in %s:\n", IMG_Name(img).c_str());
-    //    PrintMetadata(m);
+    fprintf(stderr, "\n\n\nFound metadata in %s:\n", IMG_Name(img).c_str());
+    PrintMetadata(m);
 
     // Track this image for when the time comes to unload all of the
     // metadata.
@@ -242,8 +242,8 @@ void ZCA::zca_table::load (LEVEL_PINCLIENT::IMG img, void *arg)
     ZCA::zca_table::img_info entry(m, low, high);
     table->md_handles.push_back(entry);
 
-//    fprintf(stderr, "Found metadata in %s, [%p - %p]\n",
-//            IMG_Name(img).c_str(), low, high);
+    fprintf(stderr, "Found metadata in %s, [%p - %p]\n",
+            IMG_Name(img).c_str(), low, high);
 
     // For each annotation in this metadata section, check to see whether
     // the user wants to register a callback.  If so, perform the
