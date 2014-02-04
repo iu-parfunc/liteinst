@@ -110,11 +110,13 @@ ann_table* read_zca_probes(const char* path)
       int i = 0;
       while(1) {
         table = (zca_header_11_t*)ptr;
+        char* str = (char*)table->magic;
         printf(" [read-zca] check (%d) for magic value at loc %p : %d %d %d %d \n", i, table,
-	       table->magic[0], table->magic[1], table->magic[2], table->magic[3]);
-	if (table->magic[0] == '.' && table->magic[1] == 'i' && 
-            table->magic[2] == 't' && table->magic[3] == 't') {
-          printf(" magic number MATCHED!\n");
+	       str[0], str[1], str[2], str[3]);
+	if (!strcmp(str, ".itt_notify_tab")) {
+	  // table->magic[0] == '.' && table->magic[1] == 'i' && 
+	  // table->magic[2] == 't' && table->magic[3] == 't') {
+          printf(" magic number MATCHED 16 bytes!\n");
           break;
         }
         printf(" should be %d %d %d %d\n", '.','i','t','t');
