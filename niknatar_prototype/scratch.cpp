@@ -21,6 +21,7 @@ int main()
   
   foo* bar = new foo(1);
   cout << bar.x << endl;
+  // foo
   //  m1.insert(map::value_type("bar", bar));
   //  cout << m1["bar"].x << endl;
   
