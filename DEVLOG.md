@@ -26,9 +26,8 @@ Working on fixing "undefined reference" compiler error.
 
 
 
-
-7-31-13: Ryan trying various libraries
-=================================================
+[2013.07.31] {Ryan trying various asm/jit libraries}
+----------------------------------------------------
 
 I'm experimenting with libffi, asmjit, jitasm, LuaJit/DynAsm, and Xed.
 Here are the rough outcomes from each:
@@ -60,4 +59,16 @@ Other systems seem to have too much baggage or are overkill:
     specific spot?  I suppose constructing the LLVM IR would be ok for
     the function call stub, but in other places we need specific
     control---inserting a SINGLE direct jump at the probe-ready site.
+
+[2014.02.04] {Back to debugging}
+----------------------------------------
+
+When I last touched in in the Fall, I was running into problems with
+not finding the magic number in the right place in the ZCA table.  Our
+elf header extraction code would work sometimes and sometimes fail,
+and I hadn't gotten to the bottom of it.
+
+
+
+
 
