@@ -37,6 +37,7 @@ using namespace std;
 
 //! A table mapping probe names onto the runtime metadata.
 typedef unordered_map<string, ann_data*> ann_table;
+// FIXME: this needs to be a concurrent data structure ultimately.
 
 // typedef unordered_map<string, pair<zca_row_11_t*, unsigned long*>> ann_table;
 

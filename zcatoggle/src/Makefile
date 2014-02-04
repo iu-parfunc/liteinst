@@ -49,4 +49,4 @@ libzca-toggle.a: $(OBJ)
 	$(AR) rc libzca-toggle.a $(OBJ)
 
 clean:
-	$(RM) -f $(OBJ) $(LIBSOUT) $(INSTALLD)/libzca-toggle.so $(INSTALLD)/libzca-toggle.a 
+	$(RM) -f $(OBJ) $(LIBSOUT) $(INSTALLD)/libzca-toggle.so $(INSTALLD)/libzca-toggle.a hello_notify.exe
