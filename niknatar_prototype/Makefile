@@ -20,15 +20,16 @@ LDPATHS += -L $(ZCADIR)/src/$(BUILDDIR)
 LDLIBS = ./3rdparty/pin-2.12-58423-gcc.4.4.7-linux/intel64/lib/libpin.a -lxed -ldwarf -lelf -ldl -lpthread -lzca
 #LDLIBS = -lpin -lxed -ldwarf ./3rdparty/pin-2.12-58423-gcc.4.4.7-linux/intel64/runtime/libelf.so.0 -ldl -lpthread -lzca
 
-.PHONY: all test test3 test4 test5
+.PHONY: all test test3 test4 test5 test6
 
-all: getpin test test4 test5
+all: getpin test test4 test5 test6
 # test3 disabled ... [2013.10.17] Test3 is not working for me, Pin related error -RRN
 
 test:  test.exe
 test3: test3.exe
 test4: test4.exe
 test5: test5.exe
+test6: test6.exe
 
 test.exe: test.cpp
 	icc test.cpp $(INCLUDES) $(DEFS) -o test.exe
@@ -41,6 +42,9 @@ test4.exe: test4_libelf.cpp
 
 test5.exe: test5.cpp
 	icc -g -IAsmJit-1.0-beta4/ AsmJit-1.0-beta4/AsmJit/*.cpp -O0 -std=c++11 test5.cpp $(INCLUDES) $(DEFS) -lelf -o test5.exe
+	
+test6.exe: test6.cpp
+	icc -g -IAsmJit-1.0-beta4/ AsmJit-1.0-beta4/AsmJit/*.cpp -O0 -std=c++11 test6.cpp $(INCLUDES) $(DEFS) -lelf -o test6.exe
 
 tool:
 	icc test_pin.cpp $(INCLUDES) $(DEFS) $(LDFLAGS) $(LDPATHS) $(LDLIBS) -o tool.so
