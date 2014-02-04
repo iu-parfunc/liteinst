@@ -105,9 +105,11 @@ ann_table* read_zca_probes(const char* path)
       dbgprint("\n [read-zca] got itt_notify... section data is at addr %p, header at %p.\n", section_data, shdr);
 
       // Cast section data
-      zca_header_11_t *table  = (zca_header_11_t*) section_data;  
+      zca_header_11_t* table  = (zca_header_11_t*) section_data;  
+      char* ptr = (char*)table;
       int i = 0;
       while(1) {
+        table = (zca_header_11_t*)ptr;
         printf(" [read-zca] check (%d) for magic value at loc %p : %d %d %d %d \n", i, table,
 	       table->magic[0], table->magic[1], table->magic[2], table->magic[3]);
 	if (table->magic[0] == '.' && table->magic[1] == 'i' && 
@@ -116,7 +118,8 @@ ann_table* read_zca_probes(const char* path)
           break;
         }
         printf(" should be %d %d %d %d\n", '.','i','t','t');
-        table++; i++;
+        ptr++; 
+        i++;
       }
       uint8_t* ver = (uint8_t*) & (table->version);
       printf("Now that we've found the magic number, version num is: %d / %d\n", ver[0], ver[1]);
