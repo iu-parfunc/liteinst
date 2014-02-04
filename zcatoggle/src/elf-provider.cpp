@@ -63,6 +63,7 @@ ann_table* read_zca_probes(const char* path)
   
   Elf *e;           // ELF struct
   Elf_Scn *scn;     // Section index struct
+  Elf_Data *data;     // Section index struct
   Elf64_Shdr *shdr;  // Section struct
 
   ann_table* out_table = NULL;
@@ -99,13 +100,15 @@ ann_table* read_zca_probes(const char* path)
     // If the section is the one we want... (in my case, it is one of the main file sections)
     if(!strcmp(section_name, ".itt_notify_tab")) {
 
+      data = elf_getdata(scn, NULL);
+
       // We can use the section adress as a pointer, since it corresponds to the actual
       // adress where the section is placed in the virtual memory
-      struct data_t * section_data = (struct data_t *) shdr->sh_addr; // This seems bogus!
-      dbgprint("\n [read-zca] got itt_notify... section data is at addr %p, header at %p.\n", section_data, shdr);
+      // struct data_t * section_data = (struct data_t *) shdr->sh_addr; // This seems bogus!
+      dbgprint("\n [read-zca] got itt_notify... section data is at addr %p, header at %p.\n", data, shdr);
 
       // Cast section data
-      zca_header_11_t* table  = (zca_header_11_t*) section_data;  
+      zca_header_11_t* table  = (zca_header_11_t*) data;  
       char* ptr = (char*)table;
       int i = 0;
       while(1) {
