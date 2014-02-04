@@ -489,20 +489,30 @@ void populateHT(const char* progname)
 
       // We can use the section adress as a pointer, since it corresponds to the actual
       // adress where the section is placed in the virtual memory
-      struct data_t * section_data = (struct data_t *) shdr->sh_addr;
-      printf("Yep, got itt_notify... data is at addr %p.  Now to parse it!\n", section_data);
+      // struct data_t * section_data = (struct data_t *) shdr->sh_addr;
+      zca_header_11_t *table  = (zca_header_11_t*) shdr->sh_addr;
+      // printf("Yep, got itt_notify... data is at addr %p.  Now to parse it!\n", section_data);
       
       // Cast section data
-      zca_header_11_t *table  = (zca_header_11_t*) section_data;
-      printf(" [read-zca] check for magic value: %d %d %d %d \n", 
+      // zca_header_11_t *table  = (zca_header_11_t*) section_data;
+      int i = 0;
+      while(1) {
+        printf(" [read-zca] check (%d) for magic value at loc %p : %d %d %d %d \n", i, table,
 	       table->magic[0], table->magic[1], table->magic[2], table->magic[3]);
-      printf(" should be %d %d %d %d\n", '.','i','t','t');
+	if (table->magic[0] == '.' && table->magic[1] == 'i' && 
+            table->magic[2] == 't' && table->magic[3] == 't') {
+          printf(" magic number MATCHED!\n");
+          break;
+        }
+        printf(" should be %d %d %d %d\n", '.','i','t','t');
+        table++; i++;
+      }     
+      printf("Now that we've found the magic number, version num is: %d\n", table->version);
 
       globalZCATable = table;
       row = (zca_row_11_t*) ((byte*) table + sizeof(*table));
 
       printf(" - First row offset from start of table: %d\n", (long)row - (long)table);
-
 
       const char *str = (const char *) ((byte*) table + table->strings + row->annotation);
       const unsigned char *expr = (const unsigned char *) ((byte*) table + table->exprs + row->expr);      

@@ -106,9 +106,20 @@ ann_table* read_zca_probes(const char* path)
 
       // Cast section data
       zca_header_11_t *table  = (zca_header_11_t*) section_data;  
-      dbgprint(" [read-zca] check for magic value at %p: %d %d %d %d \n", 
-	       &(table->magic), table->magic[0], table->magic[1], table->magic[2], table->magic[3]);
-      dbgprint(" should be %d %d %d %d\n", '.','i','t','t');
+      int i = 0;
+      while(1) {
+        printf(" [read-zca] check (%d) for magic value at loc %p : %d %d %d %d \n", i, table,
+	       table->magic[0], table->magic[1], table->magic[2], table->magic[3]);
+	if (table->magic[0] == '.' && table->magic[1] == 'i' && 
+            table->magic[2] == 't' && table->magic[3] == 't') {
+          printf(" magic number MATCHED!\n");
+          break;
+        }
+        printf(" should be %d %d %d %d\n", '.','i','t','t');
+        table++; i++;
+      }
+      uint8_t* ver = (uint8_t*) & (table->version);
+      printf("Now that we've found the magic number, version num is: %d / %d\n", ver[0], ver[1]);
 
       // Here we skip the header and move on to the actual rows:
       row = (zca_row_11_t*) ((byte*) table + sizeof(*table));
