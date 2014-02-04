@@ -108,7 +108,7 @@ ann_table* read_zca_probes(const char* path)
       dbgprint("\n [read-zca] got itt_notify... section data is at addr %p, header at %p.\n", data, shdr);
 
       // Cast section data
-      zca_header_11_t* table  = (zca_header_11_t*) data;  
+      zca_header_11_t* table  = (zca_header_11_t*) data->d_buf;
       char* ptr = (char*)table;
       int i = 0;
       while(1) {
