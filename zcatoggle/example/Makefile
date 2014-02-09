@@ -1,6 +1,7 @@
 TOP=..
+INTEL_LIB=/opt/intel/composer_xe_2013_sp1.1.106/compiler/lib/intel64/
 
-CC = icc 
+CC = icc -g 
 AR = ar
 RM = rm
 
@@ -27,13 +28,13 @@ test2:
 	@echo
 	@echo "Test2: Dynamically linked executable"
 	@echo "================================================================================"
-	LD_LIBRARY_PATH=$(TOP)/build/:$(LD_LIBRARY_PATH) ./mainDynamic
+	LD_LIBRARY_PATH=$(TOP)/build/:$(INTEL_LIB):$(LD_LIBRARY_PATH) ./mainDynamic
 
 test3:
 	@echo
 	@echo "Test3: LD_PRELOAD method with preexisting binary"
 	@echo "================================================================================"
-	LD_PRELOAD=$(TOP)/build/libzca-toggle.so ls
+	LD_LIBRARY_PATH=$(INTEL_LIB):$(LD_LIBRARY_PATH) LD_PRELOAD=$(TOP)/build/libzca-toggle.so /bin/ls
 
 clean:
 	rm -rf mainDynamic mainStatic

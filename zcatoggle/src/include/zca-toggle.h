@@ -27,8 +27,13 @@ extern "C"
 {
 #endif
 
+#include "zca-types.h"
 
-  // @brief  @details 
+extern const char *__progname; // Get the program name before the main. No argv[0] at this stage.
+
+extern ann_data* annotations;
+
+// @brief  @details
 
 /** A probe-able location in the instruction stream.
  *
@@ -57,6 +62,11 @@ typedef void (*probe_callable_t)(const char* label, void* arg);
  *  callback function atomically replacing the old.
  */
 extern int activateProbe(const probe_t* label, probe_callable_t callback);
+
+/** Deactivate a probe.
+ *  Returns the sucess code.
+ */
+extern int deactivateProbe(const probe_t* label);
 
 /** Runs at startup-time and reads the current binary's ELF headers.
  */

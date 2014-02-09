@@ -6,7 +6,7 @@
  * 
  */
 
-#include "zca-types.h"
+#include "elf-provider.h"
 
 #include <stdio.h>
 #include <stdlib.h> // EXIT_FAILURE
@@ -15,6 +15,9 @@
 #include <err.h>     // err
 #include <unistd.h>  // getcwd
 #include <libelf.h>
+
+#include "zca-types.h"
+#include "zca-utils.h"
 
 #include <sys/param.h> // MAXPATHLEN
 #include <string>
@@ -36,10 +39,12 @@
 using namespace std;
 
 //! A table mapping probe names onto the runtime metadata.
-typedef unordered_map<string, ann_data*> ann_table;
+// typedef unordered_map<string, ann_data*> ann_table;
 // FIXME: this needs to be a concurrent data structure ultimately.
 
-// typedef unordered_map<string, pair<zca_row_11_t*, unsigned long*>> ann_table;
+typedef unordered_map<string, pair<zca_row_11_t*, unsigned long*>> ann_table;
+
+// ann_data* annotations;
 
 // ann_table globalAnnTable;
 // zca_header_11_t* globalZCATable;
@@ -54,146 +59,173 @@ typedef unordered_map<string, ann_data*> ann_table;
  * information (section .itt_notify_tab).  It returns a freshly
  * allocated table containing the metadata.
  */
-ann_table* read_zca_probes(const char* path)
+int read_zca_probes(const char* path)
 {
-  int fd;       // File descriptor for the executable ELF file
-  char *section_name;
-  size_t shstrndx;
-  zca_row_11_t* row;
-  
-  Elf *e;           // ELF struct
-  Elf_Scn *scn;     // Section index struct
-  Elf_Data *data;     // Section index struct
-  Elf64_Shdr *shdr;  // Section struct
+	int fd;       // File descriptor for the executable ELF file
+	char *section_name;
+	size_t shstrndx;
+	zca_row_11_t* rows;
 
-  ann_table* out_table = NULL;
+	int probe_count; // Number of probes discovered
 
-  if(elf_version(EV_CURRENT)==EV_NONE)
-    errx(EXIT_FAILURE, "ELF library iinitialization failed: %s", elf_errmsg(-1));
+	Elf *e;           // ELF struct
+	Elf_Scn *scn;     // Section index struct
+	Elf_Data *data;     // Section index struct
+	Elf64_Shdr *shdr;  // Section strkkkuct
 
-  if((fd = open(path, O_RDONLY, 0))<0)
-    err(EXIT_FAILURE, "open file \"%s\" failed", path);
+	if(elf_version(EV_CURRENT)==EV_NONE)
+		errx(EXIT_FAILURE, "ELF library iinitialization failed: %s", elf_errmsg(-1));
 
-  if((e = elf_begin(fd, ELF_C_READ, NULL))==NULL)
-    errx(EXIT_FAILURE, "elf_begin() failed: %s.", elf_errmsg(-1));
+	if((fd = open(path, O_RDONLY, 0))<0)
+		err(EXIT_FAILURE, "open file \"%s\" failed", path);
 
-  // Retrieve the section index of the ELF section containing the string table of section names
-  if(elf_getshdrstrndx(e, &shstrndx)!=0)
-    errx(EXIT_FAILURE, "elf_getshdrstrndx() failed: %s.", elf_errmsg(-1));
+	if((e = elf_begin(fd, ELF_C_READ, NULL))==NULL)
+		errx(EXIT_FAILURE, "elf_begin() failed: %s.", elf_errmsg(-1));
 
-  scn = NULL;
+	// Retrieve the section index of the ELF section containing the string table of section names
+	if(elf_getshdrstrndx(e, &shstrndx)!=0)
+		errx(EXIT_FAILURE, "elf_getshdrstrndx() failed: %s.", elf_errmsg(-1));
 
-  dbgprint(" LOADING ELF HEADER FOR FILE %s\n", path);
+	scn = NULL;
 
-  // Loop over all sections in the ELF object
-  while((scn = elf_nextscn(e, scn))!=NULL) {
-    // Given a Elf Scn pointer, retrieve the associated section header
-    if((shdr = elf64_getshdr(scn))!=shdr)
-      errx(EXIT_FAILURE, "getshdr() failed: %s.", elf_errmsg(-1));
+	dbgprint(" LOADING ELF HEADER FOR FILE %s\n", path);
 
-    // Retrieve the name of the section name
-    if((section_name = elf_strptr(e, shstrndx, shdr->sh_name))==NULL)
-      errx(EXIT_FAILURE, "elf_strptr() failed: %s.", elf_errmsg(-1));
+	// Loop over all sections in the ELF object
+	while((scn = elf_nextscn(e, scn))!=NULL) {
+		// Given a Elf Scn pointer, retrieve the associated section header
+		if((shdr = elf64_getshdr(scn))!=shdr)
+			errx(EXIT_FAILURE, "getshdr() failed: %s.", elf_errmsg(-1));
 
-    dbgprint("(section %s) ", section_name);
+		// Retrieve the name of the section name
+		if((section_name = elf_strptr(e, shstrndx, shdr->sh_name))==NULL)
+			errx(EXIT_FAILURE, "elf_strptr() failed: %s.", elf_errmsg(-1));
 
-    // If the section is the one we want... (in my case, it is one of the main file sections)
-    if(!strcmp(section_name, ".itt_notify_tab")) {
+		dbgprint("(section %s) ", section_name);
 
-      data = elf_getdata(scn, NULL);
+		// If the section is the one we want... (in my case, it is one of the main file sections)
+		if(!strcmp(section_name, ".itt_notify_tab")) {
 
-      // We can use the section adress as a pointer, since it corresponds to the actual
-      // adress where the section is placed in the virtual memory
-      // struct data_t * section_data = (struct data_t *) shdr->sh_addr; // This seems bogus!
-      dbgprint("\n [read-zca] got itt_notify... section data is at addr %p, header at %p.\n", data, shdr);
+			data = elf_getdata(scn, NULL);
 
-      // Cast section data
-      zca_header_11_t* table  = (zca_header_11_t*) data->d_buf;
-      char* ptr = (char*)table;
-      int i = 0;
-      while(1) {
-        table = (zca_header_11_t*)ptr;
-        char* str = (char*)table->magic;
-        printf(" [read-zca] check (%d) for magic value at loc %p : %d %d %d %d \n", i, table,
-	       str[0], str[1], str[2], str[3]);
-	if (!strcmp(str, ".itt_notify_tab")) {
-	  // table->magic[0] == '.' && table->magic[1] == 'i' && 
-	  // table->magic[2] == 't' && table->magic[3] == 't') {
-          printf(" magic number MATCHED 16 bytes!\n");
-          break;
-        }
-        printf(" should be %d %d %d %d\n", '.','i','t','t');
-        ptr++; 
-        i++;
-      }
-      uint8_t* ver = (uint8_t*) & (table->version);
-      printf("Now that we've found the magic number, version num is: %d / %d\n", ver[0], ver[1]);
+			// We can use the section adress as a pointer, since it corresponds to the actual
+			// adress where the section is placed in the virtual memory
+			// struct data_t * section_data = (struct data_t *) shdr->sh_addr; // This seems bogus!
+			dbgprint("\n [read-zca] got itt_notify... section data is at addr %p, header at %p.\n", data, shdr);
 
-      // Here we skip the header and move on to the actual rows:
-      row = (zca_row_11_t*) ((byte*) table + sizeof(*table));
-      // const unsigned char *expr = (const unsigned char *) ((byte*) table + table->exprs + row->expr);      
-      dbgprint(" [read-zca] found first row at %p, offset %d\n", row, ((long)row - (long)table));
+			// Cast section data
+			zca_header_11_t* header  = (zca_header_11_t*) data->d_buf;
+			char* ptr = (char*)header;
+			int i = 0;
+			while(1) {
+				header = (zca_header_11_t*)ptr;
+				char* str = (char*)header->magic;
+				printf(" [read-zca] check (%d) for magic value at loc %p : %d %d %d %d \n", i, header,
+						str[0], str[1], str[2], str[3]);
+				if (!strcmp(str, ".itt_notify_tab")) {
+					// table->magic[0] == '.' && table->magic[1] == 'i' &&
+					// table->magic[2] == 't' && table->magic[3] == 't') {
+					printf(" magic number MATCHED 16 bytes!\n");
+					break;
+				}
+				printf(" should be %d %d %d %d\n", '.','i','t','t');
+				ptr++;
+				i++;
+			}
+			uint8_t* ver = (uint8_t*) & (header->version);
+			printf("Now that we've found the magic number, version num is: %d / %d\n", ver[0], ver[1]);
 
-      const char *str = getAnnotation(table,row);
-      dbgprint("  -> Got the annotation for this row: %s\n", str);
+			// Here we skip the header and move on to the actual rows:
+			rows = (zca_row_11_t*) ((byte*) header + sizeof(*header));
+			// const unsigned char *expr = (const unsigned char *) ((byte*) table + table->exprs + row->expr);
+			dbgprint(" [read-zca] found first row at %p, offset %lu\n", rows, ((long)rows - (long)header));
 
-      // const unsigned char *expr = getExpr(table,row);      
+			const char *str = getAnnotation(header,rows);
+			dbgprint("  -> Got the annotation for this row: %s\n", str);
 
-      unsigned int reg = 200;
-      int32_t offset = 200;
+			// const unsigned char *expr = getExpr(table,row);
 
-      //      out_table = new ann_table();      
+			unsigned int reg = 200;
+			int32_t offset = 200;
 
-      // const char *str = (const char *) ((byte*) table + table->strings + row->annotation);
+			//      out_table = new ann_table();
+
+			// const char *str = (const char *) ((byte*) table + table->strings + row->annotation);
 
 
-  //     // Put tag parameter regester and offset data into &reg and &offset
-  //     dwarf_expr_to_pin(expr, &reg, &offset);
-      
-      for (int i = 0; i < table->entry_count; i++)
-  	{
-  	  cout << getAnnotation(table, row) << endl;
-	  /*
+			//     // Put tag parameter regester and offset data into &reg and &offset
+			//     dwarf_expr_to_pin(expr, &reg, &offset);
+
+			annotations = (ann_data*)malloc(sizeof(ann_data) * (header->entry_count));
+			probe_count = header->entry_count;
+			printf("\n\nEntry count : %d\n", header->entry_count);
+			printf("Annotation table resides at : %p\n", annotations);
+			for (int i = 0; i < header->entry_count; i++)
+			{
+				ann_data* annotation = &annotations[i];
+				zca_row_11_t* row = (zca_row_11_t*)((byte*)rows + sizeof(*row) * i);
+
+				printf ("Row[%d] address is : %p\n", i, row);
+
+				annotation->ip = row->anchor;
+				annotation->probespace = row->probespace;
+
+				if (i%2 == 0) {
+				    annotation->fun = &print_fn;
+				} else {
+					annotation->fun = &print_fn2;
+				}
+				annotation->expr = getAnnotation(header, row);
+
+				//probe_count++;
+
+				printf ("\n------------ Annotation [%d] --------------\n", i);
+				printf ("annotation-ip : %p\n", (unsigned char*)annotation->ip);
+				printf ("annotation-probespace : %d\n", annotation->probespace);
+				printf ("annotation-func : %p \n", (unsigned char*)annotation->fun);
+				printf ("annotation-expr : %s \n\n", annotation->expr);
+
+				/*
   	  dbgprint("%p\n", getIP(row));
   	  //	  ann_data ad = ann_data(NULL, NULL, getIP(row), getProbespace(row), getExpr(table, row));
           const char* str = getAnnotation(row);
-	  
+
   	  globalAnnTable.insert(ann_table::value_type(string(str), pair<zca_row_11_t*, unsigned long*>(row, nullptr)));
   	  // Move to next row
   	  row = (zca_row_11_t*) ((byte*) row + sizeof(*row));
-	  */
-  	}
-      row = (zca_row_11_t*) ((byte*) table + sizeof(*table));
+				 */
+			}
 
-  //     /*
-  //     cout << "  reg/offset: " << reg << ", " << offset << endl;
-  //     cout << "  table " << table << ", row " << row << ", row byteoffset " << (byte*) row - (byte*) table << ", table_size "
-  //     	   << sizeof(*table) << endl;
-  //     cout << "  row "<< row << ": label \"" << str << "\", str offset " << (byte*) str - (byte*) table << ", strings "
-  // 	   << table->strings << ", annotation " << row->annotation 
-  //          << ", probespace " << row->probespace
-  //          << ", IP " << (void*)(row->anchor)
-  //          << endl;
-      
-  //     ann_data* tstann = globalAnnTable["probe1"];
-  //     dbgprint("Populating table, annotation 'probe1': struct is at addr %p, reading IP %p (from %p)\n", 
-  // 	     tstann, tstann->ip, &(tstann->ip));
+			//     /*
+			//     cout << "  reg/offset: " << reg << ", " << offset << endl;
+			//     cout << "  table " << table << ", row " << row << ", row byteoffset " << (byte*) row - (byte*) table << ", table_size "
+			//     	   << sizeof(*table) << endl;
+			//     cout << "  row "<< row << ": label \"" << str << "\", str offset " << (byte*) str - (byte*) table << ", strings "
+			// 	   << table->strings << ", annotation " << row->annotation
+			//          << ", probespace " << row->probespace
+			//          << ", IP " << (void*)(row->anchor)
+			//          << endl;
 
-  //     cout << "probespace: " << globalAnnTable["probe1"]->probespace << endl;
-  //     cout << "expr: " << getExpr(table, row) << endl;
-  //     */
+			//     ann_data* tstann = globalAnnTable["probe1"];
+			//     dbgprint("Populating table, annotation 'probe1': struct is at addr %p, reading IP %p (from %p)\n",
+			// 	     tstann, tstann->ip, &(tstann->ip));
 
-  //     cout << "this is location of the zca row for 'probe1' obtained from the HT during populateHT(): " << globalAnnTable["probe1"].first << endl;
+			//     cout << "probespace: " << globalAnnTable["probe1"]->probespace << endl;
+			//     cout << "expr: " << getExpr(table, row) << endl;
+			//     */
 
-      // End the loop (if we only need this section)
-      break;
-    }
-  }
+			//     cout << "this is location of the zca row for 'probe1' obtained from the HT during populateHT(): " << globalAnnTable["probe1"].first << endl;
 
-  elf_end(e);
-  close(fd);
-  dbgprint("\n [read-zca] Returning out table %p\n", out_table);
-  return out_table;
+			// End the loop (if we only need this section)
+			break;
+		}
+	}
+
+	elf_end(e);
+	close(fd);
+
+	return probe_count;
+	// dbgprint("\n [read-zca] Returning out table %p\n", out_table);
+	// return out_table;
 }
 // ^^ This code is taken from:
 // http://stackoverflow.com/questions/12159595/how-to-get-a-pointer-to-an-specific-section-of-a-program-from-within-itself-ma
@@ -206,46 +238,22 @@ ann_table* read_zca_probes(const char* path)
  * read its ELF headers, looking for a compiler-inserted section
  * containing a ZCA table.
  */
-void read_self_zca_probes()
+int read_self_zca_probes()
 {
-  const char* progname;
 
-  string path();
-  
-  // char path[512];
-  // // Create the full path of the executable
-  // getcwd(path, 255);
-  // strcat(path, "/");
-  // strcat(path, progname);
+	char path[MAXPATHLEN];
+	get_working_path(path);
+	return read_zca_probes(path);
+
 }
 
 /** Return the current working path or an empty string upon failure.
  *
  */
-std::string get_working_path()
+void get_working_path(char* buf)
 {
-   char temp[MAXPATHLEN];
-   return ( getcwd(temp, MAXPATHLEN) ? std::string( temp ) : std::string("") );
+	getcwd(buf, MAXPATHLEN);
+	strcat(buf, "/");
+	strcat(buf, __progname);
+	// return ( getcwd(temp, MAXPATHLEN) ? std::string( temp ) : std::string("") );
 }
-
-// int main(void) 
-// { 
-//   char buf[80]; 
-//   FILE *fp; 
-//   sprintf(buf, "/proc/%d/cmdline", getpid()); 
-//   if (NULL == (fp = fopen(buf, "r"))) { 
-//     fdbgprint(stderr, "Cannot open file %s\n", buf); 
-//     exit(EXIT_FAILURE); 
-//   } 
-//   while (fread(buf, 1, 1, fp)) { 
-//     if (*buf < 0x20) { 
-//       putchar(' '); 
-//     } else { 
-//       dbgprint("%c", *buf); 
-//     } 
-//   } 
-//   putchar('\n'); 
-//   exit(EXIT_SUCCESS); 
-// } 
-// From http://linux.derkeiler.com/Newsgroups/comp.os.linux.development.system/2005-07/0149.html
-
