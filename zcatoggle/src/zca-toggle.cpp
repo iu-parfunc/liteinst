@@ -12,8 +12,8 @@
 #include "zca-types.h"
 #include <sys/mman.h>
 
-#include <AsmJit/AsmJit.h>
-#include "zca-utils.h"
+#include "AsmJit/AsmJit.h"
+// #include "zca-utils.h"
 #include <errno.h>
 
 ann_data* annotations;
@@ -34,9 +34,9 @@ int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_fn
 
     // Push all volatile registers:
     printf("Before..\n");
-    a.push(eax); a.push(ecx);  a.push(edx);
+    a.push(rax); a.push(rcx);  a.push(rdx);
     printf("After..\n");
-    //a.push(r8); a.push(r9); a.push(r10); a.push(r11);
+    a.push(r8); a.push(r9); a.push(r10); a.push(r11);
     // a.mov (rax, imm ((intptr_t)(void*) &toggle_bitmap));
     a.mov (rsi, imm((sysint_t)0));
     //a.lea(rax, toggle_bitmap, 0));
@@ -74,23 +74,14 @@ int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_fn
     printf("\n");
     return (codesz+ PROBESIZE + sz2);
 }
-// Probe function to test
-void print_fn() {
-	printf("[Successful] We are the borg");
-
-}
-
-void print_fn2() {
-	printf ("[Successful] May the Force be with you");
-}
 
 void setupStubs() {
 
 	// Retrieve annotation data
 	// int dummy = 1092;
 	int probe_count=read_self_zca_probes();
-	//probe_count = 1092;
-	//printf ("Probe count returned by read_self_zca_probes : %d", probe_count);
+	// probe_count = 1092;
+	printf ("Probe count returned by read_self_zca_probes : %d\n", probe_count);
 
 	// Calculate memory requirement and allocate memory for the stubs
 	//------------------------------------------------------------
@@ -99,7 +90,7 @@ void setupStubs() {
 	unsigned long* base = (unsigned long*)0x01230000;// TODO : Figure out how to make sure this memory island is
 	                                                 //        reachable with short jmp without hard coding addresses
 	printf("Base address is : %p\n\n", base);
-	base = (unsigned long*)mmap(base, 4096, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED | MAP_ANONYMOUS, -1,0);
+	base = (unsigned long*)mmap(base, 4096, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED| MAP_ANONYMOUS, -1,0);
 	if (base == MAP_FAILED) {
 		int err = errno;
 		printf("Got error on mmap: %s\n", strerror(err));

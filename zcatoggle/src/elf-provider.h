@@ -60,4 +60,8 @@ int read_self_zca_probes();
  */
 void get_working_path(char* buf);
 
+void print_fn();
+
+void print_fn2();
+
 #endif // _ELF_PROVIDER_H_

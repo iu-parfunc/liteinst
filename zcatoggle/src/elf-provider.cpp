@@ -17,7 +17,7 @@
 #include <libelf.h>
 
 #include "zca-types.h"
-#include "zca-utils.h"
+// #include "zca-utils.h"
 
 #include <sys/param.h> // MAXPATHLEN
 #include <string>
@@ -256,4 +256,15 @@ void get_working_path(char* buf)
 	strcat(buf, "/");
 	strcat(buf, __progname);
 	// return ( getcwd(temp, MAXPATHLEN) ? std::string( temp ) : std::string("") );
+}
+
+//* Temporary functions to test
+// Probe function to test
+void print_fn() {
+	printf("[Successful] We are the borg");
+
+}
+
+void print_fn2() {
+	printf ("[Successful] May the Force be with you");
 }

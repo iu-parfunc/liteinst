@@ -6,8 +6,8 @@ LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 # CPP = g++ -std=c++11 $(ARGS)
 # CC  = clang $(ARGS)
 # CPP = clang $(ARGS)
-CC  = icc -O0 -std=c++11 $(ARGS) $(DEFS) $(LDFLAGS)
-CPP = icpc -std=c++11 $(ARGS) $(DEFS) $(LDFLAGS)
+CC  = icc $(ARGS) 
+CPP = icpc -std=c++11 $(ARGS) 
 AR = ar
 RM = rm
 
@@ -44,7 +44,7 @@ hello_notify.exe: hello_notify.c
 	$(CC) hello_notify.c -o hello_notify.exe
 
 .cpp.o:
-	$(CC) -fPIC -c -Wall -o $@ $<
+	$(CPP) -fPIC -c -Wall -o $@ $<
 ../3rdparty/AsmJit/.cpp.o:
 	$(CC) -fPIC -c -Wall -o $@ $<
 .c.o:
@@ -55,6 +55,9 @@ libzca-toggle.so: $(OBJ) $(DEPS)
 
 libzca-toggle.a: $(OBJ) $(DEPS) 
 	$(AR) rc libzca-toggle.a $(OBJ) $(DEPS)
+
+# test6: test6.cpp
+# 	icc -g -I../3rdparty/ ../3rdparty/AsmJit/*.cpp -O0 -std=c++11 test6.cpp -lelf -o test6.exe
 
 clean:
 	$(RM) -f $(OBJ) $(DEPS) $(LIBSOUT) $(INSTALLD)/libzca-toggle.so $(INSTALLD)/libzca-toggle.a hello_notify.exe
