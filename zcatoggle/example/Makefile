@@ -15,7 +15,7 @@ mainDynamic: $(TOP)/build/libzca-toggle.so main.c
 	$(CC) $(CCARGS) main.c $(TOP)/build/libzca-toggle.so -o mainDynamic
 
 mainStatic: $(TOP)/build/libzca-toggle.a main.c
-	$(CC) $(CCARGS) main.c $(TOP)/build/libzca-toggle.a -o mainStatic
+	$(CC) -lelf -DSTATIC_MODE $(CCARGS) main.c $(TOP)/build/libzca-toggle.a -o mainStatic
 
 # Linux specific:
 test: test1 test2 test3

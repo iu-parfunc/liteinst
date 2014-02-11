@@ -50,7 +50,11 @@ hello_notify.exe: hello_notify.c
 .c.o:
 	$(CC) -fPIC -c -Wall -o $@ $<
 
-libzca-toggle.so: $(OBJ) $(DEPS)
+# TEMP: trying ONE big call to ICC:
+# libzca-toggle.so: $(CODE) $(DEPS0) 
+# 	$(CC) $(LIBS) -fPIC -std=c++11 -shared -Wl,-soname,libzca-toggle.so -Wl,-init,initZCAService -o libzca-toggle.so $(CODE) $(DEPS0) -lc
+
+libzca-toggle.so: $(OBJ) $(DEPS) 
 	$(CC) $(LIBS) -shared -Wl,-soname,libzca-toggle.so -Wl,-init,initZCAService -o libzca-toggle.so $(OBJ) $(DEPS) -lc
 
 libzca-toggle.a: $(OBJ) $(DEPS) 
