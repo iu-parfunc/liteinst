@@ -152,6 +152,9 @@ int deactivateProbe(const probe_t* label) {
 
 
 /* This function is called automatically when the library is loaded */
+// __attribute__((constructor)) 
+// FIXME: trying to get this attribute((constructor)) business to work even in a statically linked library.
+// I think it actually only works for shared libraries.
 void initZCAService() {
 	/* Read all annotations here and setup stubs. How best to do it (sync or async) needs to be emperically determined */
 	setupStubs();

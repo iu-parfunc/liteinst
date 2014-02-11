@@ -21,7 +21,7 @@ mainStatic: $(TOP)/build/libzca-toggle.a main.c
 test: test1 test2 test3
 test1:
 	@echo
-	@echo "Test1: Static executable"
+	@echo "Test1: Static executable (won't be able to run before main())"
 	@echo "================================================================================"
 	./mainStatic
 test2:
