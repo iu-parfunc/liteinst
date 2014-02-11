@@ -33,23 +33,12 @@ int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_fn
     a2.setLogger(&logger);
 
     // Push all volatile registers:
-    printf("Before..\n");
-    a.push(rax); a.push(rcx);  a.push(rdx);
-    printf("After..\n");
+    a.push(rax); a.push(rcx); a.push(rdx);
     a.push(r8); a.push(r9); a.push(r10); a.push(r11);
-    // a.mov (rax, imm ((intptr_t)(void*) &toggle_bitmap));
-    a.mov (rsi, imm((sysint_t)0));
-    //a.lea(rax, toggle_bitmap, 0));
-
-    Label reloc = a.newLabel();
-    a.cmp(byte_ptr(rax, rsi, 0, 0), imm((int)0));
-    a.jne(reloc);
     a.call(imm((sysint_t)target_fn));
     // Restore all volatile registers:
     a.pop(r11); a.pop(r10); a.pop(r9); a.pop(r8);
     a.pop(rdx); a.pop(rcx); a.pop(rax);
-
-    a.bind(reloc);
 
     int codesz = a.getCodeSize();
     // This works just as well, don't need the function_cast magic:
@@ -65,8 +54,8 @@ int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_fn
     a2.relocCode(addr + codesz + PROBESIZE);
 
     // TEMP: Fill with NOOPS:
-//    for(int i=0; i<1000; i++)
-//      addr[codesz + PROBESIZE + sz2 + i] = 0x90;
+    for(int i=0; i<1000; i++)
+      addr[codesz + PROBESIZE + sz2 + i] = 0x90;
 
     printf("  Size of return jmp %d, total size %d\n", sz2, codesz + PROBESIZE + sz2);
     for(int i=0; i<codesz + PROBESIZE + sz2; i++)

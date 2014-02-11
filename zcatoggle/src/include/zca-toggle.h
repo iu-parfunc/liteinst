@@ -70,11 +70,7 @@ extern int deactivateProbe(const probe_t* label);
 
 /** Runs at startup-time and reads the current binary's ELF headers.
  */
-extern void initZCAService() __attribute__((constructor));
-
-
-
-
+extern void initZCAService(); //__attribute__((constructor));
 
 // TODO: the basic toggling functionality should be separated from the
 // retriev-own-ELF-headers hack.

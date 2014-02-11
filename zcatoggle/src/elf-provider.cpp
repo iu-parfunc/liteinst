@@ -179,7 +179,7 @@ int read_zca_probes(const char* path)
 				//probe_count++;
 
 				printf ("\n------------ Annotation [%d] --------------\n", i);
-				printf ("annotation-ip : %p\n", (unsigned char*)annotation->ip);
+				printf ("annotation-ip : %lu\n", (unsigned char*)annotation->ip);
 				printf ("annotation-probespace : %d\n", annotation->probespace);
 				printf ("annotation-func : %p \n", (unsigned char*)annotation->fun);
 				printf ("annotation-expr : %s \n\n", annotation->expr);
