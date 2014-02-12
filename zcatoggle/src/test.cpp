@@ -5,7 +5,7 @@
 #include <sys/mman.h>
 #include <errno.h>
 
-void __attribute__ ((constructor)) premain()
+void __attribute__ ((constructor(10))) premain()
 {
 	initZCAService();
 }
@@ -18,7 +18,7 @@ int main () {
   __notify_intrinsic((void*)"notify01",(void*)99);
   // int probes = read_self_zca_probes();
   // printf("***** Probe count : %d\n", probes);
-  __notify_intrinsic((void*)"notify01",(void*)99);
+  __notify_intrinsic((void*)"notify01",(void*)100);
 
   printf("[test] Done reading probes!\n");
 }
