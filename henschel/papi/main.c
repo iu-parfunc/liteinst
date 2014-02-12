@@ -4,6 +4,7 @@
 #include "papi.h"
 
 int test(int i) {
+//__notify_intrinsic((void*)"ENTER int myEmptyFunc() C", (void *)1);
     return i+1;
 }
 
