@@ -50,7 +50,7 @@ int gen_stub_code_1(unsigned char* addr, unsigned char* probe_loc, void* target_
 
     // Copy over the displaced probe bytes:
     for(int i=0; i<PROBESIZE; i++)
-      addr[codesz + i] = 0xEE;
+      addr[codesz + i] = probe_loc[i];
 
     // Next generate the jump back home:
     a2.jmp(imm((sysint_t)(void*)(probe_loc + PROBESIZE)));
@@ -75,12 +75,12 @@ int gen_stub_code_1(unsigned char* addr, unsigned char* probe_loc, void* target_
 }*/
 
 void print_fn() {
-	printf("[Successful] We are the borg");
+	printf("[Successful] We are the borg\n");
 
 }
 
 void print_fn2() {
-	printf ("[Successful] May the Force be with you");
+	printf ("[Successful] May the Force be with you\n");
 }
 
 int read_zca_probes(const char* path)
@@ -296,11 +296,11 @@ int main () {
   int x=2;
   // printf("[test] Simple program to read the ELF table of hello_notify.exe\n");
   // read_zca_probes("hello_notify.exe");
-  __notify_intrinsic((void*)"notify01",(void*)99);
+  __notify_intrinsic((void*)"notify01",(void*)&x);
   printf("Print something..\n");
   // int probes = read_self_zca_probes();
   // printf("***** Probe count : %d\n", probes);
-   __notify_intrinsic((void*)"notify01",(void*)100);
+  __notify_intrinsic((void*)"notify01",(void*)&x);
 
   printf("[test] Done reading probes!\n");
 }

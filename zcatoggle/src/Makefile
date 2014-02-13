@@ -11,6 +11,7 @@ CC  = icc $(ARGS)
 CPP = icpc -std=c++11 $(ARGS) 
 AR = ar
 RM = rm
+OPTS=-DLOG_LEVEL=2 -DPROFILE=1 # -DON
 
 INSTALLD=../build
 
@@ -38,18 +39,24 @@ install: build
 	cp $(LIBSOUT) $(INSTALLD)
 
 test: build test.cpp hello_notify.exe elf-provider.o
-	$(CPP) test.cpp libzca-toggle.a $(LIBS) -o test.exe
+	$(CPP) $(OPTS)  test.cpp libzca-toggle.a $(LIBS) -o test.exe
 	./test.exe
+
+test_prof_off: build test.cpp elf-provider.o
+	$(CPP) -DLOG_LEVEL=2 -DPROFILE=0 test.cpp libzca-toggle.a $(LIBS) -o app_prof_off.exe
+
+test_prof_on: build test.cpp elf-provider.o
+	$(CPP) -DLOG_LEVEL=2 -DPROFILE=1 test.cpp libzca-toggle.a $(LIBS) -o app_prof_on.exe
 
 hello_notify.exe: hello_notify.c
 	$(CC) hello_notify.c -o hello_notify.exe
 
 .cpp.o:
-	$(CPP) -fPIC -c -Wall -o $@ $<
+	$(CPP) $(OPTS) -fPIC -c -Wall -o $@ $<
 ../3rdparty/AsmJit/.cpp.o:
-	$(CC) -fPIC -c -Wall -o $@ $<
+	$(CC) $(OPTS) -fPIC -c -Wall -o $@ $<
 .c.o:
-	$(CC) -fPIC -c -Wall -o $@ $<
+	$(CC) $(OPTS) -fPIC -c -Wall -o $@ $<
 
 # TEMP: trying ONE big call to ICC:
 # libzca-toggle.so: $(CODE) $(DEPS0) 

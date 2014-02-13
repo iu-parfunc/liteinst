@@ -16,6 +16,7 @@
 #include <unistd.h>  // getcwd
 #include <libelf.h>
 
+#include "logger.h"   // LOG_DEBUG
 #include "zca-types.h"
 // #include "zca-utils.h"
 
@@ -88,7 +89,7 @@ int read_zca_probes(const char* path)
 
 	scn = NULL;
 
-	dbgprint(" LOADING ELF HEADER FOR FILE %s\n", path);
+	LOG_DEBUG(" *****From logger.h LOADING ELF HEADER FOR FILE %s\n", path);
 
 	// Loop over all sections in the ELF object
 	while((scn = elf_nextscn(e, scn))!=NULL) {
@@ -100,7 +101,7 @@ int read_zca_probes(const char* path)
 		if((section_name = elf_strptr(e, shstrndx, shdr->sh_name))==NULL)
 			errx(EXIT_FAILURE, "elf_strptr() failed: %s.", elf_errmsg(-1));
 
-		dbgprint("(section %s) ", section_name);
+		LOG_DEBUG("(section %s) ", section_name);
 
 		// If the section is the one we want... (in my case, it is one of the main file sections)
 		if(!strcmp(section_name, ".itt_notify_tab")) {
@@ -110,7 +111,7 @@ int read_zca_probes(const char* path)
 			// We can use the section adress as a pointer, since it corresponds to the actual
 			// adress where the section is placed in the virtual memory
 			// struct data_t * section_data = (struct data_t *) shdr->sh_addr; // This seems bogus!
-			dbgprint("\n [read-zca] got itt_notify... section data is at addr %p, header at %p.\n", data, shdr);
+			LOG_DEBUG("\n [read-zca] got itt_notify... section data is at addr %p, header at %p.\n", data, shdr);
 
 			// Cast section data
 			zca_header_11_t* header  = (zca_header_11_t*) data->d_buf;
@@ -119,52 +120,42 @@ int read_zca_probes(const char* path)
 			while(1) {
 				header = (zca_header_11_t*)ptr;
 				char* str = (char*)header->magic;
-				printf(" [read-zca] check (%d) for magic value at loc %p : %d %d %d %d \n", i, header,
+
+				LOG_DEBUG(" [read-zca] check (%d) for magic value at loc %p : %d %d %d %d \n", i, header,
 						str[0], str[1], str[2], str[3]);
 				if (!strcmp(str, ".itt_notify_tab")) {
 					// table->magic[0] == '.' && table->magic[1] == 'i' &&
 					// table->magic[2] == 't' && table->magic[3] == 't') {
-					printf(" magic number MATCHED 16 bytes!\n");
+
+					LOG_DEBUG(" magic number MATCHED 16 bytes!\n");
 					break;
 				}
-				printf(" should be %d %d %d %d\n", '.','i','t','t');
+
+				LOG_DEBUG(" should be %d %d %d %d\n", '.','i','t','t');
 				ptr++;
 				i++;
 			}
 			uint8_t* ver = (uint8_t*) & (header->version);
-			printf("Now that we've found the magic number, version num is: %d / %d\n", ver[0], ver[1]);
+
+			LOG_DEBUG("Now that we've found the magic number, version num is: %d / %d\n", ver[0], ver[1]);
 
 			// Here we skip the header and move on to the actual rows:
 			rows = (zca_row_11_t*) ((byte*) header + sizeof(*header));
-			// const unsigned char *expr = (const unsigned char *) ((byte*) table + table->exprs + row->expr);
-			dbgprint(" [read-zca] found first row at %p, offset %lu\n", rows, ((long)rows - (long)header));
 
-			const char *str = getAnnotation(header,rows);
-			dbgprint("  -> Got the annotation for this row: %s\n", str);
+			LOG_DEBUG(" [read-zca] found first row at %p, offset %lu\n", rows, ((long)rows - (long)header));
 
-			// const unsigned char *expr = getExpr(table,row);
-
-			unsigned int reg = 200;
-			int32_t offset = 200;
-
-			//      out_table = new ann_table();
-
-			// const char *str = (const char *) ((byte*) table + table->strings + row->annotation);
-
-
-			//     // Put tag parameter regester and offset data into &reg and &offset
-			//     dwarf_expr_to_pin(expr, &reg, &offset);
-
+			// For now allocate memory for annotations as an array in the heap
 			annotations = (ann_data*)malloc(sizeof(ann_data) * (header->entry_count));
+
 			probe_count = header->entry_count;
-			printf("\n\nEntry count : %d\n", header->entry_count);
-			printf("Annotation table resides at : %p\n", annotations);
+
+			LOG_DEBUG("\n\nAnnotation entry count : %d\n", header->entry_count);
+			LOG_DEBUG("Annotation table resides at : %p\n", annotations);
+
 			for (int i = 0; i < header->entry_count; i++)
 			{
 				ann_data* annotation = &annotations[i];
 				zca_row_11_t* row = (zca_row_11_t*)((byte*)rows + sizeof(*row) * i);
-
-				printf ("Row[%d] address is : %p\n", i, row);
 
 				annotation->ip = row->anchor;
 				annotation->probespace = row->probespace;
@@ -178,11 +169,11 @@ int read_zca_probes(const char* path)
 
 				//probe_count++;
 
-				printf ("\n------------ Annotation [%d] --------------\n", i);
-				printf ("annotation-ip : %lu\n", (unsigned char*)annotation->ip);
-				printf ("annotation-probespace : %d\n", annotation->probespace);
-				printf ("annotation-func : %p \n", (unsigned char*)annotation->fun);
-				printf ("annotation-expr : %s \n\n", annotation->expr);
+				LOG_DEBUG("\n------------ Annotation [%d] --------------\n", i);
+				LOG_DEBUG("annotation-ip : %lu\n", (unsigned char*)annotation->ip);
+				LOG_DEBUG("annotation-probespace : %d\n", annotation->probespace);
+				LOG_DEBUG("annotation-func : %p \n", (unsigned char*)annotation->fun);
+				LOG_DEBUG("annotation-expr : %s \n\n", annotation->expr);
 
 				/*
   	  dbgprint("%p\n", getIP(row));
@@ -261,10 +252,10 @@ void get_working_path(char* buf)
 //* Temporary functions to test
 // Probe function to test
 void print_fn() {
-	printf("[Successful] We are the borg");
+	LOG_DEBUG("[Successful] We are the borg\n");
 
 }
 
 void print_fn2() {
-	printf ("[Successful] May the Force be with you");
+	LOG_DEBUG("[Successful] Resistence is futile...\n");
 }

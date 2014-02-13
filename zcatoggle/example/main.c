@@ -1,5 +1,12 @@
 #include "zca-toggle.h"
 
+/*
+void __attribute__ ((constructor)) premain()
+{
+	initZCAService();
+}
+*/
+
 int main () {
 #ifdef STATIC_MODE
 	printf("Calling init function manually, because we're in the statically-linked mode.\n");
