@@ -42,11 +42,11 @@ test: build test.cpp hello_notify.exe elf-provider.o
 	$(CPP) $(OPTS)  test.cpp libzca-toggle.a $(LIBS) -o test.exe
 	./test.exe
 
-test_prof_off: build test.cpp elf-provider.o
-	$(CPP) -DLOG_LEVEL=2 -DPROFILE=0 test.cpp libzca-toggle.a $(LIBS) -o app_prof_off.exe
+test_prof_off: build bench.cpp elf-provider.o
+	$(CPP) -DLOG_LEVEL=2 -DPROFILE=0 bench.cpp libzca-toggle.a $(LIBS) -o app_prof_off.exe
 
-test_prof_on: build test.cpp elf-provider.o
-	$(CPP) -DLOG_LEVEL=2 -DPROFILE=1 test.cpp libzca-toggle.a $(LIBS) -o app_prof_on.exe
+test_prof_on: build bench.cpp elf-provider.o
+	$(CPP) -DLOG_LEVEL=2 -DPROFILE=1 bench.cpp libzca-toggle.a $(LIBS) -o app_prof_on.exe
 
 hello_notify.exe: hello_notify.c
 	$(CC) hello_notify.c -o hello_notify.exe

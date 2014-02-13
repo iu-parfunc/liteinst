@@ -27,7 +27,33 @@ int main () {
 	// __notify_intrinsic((void*)"notify01",(void*)&x);
 	// __notify_intrinsic((void*)"notify02",(void*)&x);
 
-	test_probe_loop();
+	x=1;
+	__notify_intrinsic((void*)"notify02",(void*)&x);
+
+	x=1;
+	__notify_intrinsic((void*)"notify03",(void*)&x);
+
+	x=1;
+	__notify_intrinsic((void*)"notify04",(void*)&x);
+
+	x=1;
+	__notify_intrinsic((void*)"notify05",(void*)&x);
+
+	x=1;
+	__notify_intrinsic((void*)"notify06",(void*)&x);
+
+	x=1;
+	__notify_intrinsic((void*)"notify07",(void*)&x);
+
+	x=1;
+	__notify_intrinsic((void*)"notify08",(void*)&x);
+
+	x=1;
+	__notify_intrinsic((void*)"notify09",(void*)&x);
+
+	x=2;
+	__notify_intrinsic((void*)"notify10",(void*)&x);
+	// test_probe_loop();
 
 }
 
