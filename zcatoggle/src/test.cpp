@@ -13,6 +13,7 @@
 
 void empty_func(int i);
 void test_probe_loop();
+void test_large_probe_count();
 ticks find_median(ticks* values, int items);
 
 void __attribute__ ((constructor(10))) premain()
@@ -30,6 +31,13 @@ int main () {
 
 }
 
+/**
+ * Test functions
+ */
+
+/**
+ * This tests notify intrinsic timings in a loop
+ */
 void test_probe_loop() {
 	ticks start;
 	ticks end;
@@ -63,6 +71,17 @@ void test_probe_loop() {
 	printf("Median time without annotations : %llu", find_median(timings, rounds));
 
 }
+
+/**
+ * This tests a function having a large number of notify annotations. Annotations will be injected externally.
+ */
+void test_large_probe_count() {
+	// $?*!$
+}
+
+/**
+ * Utility functions
+ */
 
 void empty_func(int i) {
 #ifdef PROBE_ON
