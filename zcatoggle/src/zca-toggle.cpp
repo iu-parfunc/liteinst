@@ -20,6 +20,7 @@
 ann_data* annotations;
 
 #define PROBESIZE 6
+#define DWORD_SIZE 8
 
 int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_fn)
 {
@@ -67,7 +68,7 @@ int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_fn
 
 	LOG_DEBUG("  Size of return jmp %d, total size %d\n", sz2, codesz + PROBESIZE + sz2);
 
-//#if LOGLEVEL >= DEBUG_LEVEL
+	//#if LOGLEVEL >= DEBUG_LEVEL
 	char buf[1024];
 	for(int i=0; i<codesz + PROBESIZE + sz2; i++) {
 
@@ -76,7 +77,7 @@ int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_fn
 	}
 
 	LOG_DEBUG("%s\n", buf);
-//#endif
+	//#endif
 
 	return (codesz+ PROBESIZE + sz2);
 }
@@ -94,7 +95,7 @@ void setupStubs() {
 	//        reachable with short jmp without hard coding addresses
 
 	LOG_DEBUG("Base address is : %p\n\n", base);
-	base = (unsigned long*)mmap(base, 4096, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED| MAP_ANONYMOUS, -1,0);
+	base = (unsigned long*)mmap(base, 40960, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED| MAP_ANONYMOUS, -1,0);
 	if (base == MAP_FAILED) {
 		int err = errno;
 		LOG_ERROR("Got error on mmap: %s\n", strerror(err));
@@ -138,7 +139,15 @@ void setupStubs() {
 		probe_address[5] = 0x0;
 
 		// Next stub address
-		stub_address += (stub_size + 1);
+		stub_address = stub_address + (stub_size + 1);
+
+		// Align to 8 word boundry
+/*		int padding = DWORD_SIZE - (*stub_address%8);
+
+		if (padding != 0) {
+			LOG_DEBUG("Padding for stub [%d] : %d", i, padding);
+			stub_address = stub_address + padding;
+		}*/
 
 		LOG_DEBUG("Stub %d starting at %p \n", i+1, stub_address);
 
@@ -170,5 +179,6 @@ void initZCAService() {
 	LOG_DEBUG("This text is printed before reaching \"main\".\n");
 	return;
 }
+
 
 

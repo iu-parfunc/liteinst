@@ -1,5 +1,4 @@
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "zca-toggle.h"
@@ -13,7 +12,9 @@
 
 void empty_func(int i);
 void test_probe_loop();
+void test_single_probe();
 void test_large_probe_count();
+void large_probe_count();
 ticks find_median(ticks* values, int items);
 
 void __attribute__ ((constructor(10))) premain()
@@ -27,33 +28,9 @@ int main () {
 	// __notify_intrinsic((void*)"notify01",(void*)&x);
 	// __notify_intrinsic((void*)"notify02",(void*)&x);
 
-	x=1;
-	__notify_intrinsic((void*)"notify02",(void*)&x);
-
-	x=1;
-	__notify_intrinsic((void*)"notify03",(void*)&x);
-
-	x=1;
-	__notify_intrinsic((void*)"notify04",(void*)&x);
-
-	x=1;
-	__notify_intrinsic((void*)"notify05",(void*)&x);
-
-	x=1;
-	__notify_intrinsic((void*)"notify06",(void*)&x);
-
-	x=1;
-	__notify_intrinsic((void*)"notify07",(void*)&x);
-
-	x=1;
-	__notify_intrinsic((void*)"notify08",(void*)&x);
-
-	x=1;
-	__notify_intrinsic((void*)"notify09",(void*)&x);
-
-	x=2;
-	__notify_intrinsic((void*)"notify10",(void*)&x);
 	// test_probe_loop();
+	// test_large_probe_count();
+	test_single_probe();
 
 }
 
@@ -77,7 +54,7 @@ void test_probe_loop() {
 		int i=0;
 
 		start = getticks();
-		for (i=0; i<100; i++) {
+		for (i=0; i<10000; i++) {
 			empty_func(i);
 		}
 
@@ -90,19 +67,65 @@ void test_probe_loop() {
 
 
 #ifdef PROBE_ON
-	printf("\nMedian time with annotations : %llu\n", find_median(timings, rounds));
+	printf("\n[Probe Loop] Median time with annotations : %llu\n", find_median(timings, rounds));
 	return;
 #endif
 
-	printf("Median time without annotations : %llu", find_median(timings, rounds));
+	printf("[Probe Loop] Median time without annotations : %llu", find_median(timings, rounds));
 
 }
 
 /**
- * This tests a function having a large number of notify annotations. Annotations will be injected externally.
+ * This tests notify intrinsic timings in a loop
  */
 void test_large_probe_count() {
-	// $?*!$
+	ticks start;
+	ticks end;
+	ticks elapsed_time;
+
+	int rounds = 10;
+	ticks timings[rounds];
+
+	int j;
+	for (j=0; j<rounds; j++) {
+		int i=0;
+
+		start = getticks();
+		large_probe_count();
+		end = getticks();
+
+		timings[j] = elapsed(end, start);
+		// printf("timings[%d] is : %llu\n", j, timings[j]);
+
+	}
+
+
+#ifdef PROBE_ON
+	printf("\n[Large Probe] Median time with annotations : %llu\n", find_median(timings, rounds));
+	return;
+#endif
+
+	printf("[Large Probe] Median time without annotations : %llu\n", find_median(timings, rounds));
+
+}
+
+void test_single_probe() {
+	ticks start;
+	ticks end;
+	ticks elapsed_time;
+
+	int i = 0;
+
+	start = getticks();
+#ifdef PROBE_ON
+	__notify_intrinsic((void*)"singleProbe",(void*)&i);
+#endif
+	end = getticks();
+
+	elapsed_time = elapsed(end, start);
+
+	printf("[Single Probe] Single probe elapsed time: %llu\n", elapsed_time);
+
 }
 
 /**
@@ -114,6 +137,14 @@ void empty_func(int i) {
 	__notify_intrinsic((void*)"emptyFunc",(void*)&i);
 #endif
 }
+
+/**
+ * This tests a function having a large number of notify annotations. Annotations will be injected externally.
+ */
+void large_probe_count() {
+	// $?*!$
+}
+
 
 int compare(const void* a, const void* b) {
 	return (*(ticks*)a - *(ticks*)b);
