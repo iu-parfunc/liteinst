@@ -95,7 +95,7 @@ void setupStubs()
   //        reachable with short jmp without hard coding addresses
 
   LOG_DEBUG("Base address is : %p\n\n", base);
-  base = (unsigned long*)mmap(base, 4096, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED| MAP_ANONYMOUS, -1,0);
+  base = (unsigned long*)mmap(base, 40960, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED| MAP_ANONYMOUS, -1,0);
   if (base == MAP_FAILED) {
     int err = errno;
     LOG_ERROR("Got error on mmap: %s\n", strerror(err));

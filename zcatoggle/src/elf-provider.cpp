@@ -252,10 +252,10 @@ void get_working_path(char* buf)
 //* Temporary functions to test
 // Probe function to test
 void print_fn() {
-	LOG_DEBUG("[Successful] We are the borg\n");
+	LOG_INFO("[Successful] We are the borg\n");
 
 }
 
 void print_fn2() {
-	LOG_DEBUG("[Successful] Resistence is futile...\n");
+	LOG_INFO("[Successful] Resistence is futile...\n");
 }

@@ -29,8 +29,8 @@ int main () {
 	// __notify_intrinsic((void*)"notify02",(void*)&x);
 
 	// test_probe_loop();
-	// test_large_probe_count();
-	test_single_probe();
+	test_large_probe_count();
+	// test_single_probe();
 
 }
 
