@@ -66,8 +66,6 @@ int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_fn
     addr[codesz + PROBESIZE + sz2 + i] = 0x90;
   */
 
-  printf("  Size of return jmp %d, total size %d\n", sz2, codesz + PROBESIZE + sz2);
-
   //#if LOGLEVEL >= DEBUG_LEVEL
   char buf[1024];
   for(int i=0; i<codesz + PROBESIZE + sz2; i++) {
