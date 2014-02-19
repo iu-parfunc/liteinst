@@ -18,9 +18,9 @@ void large_probe_count();
 ticks find_median(ticks* values, int items);
 
 void __attribute__ ((constructor(10))) premain()
-						{
+{
 	// initZCAService();
-						}
+}
 
 int main () {
 	initZCAService();
@@ -95,7 +95,7 @@ void test_large_probe_count() {
 		end = getticks();
 
 		timings[j] = elapsed(end, start);
-		// printf("timings[%d] is : %llu\n", j, timings[j]);
+		printf("timings[%d] is : %llu\n", j, timings[j]);
 
 	}
 

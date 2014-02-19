@@ -89,8 +89,6 @@ int read_zca_probes(const char* path)
 
 	scn = NULL;
 
-	LOG_DEBUG(" *****From logger.h LOADING ELF HEADER FOR FILE %s\n", path);
-
 	// Loop over all sections in the ELF object
 	while((scn = elf_nextscn(e, scn))!=NULL) {
 		// Given a Elf Scn pointer, retrieve the associated section header

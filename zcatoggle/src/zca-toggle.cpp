@@ -111,7 +111,9 @@ void setupStubs()
 
   int i;
   for (i=0; i < probe_count; i++) {
-    printf("stub_address: %p", stub_address);
+
+    LOG_DEBUG("Stub %d starting at %p \n", i, stub_address);
+
     unsigned char* probe_address = (unsigned char*)((ann_data*)&annotations[i])->ip;
 
     LOG_DEBUG("Probe address is : %p\n", (unsigned char*)(&annotations[i])->ip);
@@ -150,7 +152,6 @@ void setupStubs()
 		stub_address = stub_address + padding;
 		}*/
 
-    LOG_DEBUG("Stub %d starting at %p \n", i+1, stub_address);
 
   }
   // Generate stubs for each of them and modify the probe sites to jump to them
