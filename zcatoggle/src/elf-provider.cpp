@@ -65,20 +65,12 @@ int read_zca_probes(const char* path)
   size_t shstrndx;
   zca_row_11_t* rows;
 
-<<<<<<< HEAD
   int probe_count; // Number of probes discovered
 
   Elf *e;           // ELF struct
   Elf_Scn *scn;     // Section index struct
   Elf_Data *data;     // Section index struct
   Elf64_Shdr *shdr;  // Section strkkkuct
-=======
-	// Loop over all sections in the ELF object
-	while((scn = elf_nextscn(e, scn))!=NULL) {
-		// Given a Elf Scn pointer, retrieve the associated section header
-		if((shdr = elf64_getshdr(scn))!=shdr)
-			errx(EXIT_FAILURE, "getshdr() failed: %s.", elf_errmsg(-1));
->>>>>>> 4316bba35022c6ed429220b734daf5746f937246
 
   if(elf_version(EV_CURRENT)==EV_NONE)
     errx(EXIT_FAILURE, "ELF library iinitialization failed: %s", elf_errmsg(-1));
@@ -94,100 +86,106 @@ int read_zca_probes(const char* path)
     errx(EXIT_FAILURE, "elf_getshdrstrndx() failed: %s.", elf_errmsg(-1));
 
   scn = NULL;
-
-  LOG_DEBUG(" *****From logger.h LOADING ELF HEADER FOR FILE %s\n", path);
-
+  
   // Loop over all sections in the ELF object
   while((scn = elf_nextscn(e, scn))!=NULL) {
     // Given a Elf Scn pointer, retrieve the associated section header
     if((shdr = elf64_getshdr(scn))!=shdr)
       errx(EXIT_FAILURE, "getshdr() failed: %s.", elf_errmsg(-1));
 
-    // Retrieve the name of the section name
-    if((section_name = elf_strptr(e, shstrndx, shdr->sh_name))==NULL)
-      errx(EXIT_FAILURE, "elf_strptr() failed: %s.", elf_errmsg(-1));
+    LOG_DEBUG(" *****From logger.h LOADING ELF HEADER FOR FILE %s\n", path);
 
-    LOG_DEBUG("(section %s) ", section_name);
+    // Loop over all sections in the ELF object
+    while((scn = elf_nextscn(e, scn))!=NULL) {
+      // Given a Elf Scn pointer, retrieve the associated section header
+      if((shdr = elf64_getshdr(scn))!=shdr)
+	errx(EXIT_FAILURE, "getshdr() failed: %s.", elf_errmsg(-1));
 
-    // If the section is the one we want... (in my case, it is one of the main file sections)
-    if(!strcmp(section_name, ".itt_notify_tab")) {
+      // Retrieve the name of the section name
+      if((section_name = elf_strptr(e, shstrndx, shdr->sh_name))==NULL)
+	errx(EXIT_FAILURE, "elf_strptr() failed: %s.", elf_errmsg(-1));
 
-      data = elf_getdata(scn, NULL);
+      LOG_DEBUG("(section %s) ", section_name);
 
-      // We can use the section adress as a pointer, since it corresponds to the actual
-      // adress where the section is placed in the virtual memory
-      // struct data_t * section_data = (struct data_t *) shdr->sh_addr; // This seems bogus!
-      LOG_DEBUG("\n [read-zca] got itt_notify... section data is at addr %p, header at %p.\n", data, shdr);
+      // If the section is the one we want... (in my case, it is one of the main file sections)
+      if(!strcmp(section_name, ".itt_notify_tab")) {
 
-      // Cast section data
-      zca_header_11_t* header  = (zca_header_11_t*) data->d_buf;
-      char* ptr = (char*)header;
-      int i = 0;
-      while(1) {
-	header = (zca_header_11_t*)ptr;
-	char* str = (char*)header->magic;
+	data = elf_getdata(scn, NULL);
 
-	LOG_DEBUG(" [read-zca] check (%d) for magic value at loc %p : %d %d %d %d \n", i, header,
-		  str[0], str[1], str[2], str[3]);
-	if (!strcmp(str, ".itt_notify_tab")) {
-	  // table->magic[0] == '.' && table->magic[1] == 'i' &&
-	  // table->magic[2] == 't' && table->magic[3] == 't') {
+	// We can use the section adress as a pointer, since it corresponds to the actual
+	// adress where the section is placed in the virtual memory
+	// struct data_t * section_data = (struct data_t *) shdr->sh_addr; // This seems bogus!
+	LOG_DEBUG("\n [read-zca] got itt_notify... section data is at addr %p, header at %p.\n", data, shdr);
 
-	  LOG_DEBUG(" magic number MATCHED 16 bytes!\n");
-	  break;
-	}
+	// Cast section data
+	zca_header_11_t* header  = (zca_header_11_t*) data->d_buf;
+	char* ptr = (char*)header;
+	int i = 0;
+	while(1) {
+	  header = (zca_header_11_t*)ptr;
+	  char* str = (char*)header->magic;
 
-	LOG_DEBUG(" should be %d %d %d %d\n", '.','i','t','t');
-	ptr++;
-	i++;
-      }
-      uint8_t* ver = (uint8_t*) & (header->version);
+	  LOG_DEBUG(" [read-zca] check (%d) for magic value at loc %p : %d %d %d %d \n", i, header,
+		    str[0], str[1], str[2], str[3]);
+	  if (!strcmp(str, ".itt_notify_tab")) {
+	    // table->magic[0] == '.' && table->magic[1] == 'i' &&
+	    // table->magic[2] == 't' && table->magic[3] == 't') {
 
-      LOG_DEBUG("Now that we've found the magic number, version num is: %d / %d\n", ver[0], ver[1]);
-
-      // Here we skip the header and move on to the actual rows:
-      zca_row_11_t* row = (zca_row_11_t*) ((byte*) header + sizeof(*header));
-
-      LOG_DEBUG(" [read-zca] found first row at %p, offset %lu\n", rows, ((long)rows - (long)header));
-      LOG_DEBUG("\n\nAnnotation entry count : %d\n", header->entry_count);
-      LOG_DEBUG("Annotation table resides at : %p\n", annotations);
-
-      for (int i = 0; i < header->entry_count; i++)
-	{
-	  void (*fun) ();
-	  if (i%2 == 0) {
-	    fun = &print_fn;
-	  } else {
-	    fun = &print_fn2;
+	    LOG_DEBUG(" magic number MATCHED 16 bytes!\n");
+	    break;
 	  }
 
-	  //	  LOG_DEBUG("\n------------ Annotation [%d] --------------\n", i);
-	  //	  LOG_DEBUG("annotation-ip : %lu\n", (unsigned char*)annotation->ip);
-	  //	  LOG_DEBUG("annotation-probespace : %d\n", annotation->probespace);
-	  //	  LOG_DEBUG("annotation-func : %p \n", (unsigned char*)annotation->fun);
-	  //	  LOG_DEBUG("annotation-expr : %s \n\n", annotation->expr);
-	  
-	  ann_data ad = ann_data(NULL, NULL, fun, getIP(row), getProbespace(row), getExpr(header, row));
-	  const char* str = getAnnotation(header, row);
-	  
-	  annTable.insert(ann_table::value_type(string(str), pair<zca_row_11_t*,
-						unsigned long*>(row, nullptr)));
-	  // Move to next row
-	  row = (zca_row_11_t*) ((byte*) row + sizeof(*row));
+	  LOG_DEBUG(" should be %d %d %d %d\n", '.','i','t','t');
+	  ptr++;
+	  i++;
 	}
+	uint8_t* ver = (uint8_t*) & (header->version);
 
-      // End the loop (if we only need this section)
-      break;
+	LOG_DEBUG("Now that we've found the magic number, version num is: %d / %d\n", ver[0], ver[1]);
+
+	// Here we skip the header and move on to the actual rows:
+	zca_row_11_t* row = (zca_row_11_t*) ((byte*) header + sizeof(*header));
+
+	LOG_DEBUG(" [read-zca] found first row at %p, offset %lu\n", rows, ((long)rows - (long)header));
+	LOG_DEBUG("\n\nAnnotation entry count : %d\n", header->entry_count);
+	LOG_DEBUG("Annotation table resides at : %p\n", annotations);
+
+	for (int i = 0; i < header->entry_count; i++)
+	  {
+	    void (*fun) ();
+	    if (i%2 == 0) {
+	      fun = &print_fn;
+	    } else {
+	      fun = &print_fn2;
+	    }
+
+	    //	  LOG_DEBUG("\n------------ Annotation [%d] --------------\n", i);
+	    //	  LOG_DEBUG("annotation-ip : %lu\n", (unsigned char*)annotation->ip);
+	    //	  LOG_DEBUG("annotation-probespace : %d\n", annotation->probespace);
+	    //	  LOG_DEBUG("annotation-func : %p \n", (unsigned char*)annotation->fun);
+	    //	  LOG_DEBUG("annotation-expr : %s \n\n", annotation->expr);
+	  
+	    ann_data ad = ann_data(NULL, NULL, fun, getIP(row), getProbespace(row), getExpr(header, row));
+	    const char* str = getAnnotation(header, row);
+	  
+	    annTable.insert(ann_table::value_type(string(str), pair<zca_row_11_t*,
+						  unsigned long*>(row, nullptr)));
+	    // Move to next row
+	    row = (zca_row_11_t*) ((byte*) row + sizeof(*row));
+	  }
+
+	// End the loop (if we only need this section)
+	break;
+      }
     }
+
+    elf_end(e);
+    close(fd);
+
+    return probe_count;
+    // dbgprint("\n [read-zca] Returning out table %p\n", out_table);
+    // return out_table;
   }
-
-  elf_end(e);
-  close(fd);
-
-  return probe_count;
-  // dbgprint("\n [read-zca] Returning out table %p\n", out_table);
-  // return out_table;
-}
 // ^^ This code is taken from:
 // http://stackoverflow.com/questions/12159595/how-to-get-a-pointer-to-an-specific-section-of-a-program-from-within-itself-ma
 
