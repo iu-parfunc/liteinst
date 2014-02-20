@@ -42,11 +42,18 @@ test: build test.cpp hello_notify.exe elf-provider.o
 	$(CPP) $(OPTS)  test.cpp libzca-toggle.a $(LIBS) -o test.exe
 	./test.exe
 
+# Benchmark binary generation targets
 test_prof_off: build bench.cpp elf-provider.o
-	$(CPP) -DLOG_LEVEL=2 -DPROFILE=0 bench.cpp libzca-toggle.a $(LIBS) -o app_prof_off.exe
+	$(CPP) $(CFLAGS) -DLOG_LEVEL=2 -DPROFILE=0 bench.cpp libzca-toggle.a $(LIBS) -o app_prof_off.exe
 
-test_prof_on: build bench.cpp elf-provider.o
-	$(CPP) -DLOG_LEVEL=2 -DPROFILE=1 bench.cpp libzca-toggle.a $(LIBS) -o app_prof_on.exe
+test_prof_on_single_probe: build bench.cpp elf-provider.o
+	$(CPP) $(CFLAGS) -DLOG_LEVEL=2 -DPROFILE=1 bench.cpp libzca-toggle.a $(LIBS) -o app_prof_on_single_probe.exe
+
+test_prof_on_probe_loop: build bench.cpp elf-provider.o
+	$(CPP) $(CFLAGS) -DLOG_LEVEL=2 -DPROFILE=1 bench.cpp libzca-toggle.a $(LIBS) -o app_prof_on_probe_loop.exe
+
+test_prof_off_probe_loop: build bench.cpp elf-provider.o
+	$(CPP) $(CFLAGS) -DLOG_LEVEL=2 -DPROFILE=0 bench.cpp libzca-toggle.a $(LIBS) -o app_prof_off_probe_loop.exe
 
 hello_notify.exe: hello_notify.c
 	$(CC) hello_notify.c -o hello_notify.exe

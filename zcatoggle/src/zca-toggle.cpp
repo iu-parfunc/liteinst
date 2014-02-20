@@ -66,8 +66,6 @@ int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_fn
     addr[codesz + PROBESIZE + sz2 + i] = 0x90;
   */
 
-  printf("  Size of return jmp %d, total size %d\n", sz2, codesz + PROBESIZE + sz2);
-
   //#if LOGLEVEL >= DEBUG_LEVEL
   char buf[1024];
   for(int i=0; i<codesz + PROBESIZE + sz2; i++) {
@@ -111,7 +109,9 @@ void setupStubs()
 
   int i;
   for (i=0; i < probe_count; i++) {
-    printf("stub_address: %p", stub_address);
+
+    LOG_DEBUG("Stub %d starting at %p \n", i, stub_address);
+
     unsigned char* probe_address = (unsigned char*)((ann_data*)&annotations[i])->ip;
 
     LOG_DEBUG("Probe address is : %p\n", (unsigned char*)(&annotations[i])->ip);
@@ -150,7 +150,6 @@ void setupStubs()
 		stub_address = stub_address + padding;
 		}*/
 
-    LOG_DEBUG("Stub %d starting at %p \n", i+1, stub_address);
 
   }
   // Generate stubs for each of them and modify the probe sites to jump to them

@@ -65,12 +65,20 @@ int read_zca_probes(const char* path)
   size_t shstrndx;
   zca_row_11_t* rows;
 
+<<<<<<< HEAD
   int probe_count; // Number of probes discovered
 
   Elf *e;           // ELF struct
   Elf_Scn *scn;     // Section index struct
   Elf_Data *data;     // Section index struct
   Elf64_Shdr *shdr;  // Section strkkkuct
+=======
+	// Loop over all sections in the ELF object
+	while((scn = elf_nextscn(e, scn))!=NULL) {
+		// Given a Elf Scn pointer, retrieve the associated section header
+		if((shdr = elf64_getshdr(scn))!=shdr)
+			errx(EXIT_FAILURE, "getshdr() failed: %s.", elf_errmsg(-1));
+>>>>>>> 4316bba35022c6ed429220b734daf5746f937246
 
   if(elf_version(EV_CURRENT)==EV_NONE)
     errx(EXIT_FAILURE, "ELF library iinitialization failed: %s", elf_errmsg(-1));
@@ -214,10 +222,10 @@ void get_working_path(char* buf)
 //* Temporary functions to test
 // Probe function to test
 void print_fn() {
-	LOG_INFO("[Successful] We are the borg\n");
+	LOG_DEBUG("[Successful] We are the borg\n");
 
 }
 
 void print_fn2() {
-	LOG_INFO("[Successful] Resistence is futile...\n");
+	LOG_DEBUG("[Successful] Resistence is futile...\n");
 }
