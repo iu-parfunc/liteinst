@@ -144,43 +144,35 @@ const uint64_t zca_c_32bit_anchor=0x04;         // The anchor address is 32bits
 
 typedef struct ann_data
 {
-  unsigned long* location;
+  unsigned long* stubLocation;
+  int stubSize;
   void (*fun)();
-  uint64_t ip;
-  uint32_t probespace;
-  unsigned char* annotation;
-  const char* expr;
-
-  // ann_data(unsigned long int* l, void (*f)(), byte* const i, const uint32_t ps,
-  // 	   const unsigned char* e): location(l), func(f), ip(i), probespace(ps), expr(e) {}
-  /*
-  {
-    location = l;
-    func = f;
-    ip = i;
-    probespace = ps;
-    expr = e;
-  }
-  */
+  const byte* const ip;
+  const uint32_t probespace;
+  const byte* const expr;
+  
+  ann_data(unsigned long* sL, int sS, void (*f)(), const byte* const i, const uint32_t ps,
+   	   const byte* const e):
+    stubLocation(sL), stubSize(sS), fun(f), ip(i), probespace(ps), expr(e) {}
 } ann_data;
 
 // --------------------------------------------------------------------------------
 // Convenience functions for dealing with rows
 
-// inline uint32_t getProbespace(struct zca_row_11_t* row)
-// {
-//   return row->probespace;
-// }
-
-// inline byte* getIP(zca_row_11_t* row)
-// {
-//   return
-//     (byte*) row->anchor;
-// }
-
-inline const unsigned char* getExpr(struct zca_header_11_t* table, struct zca_row_11_t* row)
+inline uint32_t getProbespace(struct zca_row_11_t* row)
 {
-  return (const unsigned char*) ((byte*) table + table->exprs + row->expr);
+  return (uint32_t) row->probespace;
+}
+
+inline const byte* getIP(zca_row_11_t* row)
+{
+  return
+     (const byte*) row->anchor;
+}
+
+inline const byte* getExpr(struct zca_header_11_t* table, struct zca_row_11_t* row)
+{
+  return (const byte*) ((byte*) table + table->exprs + row->expr);
 }
 
 inline const char* getAnnotation(struct zca_header_11_t* table, struct zca_row_11_t *row)

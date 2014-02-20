@@ -27,7 +27,7 @@ extern "C"
 {
 #endif
 
-#include "zca-types.h"
+#include "zca-types.hpp"
 
 extern const char *__progname; // Get the program name before the main. No argv[0] at this stage.
 

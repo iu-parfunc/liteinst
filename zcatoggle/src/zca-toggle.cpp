@@ -10,7 +10,7 @@
 #include "elf-provider.h"
 #include "logger.h"   // LOG_DEBUG
 // #include "zca-utils.h"
-#include "zca-types.h"
+#include "zca-types.hpp"
 #include <sys/mman.h>
 
 #include "AsmJit/AsmJit.h"

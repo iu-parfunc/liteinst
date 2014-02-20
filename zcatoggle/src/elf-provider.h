@@ -9,7 +9,7 @@
 #define _ELF_PROVIDER_H_
 
 #include <string.h>
-#include "zca-types.h"
+#include "zca-types.hpp"
 
 
 //#ifdef __cplusplus
