@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 
+#include <iostream>
 #include "zca-toggle.h"
 #include "elf-provider.h"
 #include "logger.h"   // LOG_DEBUG
@@ -17,7 +18,7 @@
 // #include "zca-utils.h"
 #include <errno.h>
 
-ann_data* annotations;
+// ann_data* annotations;
 
 #define PROBESIZE 6
 #define DWORD_SIZE 8
@@ -108,13 +109,17 @@ void setupStubs()
   LOG_DEBUG("Annotation table points to : %p\n", annotations);
 
   int i;
-  for (i=0; i < probe_count; i++) {
+  for ( auto iter = annotations.begin(); iter != annotations.end(); ++iter, i++) {
 
     LOG_DEBUG("Stub %d starting at %p \n", i, stub_address);
 
-    unsigned char* probe_address = (unsigned char*)((ann_data*)&annotations[i])->ip;
+    std::pair<zca_row_11_t*, unsigned long*> data = iter->second;
 
-    LOG_DEBUG("Probe address is : %p\n", (unsigned char*)(&annotations[i])->ip);
+    unsigned char* probe_address = (unsigned char*) (data.first->anchor);
+
+    // unsigned char* probe_address = NULL;/*(unsigned char*)((ann_data*)&annotations[i])->ip;*/
+
+    LOG_DEBUG("Probe address is : %p\n", (unsigned char*)probe_address);
 
     int page_size = 4096;
     int code = mprotect((void*)(probe_address - (((unsigned long)probe_address)%4096)), page_size, PROT_READ | PROT_WRITE | PROT_EXEC);
@@ -126,7 +131,7 @@ void setupStubs()
       // return 1;
     }
 
-    int stub_size = gen_stub_code((unsigned char*)(stub_address), probe_address, (&annotations[i])->fun);
+    int stub_size = gen_stub_code((unsigned char*)(stub_address), probe_address, print_fn/*(&annotations[i])->fun*/);
     // ((&annotations[i])->fun)(); This works
     // Plug in the relative jump
     // This does a relative jump:

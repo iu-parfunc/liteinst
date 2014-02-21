@@ -31,7 +31,7 @@ extern "C"
 
 extern const char *__progname; // Get the program name before the main. No argv[0] at this stage.
 
-extern ann_data* annotations;
+// extern ann_data* annotations;
 
 // @brief  @details
 

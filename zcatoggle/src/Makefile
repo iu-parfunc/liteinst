@@ -39,7 +39,7 @@ install: build
 	cp $(LIBSOUT) $(INSTALLD)
 
 test: build test.cpp hello_notify.exe elf-provider.o
-	$(CPP) $(OPTS)  test.cpp libzca-toggle.a $(LIBS) -o test.exe
+	$(CPP) $(OPTS) -DPROBE_LOOP test.cpp libzca-toggle.a $(LIBS) -o test.exe
 	./test.exe
 
 # Benchmark binary generation targets

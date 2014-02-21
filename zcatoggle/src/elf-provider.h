@@ -8,9 +8,9 @@
 #ifndef _ELF_PROVIDER_H_
 #define _ELF_PROVIDER_H_
 
-#include <string.h>
+#include <string>
+#include <unordered_map>
 #include "zca-types.hpp"
-
 
 //#ifdef __cplusplus
 //extern "C"
@@ -21,7 +21,9 @@
 
 extern const char *__progname;
 
-extern ann_data* annotations;
+typedef std::unordered_map<std::string, std::pair<zca_row_11_t*, unsigned long*>> ann_table;
+
+extern ann_table annotations;
 
 /** Read the probes available in an ELF binary.
  *

@@ -43,9 +43,9 @@ using namespace std;
 // typedef unordered_map<string, ann_data*> ann_table;
 // FIXME: this needs to be a concurrent data structure ultimately.
 
-typedef unordered_map<string, pair<zca_row_11_t*, unsigned long*>> ann_table;
+// typedef unordered_map<string, pair<zca_row_11_t*, unsigned long*>> ann_table;
 
-ann_table annTable;
+ann_table annotations;
 // zca_header_11_t* globalZCATable;
 
 #define dbgprint printf
@@ -160,8 +160,7 @@ int read_zca_probes(const char* path)
 	  ann_data ad = ann_data(NULL, NULL, fun, getIP(row), getProbespace(row), getExpr(header, row));
 	  const char* str = getAnnotation(header, row);
 	  
-	  annTable.insert(ann_table::value_type(string(str), pair<zca_row_11_t*,
-						unsigned long*>(row, nullptr)));
+	  annotations.insert(ann_table::value_type(string(str), pair<zca_row_11_t*, unsigned long*>(row, nullptr)));
 	  // Move to next row
 	  row = (zca_row_11_t*) ((byte*) row + sizeof(*row));
 	}
