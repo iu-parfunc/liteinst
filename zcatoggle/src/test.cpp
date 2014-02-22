@@ -29,15 +29,17 @@ int main () {
 	// __notify_intrinsic((void*)"notify01",(void*)&x);
 	// __notify_intrinsic((void*)"notify02",(void*)&x);
 
-#ifdef PROBE_LOOP
-	test_probe_loop();
-#endif
-
-	// test_large_probe_count();
 #ifdef SINGLE_PROBE
 	test_single_probe();
 #endif
 
+#ifdef PROBE_LOOP
+	test_probe_loop();
+#endif
+
+#ifdef PROBE_LARGE
+	test_large_probe_count();
+#endif
 	// test_setup_times();
 
 }
@@ -82,11 +84,11 @@ void test_probe_loop() {
 
 
 #ifdef PROBE_ON
-	printf("\n--- Median time with annotations : %llu\n", find_median(timings, rounds));
+	printf("--- Median time with annotations (cycles): %llu\n", find_median(timings, rounds));
 	return;
 #endif
 
-	printf("--- Median time without annotations : %llu", find_median(timings, rounds));
+	printf("--- Median time without annotations (cycles) : %llu", find_median(timings, rounds));
 
 }
 #endif
@@ -111,17 +113,17 @@ void test_large_probe_count() {
 		end = getticks();
 
 		timings[j] = elapsed(end, start);
-		printf("timings[%d] is : %llu\n", j, timings[j]);
+		// printf("timings[%d] is : %llu\n", j, timings[j]);
 
 	}
 
 
 #ifdef PROBE_ON
-	printf("\n--- Median time with annotations : %llu \n", find_median(timings, rounds));
+	printf("--- Median time with annotations (cycles): %llu \n", find_median(timings, rounds));
 	return;
 #endif
 
-	printf("--- Median time without annotations : %llu \n", find_median(timings, rounds));
+	printf("--- Median time without annotations (cycles): %llu \n", find_median(timings, rounds));
 
 }
 
@@ -139,7 +141,7 @@ void test_single_probe() {
 
 	elapsed_time = elapsed(end, start);
 
-	printf("\n--- Single probe elapsed time: %llu\n", elapsed_time);
+	printf("--- Single probe elapsed time: %llu\n", elapsed_time);
 
 }
 #endif

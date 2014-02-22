@@ -10,6 +10,8 @@
 
 #include <string>
 #include <unordered_map>
+#include <map>
+#include <list>
 #include "zca-types.hpp"
 
 //#ifdef __cplusplus
@@ -21,9 +23,17 @@
 
 extern const char *__progname;
 
+extern unsigned long probe_start; // Address of the first probe
+
+extern unsigned long probe_end; // Address of the last probe
+
 typedef std::unordered_map<std::string, std::pair<zca_row_11_t*, unsigned long*>> ann_table;
 
 extern ann_table annotations;
+
+typedef std::map<uint32_t, std::list<mem_island*>*> mem_alloc_table;
+
+extern mem_alloc_table mem_allocations;
 
 /** Read the probes available in an ELF binary.
  *

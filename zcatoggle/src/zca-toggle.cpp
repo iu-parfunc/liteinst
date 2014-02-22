@@ -10,6 +10,7 @@
 #include "zca-toggle.h"
 #include "elf-provider.h"
 #include "logger.h"   // LOG_DEBUG
+#include "cycle.h"    // ticks
 // #include "zca-utils.h"
 #include "zca-types.hpp"
 #include <sys/mman.h>
@@ -81,6 +82,52 @@ int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_fn
   return (codesz+ PROBESIZE + sz2);
 }
 
+void get_allocated_stub_memory_for_probe(unsigned char* probe_address, unsigned long** stub_address) {
+
+	int32_t mem_chunk = ((unsigned long)probe_address) >> 32;
+
+    if (mem_allocations.find(mem_chunk) == mem_allocations.end()) {
+       // Error. Log and return
+    } else {
+    	std::list<mem_island*>* mem_list = mem_allocations.find(mem_chunk)->second;
+    	// Check first memory island
+    	mem_island* first_mem = mem_list->front();
+
+    	if (first_mem != NULL) {
+    		if (first_mem->allocated) {
+    			if (first_mem->remaining_size > STUB_SIZE) {
+    				*stub_address = first_mem->insertion_ptr;
+    				first_mem->insertion_ptr = (unsigned long*)((byte*) first_mem->insertion_ptr + STUB_SIZE);
+    				first_mem->remaining_size -= STUB_SIZE;
+
+    				LOG_DEBUG("Stub starting at %p \n", *stub_address);
+    			} else {
+    				// allocate a second chunk
+    			}
+    		} else {
+    			// unsigned long base = align_to_page_boundary(first_mem->start_addr);
+    			// size_t size = align_to_page_boundary(first_mem->size);
+    			*stub_address = (unsigned long*)mmap(first_mem->start_addr, first_mem->size,
+    					PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED| MAP_ANONYMOUS, -1,0);
+
+    			if (*stub_address == MAP_FAILED) {
+    				printf("Map failed..\n");
+    			    int err = errno;
+    			    LOG_ERROR("Got error on mmap: %s\n", strerror(err));
+    			    return; //exit(1);
+    			}
+
+    			first_mem->start_addr = *stub_address;
+    			first_mem->insertion_ptr = (unsigned long*)((byte*) *stub_address + STUB_SIZE);
+    			first_mem->remaining_size -= STUB_SIZE;
+    			first_mem->allocated = true;
+    		}
+    	} else {
+    		// Error. Log and return
+    	}
+    }
+}
+
 void setupStubs()
 {
   // Retrieve annotation data
@@ -90,7 +137,7 @@ void setupStubs()
   //------------------------------------------------------------
   // Second, create a 32-bit addressable scratch area.
   //------------------------------------------------------------
-  unsigned long* base = (unsigned long*)0x01230000;// TODO : Figure out how to make sure this memory island is
+/*  unsigned long* base = (unsigned long*)0x01230000;// TODO : Figure out how to make sure this memory island is
   //        reachable with short jmp without hard coding addresses
 
   LOG_DEBUG("Base address is : %p\n\n", base);
@@ -99,36 +146,33 @@ void setupStubs()
     int err = errno;
     LOG_ERROR("Got error on mmap: %s\n", strerror(err));
     return; //exit(1);
-  }
+  }*/
 
-  LOG_DEBUG("Mmap'd scratch region starting at %p\n", base);
+  // LOG_DEBUG("Mmap'd scratch region starting at %p\n", base);
 
-  unsigned long* stub_address = base + 4;
+  unsigned long* stub_address;
 
-  LOG_DEBUG("First stub starting at %p\n", stub_address);
-  LOG_DEBUG("Annotation table points to : %p\n", annotations);
-
-  int i;
-  for ( auto iter = annotations.begin(); iter != annotations.end(); ++iter, i++) {
-
-    LOG_DEBUG("Stub %d starting at %p \n", i, stub_address);
+  int i = 0;
+  for (auto iter = annotations.begin(); iter != annotations.end(); ++iter, i++) {
 
     std::pair<zca_row_11_t*, unsigned long*> data = iter->second;
 
     unsigned char* probe_address = (unsigned char*) (data.first->anchor);
 
-    // unsigned char* probe_address = NULL;/*(unsigned char*)((ann_data*)&annotations[i])->ip;*/
+    get_allocated_stub_memory_for_probe(probe_address, &stub_address);
 
     LOG_DEBUG("Probe address is : %p\n", (unsigned char*)probe_address);
+    LOG_DEBUG("Stub address is : %p\n", stub_address);
 
     int page_size = 4096;
-    int code = mprotect((void*)(probe_address - (((unsigned long)probe_address)%4096)), page_size, PROT_READ | PROT_WRITE | PROT_EXEC);
+    int code = mprotect((void*)(probe_address - (((unsigned long)probe_address)%4096)), page_size,
+    		PROT_READ | PROT_WRITE | PROT_EXEC);
 
     if (code) {
       /* current code page is now writable and code from it is allowed for execution */
       LOG_ERROR("mprotect was not successfull! code %d\n", code);
       LOG_ERROR("errno value is : %d\n", errno);
-      // return 1;
+      // return -1;
     }
 
     int stub_size = gen_stub_code((unsigned char*)(stub_address), probe_address, print_fn/*(&annotations[i])->fun*/);
@@ -145,17 +189,7 @@ void setupStubs()
     probe_address[5] = 0x0;
 
     // Next stub address
-    stub_address = (unsigned long*) ((byte*) stub_address + (stub_size + 1));
-
-    // Align to 8 word boundry
-    /*		int padding = DWORD_SIZE - (*stub_address%8);
-
-		if (padding != 0) {
-		LOG_DEBUG("Padding for stub [%d] : %d", i, padding);
-		stub_address = stub_address + padding;
-		}*/
-
-
+    // stub_address = (unsigned long*) ((byte*) stub_address + (stub_size + 1));
   }
   // Generate stubs for each of them and modify the probe sites to jump to them
   // Initialize the book keeping data structure mapping probe site to generated stub address for
@@ -179,7 +213,21 @@ int deactivateProbe(const probe_t* label) {
 // I think it actually only works for shared libraries.
 void initZCAService() {
 	/* Read all annotations here and setup stubs. How best to do it (sync or async) needs to be emperically determined */
+#ifdef PROFILE
+	ticks start;
+	ticks end;
+	ticks elapsed_time;
+
+	start = getticks();
+#endif
+
 	setupStubs();
+
+#ifdef PROFILE
+	end = getticks();
+	elapsed_time = elapsed(end, start);
+	printf("\n--- Init time (cycles): %llu \n", elapsed_time);
+#endif
 
 	LOG_DEBUG("This text is printed before reaching \"main\".\n");
 	return;

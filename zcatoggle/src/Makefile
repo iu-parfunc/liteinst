@@ -39,7 +39,7 @@ install: build
 	cp $(LIBSOUT) $(INSTALLD)
 
 test: build test.cpp hello_notify.exe elf-provider.o
-	$(CPP) $(OPTS) -DPROBE_LOOP test.cpp libzca-toggle.a $(LIBS) -o test.exe
+	$(CPP) $(OPTS) test.cpp libzca-toggle.a $(LIBS) -o test.exe
 	./test.exe
 
 # Benchmark binary generation targets
@@ -55,15 +55,18 @@ test_prof_on_probe_loop: build bench.cpp elf-provider.o
 test_prof_off_probe_loop: build bench.cpp elf-provider.o
 	$(CPP) $(CFLAGS) -DLOG_LEVEL=2 -DPROFILE=0 bench.cpp libzca-toggle.a $(LIBS) -o app_prof_off_probe_loop.exe
 
+test_prof_on_large_probe_count : build bench.cpp elf-provider.o
+	$(CPP) $(CFLAGS) -DLOG_LEVEL=2 -DPROFILE=1 bench.cpp libzca-toggle.a $(LIBS) -o app_prof_on_large_probe_count.exe
+
 hello_notify.exe: hello_notify.c
 	$(CC) hello_notify.c -o hello_notify.exe
 
 .cpp.o:
-	$(CPP) $(OPTS) -fPIC -c -Wall -o $@ $<
+	$(CPP) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
 ../3rdparty/AsmJit/.cpp.o:
 	$(CC) $(OPTS) -fPIC -c -Wall -o $@ $<
 .c.o:
-	$(CC) $(OPTS) -fPIC -c -Wall -o $@ $<
+	$(CC) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
 
 # TEMP: trying ONE big call to ICC:
 # libzca-toggle.so: $(CODE) $(DEPS0) 
@@ -75,6 +78,7 @@ libzca-toggle.so: $(OBJ) $(DEPS)
 libzca-toggle.a: $(OBJ) $(DEPS) 
 	$(AR) rc libzca-toggle.a $(OBJ) $(DEPS)
 
+### Start of Testing stuff ###
 test6: test6.cpp
 	icc -g -I../3rdparty/ -I./include ../3rdparty/AsmJit/*.cpp -O0 -std=c++11 test6.cpp -lelf -o test6.exe
 
@@ -85,6 +89,8 @@ test8: test8.cpp
 asm: asmjit.cpp
 	icc -g -I../3rdparty ../3rdparty/AsmJit/*.cpp  -std=c++11 asmjit.cpp -lelf -o asm.exe
 	./asm.exe
+
+### End of Testing stuff ###
 
 clean:
 	$(RM) -f $(OBJ) $(DEPS) $(LIBSOUT) $(INSTALLD)/libzca-toggle.so $(INSTALLD)/libzca-toggle.a hello_notify.exe

@@ -46,6 +46,10 @@ using namespace std;
 // typedef unordered_map<string, pair<zca_row_11_t*, unsigned long*>> ann_table;
 
 ann_table annotations;
+mem_alloc_table mem_allocations;
+
+unsigned long probe_start;
+unsigned long probe_end;
 // zca_header_11_t* globalZCATable;
 
 #define dbgprint printf
@@ -151,16 +155,48 @@ int read_zca_probes(const char* path)
 	    fun = &print_fn2;
 	  }
 
+	  if (i == 0) {
+		  probe_start = row->anchor;
+	  } else if (i == (header->entry_count - 1)) {
+		  probe_end = row->anchor;
+	  }
+
 	  //	  LOG_DEBUG("\n------------ Annotation [%d] --------------\n", i);
 	  //	  LOG_DEBUG("annotation-ip : %lu\n", (unsigned char*)annotation->ip);
 	  //	  LOG_DEBUG("annotation-probespace : %d\n", annotation->probespace);
 	  //	  LOG_DEBUG("annotation-func : %p \n", (unsigned char*)annotation->fun);
 	  //	  LOG_DEBUG("annotation-expr : %s \n\n", annotation->expr);
 	  
-	  ann_data ad = ann_data(NULL, NULL, fun, getIP(row), getProbespace(row), getExpr(header, row));
+	  // ann_data ad = ann_data(NULL, NULL, fun, getIP(row), getProbespace(row), getExpr(header, row));
+
 	  const char* str = getAnnotation(header, row);
 	  
 	  annotations.insert(ann_table::value_type(string(str), pair<zca_row_11_t*, unsigned long*>(row, nullptr)));
+
+	  uint64_t probe_adddress = row->anchor;
+	  uint32_t mem_chunk = ((uint64_t)probe_adddress) >> 32;
+	  uint64_t chunk_start = probe_adddress & 0xFFFF0000; // Get 32 high order bits
+	  // Calculate memory requirements for the stubs to be allocated related to probe spaces,
+	  // later during the JIT code generation phase
+      mem_island* mem;
+	  if (mem_allocations.find(mem_chunk) == mem_allocations.end()) {
+		  list<mem_island*>* mem_list = new list<mem_island*>;
+		  mem = new mem_island;
+		  mem->allocated = false;
+		  mem->start_addr = (unsigned long*)((chunk_start + CHUNK_SIZE) / 2); // We initially set this to the middle of the 2^32 chunk
+		  mem->size = STUB_SIZE;
+
+		  mem_list->push_back(mem);
+		  mem_allocations.insert(make_pair(mem_chunk, mem_list));
+	  } else {
+		  list<mem_island*>* mem_list = mem_allocations.find(mem_chunk)->second;
+		  mem = mem_list->front(); // At this stage we only have one memory island in the list
+		  if (mem != NULL) {
+			  mem->size += STUB_SIZE; // Another stub for this memory island
+		  } else {
+			  // log error. This shouldn't happen
+		  }
+	  }
 	  // Move to next row
 	  row = (zca_row_11_t*) ((byte*) row + sizeof(*row));
 	}

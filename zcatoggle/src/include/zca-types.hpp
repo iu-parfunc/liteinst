@@ -61,6 +61,9 @@ extern "C"
 /* ZCA table stuff */
 typedef unsigned char byte;
 
+#define STUB_SIZE 72 // In practice this is 66 bytes but making 72 for alignment
+
+#define CHUNK_SIZE 4294967296 // 2^32
 /*
  * Header for a table of V1.1 annotations.
  *
@@ -155,6 +158,14 @@ typedef struct ann_data
    	   const byte* const e):
     stubLocation(sL), stubSize(sS), fun(f), ip(i), probespace(ps), expr(e) {}
 } ann_data;
+
+typedef struct mem_island {
+	unsigned long* start_addr;        // Memory island start address
+	bool allocated; 			      // Has this island been actually allocated
+	unsigned long* insertion_ptr;     // Next insertion pointer
+	unsigned long int size;           // Size of this memory island in bytes
+	unsigned long int remaining_size; // Remaining size available
+} mem_island;
 
 // --------------------------------------------------------------------------------
 // Convenience functions for dealing with rows
