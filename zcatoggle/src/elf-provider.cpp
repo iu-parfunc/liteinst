@@ -146,6 +146,9 @@ int read_zca_probes(const char* path)
       LOG_DEBUG("\n\nAnnotation entry count : %d\n", header->entry_count);
       LOG_DEBUG("Annotation table resides at : %p\n", annotations);
 
+      probe_count = header->entry_count;
+      printf("Probe count : %d\n", probe_count);
+
       for (int i = 0; i < header->entry_count; i++)
 	{
 	  void (*fun) ();
@@ -171,6 +174,8 @@ int read_zca_probes(const char* path)
 
 	  const char* str = getAnnotation(header, row);
 	  
+	  // printf("Row %d address : %p\n", i, row);
+
 	  annotations.insert(ann_table::value_type(string(str), pair<zca_row_11_t*, unsigned long*>(row, nullptr)));
 
 	  uint64_t probe_adddress = row->anchor;
@@ -185,6 +190,7 @@ int read_zca_probes(const char* path)
 		  mem->allocated = false;
 		  mem->start_addr = (unsigned long*)((chunk_start + CHUNK_SIZE) / 2); // We initially set this to the middle of the 2^32 chunk
 		  mem->size = STUB_SIZE;
+		  mem->mem_chunk = mem_chunk;
 
 		  mem_list->push_back(mem);
 		  mem_allocations.insert(make_pair(mem_chunk, mem_list));
@@ -205,8 +211,8 @@ int read_zca_probes(const char* path)
       break;
     }
   }
-  
-  elf_end(e);
+
+  // elf_end(e);
   close(fd);
   
   return probe_count;

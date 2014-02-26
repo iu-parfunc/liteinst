@@ -161,6 +161,7 @@ typedef struct ann_data
 
 typedef struct mem_island {
 	unsigned long* start_addr;        // Memory island start address
+	int32_t mem_chunk;                 // 2^32 memory chunk this island belongs to
 	bool allocated; 			      // Has this island been actually allocated
 	unsigned long* insertion_ptr;     // Next insertion pointer
 	unsigned long int size;           // Size of this memory island in bytes

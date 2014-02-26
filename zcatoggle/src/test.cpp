@@ -84,11 +84,11 @@ void test_probe_loop() {
 
 
 #ifdef PROBE_ON
-	printf("--- Median time with annotations (cycles): %llu\n", find_median(timings, rounds));
+	printf("--- Median time with annotations (cycles): %llu \n\n", find_median(timings, rounds));
 	return;
 #endif
 
-	printf("--- Median time without annotations (cycles) : %llu", find_median(timings, rounds));
+	printf("--- Median time without annotations (cycles) : %llu\n", find_median(timings, rounds));
 
 }
 #endif
@@ -136,7 +136,7 @@ void test_single_probe() {
 	int i = 0;
 
 	start = getticks();
-	__notify_intrinsic((void*)"singleProbe",(void*)&i);
+	empty_func(i);
 	end = getticks();
 
 	elapsed_time = elapsed(end, start);
