@@ -84,7 +84,7 @@ void test_probe_loop() {
 
 
 #ifdef PROBE_ON
-	printf("--- Median time with annotations (cycles): %llu \n\n", find_median(timings, rounds));
+	printf("--- Median time with annotations (cycles): %llu \n \n", find_median(timings, rounds));
 	return;
 #endif
 
@@ -119,7 +119,7 @@ void test_large_probe_count() {
 
 
 #ifdef PROBE_ON
-	printf("--- Median time with annotations (cycles): %llu \n", find_median(timings, rounds));
+	printf("--- Median time with annotations (cycles): %llu \n \n", find_median(timings, rounds));
 	return;
 #endif
 

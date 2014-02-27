@@ -147,7 +147,7 @@ int read_zca_probes(const char* path)
       LOG_DEBUG("Annotation table resides at : %p\n", annotations);
 
       probe_count = header->entry_count;
-      printf("Probe count : %d\n", probe_count);
+      // printf("Probe count : %d\n", probe_count);
 
       for (int i = 0; i < header->entry_count; i++)
 	{
@@ -183,18 +183,19 @@ int read_zca_probes(const char* path)
 	  uint64_t chunk_start = probe_adddress & 0xFFFF0000; // Get 32 high order bits
 	  // Calculate memory requirements for the stubs to be allocated related to probe spaces,
 	  // later during the JIT code generation phase
-      mem_island* mem;
+      mem_island* mem; // int counter=0;
 	  if (mem_allocations.find(mem_chunk) == mem_allocations.end()) {
 		  list<mem_island*>* mem_list = new list<mem_island*>;
 		  mem = new mem_island;
-		  mem->allocated = false;
 		  mem->start_addr = (unsigned long*)((chunk_start + CHUNK_SIZE) / 2); // We initially set this to the middle of the 2^32 chunk
 		  mem->size = STUB_SIZE;
 		  mem->mem_chunk = mem_chunk;
 
 		  mem_list->push_back(mem);
 		  mem_allocations.insert(make_pair(mem_chunk, mem_list));
+		  // counter += 1;
 	  } else {
+		  // counter += 1;
 		  list<mem_island*>* mem_list = mem_allocations.find(mem_chunk)->second;
 		  mem = mem_list->front(); // At this stage we only have one memory island in the list
 		  if (mem != NULL) {
@@ -203,6 +204,8 @@ int read_zca_probes(const char* path)
 			  // log error. This shouldn't happen
 		  }
 	  }
+
+	  // printf("Mem chunk : %lu   Counter : %d\n", mem_chunk, counter);
 	  // Move to next row
 	  row = (zca_row_11_t*) ((byte*) row + sizeof(*row));
 	}
@@ -211,6 +214,8 @@ int read_zca_probes(const char* path)
       break;
     }
   }
+
+  // printf("Number of processors :%d", get_nprocs());
 
   // elf_end(e);
   close(fd);

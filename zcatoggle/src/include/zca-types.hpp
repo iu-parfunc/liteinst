@@ -160,12 +160,16 @@ typedef struct ann_data
 } ann_data;
 
 typedef struct mem_island {
-	unsigned long* start_addr;        // Memory island start address
-	int32_t mem_chunk;                 // 2^32 memory chunk this island belongs to
-	bool allocated; 			      // Has this island been actually allocated
-	unsigned long* insertion_ptr;     // Next insertion pointer
-	unsigned long int size;           // Size of this memory island in bytes
-	unsigned long int remaining_size; // Remaining size available
+	unsigned long* start_addr;      	 // Memory island start address
+	int32_t mem_chunk;                   // 2^32 memory chunk this island belongs to
+//	bool allocated; 			     	 // Has this island been actually allocated
+	unsigned long* insertion_ptr;    	 // Next stub insertion pointer
+	unsigned long int size;         	 // Size required for this memory island in bytes
+	unsigned long int unallocated_size;	 // The size that was left unallocated due to memory constraints.
+	                                     // (e.g: due to fragmentation of vm address space)
+	                                     // Should be allocated to another mem_island at a different location a lazy manner
+	unsigned long int remaining_size; 	 // Remaining size available
+	unsigned long* last_probe_address;   // Address of the last probe serviced by this stub island.
 } mem_island;
 
 // --------------------------------------------------------------------------------

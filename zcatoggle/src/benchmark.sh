@@ -35,7 +35,7 @@ make test_prof_on_probe_loop CFLAGS=-DPROBE_LOOP=1
 make test_prof_off_probe_loop CFLAGS=-DPROBE_LOOP=1 
 
 echo -e " << Generating Init Timing Test >>"
-annotate 30000;
+annotate 10000;
 make test_prof_on_large_probe_count CFLAGS=-DPROFILE_INIT=1
 
 }
