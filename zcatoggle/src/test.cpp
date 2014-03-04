@@ -1,7 +1,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "zca-toggle.h"
+#include "zca-toggle.hpp"
 #include <sys/mman.h>
 #include <errno.h>
 #include "cycle.h"
@@ -23,7 +23,24 @@ void __attribute__ ((constructor(10))) premain()
 	// initZCAService();
 }
 
-int main () {
+void testfun1() {
+  int x = 5;
+  printf("Before probe\n");
+  __notify_intrinsic((void*)"notify01",(void*)&x);
+  printf("After probe\n");
+  
+}
+
+int main() {
+  initZCAService();
+  testfun1();
+  int status = deactivateProbe("notify01");
+  testfun1();
+
+  return status;
+}
+
+int main2 () {
 	initZCAService();
 	int x = 20;
 	// __notify_intrinsic((void*)"notify01",(void*)&x);

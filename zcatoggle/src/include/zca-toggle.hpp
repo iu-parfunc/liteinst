@@ -61,12 +61,12 @@ typedef void (*probe_callable_t)(const char* label, void* arg);
  *  `activateProbe` on the *same* probe will result in the new
  *  callback function atomically replacing the old.
  */
-extern int activateProbe(const probe_t* label, probe_callable_t callback);
+int activateProbe(const probe_t* label, probe_callable_t callback);
 
 /** Deactivate a probe.
  *  Returns the sucess code.
  */
-extern int deactivateProbe(const probe_t* label);
+int deactivateProbe(const char* ann);
 
 /** Runs at startup-time and reads the current binary's ELF headers.
  */
