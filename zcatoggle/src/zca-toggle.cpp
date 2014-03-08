@@ -32,7 +32,7 @@ static ticks stub_gen_elapsed_time;
 static struct timeval stub_gen_tvDiff;
 #endif
 
-static int probe_count;
+static int probe_count = 0;
 static mem_island* current_alloc_unit;
 
 inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_fn, ann_data** ann_info)

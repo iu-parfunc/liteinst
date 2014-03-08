@@ -31,18 +31,20 @@ int main () {
 	// __notify_intrinsic((void*)"notify02",(void*)&x);
 
 #ifdef SINGLE_PROBE
-	 // test_single_probe();
+	 test_single_probe();
 #endif
 
 #ifdef PROBE_LOOP
-	// test_probe_loop();
+	test_probe_loop();
 #endif
 
 #ifdef PROBE_LARGE
-	// test_large_probe_count();
+	test_large_probe_count();
 #endif
 
+#ifdef PROBE_ACTIVATION
 	 test_probe_deactivation();
+#endif
 
 }
 
@@ -53,14 +55,18 @@ int main () {
 void test_probe_deactivation() {
 
 	int i = 0;
+
+	printf("\nExecuting the annotated method..\n");
 	empty_func(i);
 
-	printf("Deactivating probe..\n");
+	printf("\nDeactivating probe..\n");
 	deactivateProbe("emptyFunc");
+	printf("Executing the annotated method after deactivation..\n");
 	empty_func(i);
 
-	printf("Activating probe..\n");
+	printf("\nReactivating probe..\n");
 	activateProbe("emptyFunc", NULL);
+	printf("Executing the annotated method after reactivation..\n");
 	empty_func(i);
 
 }

@@ -69,7 +69,7 @@ int read_zca_probes(const char* path)
   size_t shstrndx;
   zca_row_11_t* rows;
 
-  int probe_count; // Number of probes discovered
+  int probe_count = 0; // Number of probes discovered
 
   Elf *e;           // ELF struct
   Elf_Scn *scn;     // Section index struct
@@ -261,7 +261,11 @@ void get_working_path(char* buf)
 //* Temporary functions to test
 // Probe function to test
 void print_fn() {
-	printf("[Successful] We are the borg\n");
+#ifdef PROBE_ACTIVATION
+	 printf("[Successful] We are the borg\n");
+	 return;
+#endif
+	LOG_DEBUG("[Successful] We are the borg\n");
 
 }
 
