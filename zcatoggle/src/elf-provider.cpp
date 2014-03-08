@@ -159,9 +159,9 @@ int read_zca_probes(const char* path)
 	  }
 
 	  if (i == 0) {
-	    probe_start = row->anchor;
+		  probe_start = row->anchor;
 	  } else if (i == (header->entry_count - 1)) {
-	    probe_end = row->anchor;
+		  probe_end = row->anchor;
 	  }
 
 	  //	  LOG_DEBUG("\n------------ Annotation [%d] --------------\n", i);
@@ -183,26 +183,26 @@ int read_zca_probes(const char* path)
 	  uint64_t chunk_start = probe_adddress & 0xFFFF0000; // Get 32 high order bits
 	  // Calculate memory requirements for the stubs to be allocated related to probe spaces,
 	  // later during the JIT code generation phase
-	  mem_island* mem; // int counter=0;
+      mem_island* mem; // int counter=0;
 	  if (mem_allocations.find(mem_chunk) == mem_allocations.end()) {
-	    list<mem_island*>* mem_list = new list<mem_island*>;
-	    mem = new mem_island;
-	    mem->start_addr = (unsigned long*)((chunk_start + CHUNK_SIZE) / 2); // We initially set this to the middle of the 2^32 chunk
-	    mem->size = STUB_SIZE;
-	    mem->mem_chunk = mem_chunk;
+		  list<mem_island*>* mem_list = new list<mem_island*>;
+		  mem = new mem_island;
+		  mem->start_addr = (unsigned long*)((chunk_start + CHUNK_SIZE) / 2); // We initially set this to the middle of the 2^32 chunk
+		  mem->size = STUB_SIZE;
+		  mem->mem_chunk = mem_chunk;
 
-	    mem_list->push_back(mem);
-	    mem_allocations.insert(make_pair(mem_chunk, mem_list));
-	    // counter += 1;
+		  mem_list->push_back(mem);
+		  mem_allocations.insert(make_pair(mem_chunk, mem_list));
+		  // counter += 1;
 	  } else {
-	    // counter += 1;
-	    list<mem_island*>* mem_list = mem_allocations.find(mem_chunk)->second;
-	    mem = mem_list->front(); // At this stage we only have one memory island in the list
-	    if (mem != NULL) {
-	      mem->size += STUB_SIZE; // Another stub for this memory island
-	    } else {
-	      // log error. This shouldn't happen
-	    }
+		  // counter += 1;
+		  list<mem_island*>* mem_list = mem_allocations.find(mem_chunk)->second;
+		  mem = mem_list->front(); // At this stage we only have one memory island in the list
+		  if (mem != NULL) {
+			  mem->size += STUB_SIZE; // Another stub for this memory island
+		  } else {
+			  // log error. This shouldn't happen
+		  }
 	  }
 
 	  // printf("Mem chunk : %lu   Counter : %d\n", mem_chunk, counter);
@@ -258,10 +258,10 @@ void get_working_path(char* buf)
 //* Temporary functions to test
 // Probe function to test
 void print_fn() {
-	printf("[Successful] We are the borg\n");
+	LOG_DEBUG("[Successful] We are the borg\n");
 
 }
 
 void print_fn2() {
-	printf("[Successful] Resistence is futile...\n");
+	LOG_DEBUG("[Successful] Resistence is futile...\n");
 }
