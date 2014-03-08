@@ -147,6 +147,7 @@ int read_zca_probes(const char* path)
       LOG_DEBUG("Annotation table resides at : %p\n", annotations);
 
       probe_count = header->entry_count;
+      ann_data* ann_info = (ann_data*)malloc(sizeof(ann_data) * (header->entry_count));
       // printf("Probe count : %d\n", probe_count);
 
       for (int i = 0; i < header->entry_count; i++)
@@ -173,10 +174,12 @@ int read_zca_probes(const char* path)
 	  // ann_data ad = ann_data(NULL, NULL, fun, getIP(row), getProbespace(row), getExpr(header, row));
 
 	  const char* str = getAnnotation(header, row);
+	  // printf("The annotation string  is : %s\n", str);
 	  
 	  // printf("Row %d address : %p\n", i, row);
-
-	  annotations.insert(ann_table::value_type(string(str), pair<zca_row_11_t*, unsigned long*>(row, nullptr)));
+	  // TODO : Decode in annotation's expression from zca_row exp and store in the ann_data
+	  // ann_info[i].exp = <<>>
+	  annotations.insert(ann_table::value_type(string(str), pair<zca_row_11_t*, ann_data*>(row, &(ann_info[i]))));
 
 	  uint64_t probe_adddress = row->anchor;
 	  uint32_t mem_chunk = ((uint64_t)probe_adddress) >> 32;
@@ -258,7 +261,7 @@ void get_working_path(char* buf)
 //* Temporary functions to test
 // Probe function to test
 void print_fn() {
-	LOG_DEBUG("[Successful] We are the borg\n");
+	printf("[Successful] We are the borg\n");
 
 }
 

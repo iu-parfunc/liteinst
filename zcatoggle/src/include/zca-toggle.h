@@ -22,6 +22,9 @@
 
 #ifndef _ZCA_TOGGLE_H_
 #define _ZCA_TOGGLE_H_
+
+#include <string>
+
 #ifdef __cplusplus
 extern "C"
 {
@@ -61,12 +64,12 @@ typedef void (*probe_callable_t)(const char* label, void* arg);
  *  `activateProbe` on the *same* probe will result in the new
  *  callback function atomically replacing the old.
  */
-extern int activateProbe(const probe_t* label, probe_callable_t callback);
+extern int activateProbe(std::string label, probe_callable_t callback);
 
 /** Deactivate a probe.
  *  Returns the sucess code.
  */
-extern int deactivateProbe(const probe_t* label);
+extern int deactivateProbe(std::string label);
 
 /** Runs at startup-time and reads the current binary's ELF headers.
  */

@@ -145,18 +145,17 @@ const uint64_t zca_c_have_probe_region = 0x02;  // ZCA table row has field
 
 const uint64_t zca_c_32bit_anchor=0x04;         // The anchor address is 32bits
 
+// Data structure to hold additional data related to an annotation and the stub related to it
 typedef struct ann_data
 {
-  unsigned long* stubLocation;
-  int stubSize;
-  void (*fun)();
-  const byte* const ip;
-  const uint32_t probespace;
-  const byte* const expr;
+  unsigned long* stubLocation;                  // Address of the stub related to this probe
+  short int probe_offset;                       // Offset at which original probe sequence can be found at the stub site
+  const byte* const expr;                       // Decoded annotation tag which serve as a look up key
+  bool active; 									// Whether this probe site is currently active or not
   
-  ann_data(unsigned long* sL, int sS, void (*f)(), const byte* const i, const uint32_t ps,
+/*  ann_data(unsigned long* sL, int sS, void (*f)(), const byte* const i, const uint32_t ps,
    	   const byte* const e):
-    stubLocation(sL), stubSize(sS), fun(f), ip(i), probespace(ps), expr(e) {}
+    stubLocation(sL), stubSize(sS), fun(f), ip(i), probespace(ps), expr(e) {}*/
 } ann_data;
 
 typedef struct mem_island {

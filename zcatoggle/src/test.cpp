@@ -15,6 +15,7 @@ void test_probe_loop();
 void test_single_probe();
 void test_large_probe_count();
 void test_setup_times();
+void test_probe_deactivation();
 void annotated_func();
 ticks find_median(ticks* values, int items);
 
@@ -30,17 +31,18 @@ int main () {
 	// __notify_intrinsic((void*)"notify02",(void*)&x);
 
 #ifdef SINGLE_PROBE
-	test_single_probe();
+	 // test_single_probe();
 #endif
 
 #ifdef PROBE_LOOP
-	test_probe_loop();
+	// test_probe_loop();
 #endif
 
 #ifdef PROBE_LARGE
-	test_large_probe_count();
+	// test_large_probe_count();
 #endif
-	// test_setup_times();
+
+	 test_probe_deactivation();
 
 }
 
@@ -48,9 +50,18 @@ int main () {
  * Test functions
  */
 
-void test_setup_times() {
+void test_probe_deactivation() {
 
+	int i = 0;
+	empty_func(i);
 
+	printf("Deactivating probe..\n");
+	deactivateProbe("emptyFunc");
+	empty_func(i);
+
+	printf("Activating probe..\n");
+	activateProbe("emptyFunc", NULL);
+	empty_func(i);
 
 }
 

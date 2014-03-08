@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 
+#include <string>
 #include <iostream>
 #include "zca-toggle.h"
 #include "elf-provider.h"
@@ -34,7 +35,7 @@ static struct timeval stub_gen_tvDiff;
 static int probe_count;
 static mem_island* current_alloc_unit;
 
-inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_fn)
+inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_fn, ann_data** ann_info)
 {
 
 	using namespace AsmJit;
@@ -63,15 +64,40 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* ta
 	// This works just as well, don't need the function_cast magic:
 	sysuint_t code = a.relocCode(addr);
 
+
+	//printf("[Gen Stub]Probe address is : %p\n", (unsigned char*)probe_loc);
+	//printf("[Gen Stub]Original probe content is : %016llx\n", *((uint64_t*)probe_loc));
+	//printf("[Gen Stub]Stub address is : %p\n", addr);
+
+	(*ann_info)->probe_offset = codesz;
+	// printf("[Gen Stub]Probe offset is : %d\n", (*ann_info)->probe_offset);
+
 	// Copy over the displaced probe bytes:
-	for(int i=0; i<PROBESIZE; i++)
+	char b[8];
+	for(int i=0; i<PROBESIZE; i++) {
 		addr[codesz + i] = probe_loc[i];
+	}
+
+/*	for (int i=0; i<PROBESIZE; i++) {
+		// b[i] = addr[codesz + i];
+		b[i] = probe_loc[i];
+		printf("%p ", addr[codesz+i]);
+	}
+	printf("\n");*/
+
+	b[6] = 0;
+	b[7] = 0;
+
+	// printf("[Gen Stub]Buffer value is : %016llx\n", b);
 
 	// Next generate the jump back home:
 	a2.jmp(imm((sysint_t)(void*)(probe_loc + PROBESIZE)));
 	int sz2 = a2.getCodeSize();
 	a2.relocCode(addr + codesz + PROBESIZE);
 
+	//printf("[Gen Stub]Stub content is :%016llx\n", *((uint64_t*)((byte*)addr+(*ann_info)->probe_offset)));
+	//printf("[Gen Stub]Stub content direct :%016llx\n", *((uint64_t*)((byte*)addr + codesz + 1)));
+    //printf("[Gen Stub]One word after the stub is : %016llx\n", *((uint64_t*)(addr + codesz + PROBESIZE)));
 	//#if LOGLEVEL >= DEBUG_LEVEL
 	char buf[1024];
 	for(int i=0; i<codesz + PROBESIZE + sz2; i++) {
@@ -80,7 +106,7 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* ta
 
 	}
 
-	LOG_DEBUG("%s\n", buf);
+	//printf("%s\n", buf);
 	//#endif
 
 	return (codesz+ PROBESIZE + sz2);
@@ -150,6 +176,8 @@ inline int get_allocated_stub_memory_for_probe(unsigned char* probe_address, uns
 					current_alloc_unit->start_addr = *stub_address;
 					current_alloc_unit->insertion_ptr = (unsigned long*)((byte*) *stub_address + STUB_SIZE);
 					current_alloc_unit->remaining_size = alloc_size - STUB_SIZE;
+
+
 				}
 			}
 
@@ -214,10 +242,11 @@ inline int get_allocated_stub_memory_for_probe(unsigned char* probe_address, uns
 	return 0;
 }
 
-inline void modify_probe_site(unsigned char* probe_address, unsigned long* stub_address) {
+inline void modify_probe_site(unsigned char* probe_address, unsigned long* stub_address, ann_data** ann_info) {
 
 	LOG_DEBUG("Probe address is : %p\n", (unsigned char*)probe_address);
 	LOG_DEBUG("Stub address is : %p\n", stub_address);
+
 
 	int page_size = 4096;
 	int code = mprotect((void*)(probe_address - (((unsigned long)probe_address)%4096)), page_size,
@@ -230,12 +259,13 @@ inline void modify_probe_site(unsigned char* probe_address, unsigned long* stub_
 		// return -1;
 	}
 
-	int stub_size = gen_stub_code((unsigned char*)(stub_address), probe_address, print_fn/*(&annotations[i])->fun*/);
+	int stub_size = gen_stub_code((unsigned char*)(stub_address), probe_address, print_fn, ann_info/*(&annotations[i])->fun*/);
 	// Plug in the relative jump
 	// This does a relative jump:
 	probe_address[0] = 0xE9;
 	// Size of the JMP we insert is 5.  So +5 points to the following instruction.
 	long relative = (long)(((unsigned char*)(void*) stub_address) - probe_address - 5);
+	//printf ("[Modify Probe site] Jump distance is : %lu\n", relative);
 
 	LOG_DEBUG("  Relative offset of dest from starting addr: %p %p, 32 bit: %d\n", probe_address, stub_address, (int)relative);
 
@@ -271,13 +301,17 @@ void setupStubs()
 	int i = 0;
 	for (auto iter = annotations.begin(); iter != annotations.end(); iter++, i++) {
 
-		std::pair<zca_row_11_t*, unsigned long*> data = iter->second;
+		std::pair<zca_row_11_t*, ann_data*> data = iter->second;
 		unsigned char* probe_address = (unsigned char*) (data.first->anchor);
+		ann_data* ann_info = data.second;
 
 		int status =get_allocated_stub_memory_for_probe(probe_address, &stub_address);
 
 		if (status != -1) {
-		   modify_probe_site(probe_address, stub_address);
+					// Fill annotation information for later use in probe activation/ deactivation
+		   ann_info->stubLocation = stub_address;
+		   modify_probe_site(probe_address, stub_address, &ann_info);
+		   ann_info->active = true;
 		}
 	}
 #ifdef PROFILE
@@ -289,17 +323,137 @@ void setupStubs()
 
 }
 
-
-int activateProbe(const probe_t* label, probe_callable_t callback)
+// Activate the probe by copying the jump to the stub
+// Little bit of bitmasking trickery is needed if the probe size is less than 8 bytes since
+// CAS can only deal with in integer sizes
+int activateProbe(std::string label , probe_callable_t callback)
 {
-	return 0;
+
+	 if (annotations.find(label) != annotations.end()) {
+
+		 std::pair<zca_row_11_t*, ann_data*> data = annotations.find(label)->second;
+		 zca_row_11_t* probe_info = data.first;
+		ann_data* ann_info = data.second;
+
+		if (probe_info != NULL && ann_info != NULL && ann_info->active == false) {
+			uint64_t* stub_address = ann_info->stubLocation;
+			uint64_t* probe_address = (uint64_t*) probe_info->anchor;
+
+           	//printf("[Activate Probe]The probe content is : %016llx\n", *probe_address);
+           	//printf("[Activate Probe]The stub content is : %016llx\n", ((byte*)stub_address + ann_info->probe_offset));
+
+			if (stub_address != NULL && probe_address != NULL) {
+				uint64_t old_val = *probe_address;
+
+				if (PROBESIZE < sizeof(uint64_t)) {
+					uint64_t mask = 0x0FFFFFFFFFFFFFFF;
+
+					int shift_size = (sizeof(uint64_t) - PROBESIZE) * 8 - 4;
+					mask = (mask >> shift_size);
+
+					uint64_t msb = (old_val & ~mask);
+
+					//printf("[Activate Probe]MSB is : %016llx\n", msb);
+
+					uint64_t new_val = 0;
+					byte* new_val_ptr;
+					new_val_ptr = (byte*) &new_val;
+					new_val_ptr[0] = 0xE9;
+
+					long relative = (long)(((unsigned char*)(void*)stub_address) - (unsigned char*)probe_address - 5);
+					//printf("[Activate Probe]Jump distance is : %lu\n", relative);
+					*(uint32_t*)(new_val_ptr+1) = (int)relative;
+					new_val_ptr[5] = 0x0;
+
+					new_val = (new_val | msb);
+
+					//printf("[Activate Probe]Modfied probe content is : %016llx\n", new_val);
+
+					// Now atomically swap the jump to the stub at the probe site
+	           	   int status = __sync_bool_compare_and_swap(probe_address, old_val, new_val);
+				   // printf("[Activate Probe]Changed probe content is : %016llx\n", *probe_address);
+
+	           	   return status;
+				}
+
+			}
+
+		}
+	} else {
+		printf("Couldn't find the annotation..\n");
+	}
+	return -1;
 }
 
-int deactivateProbe(const probe_t* label) {
-	return 0;
+// Deactivate the probe by copying original probe sequence back
+// Little bit of bitmasking trickery is needed if the probe size is less than 8 bytes since
+// CAS can only deal with in integer sizes
+int deactivateProbe(std::string label) {
+
+	 if (annotations.find(label) != annotations.end()) {
+
+		 std::pair<zca_row_11_t*, ann_data*> data = annotations.find(label)->second;
+		zca_row_11_t* probe_info = data.first;
+		ann_data* ann_info = data.second;
+
+		if (probe_info != NULL && ann_info != NULL && ann_info->active == true) {
+			uint64_t* probe = (uint64_t*) probe_info->anchor;
+			uint64_t old_val = *probe;
+
+			//printf("Probe location is : %p\n", probe_info->anchor);
+			//printf("Old val is : %016llx\n", old_val);
+
+			//printf("Stub location is : %p\n", ann_info->stubLocation);
+			uint64_t* probespace = (uint64_t*) ((byte*)ann_info->stubLocation + ann_info->probe_offset);
+			//printf("Probespace is : %p\n", probespace);
+			//printf("Probe offset now is : %d\n", ann_info->probe_offset);
+			//printf("Probespace content is : %016llx\n", *probespace);
+
+			uint64_t new_val = *probespace;
+
+			if (PROBESIZE < sizeof(uint64_t)) {
+				uint64_t mask = 0x0FFFFFFFFFFFFFFF;
+
+				// printf("Mask before shifting is %016llx\n", mask);
+				int shift_size = (sizeof(uint64_t) - PROBESIZE) * 8 - 4;
+				mask = (mask >> shift_size);
+				//printf("Mask is %016llx\n", mask);
+
+				new_val = (new_val & mask); // Shave off (2) least significant bytes
+				//printf("New val after shaving off 2 msb : %016llx\n", new_val);
+				uint64_t msb = (old_val & ~mask);
+				//printf("LSB is : %016llx\n", msb);
+
+				new_val = (new_val | msb);
+
+				int page_size = 4096;
+				//printf("Probe is %04x\n", probe);
+/*				int code = mprotect((void*)(probe - (((unsigned long)probe)%4096)), page_size,
+						PROT_READ | PROT_WRITE | PROT_EXEC);
+
+				if (code) {
+					 current code page is now writable and code from it is allowed for execution
+					LOG_ERROR("mprotect was not successfull! code %d\n", code);
+					LOG_ERROR("errno value is : %d\n", errno);
+					// return -1;
+				}*/
+
+				// Now atomically swap the displaced probe site sequence to its original location
+           	   int status = __sync_bool_compare_and_swap(probe, old_val, new_val);
+
+           	   ann_info->active = false;
+           	   //printf("Swapped the stuff..\n");
+
+           	   //printf("Now the probe content is : %016llx\n", *probe);
+
+           	   return status;
+			}
+
+		}
+	}
+
+	return -1;
 }
-
-
 
 /* This function is called automatically when the library is loaded */
 // __attribute__((constructor)) 
