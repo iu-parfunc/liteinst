@@ -64,7 +64,7 @@ typedef void (*probe_callable_t)(const char* label, void* arg);
  *  `activateProbe` on the *same* probe will result in the new
  *  callback function atomically replacing the old.
  */
-extern int activateProbe(std::string label, probe_callable_t callback);
+extern int activateProbe(std::string label, void* fun);
 
 /** Deactivate a probe.
  *  Returns the sucess code.

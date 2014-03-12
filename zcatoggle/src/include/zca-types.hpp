@@ -57,6 +57,27 @@ extern "C"
 
 // using namespace std;
 
+/*
+static REG reg_vals[16] =
+{
+    REG_RAX,
+    REG_RDX,
+    REG_RCX,
+    REG_RBX,
+    REG_RSI,
+    REG_RDI,
+    REG_RBP,
+    REG_STACK_PTR,
+    REG_R8,
+    REG_R9,
+    REG_R10,
+    REG_R11,
+    REG_R12,
+    REG_R13,
+    REG_R14,
+    REG_R15
+};
+*/
 
 /* ZCA table stuff */
 typedef unsigned char byte;
@@ -152,7 +173,7 @@ typedef struct ann_data
   short int probe_offset;                       // Offset at which original probe sequence can be found at the stub site
   const byte* const expr;                       // Decoded annotation tag which serve as a look up key
   bool active; 									// Whether this probe site is currently active or not
-  
+  void (*fun) ();
 /*  ann_data(unsigned long* sL, int sS, void (*f)(), const byte* const i, const uint32_t ps,
    	   const byte* const e):
     stubLocation(sL), stubSize(sS), fun(f), ip(i), probespace(ps), expr(e) {}*/
@@ -171,6 +192,11 @@ typedef struct mem_island {
 	unsigned long* last_probe_address;   // Address of the last probe serviced by this stub island.
 } mem_island;
 
+typedef struct exprReg {
+  int reg;
+  int32_t offset;
+} exprReg;
+  
 // --------------------------------------------------------------------------------
 // Convenience functions for dealing with rows
 
