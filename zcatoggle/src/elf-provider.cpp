@@ -368,8 +368,12 @@ int read_zca_probes(const char* path)
 	  // printf("Row %d address : %p\n", i, row);
 	  // TODO : Decode in annotation's expression from zca_row exp and store in the ann_data
 	  // ann_info[i].exp = <<>>
-	  annotations.insert(ann_table::value_type(string(str), pair<zca_row_11_t*, ann_data*>(row, &(ann_info[i]))));
 	  ann_info[i].fun = print_fn;
+	  ann_info[i].anchor = row->anchor;
+	  ann_info[i].annotation = row->annotation;
+	  ann_info[i].probespace = row->probespace;
+	  ann_info[i].expr_dwarf = row->expr;
+	  annotations.insert(ann_table::value_type(string(str), &(ann_info[i])));
 	  
 	  uint64_t probe_adddress = row->anchor;
 	  uint32_t mem_chunk = ((uint64_t)probe_adddress) >> 32;

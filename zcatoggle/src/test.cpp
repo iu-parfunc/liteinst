@@ -26,33 +26,7 @@ void __attribute__ ((constructor(10))) premain()
 	// initZCAService();
 }
 
-void testfun1() {
-  int x = 5;
-  printf("Before probe\n");
-  __notify_intrinsic((void*)"notify01",(void*)&x);
-  printf("After probe\n");
-  
-}
-
-void print_fn01() {
-  printf("Default callback fun\n");
-}
-void print_fn02() {
-  printf("Made it, brah\n");
-}
-
-int main() {
-  initZCAService();
-  testfun1();
-  deactivateProbe("notify01");
-  testfun1();
-  activateProbe("notify01", print_fn02);
-  testfun1();
-
-  return 1;
-}
-
-int main2 () {
+int main () {
 	initZCAService();
 	int x = 20;
 	// __notify_intrinsic((void*)"notify01",(void*)&x);
@@ -80,6 +54,10 @@ int main2 () {
  * Test functions
  */
 
+void print_fn3() {
+  printf("[Successful] Resistence is futile...\n");
+}
+
 void *probe_activation_func(void* tid) {
 	// printf("\nDeactivating probe..\n");
 	int status = 0;
@@ -92,7 +70,7 @@ void *probe_activation_func(void* tid) {
 	// sleep(1);
 
 	status = 0;
-	status = activateProbe("emptyFunc", NULL);
+	status = activateProbe("emptyFunc", print_fn3);
 
 	if (status == 1) {
 	   empty_func((int)tid);
@@ -105,7 +83,7 @@ void test_probe_deactivation() {
 
 	int i = 0;
 
-/*	printf("\nExecuting the annotated method..\n");
+	printf("\nExecuting the annotated method..\n");
 	empty_func(i);
 
 	printf("\nDeactivating probe..\n");
@@ -114,11 +92,11 @@ void test_probe_deactivation() {
 	empty_func(i);
 
 	printf("\nReactivating probe..\n");
-	//	activateProbe("emptyFunc", NULL);
+	activateProbe("emptyFunc", print_fn3);
 	printf("Executing the annotated method after reactivation..\n");
-	empty_func(i);*/
+	empty_func(i);
 
-	pthread_t threads[100];
+/*	pthread_t threads[100];
 
 	int rc;
 	for(i=0; i<100; i++) {
@@ -133,7 +111,7 @@ void test_probe_deactivation() {
 	    	  printf("Error joining thread\n");
 	    	  exit(-1);
 	      }
-	}
+	}*/
 
 }
 

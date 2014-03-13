@@ -299,17 +299,17 @@ void setupStubs()
 
 	int i = 0;
 	for (auto iter = annotations.begin(); iter != annotations.end(); iter++, i++) {
-		std::pair<zca_row_11_t*, ann_data*> data = iter->second;
-		unsigned char* probe_address = (unsigned char*) (data.first->anchor);
-		ann_data* ann_info = data.second;
+		ann_data* data = iter->second;
+		unsigned char* probe_address = (unsigned char*) (data->anchor);
+		// ann_data* ann_info = data.second;
 
 		int status = get_allocated_stub_memory_for_probe(probe_address, &stub_address);
 
 		if (status != -1) {
 					// Fill annotation information for later use in probe activation/ deactivation
-		   ann_info->stubLocation = stub_address;
-		   modify_probe_site(probe_address, stub_address, &ann_info, print_fn);
-		   ann_info->active = true;
+		   data->stubLocation = stub_address;
+		   modify_probe_site(probe_address, stub_address, &data, print_fn);
+		   data->active = true;
 		}
 	}
 #ifdef PROFILE
@@ -328,18 +328,20 @@ int activateProbe(std::string label, void* fun)
 {
   if (annotations.find(label) != annotations.end()) {
     
-    std::pair<zca_row_11_t*, ann_data*> data = annotations.find(label)->second;
-    zca_row_11_t* probe_info = data.first;
-    ann_data* ann_info = data.second;
+    ann_data* data = annotations.find(label)->second;
+    //zca_row_11_t* probe_info = data.first;
+    // ann_data* ann_info = data.second;
 
-    if (ann_info->fun != fun) {
-      unsigned char* probe_address = (unsigned char*) (probe_info->anchor);      
-      modify_probe_site(probe_address, ann_info->stubLocation, &ann_info, fun);
+    if (data->fun != fun) {
+//    	printf("Current function : %p New function : %p\n", ann_info->fun, fun);
+      unsigned char* probe_address = (unsigned char*) (data->anchor);
+      modify_probe_site(probe_address, data->stubLocation, &data, fun);
+      return 1;
     }
     
-    if (probe_info != NULL && ann_info != NULL && ann_info->active == false) {
-      uint64_t* stub_address = ann_info->stubLocation;
-      uint64_t* probe_address = (uint64_t*) probe_info->anchor;
+    if (data != NULL && data != NULL && data->active == false) {
+      uint64_t* stub_address = data->stubLocation;
+      uint64_t* probe_address = (uint64_t*) data->anchor;
 
       //printf("[Activate Probe]The probe content is : %016llx\n", *probe_address);
       //printf("[Activate Probe]The stub content is : %016llx\n", ((byte*)stub_address + ann_info->probe_offset));
@@ -394,19 +396,19 @@ int deactivateProbe(std::string label) {
 
   if (annotations.find(label) != annotations.end()) {
 
-    std::pair<zca_row_11_t*, ann_data*> data = annotations.find(label)->second;
-    zca_row_11_t* probe_info = data.first;
-    ann_data* ann_info = data.second;
+    ann_data* data = annotations.find(label)->second;
+    // zca_row_11_t* probe_info = data.first;
+    // ann_data* ann_info = data.second;
 
-    if (probe_info != NULL && ann_info != NULL && ann_info->active == true) {
-      uint64_t* probe = (uint64_t*) probe_info->anchor;
+    if (data != NULL && data != NULL && data->active == true) {
+      uint64_t* probe = (uint64_t*) data->anchor;
       uint64_t old_val = *probe;
 
       //printf("Probe location is : %p\n", probe_info->anchor);
       //printf("Old val is : %016llx\n", old_val);
 
       //printf("Stub location is : %p\n", ann_info->stubLocation);
-      uint64_t* probespace = (uint64_t*) ((byte*)ann_info->stubLocation + ann_info->probe_offset);
+      uint64_t* probespace = (uint64_t*) ((byte*)data->stubLocation + data->probe_offset);
       //printf("Probespace is : %p\n", probespace);
       //printf("Probe offset now is : %d\n", ann_info->probe_offset);
       //printf("Probespace content is : %016llx\n", *probespace);
@@ -443,7 +445,7 @@ int deactivateProbe(std::string label) {
 	// Now atomically swap the displaced probe site sequence to its original location
 	int status = __sync_bool_compare_and_swap(probe, old_val, new_val);
 
-	ann_info->active = false;
+	data->active = false;
 	//printf("Swapped the stuff..\n");
 
 	//printf("Now the probe content is : %016llx\n", *probe);
