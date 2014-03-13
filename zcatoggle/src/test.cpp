@@ -1,7 +1,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include "zca-toggle.h"
+#include "zca-toggle.hpp"
 #include <sys/mman.h>
 #include <errno.h>
 #include "cycle.h"
@@ -24,7 +24,33 @@ void __attribute__ ((constructor(10))) premain()
 	// initZCAService();
 }
 
-int main () {
+void testfun1() {
+  int x = 5;
+  printf("Before probe\n");
+  __notify_intrinsic((void*)"notify01",(void*)&x);
+  printf("After probe\n");
+  
+}
+
+void print_fn01() {
+  printf("Default callback fun\n");
+}
+void print_fn02() {
+  printf("Made it, brah\n");
+}
+
+int main() {
+  initZCAService();
+  testfun1();
+  deactivateProbe("notify01");
+  testfun1();
+  activateProbe("notify01", print_fn02);
+  testfun1();
+
+  return 1;
+}
+
+int main2 () {
 	initZCAService();
 	int x = 20;
 	// __notify_intrinsic((void*)"notify01",(void*)&x);
@@ -65,7 +91,7 @@ void test_probe_deactivation() {
 	empty_func(i);
 
 	printf("\nReactivating probe..\n");
-	activateProbe("emptyFunc", NULL);
+	//	activateProbe("emptyFunc", NULL);
 	printf("Executing the annotated method after reactivation..\n");
 	empty_func(i);
 
