@@ -171,14 +171,12 @@ typedef struct ann_data
 {
   unsigned long* stubLocation;                  // Address of the stub related to this probe
   short int probe_offset;                       // Offset at which original probe sequence can be found at the stub site
-  // const byte* expr;                       // Decoded annotation tag which serve as a look up key
+  const byte* const expr;                       // Decoded annotation tag which serve as a look up key
   bool active; 									// Whether this probe site is currently active or not
   void (*fun) ();
-  const byte* ip;
-  const uint32_t probespace;
-
-  ann_data(unsigned long* sL, short int pO, bool a, void (*f)(), const byte* i, const uint32_t ps):
-    stubLocation(sL), probe_offset(pO), active(a) fun(f), ip(i), probespace(ps), {}
+/*  ann_data(unsigned long* sL, int sS, void (*f)(), const byte* const i, const uint32_t ps,
+   	   const byte* const e):
+    stubLocation(sL), stubSize(sS), fun(f), ip(i), probespace(ps), expr(e) {}*/
 } ann_data;
 
 typedef struct mem_island {
