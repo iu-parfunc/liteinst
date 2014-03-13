@@ -335,6 +335,8 @@ int activateProbe(std::string label, void* fun)
     if (ann_info->fun != fun) {
       unsigned char* probe_address = (unsigned char*) (probe_info->anchor);      
       modify_probe_site(probe_address, ann_info->stubLocation, &ann_info, fun);
+
+      return 1;
     }
     
     if (probe_info != NULL && ann_info != NULL && ann_info->active == false) {

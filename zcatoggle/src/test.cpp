@@ -5,8 +5,6 @@
 #include <sys/mman.h>
 #include <errno.h>
 #include "cycle.h"
-#include <pthread.h>
-#include <unistd.h>
 
 #if PROFILE == 1
 #define PROBE_ON
@@ -48,8 +46,8 @@ int main() {
   testfun1();
   activateProbe("notify01", print_fn02);
   testfun1();
-
-  return 1;
+  
+  return 0;
 }
 
 int main2 () {
@@ -80,32 +78,11 @@ int main2 () {
  * Test functions
  */
 
-void *probe_activation_func(void* tid) {
-	// printf("\nDeactivating probe..\n");
-	int status = 0;
-	status = deactivateProbe("emptyFunc");
-
-	if(status == 1) {
-	   empty_func((int)tid);
-	}
-
-	// sleep(1);
-
-	status = 0;
-	status = activateProbe("emptyFunc", NULL);
-
-	if (status == 1) {
-	   empty_func((int)tid);
-	}
-
-	pthread_exit(NULL);
-}
-
 void test_probe_deactivation() {
 
 	int i = 0;
 
-/*	printf("\nExecuting the annotated method..\n");
+	printf("\nExecuting the annotated method..\n");
 	empty_func(i);
 
 	printf("\nDeactivating probe..\n");
@@ -116,24 +93,7 @@ void test_probe_deactivation() {
 	printf("\nReactivating probe..\n");
 	//	activateProbe("emptyFunc", NULL);
 	printf("Executing the annotated method after reactivation..\n");
-	empty_func(i);*/
-
-	pthread_t threads[100];
-
-	int rc;
-	for(i=0; i<100; i++) {
-		printf("Creating threads..\n");
-	      rc = pthread_create(&threads[i], NULL, probe_activation_func, (void *)i);
-	      if (rc){
-	         printf("ERROR; return code from pthread_create() is %d\n", rc);
-	         exit(-1);
-	      }
-
-	      if(pthread_join(threads[i], NULL)) {
-	    	  printf("Error joining thread\n");
-	    	  exit(-1);
-	      }
-	}
+	empty_func(i);
 
 }
 
