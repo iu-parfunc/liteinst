@@ -36,7 +36,7 @@ make test_prof_off_probe_loop CFLAGS=-DPROBE_LOOP=1
 
 echo -e " << Generating Init Timing Test >>"
 cp test.cpp bench.cpp
-annotate 10000;
+annotate 30000;
 make test_prof_on_large_probe_count CFLAGS=-DPROFILE_INIT=1
 
 echo -e " << Generating Probe Activations Deactivations Test >>"
