@@ -174,10 +174,6 @@ typedef struct ann_data
   const byte* const expr;                       // Decoded annotation tag which serve as a look up key
   bool active; 									// Whether this probe site is currently active or not
   void (*fun) ();
-  uint64_t    anchor;     // Instruction pointer of entry
-  uint32_t    probespace; // Bytes of instruction to be copied by probe
-  uint32_t    annotation; // Offset of annotation string in strings table
-  uint32_t    expr_dwarf;       // How to compute tag parameter in intrinsic
 /*  ann_data(unsigned long* sL, int sS, void (*f)(), const byte* const i, const uint32_t ps,
    	   const byte* const e):
     stubLocation(sL), stubSize(sS), fun(f), ip(i), probespace(ps), expr(e) {}*/
