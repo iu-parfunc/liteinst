@@ -39,14 +39,14 @@ void gen_stub_code_1(unsigned char* addr, unsigned char* probe_loc, void* target
 
 
 // This works... Finally
-void __attribute__ ((constructor)) premain()
+/*void __attribute__ ((constructor)) premain()
 {
 	gen_stub_code_1(NULL, NULL, print_fn);// This doesn't work.
-}
+}*/
 
 int main() {
 
-	// gen_stub_code_1(NULL, NULL, NULL); // This works too
+	gen_stub_code_1(NULL, NULL, print_fn); // This works too
 	printf("Main is here..\n");
 
 }

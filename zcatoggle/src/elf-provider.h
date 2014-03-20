@@ -13,6 +13,7 @@
 #include <map>
 #include <list>
 #include "zca-types.hpp"
+#include "cycle.h"
 
 //#ifdef __cplusplus
 //extern "C"
@@ -74,6 +75,34 @@ void get_working_path(char* buf);
 
 void print_fn();
 
+// void print_fn(char* annotation);
+
 void print_fn2();
+
+typedef struct prof_data {
+	ticks start;
+	int count;
+	uint64_t min;
+	uint64_t max;
+	uint64_t sum;
+} prof_data;
+
+typedef std::map<std::string, prof_data*> function_stats;
+
+class Statistics {
+public:
+	function_stats f_stats;
+	Statistics() {}
+	~Statistics() {
+		for (auto iter = f_stats.begin(); iter != f_stats.end(); iter++) {
+			prof_data* data = iter->second;
+			if (data != NULL) {
+				free(data);
+			}
+		}
+	}
+};
+
+// typedef typename std::aligned_storage<sizeof(function_stats*), std::alignment_of<function_stats*>::value>::type Storage;
 
 #endif // _ELF_PROVIDER_H_

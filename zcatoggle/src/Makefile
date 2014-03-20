@@ -25,7 +25,7 @@ OBJ  = $(OBJ0:.c=.o)
 DEPS0 :=  $(wildcard $(ASM_JIT)/*.cpp)
 DEPS = $(DEPS0:.cpp=.o)
 SRC = $(HDRS) $(CODE)
-LIBS = -lelf
+LIBS = -lelf -lpthread
 
 LIBSOUT = libzca-toggle.so libzca-toggle.a 
 
@@ -38,7 +38,7 @@ install: build
 	if ! [ -d $(INSTALLD) ]; then mkdir -p $(INSTALLD); fi	
 	cp $(LIBSOUT) $(INSTALLD)
 
-test: build test.cpp hello_notify.exe elf-provider.o
+test: build test.cpp 
 	$(CPP) $(OPTS) test.cpp libzca-toggle.a $(LIBS) -o test.exe
 	./test.exe
 
@@ -81,6 +81,14 @@ libzca-toggle.so: $(OBJ) $(DEPS)
 
 libzca-toggle.a: $(OBJ) $(DEPS) 
 	$(AR) rc libzca-toggle.a $(OBJ) $(DEPS)
+
+prof : build profiler.cpp 
+	# $(AR) rc libdynprof.a profiler.o
+	$(CPP) $(OPTS) profiler.cpp libzca-toggle.a $(LIBS) -o prof.exe
+	./prof.exe
+
+tmp : build temp.cpp
+	$(CPP) $(OPTS) temp.cpp libzca-toggle.a $(LIBS) -o t
 
 ### Start of Testing stuff ###
 test6: test6.cpp

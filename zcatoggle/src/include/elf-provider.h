@@ -21,7 +21,7 @@ extern const char *__progname;
  * This examines data section headers to retrieve the ZCA probe
  * information (section .itt_notify_tab).
  */
-a_data* read_zca_probes(const char* filename);
+int read_zca_probes(const char* filename);
 
 #ifdef __cplusplus
 }

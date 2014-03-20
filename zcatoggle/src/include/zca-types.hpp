@@ -171,7 +171,7 @@ typedef struct ann_data
 {
   unsigned long* stubLocation;                  // Address of the stub related to this probe
   short int probe_offset;                       // Offset at which original probe sequence can be found at the stub site
-  const byte* const expr;                       // Decoded annotation tag which serve as a look up key
+  const char* expr;                             // Decoded annotation tag which serve as a look up key
   bool active; 									// Whether this probe site is currently active or not
   void (*fun) ();
   uint64_t anchor;     // Instruction pointer of entry

@@ -55,7 +55,7 @@ int main () {
  */
 
 void print_fn3() {
-  printf("[Successful] Resistence is futile...\n");
+  printf("[Successful] Resistence is futile.. Hmm.. really???\n");
 }
 
 void *probe_activation_func(void* tid) {
@@ -96,11 +96,11 @@ void test_probe_deactivation() {
 	printf("Executing the annotated method after reactivation..\n");
 	empty_func(i);
 
-/*	pthread_t threads[100];
+	pthread_t threads[100];
 
 	int rc;
 	for(i=0; i<100; i++) {
-		printf("Creating threads..\n");
+		// printf("Creating threads..\n");
 	      rc = pthread_create(&threads[i], NULL, probe_activation_func, (void *)i);
 	      if (rc){
 	         printf("ERROR; return code from pthread_create() is %d\n", rc);
@@ -111,7 +111,7 @@ void test_probe_deactivation() {
 	    	  printf("Error joining thread\n");
 	    	  exit(-1);
 	      }
-	}*/
+	}
 
 }
 

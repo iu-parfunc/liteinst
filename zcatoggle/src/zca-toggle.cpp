@@ -43,6 +43,9 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* ta
   // This aims to make the same one-way jump as manual_jmp_there, except from JITed code.
   // --------------------------------------------------------------------------------
   Assembler a, a2;
+  Mem m;
+
+  Compiler c;
 
 #if LOGLEVEL >= DEBUG_LEVEL
 
@@ -55,8 +58,14 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* ta
   // Push all volatile registers:
   a.push(rax); a.push(rcx); a.push(rdx);
   a.push(r8); a.push(r9); a.push(r10); a.push(r11);
+
+  // printf("ann_info->expr : %p\n", (*ann_info)->expr);
+  // printf("ann_info->expr : %s\n", ((*ann_info)->expr));
+  // a.mov(rdx,imm((sysint_t)(*ann_info)->expr));
+  // a.push(rax);
   a.call(imm((sysint_t)target_fn));
   // Restore all volatile registers:
+  // a.pop(rax);
   a.pop(r11); a.pop(r10); a.pop(r9); a.pop(r8);
   a.pop(rdx); a.pop(rcx); a.pop(rax);
 
@@ -336,7 +345,7 @@ int activateProbe(std::string label, void* fun)
 //    	printf("Current function : %p New function : %p\n", ann_info->fun, fun);
       unsigned char* probe_address = (unsigned char*) (data->anchor);
       modify_probe_site(probe_address, data->stubLocation, &data, fun);
-      return 1;
+      return 0;
     }
     
     if (data != NULL && data != NULL && data->active == false) {

@@ -57,37 +57,37 @@ unsigned long probe_end;
 static int high_register = 15;
 int REG_INVALID()
 {
-  return 99;
+	return 99;
 }
 
 unsigned int REG_NONE = 100;
 
 static int decode_LEB128(const uint8_t *p, int32_t *value, size_t *len)
 {
-    int32_t result = 0;
-    uint32_t shift = 0;
-    const uint8_t *start = p;
-    uint32_t size = sizeof(result) * 8;
-    uint8_t byte;
+	int32_t result = 0;
+	uint32_t shift = 0;
+	const uint8_t *start = p;
+	uint32_t size = sizeof(result) * 8;
+	uint8_t byte;
 
-    while(1)
-    {
-        byte = *p++;
-        result |= (byte & 0x7f) << shift;
-        shift += 7;
-        /* sign bit of byte is second high order bit (0x40) */
-        if ((byte & 0x80) == 0)
-            break;
-    }
+	while(1)
+	{
+		byte = *p++;
+		result |= (byte & 0x7f) << shift;
+		shift += 7;
+		/* sign bit of byte is second high order bit (0x40) */
+		if ((byte & 0x80) == 0)
+			break;
+	}
 
-    if ((shift < size) && (byte & 0x40))
-        /* sign extend */
-        result |= - (1 << shift);
+	if ((shift < size) && (byte & 0x40))
+		/* sign extend */
+		result |= - (1 << shift);
 
-    *len = p - start;
-    *value = (int32_t)result;
+	*len = p - start;
+	*value = (int32_t)result;
 
-    return 0;
+	return 0;
 }
 
 /*
@@ -103,23 +103,23 @@ static int decode_LEB128(const uint8_t *p, int32_t *value, size_t *len)
 static
 int decode_ULEB128(const uint8_t *p, uint32_t *value, size_t *len)
 {
-    uint32_t result = 0;
-    uint32_t shift = 0;
-    const uint8_t *start = p;
-    uint8_t byte;
+	uint32_t result = 0;
+	uint32_t shift = 0;
+	const uint8_t *start = p;
+	uint8_t byte;
 
-    while(1)
-    {
-        byte = *p++;
-        result |= (byte & 0x7f) << shift;
-        if (0 == (byte & 0x80))
-        {
-            *len = p - start;
-            *value = result;
-            return 0;
-        }
-        shift += 7;
-    }
+	while(1)
+	{
+		byte = *p++;
+		result |= (byte & 0x7f) << shift;
+		if (0 == (byte & 0x80))
+		{
+			*len = p - start;
+			*value = result;
+			return 0;
+		}
+		shift += 7;
+	}
 }
 
 /*
@@ -138,104 +138,104 @@ int decode_ULEB128(const uint8_t *p, uint32_t *value, size_t *len)
  */
 
 int dwarf_expr_to_pin(const unsigned char *expression,
-                      unsigned int *reg,
-                      int32_t *offset)
+		unsigned int *reg,
+		int32_t *offset)
 {
-    // The format is a leading "ULEB128" value specifying length,
-    // followed by a number of "Dwarf location atoms".  The expressions
-    // I've seen have been (in hex):
-    //  - "01 30" 1 byte, literal 0, or not specified,
-    //  - "01 54" 1 byte, register 4.  For x86, that would be ESP
-    //
-    // Full DWARF specification: http://www.dwarfstd.org/doc/DWARF4.pdf
-    // DWARF expr specification: http://dwarfstd.org/doc/040408.1.html
-    // The complete enum dwarf_location_atom for the Dwarf codes can be found
-    // in subversion at cilk/trunk/eng/prod/intel/gcc/gcc/dwarf2.h
+	// The format is a leading "ULEB128" value specifying length,
+	// followed by a number of "Dwarf location atoms".  The expressions
+	// I've seen have been (in hex):
+	//  - "01 30" 1 byte, literal 0, or not specified,
+	//  - "01 54" 1 byte, register 4.  For x86, that would be ESP
+	//
+	// Full DWARF specification: http://www.dwarfstd.org/doc/DWARF4.pdf
+	// DWARF expr specification: http://dwarfstd.org/doc/040408.1.html
+	// The complete enum dwarf_location_atom for the Dwarf codes can be found
+	// in subversion at cilk/trunk/eng/prod/intel/gcc/gcc/dwarf2.h
 
-    // The expression starts with a length as an unsigned LEB128 value
-    size_t leb128_bytes;
-    uint32_t expression_length;
-    decode_ULEB128(expression, &expression_length, &leb128_bytes);
-    expression += leb128_bytes;
+	// The expression starts with a length as an unsigned LEB128 value
+	size_t leb128_bytes;
+	uint32_t expression_length;
+	decode_ULEB128(expression, &expression_length, &leb128_bytes);
+	expression += leb128_bytes;
 
-    // Subset of dwarf opcodes known to occur in our ZCA entries
-    enum dwarf_opcode
-    {
-        DW_OP_lit0  = 0x30,     // Literal values
-        DW_OP_lit31 = 0x4f,
-        DW_OP_reg0  = 0x50,     // Simple registers
-        DW_OP_reg31 = 0x6f,
-        DW_OP_breg0 = 0x70,     // Registers + offset as a signed LEB128 value
-        DW_OP_breg31 = 0x8f,
-    };
+	// Subset of dwarf opcodes known to occur in our ZCA entries
+	enum dwarf_opcode
+	{
+		DW_OP_lit0  = 0x30,     // Literal values
+		DW_OP_lit31 = 0x4f,
+		DW_OP_reg0  = 0x50,     // Simple registers
+		DW_OP_reg31 = 0x6f,
+		DW_OP_breg0 = 0x70,     // Registers + offset as a signed LEB128 value
+		DW_OP_breg31 = 0x8f,
+	};
 
-    // Extract the opcode
-    unsigned char opcode = *expression;
-    printf("Opcode: %u\n", opcode);
-    // If this is a simple register, decode it
-    if ((opcode >= DW_OP_reg0) && (opcode <= DW_OP_reg31))
-    {
-        // Length should have been 1 since the expression consists of a single
-        // byte opcode
-        // LIBZCA_ASSERT(1 == expression_length);
+	// Extract the opcode
+	unsigned char opcode = *expression;
+	printf("Opcode: %u\n", opcode);
+	// If this is a simple register, decode it
+	if ((opcode >= DW_OP_reg0) && (opcode <= DW_OP_reg31))
+	{
+		// Length should have been 1 since the expression consists of a single
+		// byte opcode
+		// LIBZCA_ASSERT(1 == expression_length);
 
-        unsigned reg_number = opcode - DW_OP_reg0;
-        if (reg_number <= high_register)
-        {
-            *reg = reg_number;
-            *offset = 0;
-            return 0;
-        }
-        else
-        {
-            *reg = REG_INVALID();
-            *offset = 0;
-	    //            LIBZCA_ASSERT(! "Unexpected DWARF register code");
-            return 1;
-        }
-    }
+		unsigned reg_number = opcode - DW_OP_reg0;
+		if (reg_number <= high_register)
+		{
+			*reg = reg_number;
+			*offset = 0;
+			return 0;
+		}
+		else
+		{
+			*reg = REG_INVALID();
+			*offset = 0;
+			//            LIBZCA_ASSERT(! "Unexpected DWARF register code");
+			return 1;
+		}
+	}
 
-    // If this is a simple literal value, decode it
-    if ((opcode >= DW_OP_lit0) && (opcode <= DW_OP_lit31))
-    {
-        // Length should have been 1 since the expression consists of a single
-        // byte opcode
-      //        LIBZCA_ASSERT(1 == expression_length);
+	// If this is a simple literal value, decode it
+	if ((opcode >= DW_OP_lit0) && (opcode <= DW_OP_lit31))
+	{
+		// Length should have been 1 since the expression consists of a single
+		// byte opcode
+		//        LIBZCA_ASSERT(1 == expression_length);
 
-        *reg = REG_NONE;
-        *offset = opcode - DW_OP_lit0;
-        return 0;
-    }
+		*reg = REG_NONE;
+		*offset = opcode - DW_OP_lit0;
+		return 0;
+	}
 
-    // If this is a register and offset, decode it
-    if ((opcode >= DW_OP_breg0) && (opcode <= DW_OP_breg31))
-    {
-        // The opcode specifies the register
-        unsigned reg_number = opcode - DW_OP_breg0;
-        if (reg_number <= high_register)
-        {
-            *reg = reg_number;
-        }
-        else
-        {
-            *reg = REG_INVALID();
-            *offset = 0;
-	    //            LIBZCA_ASSERT(! "Unexpected DWARF register code");
-            return 1;
-        }
+	// If this is a register and offset, decode it
+	if ((opcode >= DW_OP_breg0) && (opcode <= DW_OP_breg31))
+	{
+		// The opcode specifies the register
+		unsigned reg_number = opcode - DW_OP_breg0;
+		if (reg_number <= high_register)
+		{
+			*reg = reg_number;
+		}
+		else
+		{
+			*reg = REG_INVALID();
+			*offset = 0;
+			//            LIBZCA_ASSERT(! "Unexpected DWARF register code");
+			return 1;
+		}
 
-        // Advance past the opcode
-        expression++;
-        expression_length--;
+		// Advance past the opcode
+		expression++;
+		expression_length--;
 
-        // The offset is a signed LEB128 value
-        decode_LEB128(expression, offset, &leb128_bytes);
+		// The offset is a signed LEB128 value
+		decode_LEB128(expression, offset, &leb128_bytes);
 
-        return 0;
-    }
+		return 0;
+	}
 
-    //    LIBZCA_ASSERT(! "Unexpected DWARF register code");
-    return 1;
+	//    LIBZCA_ASSERT(! "Unexpected DWARF register code");
+	return 1;
 }
 
 //--------------------------------------------------------------------------------
@@ -248,178 +248,179 @@ int dwarf_expr_to_pin(const unsigned char *expression,
  */
 int read_zca_probes(const char* path)
 {
-  int fd;       // File descriptor for the executable ELF file
-  char *section_name;
-  size_t shstrndx;
-  zca_row_11_t* rows;
+	int fd;       // File descriptor for the executable ELF file
+	char *section_name;
+	size_t shstrndx;
+	zca_row_11_t* rows;
 
-  int probe_count = 0; // Number of probes discovered
+	int probe_count = 0; // Number of probes discovered
 
-  Elf *e;           // ELF struct
-  Elf_Scn *scn;     // Section index struct
-  Elf_Data *data;     // Section index struct
-  Elf64_Shdr *shdr;  // Section strkkkuct
+	Elf *e;           // ELF struct
+	Elf_Scn *scn;     // Section index struct
+	Elf_Data *data;     // Section index struct
+	Elf64_Shdr *shdr;  // Section strkkkuct
 
-  if(elf_version(EV_CURRENT)==EV_NONE)
-    errx(EXIT_FAILURE, "ELF library iinitialization failed: %s", elf_errmsg(-1));
+	if(elf_version(EV_CURRENT)==EV_NONE)
+		errx(EXIT_FAILURE, "ELF library iinitialization failed: %s", elf_errmsg(-1));
 
-  if((fd = open(path, O_RDONLY, 0))<0)
-    err(EXIT_FAILURE, "open file \"%s\" failed", path);
+	if((fd = open(path, O_RDONLY, 0))<0)
+		err(EXIT_FAILURE, "open file \"%s\" failed", path);
 
-  if((e = elf_begin(fd, ELF_C_READ, NULL))==NULL)
-    errx(EXIT_FAILURE, "elf_begin() failed: %s.", elf_errmsg(-1));
+	if((e = elf_begin(fd, ELF_C_READ, NULL))==NULL)
+		errx(EXIT_FAILURE, "elf_begin() failed: %s.", elf_errmsg(-1));
 
-  // Retrieve the section index of the ELF section containing the string table of section names
-  if(elf_getshdrstrndx(e, &shstrndx)!=0)
-    errx(EXIT_FAILURE, "elf_getshdrstrndx() failed: %s.", elf_errmsg(-1));
+	// Retrieve the section index of the ELF section containing the string table of section names
+	if(elf_getshdrstrndx(e, &shstrndx)!=0)
+		errx(EXIT_FAILURE, "elf_getshdrstrndx() failed: %s.", elf_errmsg(-1));
 
-  scn = NULL;
-  
-  // Loop over all sections in the ELF object
-  while((scn = elf_nextscn(e, scn))!=NULL) {
-    // Given a Elf Scn pointer, retrieve the associated section header
-    if((shdr = elf64_getshdr(scn))!=shdr)
-      errx(EXIT_FAILURE, "getshdr() failed: %s.", elf_errmsg(-1));
+	scn = NULL;
 
-    // Retrieve the name of the section name
-    if((section_name = elf_strptr(e, shstrndx, shdr->sh_name))==NULL)
-      errx(EXIT_FAILURE, "elf_strptr() failed: %s.", elf_errmsg(-1));
+	// Loop over all sections in the ELF object
+	while((scn = elf_nextscn(e, scn))!=NULL) {
+		// Given a Elf Scn pointer, retrieve the associated section header
+		if((shdr = elf64_getshdr(scn))!=shdr)
+			errx(EXIT_FAILURE, "getshdr() failed: %s.", elf_errmsg(-1));
 
-    LOG_DEBUG("(section %s) ", section_name);
+		// Retrieve the name of the section name
+		if((section_name = elf_strptr(e, shstrndx, shdr->sh_name))==NULL)
+			errx(EXIT_FAILURE, "elf_strptr() failed: %s.", elf_errmsg(-1));
 
-    // If the section is the one we want... (in my case, it is one of the main file sections)
-    if(!strcmp(section_name, ".itt_notify_tab")) {
+		LOG_DEBUG("(section %s) ", section_name);
 
-      data = elf_getdata(scn, NULL);
+		// If the section is the one we want... (in my case, it is one of the main file sections)
+		if(!strcmp(section_name, ".itt_notify_tab")) {
 
-      // We can use the section adress as a pointer, since it corresponds to the actual
-      // adress where the section is placed in the virtual memory
-      // struct data_t * section_data = (struct data_t *) shdr->sh_addr; // This seems bogus!
-      LOG_DEBUG("\n [read-zca] got itt_notify... section data is at addr %p, header at %p.\n", data, shdr);
+			data = elf_getdata(scn, NULL);
 
-      // Cast section data
-      zca_header_11_t* header  = (zca_header_11_t*) data->d_buf;
-      char* ptr = (char*)header;
-      int i = 0;
-      while(1) {
-	header = (zca_header_11_t*)ptr;
-	char* str = (char*)header->magic;
+			// We can use the section adress as a pointer, since it corresponds to the actual
+			// adress where the section is placed in the virtual memory
+			// struct data_t * section_data = (struct data_t *) shdr->sh_addr; // This seems bogus!
+			LOG_DEBUG("\n [read-zca] got itt_notify... section data is at addr %p, header at %p.\n", data, shdr);
 
-	LOG_DEBUG(" [read-zca] check (%d) for magic value at loc %p : %d %d %d %d \n", i, header,
-		  str[0], str[1], str[2], str[3]);
-	if (!strcmp(str, ".itt_notify_tab")) {
-	  // table->magic[0] == '.' && table->magic[1] == 'i' &&
-	  // table->magic[2] == 't' && table->magic[3] == 't') {
+			// Cast section data
+			zca_header_11_t* header  = (zca_header_11_t*) data->d_buf;
+			char* ptr = (char*)header;
+			int i = 0;
+			while(1) {
+				header = (zca_header_11_t*)ptr;
+				char* str = (char*)header->magic;
 
-	  LOG_DEBUG(" magic number MATCHED 16 bytes!\n");
-	  break;
-	}
+				LOG_DEBUG(" [read-zca] check (%d) for magic value at loc %p : %d %d %d %d \n", i, header,
+						str[0], str[1], str[2], str[3]);
+				if (!strcmp(str, ".itt_notify_tab")) {
+					// table->magic[0] == '.' && table->magic[1] == 'i' &&
+					// table->magic[2] == 't' && table->magic[3] == 't') {
 
-	LOG_DEBUG(" should be %d %d %d %d\n", '.','i','t','t');
-	ptr++;
-	i++;
-      }
-      uint8_t* ver = (uint8_t*) & (header->version);
+					LOG_DEBUG(" magic number MATCHED 16 bytes!\n");
+					break;
+				}
 
-      LOG_DEBUG("Now that we've found the magic number, version num is: %d / %d\n", ver[0], ver[1]);
+				LOG_DEBUG(" should be %d %d %d %d\n", '.','i','t','t');
+				ptr++;
+				i++;
+			}
+			uint8_t* ver = (uint8_t*) & (header->version);
 
-      // Here we skip the header and move on to the actual rows:
-      zca_row_11_t* row = (zca_row_11_t*) ((byte*) header + sizeof(*header));
+			LOG_DEBUG("Now that we've found the magic number, version num is: %d / %d\n", ver[0], ver[1]);
 
-      LOG_DEBUG(" [read-zca] found first row at %p, offset %lu\n", rows, ((long)rows - (long)header));
-      LOG_DEBUG("\n\nAnnotation entry count : %d\n", header->entry_count);
-      LOG_DEBUG("Annotation table resides at : %p\n", annotations);
+			// Here we skip the header and move on to the actual rows:
+			zca_row_11_t* row = (zca_row_11_t*) ((byte*) header + sizeof(*header));
 
-      probe_count = header->entry_count;
-      ann_data* ann_info = (ann_data*)malloc(sizeof(ann_data) * (header->entry_count));
-      // printf("Probe count : %d\n", probe_count);
+			LOG_DEBUG(" [read-zca] found first row at %p, offset %lu\n", rows, ((long)rows - (long)header));
+			LOG_DEBUG("\n\nAnnotation entry count : %d\n", header->entry_count);
+			LOG_DEBUG("Annotation table resides at : %p\n", annotations);
 
-      for (int i = 0; i < header->entry_count; i++)
-	{
-	  if (i == 0) {
-		  probe_start = row->anchor;
-	  } else if (i == (header->entry_count - 1)) {
-		  probe_end = row->anchor;
-	  }
+			probe_count = header->entry_count;
+			ann_data* ann_info = (ann_data*)malloc(sizeof(ann_data) * (header->entry_count));
+			// printf("Probe count : %d\n", probe_count);
 
-	  //	  LOG_DEBUG("\n------------ Annotation [%d] --------------\n", i);
-	  //	  LOG_DEBUG("annotation-ip : %lu\n", (unsigned char*)annotation->ip);
-	  //	  LOG_DEBUG("annotation-probespace : %d\n", annotation->probespace);
-	  //	  LOG_DEBUG("annotation-func : %p \n", (unsigned char*)annotation->fun);
-	  //	  LOG_DEBUG("annotation-expr : %s \n\n", annotation->expr);
-	  
-	  // ann_data ad = ann_data(NULL, NULL, fun, getIP(row), getProbespace(row), getExpr(header, row));
+			for (int i = 0; i < header->entry_count; i++)
+			{
+				if (i == 0) {
+					probe_start = row->anchor;
+				} else if (i == (header->entry_count - 1)) {
+					probe_end = row->anchor;
+				}
 
-	  const char* str = getAnnotation(header, row);
+				//	  LOG_DEBUG("\n------------ Annotation [%d] --------------\n", i);
+				//	  LOG_DEBUG("annotation-ip : %lu\n", (unsigned char*)annotation->ip);
+				//	  LOG_DEBUG("annotation-probespace : %d\n", annotation->probespace);
+				//	  LOG_DEBUG("annotation-func : %p \n", (unsigned char*)annotation->fun);
+				//	  LOG_DEBUG("annotation-expr : %s \n\n", annotation->expr);
 
-	  /*
+				// ann_data ad = ann_data(NULL, NULL, fun, getIP(row), getProbespace(row), getExpr(header, row));
+
+				const char* str = getAnnotation(header, row);
+
+				/*
 	  const byte* expr = getExpr(header, row);
 	  unsigned int reg = 99;
 	  int32_t offset = 0;
 	  dwarf_expr_to_pin(expr, &reg, &offset);
 	  printf("\nregister: %u\noffset: %d\n", reg, offset);
-	  
+
 	  register int* in asm("rax");
 	  printf("RAX: %d\n", *(in + 1));
-	  */
-	  
-	  // printf("The annotation string  is : %s\n", str);
-	  
-	  // printf("Row %d address : %p\n", i, row);
-	  // TODO : Decode in annotation's expression from zca_row exp and store in the ann_data
-	  // ann_info[i].exp = <<>>
-	  ann_info[i].fun = print_fn;
-	  ann_info[i].anchor = row->anchor;
-	  ann_info[i].annotation = row->annotation;
-	  ann_info[i].probespace = row->probespace;
-	  ann_info[i].expr_dwarf = row->expr;
-	  annotations.insert(ann_table::value_type(string(str), &(ann_info[i])));
-	  
-	  uint64_t probe_adddress = row->anchor;
-	  uint32_t mem_chunk = ((uint64_t)probe_adddress) >> 32;
-	  uint64_t chunk_start = probe_adddress & 0xFFFF0000; // Get 32 high order bits
-	  // Calculate memory requirements for the stubs to be allocated related to probe spaces,
-	  // later during the JIT code generation phase
-      mem_island* mem; // int counter=0;
-	  if (mem_allocations.find(mem_chunk) == mem_allocations.end()) {
-		  list<mem_island*>* mem_list = new list<mem_island*>;
-		  mem = new mem_island;
-		  mem->start_addr = (unsigned long*)((chunk_start + CHUNK_SIZE) / 2); // We initially set this to the middle of the 2^32 chunk
-		  mem->size = STUB_SIZE;
-		  mem->mem_chunk = mem_chunk;
+				 */
 
-		  mem_list->push_back(mem);
-		  mem_allocations.insert(make_pair(mem_chunk, mem_list));
-		  // counter += 1;
-	  } else {
-		  // counter += 1;
-		  list<mem_island*>* mem_list = mem_allocations.find(mem_chunk)->second;
-		  mem = mem_list->front(); // At this stage we only have one memory island in the list
-		  if (mem != NULL) {
-			  mem->size += STUB_SIZE; // Another stub for this memory island
-		  } else {
-			  // log error. This shouldn't happen
-		  }
-	  }
+				// printf("The annotation string  is : %s\n", str);
 
-	  // printf("Mem chunk : %lu   Counter : %d\n", mem_chunk, counter);
-	  // Move to next row
-	  row = (zca_row_11_t*) ((byte*) row + sizeof(*row));
+				// printf("Row %d address : %p\n", i, row);
+				// TODO : Decode in annotation's expression from zca_row exp and store in the ann_data
+				// ann_info[i].exp = <<>>
+				ann_info[i].fun = print_fn;
+				ann_info[i].anchor = row->anchor;
+				ann_info[i].annotation = row->annotation;
+				ann_info[i].probespace = row->probespace;
+				ann_info[i].expr = strdup(str);
+				ann_info[i].expr_dwarf = row->expr;
+				annotations.insert(ann_table::value_type(string(str), &(ann_info[i])));
+
+				uint64_t probe_adddress = row->anchor;
+				uint32_t mem_chunk = ((uint64_t)probe_adddress) >> 32;
+				uint64_t chunk_start = probe_adddress & 0xFFFF0000; // Get 32 high order bits
+				// Calculate memory requirements for the stubs to be allocated related to probe spaces,
+				// later during the JIT code generation phase
+				mem_island* mem; // int counter=0;
+				if (mem_allocations.find(mem_chunk) == mem_allocations.end()) {
+					list<mem_island*>* mem_list = new list<mem_island*>;
+					mem = new mem_island;
+					mem->start_addr = (unsigned long*)((chunk_start + CHUNK_SIZE) / 2); // We initially set this to the middle of the 2^32 chunk
+					mem->size = STUB_SIZE;
+					mem->mem_chunk = mem_chunk;
+
+					mem_list->push_back(mem);
+					mem_allocations.insert(make_pair(mem_chunk, mem_list));
+					// counter += 1;
+				} else {
+					// counter += 1;
+					list<mem_island*>* mem_list = mem_allocations.find(mem_chunk)->second;
+					mem = mem_list->front(); // At this stage we only have one memory island in the list
+					if (mem != NULL) {
+						mem->size += STUB_SIZE; // Another stub for this memory island
+					} else {
+						// log error. This shouldn't happen
+					}
+				}
+
+				// printf("Mem chunk : %lu   Counter : %d\n", mem_chunk, counter);
+				// Move to next row
+				row = (zca_row_11_t*) ((byte*) row + sizeof(*row));
+			}
+
+			// End the loop (if we only need this section)
+			break;
+		}
 	}
 
-      // End the loop (if we only need this section)
-      break;
-    }
-  }
+	// printf("Number of processors :%d", get_nprocs());
 
-  // printf("Number of processors :%d", get_nprocs());
+	// elf_end(e);
+	close(fd);
 
-  // elf_end(e);
-  close(fd);
-  
-  return probe_count;
-  // dbgprint("\n [read-zca] Returning out table %p\n", out_table);
-  // return out_table;
+	return probe_count;
+	// dbgprint("\n [read-zca] Returning out table %p\n", out_table);
+	// return out_table;
 }
 // ^^ This code is taken from:
 // http://stackoverflow.com/questions/12159595/how-to-get-a-pointer-to-an-specific-section-of-a-program-from-within-itself-ma
@@ -454,10 +455,102 @@ void get_working_path(char* buf)
 
 //* Temporary functions to test
 // Probe function to test
-void print_fn() {
-  printf("[Successful] We are the borg\n");
+
+static pthread_key_t key;
+static pthread_once_t tls_init_flag = PTHREAD_ONCE_INIT;
+
+void placement_delete(void *t) {
+	function_stats* f_stats = (function_stats*)t;
+	for (auto iter = f_stats->begin(); iter != f_stats->end(); iter++) {
+		prof_data* data = iter->second;
+		if (data != NULL) {
+			// printf("Data->count : %lu\n", data->count);
+			free(data);
+		}
+	}
+
+    // printf("Delete called..\n");
+	// ((Statistics*)t)->~Statistics();
 }
 
+void create_key() {
+	pthread_key_create(&key, placement_delete);
+}
+
+void print_fn() {
+	printf("[Success] We are the borg..\n");
+}
+
+/*void print_fn(char* annotation) {
+
+	__thread static bool allocated;
+	// __thread static function_stats stats;
+
+	// printf("Long annotation is : %lu\n", annotation);
+	printf("Annotation is : %s\n", annotation);
+	printf("Annotation is : %p\n", annotation);
+
+	if (!allocated) {
+		function_stats* stats = new function_stats;
+		allocated = true;
+
+		// printf("Inside allocate\n");
+
+		pthread_once(&tls_init_flag, create_key);
+		pthread_setspecific(key, stats);
+	}
+
+
+
+	// printf("Here..\n");
+
+	// function_stats& func_stats = *((function_stats*) &stats);
+
+	// function_stats func_stats = stats.f_stats;
+	prof_data* data;
+	function_stats* stats = (function_stats*)pthread_getspecific(key);
+	if (stats->find("a") == stats->end()) {
+		data = (prof_data*)malloc(sizeof(prof_data));
+		data->start = -1;
+
+		stats->insert(make_pair("a", data));
+
+		// printf("func stat value : %d\n", func_stats.find("a")->second->start);
+		// printf("func stat is at : %p\n", &func_stats);
+		// printf("data is at : %p\n", data);
+
+	} else {
+		data = stats->find("a")->second;
+	}
+
+	if (data->start == -1) {
+		data->start = getticks();
+	} else {
+		// printf("Came here..\n");
+		ticks end = getticks();
+		ticks elapsed = end - data->start;
+
+		if (elapsed < data->min || data->min == 0) {
+			data->min = elapsed;
+		}
+
+		if (elapsed > data->max) {
+			data->max = elapsed;
+		}
+
+		data->sum = data->sum + elapsed;
+		data->count += 1;
+
+		data->start = -1;
+	}
+
+	if (data->count == 1000) {
+		printf("Min : %lu\n", data->min);
+		printf("Max : %lu\n", data->max);
+		printf("Avg: %lu\n", data->sum / 1000);
+	}
+}*/
+
 void print_fn2() {
-  printf("[Successful] Resistence is futile...\n");
+	printf("[Successful] Resistence is futile...\n");
 }
