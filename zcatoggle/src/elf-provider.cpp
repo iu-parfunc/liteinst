@@ -477,18 +477,49 @@ void create_key() {
 	pthread_key_create(&key, placement_delete);
 }
 
-void print_fn() {
-	printf("[Success] We are the borg..\n");
-}
+/*void print_fn() {
 
-/*void print_fn(char* annotation) {
+	  uint64_t addr;
+	  uint64_t offset = 2;
+
+	  __asm__ __volatile__(
+	    "movq (%%rbp, %1, 8), %0\n\t"
+	    : "=r"(n)
+	    : "c" (offset)
+	  );
+
+	// printf("rbp = %p\n", addr);
+
+	char* annotation = (char*)addr;
+	printf("Annotation is : %s\n", annotation);
+	printf("[Success] We are the borg..\n");
+}*/
+
+int counter = 0;
+
+void print_fn() {
+
+	ticks time = getticks();
 
 	__thread static bool allocated;
 	// __thread static function_stats stats;
+	uint64_t addr;
+	uint64_t offset = 2;
+
+    __asm__ __volatile__(
+	    "movq (%%rbp, %1, 8), %0\n\t"
+	    : "=r"(addr)
+	    : "c" (offset)
+	);
+
+	// printf("rbp = %p\n", addr);
+
+	char* annotation = (char*)addr;
+	// printf("Annotation is : %s\n", annotation);
 
 	// printf("Long annotation is : %lu\n", annotation);
-	printf("Annotation is : %s\n", annotation);
-	printf("Annotation is : %p\n", annotation);
+	// printf("Annotation is : %s\n", annotation);
+	// printf("Annotation is : %p\n", annotation);
 
 	if (!allocated) {
 		function_stats* stats = new function_stats;
@@ -509,25 +540,42 @@ void print_fn() {
 	// function_stats func_stats = stats.f_stats;
 	prof_data* data;
 	function_stats* stats = (function_stats*)pthread_getspecific(key);
-	if (stats->find("a") == stats->end()) {
+
+	char* func_name;
+	char* tok;
+	if (annotation != NULL) {
+		func_name = strtok_r(annotation, "_", &tok);
+		// printf("Function name is : %s\n", func_name);
+	} else {
+		return;
+	}
+
+	if (stats->find(func_name) == stats->end()) {
 		data = (prof_data*)malloc(sizeof(prof_data));
 		data->start = -1;
+		data->min = 0;
+		data->max = 0;
+		data->sum = 0;
+		data->count = 0;
 
-		stats->insert(make_pair("a", data));
+		stats->insert(make_pair(func_name, data));
+
+		// printf("Initialing the map..\n");
 
 		// printf("func stat value : %d\n", func_stats.find("a")->second->start);
 		// printf("func stat is at : %p\n", &func_stats);
 		// printf("data is at : %p\n", data);
 
 	} else {
-		data = stats->find("a")->second;
+		// printf("Found in the map..\n");
+		data = stats->find(func_name)->second;
 	}
 
 	if (data->start == -1) {
-		data->start = getticks();
+		data->start = time;
 	} else {
 		// printf("Came here..\n");
-		ticks end = getticks();
+		ticks end = time;
 		ticks elapsed = end - data->start;
 
 		if (elapsed < data->min || data->min == 0) {
@@ -542,14 +590,17 @@ void print_fn() {
 		data->count += 1;
 
 		data->start = -1;
+
+		// printf("data->count : %d\n", data->count);
 	}
 
-	if (data->count == 1000) {
+ 	if (data->count == 1000) {
+ 		printf("Function : %s\n", func_name);
 		printf("Min : %lu\n", data->min);
 		printf("Max : %lu\n", data->max);
-		printf("Avg: %lu\n", data->sum / 1000);
+		printf("Avg: %lu\n", data->sum / data->count);
 	}
-}*/
+}
 
 void print_fn2() {
 	printf("[Successful] Resistence is futile...\n");

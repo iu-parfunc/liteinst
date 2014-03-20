@@ -40,6 +40,29 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* ta
 
   using namespace AsmJit;
 
+/*  int foo = 10, bar = 15;
+  __asm__ __volatile__("addl  %%ebx,%%eax"
+                       :"=a"(foo)
+                       :"a"(foo), "b"(bar)
+                       );
+  printf("foo+bar=%d\n", foo);*/
+
+
+/*  char* annotation;
+  __asm__ __volatile__ ("movl:0x10(%%rbp),%%ecx"
+		  	  	  	  	 :"=c" (annotation)
+		  	  	  	    );*/
+
+/*  volatile intptr_t new_stack_ptr = 0;
+  volatile intptr_t old_stack_ptr = 0;
+  asm __volatile__("movl %%esp, %0\n\t"
+          "movl %1, %%esp"
+          : "=r"(old_stack_ptr)  output
+          : "r"(new_stack_ptr)  input
+          );*/
+
+  // printf("Annotation is : %s\n", annotation);
+
   // This aims to make the same one-way jump as manual_jmp_there, except from JITed code.
   // --------------------------------------------------------------------------------
   Assembler a, a2;
@@ -61,11 +84,11 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* ta
 
   // printf("ann_info->expr : %p\n", (*ann_info)->expr);
   // printf("ann_info->expr : %s\n", ((*ann_info)->expr));
-  // a.mov(rdx,imm((sysint_t)(*ann_info)->expr));
-  // a.push(rax);
+  a.mov(rax,imm((sysint_t)(*ann_info)->expr));
+  a.push(rax);
   a.call(imm((sysint_t)target_fn));
   // Restore all volatile registers:
-  // a.pop(rax);
+  a.pop(rax);
   a.pop(r11); a.pop(r10); a.pop(r9); a.pop(r8);
   a.pop(rdx); a.pop(rcx); a.pop(rax);
 
