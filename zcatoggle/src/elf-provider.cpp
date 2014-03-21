@@ -47,6 +47,8 @@ using namespace std;
 
 ann_table annotations;
 mem_alloc_table mem_allocations;
+global_stats statistics;
+volatile int spin_lock = 0;
 
 unsigned long probe_start;
 unsigned long probe_end;
@@ -469,7 +471,7 @@ void placement_delete(void *t) {
 		}
 	}
 
-    // printf("Delete called..\n");
+	// printf("Delete called..\n");
 	// ((Statistics*)t)->~Statistics();
 }
 
@@ -499,45 +501,36 @@ int counter = 0;
 
 void print_fn() {
 
-	ticks time = getticks();
+	// ticks time = getticks();
 
 	__thread static bool allocated;
 	// __thread static function_stats stats;
 	uint64_t addr;
 	uint64_t offset = 2;
 
-    __asm__ __volatile__(
-	    "movq (%%rbp, %1, 8), %0\n\t"
-	    : "=r"(addr)
-	    : "c" (offset)
+	// Gets [%rbp + 16] to addr. This is a hacky way to get the function parameter (annotation string) pushed to the stack
+	// before the call to this method. Ideally this should be accessible by declaring an explicit method paramter according
+	// x86 calling conventions AFAIK. But it fails to work that way hence we do the inline assembly to get it.
+	// Fix this elegantly with a method parameter should be a TODO
+	asm (
+		"movq (%%rbp, %1, 8), %0\n\t"
+		: "=r"(addr)
+        : "c" (offset)
 	);
 
-	// printf("rbp = %p\n", addr);
-
 	char* annotation = (char*)addr;
-	// printf("Annotation is : %s\n", annotation);
-
-	// printf("Long annotation is : %lu\n", annotation);
-	// printf("Annotation is : %s\n", annotation);
-	// printf("Annotation is : %p\n", annotation);
 
 	if (!allocated) {
 		function_stats* stats = new function_stats;
 		allocated = true;
 
-		// printf("Inside allocate\n");
-
 		pthread_once(&tls_init_flag, create_key);
 		pthread_setspecific(key, stats);
 	}
 
-
-
-	// printf("Here..\n");
-
 	// function_stats& func_stats = *((function_stats*) &stats);
-
 	// function_stats func_stats = stats.f_stats;
+
 	prof_data* data;
 	function_stats* stats = (function_stats*)pthread_getspecific(key);
 
@@ -545,7 +538,6 @@ void print_fn() {
 	char* tok;
 	if (annotation != NULL) {
 		func_name = strtok_r(annotation, "_", &tok);
-		// printf("Function name is : %s\n", func_name);
 	} else {
 		return;
 	}
@@ -567,14 +559,14 @@ void print_fn() {
 		// printf("data is at : %p\n", data);
 
 	} else {
-		// printf("Found in the map..\n");
 		data = stats->find(func_name)->second;
 	}
 
 	if (data->start == -1) {
+		ticks time = getticks();
 		data->start = time;
 	} else {
-		// printf("Came here..\n");
+		ticks time = getticks();
 		ticks end = time;
 		ticks elapsed = end - data->start;
 
@@ -590,15 +582,47 @@ void print_fn() {
 		data->count += 1;
 
 		data->start = -1;
-
-		// printf("data->count : %d\n", data->count);
 	}
 
- 	if (data->count == 1000) {
- 		printf("Function : %s\n", func_name);
-		printf("Min : %lu\n", data->min);
-		printf("Max : %lu\n", data->max);
-		printf("Avg: %lu\n", data->sum / data->count);
+	// Merge to the global statistics table
+	if (data->count == 1000) {
+		prof_data* global_data;
+
+		// Acquire the spin lock
+		while (!(__sync_bool_compare_and_swap(&spin_lock, 0 , 1)));
+
+		if (statistics.find(func_name) == statistics.end()) {
+			global_data = (prof_data*)malloc(sizeof(prof_data));
+			global_data->min = 0;
+			global_data->max = 0;
+			global_data->sum = 0;
+			global_data->count = 0;
+
+			statistics.insert(make_pair(func_name, global_data));
+		} else {
+			global_data = statistics.find(func_name)->second;
+		}
+
+		if (global_data->min > data->min || global_data->min == 0){
+			global_data->min = data->min;
+		}
+
+		if (global_data->max < data->max) {
+			global_data->max = data->max;
+		}
+
+		global_data->sum = global_data->sum + data->sum;
+		global_data->count = global_data->count + data->count;
+
+		// Release lock
+		__sync_bool_compare_and_swap(&spin_lock, 1 , 0);
+
+		if (global_data->count == 2000) {
+			printf("\nFunction : %s\n", func_name);
+			printf("Min : %lu\n", global_data->min);
+			printf("Max : %lu\n", global_data->max);
+			printf("Avg : %lu\n", global_data->sum / global_data->count);
+		}
 	}
 }
 

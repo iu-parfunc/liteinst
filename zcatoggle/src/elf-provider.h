@@ -89,6 +89,8 @@ typedef struct prof_data {
 
 typedef std::map<std::string, prof_data*> function_stats;
 
+typedef std::map<std::string, prof_data*> global_stats;
+
 class Statistics {
 public:
 	function_stats f_stats;
