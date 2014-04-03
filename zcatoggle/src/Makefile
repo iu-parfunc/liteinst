@@ -82,9 +82,9 @@ libzca-toggle.so: $(OBJ) $(DEPS)
 libzca-toggle.a: $(OBJ) $(DEPS) 
 	$(AR) rc libzca-toggle.a $(OBJ) $(DEPS)
 
-prof : build profiler.cpp 
-	# $(AR) rc libdynprof.a profiler.o
-	$(CPP) $(OPTS) profiler.cpp libzca-toggle.a $(LIBS) -o prof.exe
+prof : build profiler.o
+	$(AR) rc libdynprof.a profiler.o
+	$(CPP) $(OPTS) test_profiler.cpp libdynprof.a libzca-toggle.a $(LIBS) -o prof.exe
 	./prof.exe
 
 tmp : build temp.cpp

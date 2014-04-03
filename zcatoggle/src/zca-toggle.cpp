@@ -35,7 +35,7 @@ static struct timeval stub_gen_tvDiff;
 static int probe_count = 0;
 static mem_island* current_alloc_unit;
 
-inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* target_fn, ann_data** ann_info)
+inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*target_fn)(), ann_data** ann_info)
 {
 
   using namespace AsmJit;
@@ -97,7 +97,7 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void* ta
   sysuint_t code = a.relocCode(addr);
 
 
-  //printf("[Gen Stub]Probe address is : %p\n", (unsigned char*)probe_loc);
+  // printf("[Gen Stub]Probe address is : %p\n", (unsigned char*)probe_loc);
   //printf("[Gen Stub]Original probe content is : %016llx\n", *((uint64_t*)probe_loc));
   //printf("[Gen Stub]Stub address is : %p\n", addr);
 
@@ -274,7 +274,7 @@ inline int get_allocated_stub_memory_for_probe(unsigned char* probe_address, uns
   return 0;
 }
 
-inline void modify_probe_site(unsigned char* probe_address, unsigned long* stub_address, ann_data** ann_info, void* fun) {
+inline void modify_probe_site(unsigned char* probe_address, unsigned long* stub_address, ann_data** ann_info, void (*fun)()) {
   LOG_DEBUG("Probe address is : %p\n", (unsigned char*)probe_address);
   LOG_DEBUG("Stub address is : %p\n", stub_address);
 
@@ -340,7 +340,7 @@ void setupStubs()
 		if (status != -1) {
 					// Fill annotation information for later use in probe activation/ deactivation
 		   data->stubLocation = stub_address;
-		   modify_probe_site(probe_address, stub_address, &data, print_fn);
+		   modify_probe_site(probe_address, stub_address, &data, print_fn2);
 		   data->active = true;
 		}
 	}
@@ -356,7 +356,7 @@ void setupStubs()
 // Activate the probe by copying the jump to the stub
 // Little bit of bitmasking trickery is needed if the probe size is less than 8 bytes since
 // CAS can only deal with in integer sizes
-int activateProbe(std::string label, void* fun)
+int activateProbe(std::string label, void (*fun)())
 {
   if (annotations.find(label) != annotations.end()) {
     

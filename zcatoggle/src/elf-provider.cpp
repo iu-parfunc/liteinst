@@ -47,8 +47,8 @@ using namespace std;
 
 ann_table annotations;
 mem_alloc_table mem_allocations;
-global_stats statistics;
-volatile int spin_lock = 0;
+// global_stats statistics;
+// volatile int spin_lock = 0;
 
 unsigned long probe_start;
 unsigned long probe_end;
@@ -370,7 +370,7 @@ int read_zca_probes(const char* path)
 				// printf("Row %d address : %p\n", i, row);
 				// TODO : Decode in annotation's expression from zca_row exp and store in the ann_data
 				// ann_info[i].exp = <<>>
-				ann_info[i].fun = print_fn;
+				ann_info[i].fun = print_fn2;
 				ann_info[i].anchor = row->anchor;
 				ann_info[i].annotation = row->annotation;
 				ann_info[i].probespace = row->probespace;
@@ -458,26 +458,26 @@ void get_working_path(char* buf)
 //* Temporary functions to test
 // Probe function to test
 
-static pthread_key_t key;
-static pthread_once_t tls_init_flag = PTHREAD_ONCE_INIT;
-
-void placement_delete(void *t) {
-	function_stats* f_stats = (function_stats*)t;
-	for (auto iter = f_stats->begin(); iter != f_stats->end(); iter++) {
-		prof_data* data = iter->second;
-		if (data != NULL) {
-			// printf("Data->count : %lu\n", data->count);
-			free(data);
-		}
-	}
-
-	// printf("Delete called..\n");
-	// ((Statistics*)t)->~Statistics();
-}
-
-void create_key() {
-	pthread_key_create(&key, placement_delete);
-}
+// static pthread_key_t key;
+// static pthread_once_t tls_init_flag = PTHREAD_ONCE_INIT;
+//
+// void placement_delete(void *t) {
+// 	function_stats* f_stats = (function_stats*)t;
+// 	for (auto iter = f_stats->begin(); iter != f_stats->end(); iter++) {
+// 		prof_data* data = iter->second;
+// 		if (data != NULL) {
+// 			// printf("Data->count : %lu\n", data->count);
+// 			free(data);
+// 		}
+// 	}
+//
+// 	// printf("Delete called..\n");
+// 	// ((Statistics*)t)->~Statistics();
+// }
+//
+// void create_key() {
+// 	pthread_key_create(&key, placement_delete);
+// }
 
 /*void print_fn() {
 
@@ -497,135 +497,135 @@ void create_key() {
 	printf("[Success] We are the borg..\n");
 }*/
 
-int counter = 0;
-
-void print_fn() {
-
-	// ticks time = getticks();
-
-	__thread static bool allocated;
-	// __thread static function_stats stats;
-	uint64_t addr;
-	uint64_t offset = 2;
-
-	// Gets [%rbp + 16] to addr. This is a hacky way to get the function parameter (annotation string) pushed to the stack
-	// before the call to this method. Ideally this should be accessible by declaring an explicit method paramter according
-	// x86 calling conventions AFAIK. But it fails to work that way hence we do the inline assembly to get it.
-	// Fix this elegantly with a method parameter should be a TODO
-	asm (
-		"movq (%%rbp, %1, 8), %0\n\t"
-		: "=r"(addr)
-        : "c" (offset)
-	);
-
-	char* annotation = (char*)addr;
-
-	if (!allocated) {
-		function_stats* stats = new function_stats;
-		allocated = true;
-
-		pthread_once(&tls_init_flag, create_key);
-		pthread_setspecific(key, stats);
-	}
-
-	// function_stats& func_stats = *((function_stats*) &stats);
-	// function_stats func_stats = stats.f_stats;
-
-	prof_data* data;
-	function_stats* stats = (function_stats*)pthread_getspecific(key);
-
-	char* func_name;
-	char* tok;
-	if (annotation != NULL) {
-		func_name = strtok_r(annotation, "_", &tok);
-	} else {
-		return;
-	}
-
-	if (stats->find(func_name) == stats->end()) {
-		data = (prof_data*)malloc(sizeof(prof_data));
-		data->start = -1;
-		data->min = 0;
-		data->max = 0;
-		data->sum = 0;
-		data->count = 0;
-
-		stats->insert(make_pair(func_name, data));
-
-		// printf("Initialing the map..\n");
-
-		// printf("func stat value : %d\n", func_stats.find("a")->second->start);
-		// printf("func stat is at : %p\n", &func_stats);
-		// printf("data is at : %p\n", data);
-
-	} else {
-		data = stats->find(func_name)->second;
-	}
-
-	if (data->start == -1) {
-		ticks time = getticks();
-		data->start = time;
-	} else {
-		ticks time = getticks();
-		ticks end = time;
-		ticks elapsed = end - data->start;
-
-		if (elapsed < data->min || data->min == 0) {
-			data->min = elapsed;
-		}
-
-		if (elapsed > data->max) {
-			data->max = elapsed;
-		}
-
-		data->sum = data->sum + elapsed;
-		data->count += 1;
-
-		data->start = -1;
-	}
-
-	// Merge to the global statistics table
-	if (data->count == 1000) {
-		prof_data* global_data;
-
-		// Acquire the spin lock
-		while (!(__sync_bool_compare_and_swap(&spin_lock, 0 , 1)));
-
-		if (statistics.find(func_name) == statistics.end()) {
-			global_data = (prof_data*)malloc(sizeof(prof_data));
-			global_data->min = 0;
-			global_data->max = 0;
-			global_data->sum = 0;
-			global_data->count = 0;
-
-			statistics.insert(make_pair(func_name, global_data));
-		} else {
-			global_data = statistics.find(func_name)->second;
-		}
-
-		if (global_data->min > data->min || global_data->min == 0){
-			global_data->min = data->min;
-		}
-
-		if (global_data->max < data->max) {
-			global_data->max = data->max;
-		}
-
-		global_data->sum = global_data->sum + data->sum;
-		global_data->count = global_data->count + data->count;
-
-		// Release lock
-		__sync_bool_compare_and_swap(&spin_lock, 1 , 0);
-
-		if (global_data->count == 2000) {
-			printf("\nFunction : %s\n", func_name);
-			printf("Min : %lu\n", global_data->min);
-			printf("Max : %lu\n", global_data->max);
-			printf("Avg : %lu\n", global_data->sum / global_data->count);
-		}
-	}
-}
+// int counter = 0;
+//
+// void print_fn() {
+//
+// 	// ticks time = getticks();
+//
+// 	__thread static bool allocated;
+// 	// __thread static function_stats stats;
+// 	uint64_t addr;
+// 	uint64_t offset = 2;
+//
+// 	// Gets [%rbp + 16] to addr. This is a hacky way to get the function parameter (annotation string) pushed to the stack
+// 	// before the call to this method. Ideally this should be accessible by declaring an explicit method paramter according
+// 	// x86 calling conventions AFAIK. But it fails to work that way hence we do the inline assembly to get it.
+// 	// Fix this elegantly with a method parameter should be a TODO
+// 	asm (
+// 		"movq (%%rbp, %1, 8), %0\n\t"
+// 		: "=r"(addr)
+//         : "c" (offset)
+// 	);
+//
+// 	char* annotation = (char*)addr;
+//
+// 	if (!allocated) {
+// 		function_stats* stats = new function_stats;
+// 		allocated = true;
+//
+// 		pthread_once(&tls_init_flag, create_key);
+// 		pthread_setspecific(key, stats);
+// 	}
+//
+// 	// function_stats& func_stats = *((function_stats*) &stats);
+// 	// function_stats func_stats = stats.f_stats;
+//
+// 	prof_data* data;
+// 	function_stats* stats = (function_stats*)pthread_getspecific(key);
+//
+// 	char* func_name;
+// 	char* tok;
+// 	if (annotation != NULL) {
+// 		func_name = strtok_r(annotation, "_", &tok);
+// 	} else {
+// 		return;
+// 	}
+//
+// 	if (stats->find(func_name) == stats->end()) {
+// 		data = (prof_data*)malloc(sizeof(prof_data));
+// 		data->start = -1;
+// 		data->min = 0;
+// 		data->max = 0;
+// 		data->sum = 0;
+// 		data->count = 0;
+//
+// 		stats->insert(make_pair(func_name, data));
+//
+// 		// printf("Initialing the map..\n");
+//
+// 		// printf("func stat value : %d\n", func_stats.find("a")->second->start);
+// 		// printf("func stat is at : %p\n", &func_stats);
+// 		// printf("data is at : %p\n", data);
+//
+// 	} else {
+// 		data = stats->find(func_name)->second;
+// 	}
+//
+// 	if (data->start == -1) {
+// 		ticks time = getticks();
+// 		data->start = time;
+// 	} else {
+// 		ticks time = getticks();
+// 		ticks end = time;
+// 		ticks elapsed = end - data->start;
+//
+// 		if (elapsed < data->min || data->min == 0) {
+// 			data->min = elapsed;
+// 		}
+//
+// 		if (elapsed > data->max) {
+// 			data->max = elapsed;
+// 		}
+//
+// 		data->sum = data->sum + elapsed;
+// 		data->count += 1;
+//
+// 		data->start = -1;
+// 	}
+//
+// 	// Merge to the global statistics table
+// 	if (data->count == 1000) {
+// 		prof_data* global_data;
+//
+// 		// Acquire the spin lock
+// 		while (!(__sync_bool_compare_and_swap(&spin_lock, 0 , 1)));
+//
+// 		if (statistics.find(func_name) == statistics.end()) {
+// 			global_data = (prof_data*)malloc(sizeof(prof_data));
+// 			global_data->min = 0;
+// 			global_data->max = 0;
+// 			global_data->sum = 0;
+// 			global_data->count = 0;
+//
+// 			statistics.insert(make_pair(func_name, global_data));
+// 		} else {
+// 			global_data = statistics.find(func_name)->second;
+// 		}
+//
+// 		if (global_data->min > data->min || global_data->min == 0){
+// 			global_data->min = data->min;
+// 		}
+//
+// 		if (global_data->max < data->max) {
+// 			global_data->max = data->max;
+// 		}
+//
+// 		global_data->sum = global_data->sum + data->sum;
+// 		global_data->count = global_data->count + data->count;
+//
+// 		// Release lock
+// 		__sync_bool_compare_and_swap(&spin_lock, 1 , 0);
+//
+// 		if (global_data->count == 2000) {
+// 			printf("\nFunction : %s\n", func_name);
+// 			printf("Min : %lu\n", global_data->min);
+// 			printf("Max : %lu\n", global_data->max);
+// 			printf("Avg : %lu\n", global_data->sum / global_data->count);
+// 		}
+// 	}
+// }
 
 void print_fn2() {
-	printf("[Successful] Resistence is futile...\n");
+  LOG_DEBUG("[Successful] Resistence is futile...\n");
 }

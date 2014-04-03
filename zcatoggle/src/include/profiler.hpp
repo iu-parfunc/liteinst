@@ -3,6 +3,10 @@
 #define PROFILER_HPP_
 
 #include "cycle.h"
+#include <string>
+#include <map>
+
+using namespace std;
 
 typedef struct prof_data {
 	ticks start;
@@ -12,9 +16,13 @@ typedef struct prof_data {
 	uint64_t sum;
 } prof_data;
 
-void start_profile(char* method, void* fun);
+typedef std::map<std::string, prof_data*> function_stats;
 
-void stop_profile(char* method);
+typedef std::map<std::string, prof_data*> global_stats;
+
+void start_profile(string method, void (*fun)());
+
+void stop_profile(string method);
 
 void profile_all();
 
