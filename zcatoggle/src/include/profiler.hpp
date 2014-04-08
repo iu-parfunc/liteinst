@@ -8,7 +8,7 @@
 
 using namespace std;
 
-typedef struct prof_data {
+/*typedef struct prof_data {
 	ticks start;
 	int count;
 	uint64_t min;
@@ -18,13 +18,13 @@ typedef struct prof_data {
 
 typedef std::map<std::string, prof_data*> function_stats;
 
-typedef std::map<std::string, prof_data*> global_stats;
+typedef std::map<std::string, prof_data*> global_stats;*/
 
 void start_profile(string method, void (*fun)());
 
 void stop_profile(string method);
 
-void profile_all();
+void profile_all(void (*fun)());
 
 void turn_off_profiler();
 

@@ -1,10 +1,14 @@
 
 #include "zca-toggle.hpp"
+#include "elf-provider.h"
 #include "profiler.hpp"
+#include <stdio.h>
 #include <pthread.h>
 #include <time.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <string>
+#include <vector>
 #include <string.h>
 #include "cycle.h"
 
@@ -44,12 +48,72 @@ void stop_profile(string method) {
   deactivateProbe(probe_end_annotation);
 }
 
-void profile_all() {
+void tokenize(const string& str,
+                      vector<string>& tokens,
+                      const string& delimiters = " ")
+{
+    // Skip delimiters at beginning.
+    string::size_type lastPos = str.find_first_not_of(delimiters, 0);
+    // Find first "non-delimiter".
+    string::size_type pos     = str.find_first_of(delimiters, lastPos);
 
+    while (string::npos != pos || string::npos != lastPos)
+    {
+        // Found a token, add it to the vector.
+        tokens.push_back(str.substr(lastPos, pos - lastPos));
+        // Skip delimiters.  Note the "not_of"
+        lastPos = str.find_first_not_of(delimiters, pos);
+        // Find next "non-delimiter"
+        pos = str.find_first_of(delimiters, lastPos);
+    }
+}
+
+void profile_all(void (*fun)()) {
+	map<string, int>* activated_probes = new map<string, int>;
+
+	for (auto iter = annotations.begin(); iter != annotations.end(); iter++) {
+		string annotation = iter->first;
+
+		vector<string> tokens;
+		tokenize(annotation, tokens, "_");
+
+		string func_name = tokens[0];
+
+		map<string, int>::iterator it;
+		it = activated_probes->find(func_name);
+
+		if (it == activated_probes->end()) {
+			start_profile(func_name, fun);
+		}
+
+		activated_probes->insert(make_pair(func_name,1));
+	}
+
+	delete activated_probes;
 }
 
 void turn_off_profiler() {
+	map<string, int>* deactivated_probes = new map<string, int>;
 
+	for (auto iter = annotations.begin(); iter != annotations.end(); iter++) {
+		string annotation = iter->first;
+
+		vector<string> tokens;
+		tokenize(annotation, tokens, "_");
+
+		string func_name = tokens[0];
+
+		map<string, int>::iterator it;
+		it = deactivated_probes->find(func_name);
+
+		if (it == deactivated_probes->end()) {
+			stop_profile(func_name);
+		}
+
+		deactivated_probes->insert(make_pair(func_name,1));
+	}
+
+	delete deactivated_probes;
 }
 
 /*uint64_t gettid() {
