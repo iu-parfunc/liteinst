@@ -17,7 +17,7 @@ int spin_lock_1 = 0;
 void func1(){
 	int x;
 	ticks start = getticks();
-	__notify_intrinsic((void*)"func1_start",(void*)&x);
+	// __notify_intrinsic((void*)"func1_start",(void*)&x);
 
 	// func2();
 
@@ -29,7 +29,7 @@ void func1(){
 		// func2();
 	}
 
-	__notify_intrinsic((void*)"func1_end",(void*)&x);
+	// __notify_intrinsic((void*)"func1_end",(void*)&x);
 	ticks end = getticks();
 	ticks elapsed = (end - start);
 
@@ -72,7 +72,7 @@ int spin_lock_2 = 0;
 void func2() {
 	int x;
 	ticks start = getticks();
-	__notify_intrinsic((void*)"func2_start",(void*)&x);
+	// __notify_intrinsic((void*)"func2_start",(void*)&x);
 
 	/*	uint64_t i;
       for (i=0; i < 1000; i++) {
@@ -80,7 +80,7 @@ void func2() {
       int r = rand();
       }*/
 
-	__notify_intrinsic((void*)"func2_end",(void*)&x);
+	// __notify_intrinsic((void*)"func2_end",(void*)&x);
 	ticks end = getticks();
 	ticks elapsed = (end - start);
 
@@ -148,15 +148,49 @@ void* func2_loop(void* tid) {
 	return NULL;
 }
 
+void func3() {
+
+	int x;
+	ticks start = getticks();
+	 __notify_intrinsic((void*)"func3_start",(void*)&x);
+
+	// func2();
+
+	uint64_t i;
+	for (i=0; i < 1000; i++) {
+		srand(time(NULL));
+		int r = rand();
+
+		// func2();
+	}
+
+	__notify_intrinsic((void*)"func3_end",(void*)&x);
+
+
+	__notify_intrinsic((void*)"func3_start",(void*)&x);
+
+	for (i=0; i < 10000; i++) {
+		srand(time(NULL));
+		int r = rand();
+	}
+
+	__notify_intrinsic((void*)"func3_end",(void*)&x);
+
+}
+
 int main() {
 
 	initZCAService();
 
-	profile_all(NULL);
+    Basic_Profiler bp;
+    Profiler* p = &bp;
+    p->profile_all(NULL);
 	// start_profile("func1", NULL);
 	// start_profile("func2", NULL);
 
-	pthread_t func1_t;
+    func3();
+
+/*	pthread_t func1_t;
 	int rc = pthread_create(&func1_t, NULL, func1_loop, (void*)"Function_1");
 	if (rc){
 		printf("ERROR; return code from pthread_create() is %d\n", rc);
@@ -181,7 +215,8 @@ int main() {
 	}
 
 	printf("\n ------ Deactivating all probes ---------\n");
-	turn_off_profiler();
+
+	p->turn_off_profiler();
 
 	pthread_t func3_t;
 	rc = pthread_create(&func3_t, NULL, func1_loop, (void*)"Function_1_Second_Pass");
@@ -205,7 +240,7 @@ int main() {
 	if(pthread_join(func4_t, NULL)) {
 		printf("Error joining thread\n");
 		exit(-1);
-	}
+	}*/
 	// func1();
 	// func2();
 

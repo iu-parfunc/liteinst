@@ -24,6 +24,7 @@
 #define _ZCA_TOGGLE_H_
 
 #include <string>
+#include <functional>
 
 #ifdef __cplusplus
 extern "C"

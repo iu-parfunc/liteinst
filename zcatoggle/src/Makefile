@@ -87,6 +87,13 @@ prof : build profiler.o
 	$(CPP) $(OPTS) test_profiler.cpp libdynprof.a libzca-toggle.a $(LIBS) -o prof.exe
 	./prof.exe
 
+prof1 : build profiler.o
+	$(AR) rc libdynprof.a profiler.o
+
+pdt : prof1 libzca-toggle.a
+	$(CPP) $(ARGS) -DSTREAM_ARRAY_SIZE=4000000 stream.tau.c libdynprof.a libzca-toggle.a $(LIBS) -o stream
+	./stream
+
 tmp : build temp.cpp
 	$(CPP) $(OPTS) temp.cpp libzca-toggle.a $(LIBS) -o t
 
@@ -105,4 +112,4 @@ asm: asmjit.cpp
 ### End of Testing stuff ###
 
 clean:
-	$(RM) -f $(OBJ) $(DEPS) $(LIBSOUT) $(INSTALLD)/libzca-toggle.so $(INSTALLD)/libzca-toggle.a hello_notify.exe *.exe
+	$(RM) -f $(OBJ) $(DEPS) $(LIBSOUT) $(INSTALLD)/libzca-toggle.so $(INSTALLD)/libzca-toggle.a $(INSTALLD)/libdynprof.a hello_notify.exe *.exe *.a

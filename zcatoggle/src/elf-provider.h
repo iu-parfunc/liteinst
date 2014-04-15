@@ -28,7 +28,7 @@ extern unsigned long probe_start; // Address of the first probe
 
 extern unsigned long probe_end; // Address of the last probe
 
-typedef std::unordered_map<std::string, ann_data*> ann_table;
+typedef std::unordered_map<std::string, std::list<ann_data*>*> ann_table;
 
 extern ann_table annotations;
 

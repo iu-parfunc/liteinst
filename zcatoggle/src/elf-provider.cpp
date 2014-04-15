@@ -353,6 +353,7 @@ int read_zca_probes(const char* path)
 				// ann_data ad = ann_data(NULL, NULL, fun, getIP(row), getProbespace(row), getExpr(header, row));
 
 				const char* str = getAnnotation(header, row);
+				printf("Annotation %d : %s\n", i, str);
 
 				/*
 	  const byte* expr = getExpr(header, row);
@@ -376,7 +377,18 @@ int read_zca_probes(const char* path)
 				ann_info[i].probespace = row->probespace;
 				ann_info[i].expr = strdup(str);
 				ann_info[i].expr_dwarf = row->expr;
-				annotations.insert(ann_table::value_type(string(str), &(ann_info[i])));
+
+				if (annotations.find(string(str)) == annotations.end()) {
+					list<ann_data*>* ann_list = new list<ann_data*>;
+					ann_list->push_back(&ann_info[i]);
+
+					annotations.insert(ann_table::value_type(string(str), ann_list));
+				} else {
+					list<ann_data*>* ann_list = annotations.find(string(str))->second;
+					ann_list->push_back(&ann_info[i]);
+				}
+
+				// annotations.insert(ann_table::value_type(string(str), &(ann_info[i])));
 
 				uint64_t probe_adddress = row->anchor;
 				uint32_t mem_chunk = ((uint64_t)probe_adddress) >> 32;

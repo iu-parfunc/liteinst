@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 #include <string.h>
+#include <functional>
 #include "cycle.h"
 
 using namespace std;
@@ -19,7 +20,7 @@ volatile int spin_lock = 0;
 
 void func2();
 
-void start_profile(string method, void (*fun)() ) {
+void Profiler::start_profile(string method, void (*fun)() ) {
 
   string probe_start_annotation = method + "_start";
   string probe_end_annotation = method + "_end";
@@ -34,12 +35,13 @@ void start_profile(string method, void (*fun)() ) {
   } else {
     deactivateProbe(probe_start_annotation);
     deactivateProbe(probe_end_annotation);
-    activateProbe(probe_start_annotation, profiler_func);
-    activateProbe(probe_end_annotation, profiler_func);
+
+    activateProbe(probe_start_annotation, (this->fun));
+    activateProbe(probe_end_annotation, (this->fun));
   }
 }
 
-void stop_profile(string method) {
+void Profiler::stop_profile(string method) {
 
   string probe_start_annotation = method + "_start";
   string probe_end_annotation = method + "_end";
@@ -68,7 +70,7 @@ void tokenize(const string& str,
     }
 }
 
-void profile_all(void (*fun)()) {
+void Profiler::profile_all(void (*fun)()) {
 	map<string, int>* activated_probes = new map<string, int>;
 
 	for (auto iter = annotations.begin(); iter != annotations.end(); iter++) {
@@ -92,7 +94,7 @@ void profile_all(void (*fun)()) {
 	delete activated_probes;
 }
 
-void turn_off_profiler() {
+void Profiler::turn_off_profiler() {
 	map<string, int>* deactivated_probes = new map<string, int>;
 
 	for (auto iter = annotations.begin(); iter != annotations.end(); iter++) {
@@ -147,7 +149,11 @@ void create_key() {
 
 // int counter = 0;
 
-void profiler_func() {
+void Basic_Profiler::set_profiler_function() {
+	this->fun = basic_profiler_func;
+}
+
+void basic_profiler_func() {
 
 	__thread static bool allocated;
 	// __thread static function_stats stats;
@@ -163,6 +169,8 @@ void profiler_func() {
 		: "=r"(addr)
         : "c" (offset)
 	);
+
+	// char test = *(NULL);
 
 	char* annotation = (char*)addr;
 
@@ -231,7 +239,7 @@ void profiler_func() {
 	}
 
 	// Merge to the global statistics table
-	if (data->count == 1000) {
+	if (data->count == 1) {
 		prof_data* global_data;
 
 		// Acquire the spin lock
@@ -263,7 +271,7 @@ void profiler_func() {
 		// Release lock
 		__sync_bool_compare_and_swap(&spin_lock, 1 , 0);
 
-		if (global_data->count == 1000) {
+		if (global_data->count >= 1) {
 			printf("\nFunction : %s\n", func_name);
 			printf("Min : %lu\n", global_data->min);
 			printf("Max : %lu\n", global_data->max);
@@ -275,158 +283,3 @@ void profiler_func() {
   return;
 
 }
-
-// ticks func1_min = 0;
-// ticks func1_max = 0;
-// ticks func1_sum = 0;
-// int func1_count = 0;
-// int spin_lock_1 = 0;
-//
-//
-// void func1(){
-//   int x;
-//   ticks start = getticks();
-//   __notify_intrinsic((void*)"func1_start",(void*)&x);
-//
-//   // func2();
-//
-//   uint64_t i;
-//   for (i=0; i < 1000; i++) {
-//     srand(time(NULL));
-//     int r = rand();
-//
-//     // func2();
-//   }
-//
-//   __notify_intrinsic((void*)"func1_end",(void*)&x);
-//   ticks end = getticks();
-//   ticks elapsed = (end - start);
-//
-//   while (!(__sync_bool_compare_and_swap(&spin_lock_1, 0 , 1)));
-//
-//   if (elapsed < func1_min || func1_min == 0) {
-//     func1_min = elapsed;
-//   }
-//
-//   if (elapsed > func1_max) {
-//     func1_max = elapsed;
-//   }
-//
-//   func1_sum += elapsed;
-//   func1_count++;
-//
-//   __sync_bool_compare_and_swap(&spin_lock_1, 1 , 0);
-//
-//   if (func1_count == 2000) {
-//     printf("\nMin elapsed time (total : func + prof overhead) in func1 : %lu\n", func1_min);
-//     printf("Max elapsed time (total : func + prof overhead) in func1 : %lu\n", func1_max);
-//     printf("Avg elapsed time (total : func + prof overhead) in func1 : %lu\n", (func1_sum / func1_count));
-//   }
-// }
-//
-// ticks func2_min = 0;
-// ticks func2_max = 0;
-// ticks func2_sum = 0;
-// int func2_count = 0;
-// int spin_lock_2 = 0;
-//
-// void func2() {
-//   int x;
-//   ticks start = getticks();
-//   __notify_intrinsic((void*)"func2_start",(void*)&x);
-//
-//   /*	uint64_t i;
-//       for (i=0; i < 1000; i++) {
-//       srand(time(NULL));
-//       int r = rand();
-//       }*/
-//
-//   __notify_intrinsic((void*)"func2_end",(void*)&x);
-//   ticks end = getticks();
-//   ticks elapsed = (end - start);
-//
-//   while (!(__sync_bool_compare_and_swap(&spin_lock_2, 0 , 1)));
-//
-//   if (elapsed < func2_min || func2_min == 0) {
-//     func2_min = elapsed;
-//   }
-//
-//   if (elapsed > func2_max) {
-//     func2_max = elapsed;
-//   }
-//
-//   func2_sum += elapsed;
-//   func2_count++;
-//
-//   __sync_bool_compare_and_swap(&spin_lock_2, 1 , 0);
-//
-//   if (func2_count == 2000) {
-//     printf("\nMin elapsed time (total : func + prof overhead) in func2 : %lu\n", func2_min);
-//     printf("Max elapsed time (total : func + prof overhead) in func2 : %lu\n", func2_max);
-//     printf("Avg elapsed time (total : func + prof overhead) in func2 : %lu\n", (func2_sum / func2_count));
-//   }
-// }
-//
-// void* func1_loop(void* tid) {
-//
-//   // start_profile("func1_start", NULL);
-//   // start_profile("func1_end", NULL);
-//   int i;
-// #pragma noinline recursive
-//   for (i=0; i < 1000; i++) {
-//     func1();
-//     func2();
-//   }
-//
-//   // stop_profile("func1_start");
-//   // stop_profile("func1_end");
-//
-//   return NULL;
-// }
-//
-// void* func2_loop(void* tid) {
-//
-//   // start_profile("func2_start", NULL);
-//   // start_profile("func2_end", NULL);
-//
-//   int i;
-//   for (i=0; i < 1000; i++) {
-//     func2();
-//     func1();
-//   }
-//
-//   // stop_profile("func2_start");
-//   // stop_profile("func2_end");
-//
-//   return NULL;
-// }
-//
-// int main() {
-//
-//   initZCAService();
-//   pthread_t func1_t;
-//   int rc = pthread_create(&func1_t, NULL, func1_loop, (void*)"Function_1");
-//   if (rc){
-//     printf("ERROR; return code from pthread_create() is %d\n", rc);
-//     exit(-1);
-//   }
-//
-//   if(pthread_join(func1_t, NULL)) {
-//     printf("Error joining thread\n");
-//     exit(-1);
-//   }
-//
-//   pthread_t func2_t;
-//   rc = pthread_create(&func2_t, NULL, func2_loop, (void*)"Function_2");
-//   if (rc){
-//     printf("ERROR; return code from pthread_create() is %d\n", rc);
-//     exit(-1);
-//   }
-//
-//   if(pthread_join(func1_t, NULL)) {
-//     printf("Error joining thread\n");
-//     exit(-1);
-//   }
-// }
-//
-//

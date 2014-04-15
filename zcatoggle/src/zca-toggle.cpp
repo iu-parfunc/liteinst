@@ -38,9 +38,9 @@ static mem_island* current_alloc_unit;
 inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*target_fn)(), ann_data** ann_info)
 {
 
-  using namespace AsmJit;
+	using namespace AsmJit;
 
-/*  int foo = 10, bar = 15;
+	/*  int foo = 10, bar = 15;
   __asm__ __volatile__("addl  %%ebx,%%eax"
                        :"=a"(foo)
                        :"a"(foo), "b"(bar)
@@ -48,12 +48,12 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*t
   printf("foo+bar=%d\n", foo);*/
 
 
-/*  char* annotation;
+	/*  char* annotation;
   __asm__ __volatile__ ("movl:0x10(%%rbp),%%ecx"
 		  	  	  	  	 :"=c" (annotation)
 		  	  	  	    );*/
 
-/*  volatile intptr_t new_stack_ptr = 0;
+	/*  volatile intptr_t new_stack_ptr = 0;
   volatile intptr_t old_stack_ptr = 0;
   asm __volatile__("movl %%esp, %0\n\t"
           "movl %1, %%esp"
@@ -61,247 +61,247 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*t
           : "r"(new_stack_ptr)  input
           );*/
 
-  // printf("Annotation is : %s\n", annotation);
+	// printf("Annotation is : %s\n", annotation);
 
-  // This aims to make the same one-way jump as manual_jmp_there, except from JITed code.
-  // --------------------------------------------------------------------------------
-  Assembler a, a2;
-  Mem m;
+	// This aims to make the same one-way jump as manual_jmp_there, except from JITed code.
+	// --------------------------------------------------------------------------------
+	Assembler a, a2;
+	Mem m;
 
-  Compiler c;
+	Compiler c;
 
 #if LOGLEVEL >= DEBUG_LEVEL
 
-  FileLogger logger(stderr);
-  a.setLogger(&logger);
-  a2.setLogger(&logger);
+	FileLogger logger(stderr);
+	a.setLogger(&logger);
+	a2.setLogger(&logger);
 
 #endif
 
-  // Push all volatile registers:
-  a.push(rax); a.push(rcx); a.push(rdx);
-  a.push(r8); a.push(r9); a.push(r10); a.push(r11);
+	// Push all volatile registers:
+	a.push(rax); a.push(rcx); a.push(rdx);
+	a.push(r8); a.push(r9); a.push(r10); a.push(r11);
 
-  // printf("ann_info->expr : %p\n", (*ann_info)->expr);
-  // printf("ann_info->expr : %s\n", ((*ann_info)->expr));
-  a.mov(rax,imm((sysint_t)(*ann_info)->expr));
-  a.push(rax);
-  a.call(imm((sysint_t)target_fn));
-  // Restore all volatile registers:
-  a.pop(rax);
-  a.pop(r11); a.pop(r10); a.pop(r9); a.pop(r8);
-  a.pop(rdx); a.pop(rcx); a.pop(rax);
+	// printf("ann_info->expr : %p\n", (*ann_info)->expr);
+	// printf("ann_info->expr : %s\n", ((*ann_info)->expr));
+	a.mov(rax,imm((sysint_t)(*ann_info)->expr));
+	a.push(rax);
+	a.call(imm((sysint_t)target_fn));
+	// Restore all volatile registers:
+	a.pop(rax);
+	a.pop(r11); a.pop(r10); a.pop(r9); a.pop(r8);
+	a.pop(rdx); a.pop(rcx);  a.pop(rax);
 
-  int codesz = a.getCodeSize();
-  // This works just as well, don't need the function_cast magic:
-  sysuint_t code = a.relocCode(addr);
+	int codesz = a.getCodeSize();
+	// This works just as well, don't need the function_cast magic:
+	sysuint_t code = a.relocCode(addr);
 
 
-  // printf("[Gen Stub]Probe address is : %p\n", (unsigned char*)probe_loc);
-  //printf("[Gen Stub]Original probe content is : %016llx\n", *((uint64_t*)probe_loc));
-  //printf("[Gen Stub]Stub address is : %p\n", addr);
+	// printf("[Gen Stub]Probe address is : %p\n", (unsigned char*)probe_loc);
+	//printf("[Gen Stub]Original probe content is : %016llx\n", *((uint64_t*)probe_loc));
+	// printf("[Gen Stub]Stub address is : %p\n", addr);
 
-  (*ann_info)->probe_offset = codesz;
-  // printf("[Gen Stub]Probe offset is : %d\n", (*ann_info)->probe_offset);
+	(*ann_info)->probe_offset = codesz;
+	// printf("[Gen Stub]Probe offset is : %d\n", (*ann_info)->probe_offset);
 
-  // Copy over the displaced probe bytes:
-  char b[8];
-  for(int i=0; i<PROBESIZE; i++) {
-    addr[codesz + i] = probe_loc[i];
-  }
+	// Copy over the displaced probe bytes:
+	char b[8];
+	for(int i=0; i<PROBESIZE; i++) {
+		addr[codesz + i] = probe_loc[i];
+	}
 
-  /*	for (int i=0; i<PROBESIZE; i++) {
+	/*	for (int i=0; i<PROBESIZE; i++) {
   // b[i] = addr[codesz + i];
   b[i] = probe_loc[i];
   printf("%p ", addr[codesz+i]);
   }
   printf("\n");*/
 
-  b[6] = 0;
-  b[7] = 0;
+	b[6] = 0;
+	b[7] = 0;
 
-  // printf("[Gen Stub]Buffer value is : %016llx\n", b);
+	// printf("[Gen Stub]Buffer value is : %016llx\n", b);
 
-  // Next generate the jump back home:
-  a2.jmp(imm((sysint_t)(void*)(probe_loc + PROBESIZE)));
-  int sz2 = a2.getCodeSize();
-  a2.relocCode(addr + codesz + PROBESIZE);
+	// Next generate the jump back home:
+	a2.jmp(imm((sysint_t)(void*)(probe_loc + PROBESIZE)));
+	int sz2 = a2.getCodeSize();
+	a2.relocCode(addr + codesz + PROBESIZE);
 
-  //printf("[Gen Stub]Stub content is :%016llx\n", *((uint64_t*)((byte*)addr+(*ann_info)->probe_offset)));
-  //printf("[Gen Stub]Stub content direct :%016llx\n", *((uint64_t*)((byte*)addr + codesz + 1)));
-  //printf("[Gen Stub]One word after the stub is : %016llx\n", *((uint64_t*)(addr + codesz + PROBESIZE)));
-  //#if LOGLEVEL >= DEBUG_LEVEL
-  char buf[1024];
-  for(int i=0; i<codesz + PROBESIZE + sz2; i++) {
+	//printf("[Gen Stub]Stub content is :%016llx\n", *((uint64_t*)((byte*)addr+(*ann_info)->probe_offset)));
+	//printf("[Gen Stub]Stub content direct :%016llx\n", *((uint64_t*)((byte*)addr + codesz + 1)));
+	//printf("[Gen Stub]One word after the stub is : %016llx\n", *((uint64_t*)(addr + codesz + PROBESIZE)));
+	//#if LOGLEVEL >= DEBUG_LEVEL
+	char buf[1024];
+	for(int i=0; i<codesz + PROBESIZE + sz2; i++) {
 
-    sprintf(&buf[5 * i], " %p", addr[i]);
+		sprintf(&buf[5 * i], " %p", addr[i]);
 
-  }
+	}
 
-  //printf("%s\n", buf);
-  //#endif
+	//printf("%s\n", buf);
+	//#endif
 
-  return (codesz+ PROBESIZE + sz2);
+	return (codesz+ PROBESIZE + sz2);
 }
 
 inline int retry_allocation(unsigned long* start_addr, unsigned long size, unsigned long** stub_address) {
-  // Try with decreasing sizes until we get space to fit an available memory hole
-  unsigned long new_size = size / 2;
-  while (*stub_address == MAP_FAILED && new_size >= 4096) {
-    *stub_address = (unsigned long*)mmap(start_addr, new_size,
-					 PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED| MAP_ANONYMOUS, -1,0);
-    new_size = new_size / 2;
-  }
+	// Try with decreasing sizes until we get space to fit an available memory hole
+	unsigned long new_size = size / 2;
+	while (*stub_address == MAP_FAILED && new_size >= 4096) {
+		*stub_address = (unsigned long*)mmap(start_addr, new_size,
+				PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED| MAP_ANONYMOUS, -1,0);
+		new_size = new_size / 2;
+	}
 
-  if (*stub_address == MAP_FAILED) {
-    return -1; // We give up. Cannot allocate memory inside this memory region.
-  } else {
-    return new_size;
-  }
+	if (*stub_address == MAP_FAILED) {
+		return -1; // We give up. Cannot allocate memory inside this memory region.
+	} else {
+		return new_size;
+	}
 }
 
 inline int get_allocated_stub_memory_for_probe(unsigned char* probe_address, unsigned long** stub_address) {
 
-  int32_t mem_chunk = ((unsigned long)probe_address) >> 32;
+	int32_t mem_chunk = ((unsigned long)probe_address) >> 32;
 
-  // If we are in the same memory region avoid the hash table lookup and just use the previously used memory island
-  // Assumes the probes are processed in linearly increasing order of their addresses
-  // This also deals with the memory island allocations for a given region after the first allocation
-  if (current_alloc_unit != NULL && mem_chunk == current_alloc_unit->mem_chunk) {
-    if (current_alloc_unit->remaining_size >= STUB_SIZE) {
-      *stub_address = current_alloc_unit->insertion_ptr;
+	// If we are in the same memory region avoid the hash table lookup and just use the previously used memory island
+	// Assumes the probes are processed in linearly increasing order of their addresses
+	// This also deals with the memory island allocations for a given region after the first allocation
+	if (current_alloc_unit != NULL && mem_chunk == current_alloc_unit->mem_chunk) {
+		if (current_alloc_unit->remaining_size >= STUB_SIZE) {
+			*stub_address = current_alloc_unit->insertion_ptr;
 
-      // This is the last probe that can be allocated from this memory island. Keep its address as reference
-      // So the next memory island address can be calculated using this as a reference point
-      // This assumes probes are processed in increasing order by ther addresses within a memory region
-      if (current_alloc_unit->remaining_size == STUB_SIZE) {
-	current_alloc_unit->last_probe_address = (unsigned long*)probe_address;
-      }
+			// This is the last probe that can be allocated from this memory island. Keep its address as reference
+			// So the next memory island address can be calculated using this as a reference point
+			// This assumes probes are processed in increasing order by ther addresses within a memory region
+			if (current_alloc_unit->remaining_size == STUB_SIZE) {
+				current_alloc_unit->last_probe_address = (unsigned long*)probe_address;
+			}
 
-      current_alloc_unit->insertion_ptr = (unsigned long*)((byte*) current_alloc_unit->insertion_ptr + STUB_SIZE);
-      current_alloc_unit->remaining_size -= STUB_SIZE;
+			current_alloc_unit->insertion_ptr = (unsigned long*)((byte*) current_alloc_unit->insertion_ptr + STUB_SIZE);
+			current_alloc_unit->remaining_size -= STUB_SIZE;
 
-      LOG_DEBUG("Stub starting at %p \n", *stub_address);
-    } else {
+			LOG_DEBUG("Stub starting at %p \n", *stub_address);
+		} else {
 
-      // Allocate a second memory island for stubs in this memory region since we have run out of space
-      // in the already allocated ones
-      uint64_t region_size = (1LL<<32);
-      unsigned long new_island_start_addr = (*(current_alloc_unit->last_probe_address) + region_size) / 2; // Take the middle address
-      unsigned long new_island_size = current_alloc_unit->unallocated_size;
+			// Allocate a second memory island for stubs in this memory region since we have run out of space
+			// in the already allocated ones
+			uint64_t region_size = (1LL<<32);
+			unsigned long new_island_start_addr = (*(current_alloc_unit->last_probe_address) + region_size) / 2; // Take the middle address
+			unsigned long new_island_size = current_alloc_unit->unallocated_size;
 
-      *stub_address = (unsigned long*)mmap(&new_island_start_addr, new_island_size,
-					   PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED| MAP_ANONYMOUS, -1,0);
+			*stub_address = (unsigned long*)mmap(&new_island_start_addr, new_island_size,
+					PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED| MAP_ANONYMOUS, -1,0);
 
-      // Retry with smaller allocation size in case of faliure
-      if (*stub_address == MAP_FAILED) {
-	int alloc_size = retry_allocation(&new_island_start_addr, new_island_size, stub_address);
+			// Retry with smaller allocation size in case of faliure
+			if (*stub_address == MAP_FAILED) {
+				int alloc_size = retry_allocation(&new_island_start_addr, new_island_size, stub_address);
 
-	if (alloc_size == -1) {
-	  int err = errno;
-	  LOG_ERROR("Unable to allocate memory within the region : %d. "
-		    "Annotations within this memory region will not be profiled..\n", mem_chunk);
-	  return -1;
-	} else {
-	  // This needs to be reallocated again at some place else
-	  current_alloc_unit->unallocated_size = new_island_size - alloc_size;
-	  current_alloc_unit->start_addr = *stub_address;
-	  current_alloc_unit->insertion_ptr = (unsigned long*)((byte*) *stub_address + STUB_SIZE);
-	  current_alloc_unit->remaining_size = alloc_size - STUB_SIZE;
+				if (alloc_size == -1) {
+					int err = errno;
+					LOG_ERROR("Unable to allocate memory within the region : %d. "
+							"Annotations within this memory region will not be profiled..\n", mem_chunk);
+					return -1;
+				} else {
+					// This needs to be reallocated again at some place else
+					current_alloc_unit->unallocated_size = new_island_size - alloc_size;
+					current_alloc_unit->start_addr = *stub_address;
+					current_alloc_unit->insertion_ptr = (unsigned long*)((byte*) *stub_address + STUB_SIZE);
+					current_alloc_unit->remaining_size = alloc_size - STUB_SIZE;
 
 
+				}
+			}
+
+			// All's well. We got the amount we asked for.
+			current_alloc_unit->start_addr = *stub_address;
+			current_alloc_unit->mem_chunk = mem_chunk;
+			current_alloc_unit->insertion_ptr += STUB_SIZE;
+			current_alloc_unit->size = new_island_size;
+			current_alloc_unit->remaining_size = new_island_size - STUB_SIZE;
+		}
+
+		return 0;
 	}
-      }
 
-      // All's well. We got the amount we asked for.
-      current_alloc_unit->start_addr = *stub_address;
-      current_alloc_unit->mem_chunk = mem_chunk;
-      current_alloc_unit->insertion_ptr += STUB_SIZE;
-      current_alloc_unit->size = new_island_size;
-      current_alloc_unit->remaining_size = new_island_size - STUB_SIZE;
-    }
+	// This deals with initial memory island allocation for a given memory region
+	auto it =  mem_allocations.find(mem_chunk);
+	if (it != mem_allocations.end()) {
+		// This is the first allocation of a memory island for this memory region.
+		std::list<mem_island*>* mem_list = it->second;
+		// Check first memory island
+		mem_island* first_mem = mem_list->front();
 
-    return 0;
-  }
+		if (first_mem != NULL) {
 
-  // This deals with initial memory island allocation for a given memory region
-  auto it =  mem_allocations.find(mem_chunk);
-  if (it != mem_allocations.end()) {
-    // This is the first allocation of a memory island for this memory region.
-    std::list<mem_island*>* mem_list = it->second;
-    // Check first memory island
-    mem_island* first_mem = mem_list->front();
+			*stub_address = (unsigned long*)mmap(first_mem->start_addr, first_mem->size,
+					PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED| MAP_ANONYMOUS, -1,0);
 
-    if (first_mem != NULL) {
+			// Retry with smaller allocation size in case of faliure
+			if (*stub_address == MAP_FAILED) {
+				int alloc_size = retry_allocation(first_mem->start_addr, first_mem->size, stub_address);
+				if (alloc_size == -1) {
+					int err = errno;
+					LOG_ERROR("Unable to allocate memory within chunk: %d. "
+							"Annotations within this chunk will not be profiled..\n", mem_chunk);
+					return -1;
+				} else {
+					first_mem->unallocated_size = first_mem->size - alloc_size;
+					// This needs to be reallocated again at some place else
+					first_mem->start_addr = *stub_address;
+					first_mem->insertion_ptr = (unsigned long*)((byte*) *stub_address + STUB_SIZE);
+					first_mem->remaining_size = alloc_size - STUB_SIZE;
+				}
+			}
 
-      *stub_address = (unsigned long*)mmap(first_mem->start_addr, first_mem->size,
-					   PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED| MAP_ANONYMOUS, -1,0);
+			// All's well. We got the amount we asked for.
+			first_mem->start_addr = *stub_address;
+			first_mem->insertion_ptr = (unsigned long*)((byte*) *stub_address + STUB_SIZE);
+			first_mem->remaining_size = first_mem->size - STUB_SIZE;
+			// first_mem->allocated = true;
+			first_mem->unallocated_size = 0;
 
-      // Retry with smaller allocation size in case of faliure
-      if (*stub_address == MAP_FAILED) {
-	int alloc_size = retry_allocation(first_mem->start_addr, first_mem->size, stub_address);
-	if (alloc_size == -1) {
-	  int err = errno;
-	  LOG_ERROR("Unable to allocate memory within chunk: %d. "
-		    "Annotations within this chunk will not be profiled..\n", mem_chunk);
-	  return -1;
+			current_alloc_unit = first_mem;
+		} else {
+			return -1;
+			// Error. Log and return
+		}
 	} else {
-	  first_mem->unallocated_size = first_mem->size - alloc_size;
-	  // This needs to be reallocated again at some place else
-	  first_mem->start_addr = *stub_address;
-	  first_mem->insertion_ptr = (unsigned long*)((byte*) *stub_address + STUB_SIZE);
-	  first_mem->remaining_size = alloc_size - STUB_SIZE;
+		// No memory island information available.
+		return -1;
 	}
-      }
 
-      // All's well. We got the amount we asked for.
-      first_mem->start_addr = *stub_address;
-      first_mem->insertion_ptr = (unsigned long*)((byte*) *stub_address + STUB_SIZE);
-      first_mem->remaining_size = first_mem->size - STUB_SIZE;
-      // first_mem->allocated = true;
-      first_mem->unallocated_size = 0;
-
-      current_alloc_unit = first_mem;
-    } else {
-      return -1;
-      // Error. Log and return
-    }
-  } else {
-    // No memory island information available.
-    return -1;
-  }
-
-  return 0;
+	return 0;
 }
 
 inline void modify_probe_site(unsigned char* probe_address, unsigned long* stub_address, ann_data** ann_info, void (*fun)()) {
-  LOG_DEBUG("Probe address is : %p\n", (unsigned char*)probe_address);
-  LOG_DEBUG("Stub address is : %p\n", stub_address);
+	LOG_DEBUG("Probe address is : %p\n", (unsigned char*)probe_address);
+	LOG_DEBUG("Stub address is : %p\n", stub_address);
 
 
-  int page_size = 4096;
-  int code = mprotect((void*)(probe_address - (((unsigned long)probe_address)%4096)), page_size,
-		      PROT_READ | PROT_WRITE | PROT_EXEC);
+	int page_size = 4096;
+	int code = mprotect((void*)(probe_address - (((unsigned long)probe_address)%4096)), page_size,
+			PROT_READ | PROT_WRITE | PROT_EXEC);
 
-  if (code) {
-    /* current code page is now writable and code from it is allowed for execution */
-    LOG_ERROR("mprotect was not successfull! code %d\n", code);
-    LOG_ERROR("errno value is : %d\n", errno);
-    // return -1;
-  }
+	if (code) {
+		/* current code page is now writable and code from it is allowed for execution */
+		LOG_ERROR("mprotect was not successfull! code %d\n", code);
+		LOG_ERROR("errno value is : %d\n", errno);
+		// return -1;
+	}
 
-  int stub_size = gen_stub_code((unsigned char*)(stub_address), probe_address, fun, ann_info/*(&annotations[i])->fun*/);
-  // Plug in the relative jump
-  // This does a relative jump:
-  probe_address[0] = 0xE9;
-  // Size of the JMP we insert is 5.  So +5 points to the following instruction.
-  long relative = (long)(((unsigned char*)(void*) stub_address) - probe_address - 5);
-  //printf ("[Modify Probe site] Jump distance is : %lu\n", relative);
+	int stub_size = gen_stub_code((unsigned char*)(stub_address), probe_address, fun, ann_info/*(&annotations[i])->fun*/);
+	// Plug in the relative jump
+	// This does a relative jump:
+	probe_address[0] = 0xE9;
+	// Size of the JMP we insert is 5.  So +5 points to the following instruction.
+	long relative = (long)(((unsigned char*)(void*) stub_address) - probe_address - 5);
+	//printf ("[Modify Probe site] Jump distance is : %lu\n", relative);
 
-  LOG_DEBUG("  Relative offset of dest from starting addr: %p %p, 32 bit: %d\n", probe_address, stub_address, (int)relative);
+	LOG_DEBUG("  Relative offset of dest from starting addr: %p %p, 32 bit: %d\n", probe_address, stub_address, (int)relative);
 
-  *(uint32_t*)(probe_address+1) = (int)relative;
-  probe_address[5] = 0x0;
+	*(uint32_t*)(probe_address+1) = (int)relative;
+	probe_address[5] = 0x0;
 }
 
 int timeval_subtract(struct timeval *result, struct timeval *t2, struct timeval *t1)
@@ -317,6 +317,7 @@ void setupStubs()
 {
 	// Retrieve annotation data
 	probe_count=read_self_zca_probes();
+	printf("Probe count : %d..\n", probe_count);
 	unsigned long* stub_address;
 
 #ifdef PROFILE
@@ -331,17 +332,26 @@ void setupStubs()
 
 	int i = 0;
 	for (auto iter = annotations.begin(); iter != annotations.end(); iter++, i++) {
-		ann_data* data = iter->second;
-		unsigned char* probe_address = (unsigned char*) (data->anchor);
-		// ann_data* ann_info = data.second;
+		std::list<ann_data*>* ann_list = iter->second;
+		printf("String %d: %s\n", i, iter->first);
 
-		int status = get_allocated_stub_memory_for_probe(probe_address, &stub_address);
+		for (std::list<ann_data*>::iterator it =  ann_list->begin(); it != ann_list->end(); ++it) {
+			ann_data* data = *it;
+			unsigned char* probe_address = (unsigned char*) (data->anchor);
+			// ann_data* ann_info = data.second;
 
-		if (status != -1) {
-					// Fill annotation information for later use in probe activation/ deactivation
-		   data->stubLocation = stub_address;
-		   modify_probe_site(probe_address, stub_address, &data, print_fn2);
-		   data->active = true;
+			int status = get_allocated_stub_memory_for_probe(probe_address, &stub_address);
+
+			if (status != -1) {
+				// Fill annotation information for later use in probe activation/ deactivation
+				data->stubLocation = stub_address;
+
+				printf("Probe address %d : %p  Stub address : %p\n", i, probe_address, stub_address);
+				modify_probe_site(probe_address, stub_address, &data, print_fn2);
+				data->active = true;
+			} else {
+				printf("Memory allocation failed..\n");
+			}
 		}
 	}
 #ifdef PROFILE
@@ -358,67 +368,69 @@ void setupStubs()
 // CAS can only deal with in integer sizes
 int activateProbe(std::string label, void (*fun)())
 {
-  if (annotations.find(label) != annotations.end()) {
-    
-    ann_data* data = annotations.find(label)->second;
-    //zca_row_11_t* probe_info = data.first;
-    // ann_data* ann_info = data.second;
+	if (annotations.find(label) != annotations.end()) {
 
-    if (data->fun != fun) {
-//    	printf("Current function : %p New function : %p\n", ann_info->fun, fun);
-      unsigned char* probe_address = (unsigned char*) (data->anchor);
-      modify_probe_site(probe_address, data->stubLocation, &data, fun);
-      return 0;
-    }
-    
-    if (data != NULL && data != NULL && data->active == false) {
-      uint64_t* stub_address = data->stubLocation;
-      uint64_t* probe_address = (uint64_t*) data->anchor;
+		std::list<ann_data*>* ann_list = annotations.find(label)->second;
+		//zca_row_11_t* probe_info = data.first;
+		// ann_data* ann_info = data.second;
+		for (std::list<ann_data*>::iterator it =  ann_list->begin(); it != ann_list->end(); ++it) {
+			ann_data* data = *it;
+			if (data->fun != fun) {
+				//    	printf("Current function : %p New function : %p\n", ann_info->fun, fun);
+				unsigned char* probe_address = (unsigned char*) (data->anchor);
+				modify_probe_site(probe_address, data->stubLocation, &data, fun);
+				return 0;
+			}
 
-      //printf("[Activate Probe]The probe content is : %016llx\n", *probe_address);
-      //printf("[Activate Probe]The stub content is : %016llx\n", ((byte*)stub_address + ann_info->probe_offset));
+			if (data != NULL && data != NULL && data->active == false) {
+				uint64_t* stub_address = data->stubLocation;
+				uint64_t* probe_address = (uint64_t*) data->anchor;
 
-      if (stub_address != NULL && probe_address != NULL) {
-	uint64_t old_val = *probe_address;
+				//printf("[Activate Probe]The probe content is : %016llx\n", *probe_address);
+				//printf("[Activate Probe]The stub content is : %016llx\n", ((byte*)stub_address + ann_info->probe_offset));
 
-	if (PROBESIZE < sizeof(uint64_t)) {
-	  uint64_t mask = 0x0FFFFFFFFFFFFFFF;
+				if (stub_address != NULL && probe_address != NULL) {
+					uint64_t old_val = *probe_address;
 
-	  int shift_size = (sizeof(uint64_t) - PROBESIZE) * 8 - 4;
-	  mask = (mask >> shift_size);
+					if (PROBESIZE < sizeof(uint64_t)) {
+						uint64_t mask = 0x0FFFFFFFFFFFFFFF;
 
-	  uint64_t msb = (old_val & ~mask);
+						int shift_size = (sizeof(uint64_t) - PROBESIZE) * 8 - 4;
+						mask = (mask >> shift_size);
 
-	  //printf("[Activate Probe]MSB is : %016llx\n", msb);
+						uint64_t msb = (old_val & ~mask);
 
-	  uint64_t new_val = 0;
-	  byte* new_val_ptr;
-	  new_val_ptr = (byte*) &new_val;
-	  new_val_ptr[0] = 0xE9;
+						//printf("[Activate Probe]MSB is : %016llx\n", msb);
 
-	  long relative = (long)(((unsigned char*)(void*)stub_address) - (unsigned char*)probe_address - 5);
-	  //printf("[Activate Probe]Jump distance is : %lu\n", relative);
-	  *(uint32_t*)(new_val_ptr+1) = (int)relative;
-	  new_val_ptr[5] = 0x0;
+						uint64_t new_val = 0;
+						byte* new_val_ptr;
+						new_val_ptr = (byte*) &new_val;
+						new_val_ptr[0] = 0xE9;
 
-	  new_val = (new_val | msb);
+						long relative = (long)(((unsigned char*)(void*)stub_address) - (unsigned char*)probe_address - 5);
+						//printf("[Activate Probe]Jump distance is : %lu\n", relative);
+						*(uint32_t*)(new_val_ptr+1) = (int)relative;
+						new_val_ptr[5] = 0x0;
 
-	  //printf("[Activate Probe]Modfied probe content is : %016llx\n", new_val);
+						new_val = (new_val | msb);
 
-	  // Now atomically swap the jump to the stub at the probe site
-	  int status = __sync_bool_compare_and_swap(probe_address, old_val, new_val);
-	  // printf("[Activate Probe]Changed probe content is : %016llx\n", *probe_address);
+						//printf("[Activate Probe]Modfied probe content is : %016llx\n", new_val);
 
-	  return status;
+						// Now atomically swap the jump to the stub at the probe site
+						int status = __sync_bool_compare_and_swap(probe_address, old_val, new_val);
+						// printf("[Activate Probe]Changed probe content is : %016llx\n", *probe_address);
+
+						return status;
+					}
+
+				}
+
+			}
+		}
+	} else {
+		printf("Couldn't find the annotation..\n");
 	}
-
-      }
-
-    }
-  } else {
-    printf("Couldn't find the annotation..\n");
-  }
-  return -1;
+	return -1;
 }
 
 // Deactivate the probe by copying original probe sequence back
@@ -426,45 +438,46 @@ int activateProbe(std::string label, void (*fun)())
 // CAS can only deal with in integer sizes
 int deactivateProbe(std::string label) {
 
-  if (annotations.find(label) != annotations.end()) {
+	if (annotations.find(label) != annotations.end()) {
 
-    ann_data* data = annotations.find(label)->second;
-    // zca_row_11_t* probe_info = data.first;
-    // ann_data* ann_info = data.second;
+		std::list<ann_data*>* ann_list = annotations.find(label)->second;
+		// zca_row_11_t* probe_info = data.first;
+		// ann_data* ann_info = data.second;
+		for (std::list<ann_data*>::iterator it =  ann_list->begin(); it != ann_list->end(); ++it) {
+			ann_data* data = *it;
+			if (data != NULL && data != NULL && data->active == true) {
+				uint64_t* probe = (uint64_t*) data->anchor;
+				uint64_t old_val = *probe;
 
-    if (data != NULL && data != NULL && data->active == true) {
-      uint64_t* probe = (uint64_t*) data->anchor;
-      uint64_t old_val = *probe;
+				//printf("Probe location is : %p\n", probe_info->anchor);
+				//printf("Old val is : %016llx\n", old_val);
 
-      //printf("Probe location is : %p\n", probe_info->anchor);
-      //printf("Old val is : %016llx\n", old_val);
+				//printf("Stub location is : %p\n", ann_info->stubLocation);
+				uint64_t* probespace = (uint64_t*) ((byte*)data->stubLocation + data->probe_offset);
+				//printf("Probespace is : %p\n", probespace);
+				//printf("Probe offset now is : %d\n", ann_info->probe_offset);
+				//printf("Probespace content is : %016llx\n", *probespace);
 
-      //printf("Stub location is : %p\n", ann_info->stubLocation);
-      uint64_t* probespace = (uint64_t*) ((byte*)data->stubLocation + data->probe_offset);
-      //printf("Probespace is : %p\n", probespace);
-      //printf("Probe offset now is : %d\n", ann_info->probe_offset);
-      //printf("Probespace content is : %016llx\n", *probespace);
+				uint64_t new_val = *probespace;
 
-      uint64_t new_val = *probespace;
+				if (PROBESIZE < sizeof(uint64_t)) {
+					uint64_t mask = 0x0FFFFFFFFFFFFFFF;
 
-      if (PROBESIZE < sizeof(uint64_t)) {
-	uint64_t mask = 0x0FFFFFFFFFFFFFFF;
+					// printf("Mask before shifting is %016llx\n", mask);
+					int shift_size = (sizeof(uint64_t) - PROBESIZE) * 8 - 4;
+					mask = (mask >> shift_size);
+					//printf("Mask is %016llx\n", mask);
 
-	// printf("Mask before shifting is %016llx\n", mask);
-	int shift_size = (sizeof(uint64_t) - PROBESIZE) * 8 - 4;
-	mask = (mask >> shift_size);
-	//printf("Mask is %016llx\n", mask);
+					new_val = (new_val & mask); // Shave off (2) least significant bytes
+					//printf("New val after shaving off 2 msb : %016llx\n", new_val);
+					uint64_t msb = (old_val & ~mask);
+					//printf("LSB is : %016llx\n", msb);
 
-	new_val = (new_val & mask); // Shave off (2) least significant bytes
-	//printf("New val after shaving off 2 msb : %016llx\n", new_val);
-	uint64_t msb = (old_val & ~mask);
-	//printf("LSB is : %016llx\n", msb);
+					new_val = (new_val | msb);
 
-	new_val = (new_val | msb);
-
-	int page_size = 4096;
-	//printf("Probe is %04x\n", probe);
-	/*				int code = mprotect((void*)(probe - (((unsigned long)probe)%4096)), page_size,
+					int page_size = 4096;
+					//printf("Probe is %04x\n", probe);
+					/*				int code = mprotect((void*)(probe - (((unsigned long)probe)%4096)), page_size,
 					PROT_READ | PROT_WRITE | PROT_EXEC);
 
 					if (code) {
@@ -474,21 +487,22 @@ int deactivateProbe(std::string label) {
 					// return -1;
 					}*/
 
-	// Now atomically swap the displaced probe site sequence to its original location
-	int status = __sync_bool_compare_and_swap(probe, old_val, new_val);
+					// Now atomically swap the displaced probe site sequence to its original location
+					int status = __sync_bool_compare_and_swap(probe, old_val, new_val);
 
-	data->active = false;
-	//printf("Swapped the stuff..\n");
+					data->active = false;
+					//printf("Swapped the stuff..\n");
 
-	//printf("Now the probe content is : %016llx\n", *probe);
+					//printf("Now the probe content is : %016llx\n", *probe);
 
-	return status;
-      }
+					return status;
+				}
 
-    }
-  }
+			}
+		}
+	}
 
-  return -1;
+	return -1;
 }
 
 /* This function is called automatically when the library is loaded */
