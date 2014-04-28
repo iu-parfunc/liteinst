@@ -1,6 +1,7 @@
 
 #include "zca-toggle.hpp"
 #include "elf-provider.h"
+#include "profiler_types.hpp"
 #include "profiler.hpp"
 #include <stdio.h>
 #include <pthread.h>
@@ -18,12 +19,34 @@ using namespace std;
 global_stats statistics;
 volatile int spin_lock = 0;
 
+Profiler* prof;
+
 void func2();
+
+void activate_method_profiling(char* method, void (*fun)()) {
+	prof->start_profile(string(method), fun);
+}
+
+void deactivate_method_profiling(char* method) {
+	prof->stop_profile(string(method));
+}
+
+void start_profiler() {
+	initZCAService();
+    prof = new Basic_Profiler;
+    prof->profile_all(NULL);
+
+    printf("Instrumentation done..\n");
+}
+
+void stop_profiler() {
+	delete prof;
+}
 
 void Profiler::start_profile(string method, void (*fun)() ) {
 
-  string probe_start_annotation = method + "_start";
-  string probe_end_annotation = method + "_end";
+  string probe_start_annotation = method + ":start";
+  string probe_end_annotation = method + ":end";
 
   if (fun != NULL) {
     // Need to first deactivate before activating. Otherwise the return from the generated stub will be written with a junk address in a mysterious manner.
@@ -77,7 +100,7 @@ void Profiler::profile_all(void (*fun)()) {
 		string annotation = iter->first;
 
 		vector<string> tokens;
-		tokenize(annotation, tokens, "_");
+		tokenize(annotation, tokens, ":");
 
 		string func_name = tokens[0];
 
@@ -191,7 +214,7 @@ void basic_profiler_func() {
 	char* func_name;
 	char* tok;
 	if (annotation != NULL) {
-		func_name = strtok_r(annotation, "_", &tok);
+		func_name = strtok_r(annotation, ":", &tok);
 	} else {
 		return;
 	}
@@ -219,6 +242,7 @@ void basic_profiler_func() {
 	if (data->start == -1) {
 		ticks time = getticks();
 		data->start = time;
+		return;
 	} else {
 		ticks time = getticks();
 		ticks end = time;
@@ -238,10 +262,12 @@ void basic_profiler_func() {
 		data->start = -1;
 	}
 
+
 	// Merge to the global statistics table
-	if (data->count == 1) {
+	if (data->count >= 1) {
 		prof_data* global_data;
 
+	printf("Came here..\n");
 		// Acquire the spin lock
 		while (!(__sync_bool_compare_and_swap(&spin_lock, 0 , 1)));
 
@@ -273,6 +299,7 @@ void basic_profiler_func() {
 
 		if (global_data->count >= 1) {
 			printf("\nFunction : %s\n", func_name);
+			printf("Count : %lu\n", global_data->count);
 			printf("Min : %lu\n", global_data->min);
 			printf("Max : %lu\n", global_data->max);
 			printf("Avg : %lu\n", global_data->sum / global_data->count);

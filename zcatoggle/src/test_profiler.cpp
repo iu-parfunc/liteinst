@@ -152,7 +152,7 @@ void func3() {
 
 	int x;
 	ticks start = getticks();
-	 __notify_intrinsic((void*)"func3_start",(void*)&x);
+	 __notify_intrinsic((void*)"func3:start",(void*)&x);
 
 	// func2();
 
@@ -164,30 +164,28 @@ void func3() {
 		// func2();
 	}
 
-	__notify_intrinsic((void*)"func3_end",(void*)&x);
+	__notify_intrinsic((void*)"func3:end",(void*)&x);
 
 
-	__notify_intrinsic((void*)"func3_start",(void*)&x);
+	//__notify_intrinsic((void*)"func3:start",(void*)&x);
 
 	for (i=0; i < 10000; i++) {
 		srand(time(NULL));
 		int r = rand();
 	}
 
-	__notify_intrinsic((void*)"func3_end",(void*)&x);
+	//__notify_intrinsic((void*)"func3:end",(void*)&x);
 
 }
 
 int main() {
 
-	initZCAService();
+	start_profiler();
 
-    Basic_Profiler bp;
-    Profiler* p = &bp;
-    p->profile_all(NULL);
 	// start_profile("func1", NULL);
 	// start_profile("func2", NULL);
 
+    func3();
     func3();
 
 /*	pthread_t func1_t;

@@ -90,7 +90,7 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*t
 	// Restore all volatile registers:
 	a.pop(rax);
 	a.pop(r11); a.pop(r10); a.pop(r9); a.pop(r8);
-	a.pop(rdx); a.pop(rcx);  a.pop(rax);
+	a.pop(rdx); a.pop(rcx);  // a.pop(rax); This fixes the wierd seg fault which happens when -O3 is enabled
 
 	int codesz = a.getCodeSize();
 	// This works just as well, don't need the function_cast magic:
@@ -428,7 +428,7 @@ int activateProbe(std::string label, void (*fun)())
 			}
 		}
 	} else {
-		printf("Couldn't find the annotation..\n");
+		printf("Couldn't find the annotation : %s \n", label);
 	}
 	return -1;
 }

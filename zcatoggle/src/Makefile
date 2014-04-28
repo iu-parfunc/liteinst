@@ -91,7 +91,7 @@ prof1 : build profiler.o
 	$(AR) rc libdynprof.a profiler.o
 
 pdt : prof1 libzca-toggle.a
-	$(CPP) $(ARGS) -DSTREAM_ARRAY_SIZE=4000000 stream.tau.c libdynprof.a libzca-toggle.a $(LIBS) -o stream
+	$(CPP) $(ARGS) -O3 -DSTREAM_ARRAY_SIZE=4000000 stream.tau.c libdynprof.a libzca-toggle.a $(LIBS) -o stream
 	./stream
 
 tmp : build temp.cpp

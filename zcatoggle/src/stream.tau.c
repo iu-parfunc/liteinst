@@ -215,10 +215,7 @@ main()
     {
 
     /* RH: Added toggle library */
-    initZCAService();
-    Basic_Profiler bp;
-    Profiler* p = &bp;
-    p->profile_all(NULL);
+    start_profiler();
 
 	// __notify_intrinsic((void*)"main_start", (void *)&zcatemp);
 {
@@ -387,7 +384,8 @@ main()
     printf(HLINE);
 
     /* --- Check Results --- */
-#pragma noinline recursive
+// #pragma noinline recursive
+    checkSTREAMresults();
     checkSTREAMresults();
     printf(HLINE);
 
@@ -467,7 +465,7 @@ double mysecond()
 void checkSTREAMresults ()
 {
 
-	 __notify_intrinsic((void*)"checkSTREAMresults_start", (void *)&zcatemp);
+	 __notify_intrinsic((void*)"checkSTREAMresults:start", (void *)&zcatemp);
 // {
 	STREAM_TYPE aj,bj,cj,scalar;
 	STREAM_TYPE aSumErr,bSumErr,cSumErr;
@@ -575,7 +573,7 @@ void checkSTREAMresults ()
 		printf("     For array c[], %d errors were found.\n",ierr);
 	}
 	if (err == 0) {
-		printf ("Solution Validates: avg error less than %e on all three arrays\n",epsilon);
+		// printf ("Solution Validates: avg error less than %e on all three arrays\n",epsilon);
 	}
 #ifdef VERBOSE
 	printf ("Results Validation Verbose Results: \n");
@@ -585,7 +583,7 @@ void checkSTREAMresults ()
 #endif
 
 // }
-	 __notify_intrinsic((void*)"checkSTREAMresults_end", (void *)&zcatemp);
+	 __notify_intrinsic((void*)"checkSTREAMresults:end", (void *)&zcatemp);
 }
 
 #ifdef TUNED
