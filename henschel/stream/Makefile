@@ -6,9 +6,12 @@ INSTRUMENT=/N/dcwan/scratch/henschel/ForRyan/pdtoolkit-3.17/x86_64/bin/tau_instr
 
 all: stream_c.exe
 
-stream_c.exe: stream.c
+
+stream.tau.c: stream.c
 	$(PARSE) stream.c
 	$(INSTRUMENT) stream.pdb stream.c -l -o stream.tau.c -c -spec ./TAUINST.SPEC
+
+stream_c.exe: stream.tau.c
 	$(CC) $(CFLAGS) stream.tau.c -o stream
 
 clean:
