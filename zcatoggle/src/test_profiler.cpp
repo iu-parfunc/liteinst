@@ -154,14 +154,14 @@ void func3() {
 	ticks start = getticks();
 	 __notify_intrinsic((void*)"func3:start",(void*)&x);
 
-	// func2();
+	func2();
 
 	uint64_t i;
 	for (i=0; i < 1000; i++) {
 		srand(time(NULL));
 		int r = rand();
 
-		// func2();
+		func2();
 	}
 
 	__notify_intrinsic((void*)"func3:end",(void*)&x);
