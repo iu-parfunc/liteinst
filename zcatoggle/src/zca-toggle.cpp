@@ -90,7 +90,7 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*t
 	// Restore all volatile registers:
 	a.pop(rax);
 	a.pop(r11); a.pop(r10); a.pop(r9); a.pop(r8);
-	a.pop(rdx); a.pop(rcx);  // a.pop(rax); This fixes the wierd seg fault which happens when -O3 is enabled
+	a.pop(rdx); a.pop(rcx); a.pop(rax); // This fixes the wierd seg fault which happens when -O3 is enabled
 
 	int codesz = a.getCodeSize();
 	// This works just as well, don't need the function_cast magic:
@@ -317,7 +317,7 @@ void setupStubs()
 {
 	// Retrieve annotation data
 	probe_count=read_self_zca_probes();
-	printf("Probe count : %d..\n", probe_count);
+	printf("Probe count : %d\n", probe_count);
 	unsigned long* stub_address;
 
 #ifdef PROFILE
@@ -539,6 +539,7 @@ void initZCAService() {
 #endif
 
 	LOG_DEBUG("This text is printed before reaching \"main\".\n");
+
 	return;
 }
 
