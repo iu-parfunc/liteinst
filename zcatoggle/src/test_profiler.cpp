@@ -1,5 +1,5 @@
 #include "zca-toggle.hpp"
-#include "profiler.hpp"
+#include "profiler.h"
 #include <pthread.h>
 #include <time.h>
 #include <stdlib.h>
@@ -72,7 +72,7 @@ int spin_lock_2 = 0;
 void func2() {
 	int x;
 	ticks start = getticks();
-	// __notify_intrinsic((void*)"func2_start",(void*)&x);
+	__notify_intrinsic((void*)"func2:start",(void*)&x);
 
 	/*	uint64_t i;
       for (i=0; i < 1000; i++) {
@@ -80,7 +80,7 @@ void func2() {
       int r = rand();
       }*/
 
-	// __notify_intrinsic((void*)"func2_end",(void*)&x);
+	__notify_intrinsic((void*)"func2:end",(void*)&x);
 	ticks end = getticks();
 	ticks elapsed = (end - start);
 
@@ -154,15 +154,15 @@ void func3() {
 	ticks start = getticks();
 	 __notify_intrinsic((void*)"func3:start",(void*)&x);
 
-	// func2();
+	func2();
 
 	uint64_t i;
-	for (i=0; i < 1000; i++) {
+/*	for (i=0; i < 1000; i++) {
 		srand(time(NULL));
 		int r = rand();
 
-		// func2();
-	}
+		func2();
+	}*/
 
 	__notify_intrinsic((void*)"func3:end",(void*)&x);
 

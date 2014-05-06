@@ -87,6 +87,9 @@ prof : build profiler.o
 	$(CPP) $(OPTS) test_profiler.cpp libdynprof.a libzca-toggle.a $(LIBS) -o prof.exe
 	./prof.exe
 
+notify : build read_elf.c
+	$(CPP) read_elf.c $(LIBS) -o notifier 
+
 prof1 : build profiler.o
 	$(AR) rc libdynprof.a profiler.o
 

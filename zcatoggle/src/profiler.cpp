@@ -2,13 +2,14 @@
 #include "zca-toggle.hpp"
 #include "elf-provider.h"
 #include "profiler_types.hpp"
-#include "profiler.hpp"
+#include "profiler.h"
 #include <stdio.h>
 #include <pthread.h>
 #include <time.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string>
+#include <string.h>
 #include <vector>
 #include <string.h>
 #include <functional>
@@ -23,6 +24,29 @@ Profiler* prof;
 
 void func2();
 
+// Check this out later
+//  http://stackoverflow.com/questions/2053029/how-exactly-does-attribute-constructor-work
+// TODO: Move this to profiler library. In this case libdynprof
+__attribute__((destructor))
+void cleanup(void) {
+
+	typedef std::map<std::string, prof_data*>::iterator it_type;
+	int counter = 0;
+	for(it_type iterator = statistics.begin(); iterator != statistics.end(); iterator++) {
+		counter++;
+		fprintf(stderr, "\nFunction : %s\n", iterator->first);
+
+		prof_data* data = iterator->second;
+		fprintf(stderr, "Count : %lu\n", data->count);
+		fprintf(stderr, "Min : %lu\n", data->min);
+		fprintf(stderr, "Max : %lu\n", data->max);
+		fprintf(stderr, "Avg : %lu\n", data->sum / data->count);
+	}
+
+	// Deallocate all the allocated stuff here
+
+}
+
 void activate_method_profiling(char* method, void (*fun)()) {
 	prof->start_profile(string(method), fun);
 }
@@ -33,10 +57,11 @@ void deactivate_method_profiling(char* method) {
 
 void start_profiler() {
 	initZCAService();
-    prof = new Basic_Profiler;
-    prof->profile_all(NULL);
+	prof = new Basic_Profiler;
+	prof->profile_all(NULL);
 
-    printf("Instrumentation done..\n");
+	// atexit(cleanup); // This is not required. The destructor works
+	printf("Instrumentation done..\n");
 }
 
 void stop_profiler() {
@@ -45,52 +70,52 @@ void stop_profiler() {
 
 void Profiler::start_profile(string method, void (*fun)() ) {
 
-  string probe_start_annotation = method + ":start";
-  string probe_end_annotation = method + ":end";
+	string probe_start_annotation = method + ":start";
+	string probe_end_annotation = method + ":end";
 
-  if (fun != NULL) {
-    // Need to first deactivate before activating. Otherwise the return from the generated stub will be written with a junk address in a mysterious manner.
-    // Probably this will be fixed by atomic modify_probe_site implementation
-    deactivateProbe(probe_start_annotation);
-    deactivateProbe(probe_end_annotation);
-    activateProbe(probe_start_annotation, fun);
-    activateProbe(probe_end_annotation, fun);
-  } else {
-    deactivateProbe(probe_start_annotation);
-    deactivateProbe(probe_end_annotation);
+	if (fun != NULL) {
+		// Need to first deactivate before activating. Otherwise the return from the generated stub will be written with a junk address in a mysterious manner.
+		// Probably this will be fixed by atomic modify_probe_site implementation
+		deactivateProbe(probe_start_annotation);
+		deactivateProbe(probe_end_annotation);
+		activateProbe(probe_start_annotation, fun);
+		activateProbe(probe_end_annotation, fun);
+	} else {
+		deactivateProbe(probe_start_annotation);
+		deactivateProbe(probe_end_annotation);
 
-    activateProbe(probe_start_annotation, (this->fun));
-    activateProbe(probe_end_annotation, (this->fun));
-  }
+		activateProbe(probe_start_annotation, (this->fun));
+		activateProbe(probe_end_annotation, (this->fun));
+	}
 }
 
 void Profiler::stop_profile(string method) {
 
-  string probe_start_annotation = method + "_start";
-  string probe_end_annotation = method + "_end";
+	string probe_start_annotation = method + "_start";
+	string probe_end_annotation = method + "_end";
 
-  deactivateProbe(probe_start_annotation);
-  deactivateProbe(probe_end_annotation);
+	deactivateProbe(probe_start_annotation);
+	deactivateProbe(probe_end_annotation);
 }
 
 void tokenize(const string& str,
-                      vector<string>& tokens,
-                      const string& delimiters = " ")
+		vector<string>& tokens,
+		const string& delimiters = " ")
 {
-    // Skip delimiters at beginning.
-    string::size_type lastPos = str.find_first_not_of(delimiters, 0);
-    // Find first "non-delimiter".
-    string::size_type pos     = str.find_first_of(delimiters, lastPos);
+	// Skip delimiters at beginning.
+	string::size_type lastPos = str.find_first_not_of(delimiters, 0);
+	// Find first "non-delimiter".
+	string::size_type pos     = str.find_first_of(delimiters, lastPos);
 
-    while (string::npos != pos || string::npos != lastPos)
-    {
-        // Found a token, add it to the vector.
-        tokens.push_back(str.substr(lastPos, pos - lastPos));
-        // Skip delimiters.  Note the "not_of"
-        lastPos = str.find_first_not_of(delimiters, pos);
-        // Find next "non-delimiter"
-        pos = str.find_first_of(delimiters, lastPos);
-    }
+	while (string::npos != pos || string::npos != lastPos)
+	{
+		// Found a token, add it to the vector.
+		tokens.push_back(str.substr(lastPos, pos - lastPos));
+		// Skip delimiters.  Note the "not_of"
+		lastPos = str.find_first_not_of(delimiters, pos);
+		// Find next "non-delimiter"
+		pos = str.find_first_of(delimiters, lastPos);
+	}
 }
 
 void Profiler::profile_all(void (*fun)()) {
@@ -188,9 +213,9 @@ void basic_profiler_func() {
 	// x86 calling conventions AFAIK. But it fails to work that way hence we do the inline assembly to get it.
 	// Fix this elegantly with a method parameter should be a TODO
 	asm (
-		"movq (%%rbp, %1, 8), %0\n\t"
-		: "=r"(addr)
-        : "c" (offset)
+			"movq (%%rbp, %1, 8), %0\n\t"
+			: "=r"(addr)
+			  : "c" (offset)
 	);
 
 	// char test = *(NULL);
@@ -214,7 +239,8 @@ void basic_profiler_func() {
 	char* func_name;
 	char* tok;
 	if (annotation != NULL) {
-		func_name = strtok_r(annotation, ":", &tok);
+		char *temp = strdup(annotation);
+		func_name = strtok_r(temp, ":", &tok);
 	} else {
 		return;
 	}
@@ -262,12 +288,10 @@ void basic_profiler_func() {
 		data->start = -1;
 	}
 
-
 	// Merge to the global statistics table
 	if (data->count >= 1) {
 		prof_data* global_data;
 
-	printf("Came here..\n");
 		// Acquire the spin lock
 		while (!(__sync_bool_compare_and_swap(&spin_lock, 0 , 1)));
 
@@ -292,21 +316,26 @@ void basic_profiler_func() {
 		}
 
 		global_data->sum = global_data->sum + data->sum;
+
 		global_data->count = global_data->count + data->count;
+		data->count = 0;
+		data->sum = 0;
 
 		// Release lock
 		__sync_bool_compare_and_swap(&spin_lock, 1 , 0);
 
-		if (global_data->count >= 1) {
-			printf("\nFunction : %s\n", func_name);
-			printf("Count : %lu\n", global_data->count);
-			printf("Min : %lu\n", global_data->min);
-			printf("Max : %lu\n", global_data->max);
-			printf("Avg : %lu\n", global_data->sum / global_data->count);
-		}
+/*		if (global_data->count >= 1) {
+			fprintf(stderr, "\nFunction : %s\n", func_name);
+			fprintf(stderr, "Count : %lu\n", global_data->count);
+			fprintf(stderr, "Min : %lu\n", global_data->min);
+			fprintf(stderr, "Max : %lu\n", global_data->max);
+			fprintf(stderr, "Avg : %lu\n", global_data->sum / global_data->count);
+		}*/
 	}
 
-  // printf("Inside profile function..\n");
-  return;
+	// printf("Inside profile function..\n");
+	return;
 
 }
+
+
