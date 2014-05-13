@@ -13,6 +13,10 @@ test: install
 docs:
 	doxygen zca-toggle.cfg
 
+# IU specific:
+docs-install: docs
+	rsync -e ssh -vrplt ./html/ $(shell whoami)@tank.soic.indiana.edu:.hyplan/docs/zcatoggle/
+
 clean:
 	rm -rf html/ latex/
 	(cd src;     $(MAKE) clean)
