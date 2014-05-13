@@ -27,17 +27,17 @@ void func2();
 // Check this out later
 //  http://stackoverflow.com/questions/2053029/how-exactly-does-attribute-constructor-work
 // TODO: Move this to profiler library. In this case libdynprof
-__attribute__((destructor))
+// __attribute__((destructor)) - This doesn't seem to work properly with our heap data being tampered with when this gets called
 void cleanup(void) {
 
 	typedef std::map<std::string, prof_data*>::iterator it_type;
 	int counter = 0;
-	for(it_type iterator = statistics.begin(); iterator != statistics.end(); iterator++) {
+	for(auto iterator = statistics.begin(); iterator != statistics.end(); iterator++) {
 		counter++;
 		fprintf(stderr, "\nFunction : %s\n", iterator->first);
 
 		prof_data* data = iterator->second;
-		fprintf(stderr, "Count : %lu\n", data->count);
+		fprintf(stderr, "Count : %d\n", data->count);
 		fprintf(stderr, "Min : %lu\n", data->min);
 		fprintf(stderr, "Max : %lu\n", data->max);
 		fprintf(stderr, "Avg : %lu\n", data->sum / data->count);
@@ -60,8 +60,8 @@ void start_profiler() {
 	prof = new Basic_Profiler;
 	prof->profile_all(NULL);
 
-	// atexit(cleanup); // This is not required. The destructor works
-	printf("Instrumentation done..\n");
+	atexit(cleanup); // This seems to be a viable alternative to the destructor
+	// printf("Instrumentation done..\n");
 }
 
 void stop_profiler() {

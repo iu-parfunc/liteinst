@@ -29,7 +29,7 @@ int main(int argc, const char*argv[]) {
 	Elf_Data *data = NULL;     // Section index struct
 	Elf64_Shdr *shdr;  // Section strkkkuct
 
-	int n;
+	int n=0;
 
 	if(elf_version(EV_CURRENT)==EV_NONE)
 		errx(EXIT_FAILURE, "ELF library initialization failed: %s", elf_errmsg(-1));
@@ -69,6 +69,8 @@ int main(int argc, const char*argv[]) {
 			ptr = (char*) data->d_buf;
 			long int offset = 0;
 
+      printf("Data size : %lu\n", data->d_size);
+
 			int tables = 0;
 			while (offset <= data->d_size) {
 				tables++;
@@ -96,13 +98,19 @@ int main(int argc, const char*argv[]) {
 					ptr++;
 					offset++;
 				}
+
+          if (offset > data->d_size) {
+            break; 
+          }
+
 				uint8_t* ver = (uint8_t*) & (header->version);
 
 				// Here we skip the header and move on to the actual rows:
 				zca_row_11_t* row = (zca_row_11_t*) ((byte*) header + sizeof(*header));
 
-				printf("Annotation entry count : %d\n\n", header->entry_count);
 				printf("===========================\n");
+				printf("Annotation entry count : %d\n\n", header->entry_count);
+				printf ("Starting offset is : %lu\n", offset);
 
 				probe_count = header->entry_count;
 				// printf("Probe count : %d\n", probe_count);
@@ -117,11 +125,13 @@ int main(int argc, const char*argv[]) {
 				// Get to the end of this table
 				ptr = (char*)((byte*) row + sizeof(*row));
 				offset = ptr - (char*)data->d_buf;
-				printf ("Current offset is : %lu\n", offset);
+
+				printf ("Ending offset is : %lu\n", offset);
 				printf("Current table count is : %d\n", tables);
 				printf("Data buffer size is : %lu\n", data->d_size);
+				printf("===========================\n");
 			}
-			}
+			// }
 		}
 	}
 

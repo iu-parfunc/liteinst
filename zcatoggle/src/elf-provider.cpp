@@ -263,6 +263,7 @@ int read_zca_probes(const char* path)
 	Elf_Data *data;     // Section index struct
 	Elf64_Shdr *shdr;  // Section strkkkuct
 
+  printf("File path : %s\n", path);
 	if(elf_version(EV_CURRENT)==EV_NONE)
 		errx(EXIT_FAILURE, "ELF library iinitialization failed: %s", elf_errmsg(-1));
 
@@ -294,7 +295,9 @@ int read_zca_probes(const char* path)
 		if(!strcmp(section_name, ".itt_notify_tab")) {
 
 			char* ptr;
-			data = elf_getdata(scn, data);
+			data = elf_getdata(scn, data); // Apparently we need to elf_getdata twice before we get the goods....
+
+       while ((data = elf_getdata(scn,data)) != NULL) {
 			ptr = (char*) data->d_buf;
 			long int offset = 0;
 
@@ -312,14 +315,17 @@ int read_zca_probes(const char* path)
 					char* str = (char*)header->magic;
 
 					if (!strcmp(str, ".itt_notify_tab")) {
-						// table->magic[0] == '.' && table->magic[1] == 'i' &&
-						// table->magic[2] == 't' && table->magic[3] == 't') {
 						break;
 					}
 
 					ptr++;
 					offset++;
 				}
+
+          if (offset > data->d_size) {
+            break;
+          }
+
 				uint8_t* ver = (uint8_t*) & (header->version);
 
 				LOG_DEBUG("Now that we've found the magic number, version num is: %d / %d\n", ver[0], ver[1]);
@@ -353,7 +359,7 @@ int read_zca_probes(const char* path)
 					// ann_data ad = ann_data(NULL, NULL, fun, getIP(row), getProbespace(row), getExpr(header, row));
 
 					const char* str = getAnnotation(header, row);
-					printf("Annotation %d : %s\n", i, str);
+					// printf("Annotation %d : %s\n", i, str);
 
 					/*
 	  const byte* expr = getExpr(header, row);
@@ -425,6 +431,7 @@ int read_zca_probes(const char* path)
 				ptr = (char*)((byte*) row + sizeof(*row));
 				offset = ptr - (char*)data->d_buf;
 			}
+      } // END
 
 			// End the loop (if we only need this section)
 			// break;

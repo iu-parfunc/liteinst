@@ -20,13 +20,14 @@ THIRD_PARTY = ../3rdparty
 ASM_JIT = $(THIRD_PARTY)/AsmJit
 
 HDRS = zca-types.h include/zca-toggle.h include/zca-utils.h
-CODE = zca-toggle.cpp elf-provider.cpp 
+CODE = zca-toggle.cpp elf-provider.cpp profiler.cpp
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 DEPS0 :=  $(wildcard $(ASM_JIT)/*.cpp)
 DEPS = $(DEPS0:.cpp=.o)
 SRC = $(HDRS) $(CODE)
 LIBS = -lelf -lpthread
+# CFLAGS=-O0
 
 LIBSOUT = libzca-toggle.so libzca-toggle.a libdynprof.a 
 
