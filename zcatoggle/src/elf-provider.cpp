@@ -308,9 +308,9 @@ int read_zca_probes(const char* path)
 
 			zca_header_11_t* header;
 			// Cast section data
-			while (offset <= data->d_size) {
+			while (offset < data->d_size) {
 				// Loop until we get a valid zca notify table header until the end of this section
-				while(offset <= data->d_size) {
+				while(offset < data->d_size) {
 					header = (zca_header_11_t*)ptr;
 					char* str = (char*)header->magic;
 
@@ -322,7 +322,7 @@ int read_zca_probes(const char* path)
 					offset++;
 				}
 
-          if (offset > data->d_size) {
+          if (offset >= data->d_size) {
             break;
           }
 

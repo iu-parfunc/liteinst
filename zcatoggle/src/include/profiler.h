@@ -14,6 +14,8 @@ void start_profiler();
 
 void stop_profiler();
 
+void cleanup();
+
 #ifdef __cplusplus
 }
 #endif

@@ -32,16 +32,20 @@ void cleanup(void) {
 
 	typedef std::map<std::string, prof_data*>::iterator it_type;
 	int counter = 0;
+  FILE *out_file = fopen("prof.out", "w");
 	for(auto iterator = statistics.begin(); iterator != statistics.end(); iterator++) {
 		counter++;
-		fprintf(stderr, "\nFunction : %s\n", iterator->first);
+		fprintf(out_file, "\nFunction : %s\n", iterator->first);
+		printf("\nFunction : %s\n", iterator->first);
 
 		prof_data* data = iterator->second;
-		fprintf(stderr, "Count : %d\n", data->count);
-		fprintf(stderr, "Min : %lu\n", data->min);
-		fprintf(stderr, "Max : %lu\n", data->max);
-		fprintf(stderr, "Avg : %lu\n", data->sum / data->count);
+		fprintf(out_file, "Count : %d\n", data->count);
+		fprintf(out_file, "Min : %lu\n", data->min);
+		fprintf(out_file, "Max : %lu\n", data->max);
+		fprintf(out_file, "Avg : %lu\n", data->sum / data->count);
 	}
+
+  fclose(out_file);
 
 	// Deallocate all the allocated stuff here
 
