@@ -14,7 +14,7 @@ RM = rm
 OPTS=-DLOG_LEVEL=2 -DPROFILE=1 # -DON
 
 INSTALLD=../build
-BENCHMARKS=../../benchmarks/gzip-1.6/instrumented ../../benchmarks/grep/instrumented/ ../../benchmarks/grep/instrumented/src
+BENCHMARKS=../../benchmarks/gzip-1.6/instrumented ../../benchmarks/grep-2.6.1/instrumented/ ../../benchmarks/grep-2.6.1/instrumented/src
 
 THIRD_PARTY = ../3rdparty
 ASM_JIT = $(THIRD_PARTY)/AsmJit
