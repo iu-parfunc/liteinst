@@ -29,8 +29,7 @@ SRC = $(HDRS) $(CODE)
 LIBS = -lelf -lpthread
 # CFLAGS=-O0
 
-LIBSOUT = libzca-toggle.so libzca-toggle.a libdynprof.a 
-HDRSOUT = include/profiler.h
+LIBSOUT = libzca-toggle.so libzca-toggle.a 
 
 .PHONY: all build install 
 
@@ -41,7 +40,6 @@ install: build
 	if ! [ -d $(INSTALLD) ]; then mkdir -p $(INSTALLD); fi	
 	cp $(LIBSOUT) $(INSTALLD)
 	echo $(BENCHMARKS) | xargs -n 1 cp $(LIBSOUT)
-	echo $(BENCHMARKS) | xargs -n 1 cp $(HDRSOUT)
 
 test: build test.cpp 
 	$(CPP) $(OPTS) test.cpp libzca-toggle.a $(LIBS) -o test.exe
@@ -86,9 +84,6 @@ libzca-toggle.so: $(OBJ) $(DEPS)
 
 libzca-toggle.a: $(OBJ) $(DEPS) 
 	$(AR) rc libzca-toggle.a $(OBJ) $(DEPS)
-
-libdynprof.a : $(OBJ) $(DEPS)
-	$(AR) rc libdynprof.a profiler.o
 
 prof : build profiler.o
 	$(AR) rc libdynprof.a profiler.o
