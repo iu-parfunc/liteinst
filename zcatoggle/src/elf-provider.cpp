@@ -263,7 +263,6 @@ int read_zca_probes(const char* path)
 	Elf_Data *data;     // Section index struct
 	Elf64_Shdr *shdr;  // Section strkkkuct
 
-  printf("File path : %s\n", path);
 	if(elf_version(EV_CURRENT)==EV_NONE)
 		errx(EXIT_FAILURE, "ELF library iinitialization failed: %s", elf_errmsg(-1));
 
@@ -366,7 +365,7 @@ int read_zca_probes(const char* path)
 	  unsigned int reg = 99;
 	  int32_t offset = 0;
 	  dwarf_expr_to_pin(expr, &reg, &offset);
-	  printf("\nregister: %u\noffset: %d\n", reg, offset);
+	  // printf("\nregister: %u\noffset: %d\n", reg, offset);
 
 	  register int* in asm("rax");
 	  printf("RAX: %d\n", *(in + 1));

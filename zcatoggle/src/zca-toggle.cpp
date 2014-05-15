@@ -317,7 +317,6 @@ void setupStubs()
 {
 	// Retrieve annotation data
 	probe_count=read_self_zca_probes();
-	printf("Probe count : %d\n", probe_count);
 	unsigned long* stub_address;
 
 #ifdef PROFILE
@@ -333,7 +332,7 @@ void setupStubs()
 	int i = 0;
 	for (auto iter = annotations.begin(); iter != annotations.end(); iter++, i++) {
 		std::list<ann_data*>* ann_list = iter->second;
-		printf("String %d: %s\n", i, iter->first);
+		// printf("String %d: %s\n", i, iter->first);
 
 		for (std::list<ann_data*>::iterator it =  ann_list->begin(); it != ann_list->end(); ++it) {
 			ann_data* data = *it;
@@ -346,7 +345,7 @@ void setupStubs()
 				// Fill annotation information for later use in probe activation/ deactivation
 				data->stubLocation = stub_address;
 
-				printf("Probe address %d : %p  Stub address : %p\n", i, probe_address, stub_address);
+				// printf("Probe address %d : %p  Stub address : %p\n", i, probe_address, stub_address);
 				modify_probe_site(probe_address, stub_address, &data, print_fn2);
 				data->active = true;
 			} else {
