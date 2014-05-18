@@ -14,7 +14,7 @@ RM = rm
 OPTS=-DLOG_LEVEL=2 -DPROFILE=1 # -DON
 
 INSTALLD=../build
-BENCHMARKS=../../benchmarks/gzip-1.6/instrumented ../../benchmarks/grep-2.6.1/instrumented/ ../../benchmarks/grep-2.6.1/instrumented/src
+BENCHMARKS=../../benchmarks/gzip-1.6/instrumented ../../benchmarks/grep-2.18/instrumented/ ../../benchmarks/grep-2.18/instrumented/src
 
 HDRS = zca-toggle.hpp profiler_types.hpp dynaprof.h logger.h 
 CODE = profiler.cpp
