@@ -17,14 +17,31 @@ using namespace std;
 
 global_stats statistics;
 volatile int spin_lock = 0;
+volatile int spin_lock_0 = 0;
 
 Profiler* prof;
+timestamps* deactivations;
 
 void func2();
 
 // Check this out later
 //  http://stackoverflow.com/questions/2053029/how-exactly-does-attribute-constructor-work
-// TODO: Move this to profiler library. In this case libdynprof
+
+void* probe_monitor(void* param) {
+	sleep(1);
+
+	return NULL;
+}
+
+__attribute__((constructor))
+void initialize(void) {
+
+	// pthread create
+	pthread_t tid;
+	pthread_create(&tid, NULL, probe_monitor, (void*)NULL);
+
+}
+
 // __attribute__((destructor)) - This doesn't seem to work properly with our heap data being tampered with when this gets called
 void cleanup(void) {
 
@@ -93,8 +110,8 @@ void Profiler::start_profile(string method, void (*fun)() ) {
 
 void Profiler::stop_profile(string method) {
 
-	string probe_start_annotation = method + "_start";
-	string probe_end_annotation = method + "_end";
+	string probe_start_annotation = method + ":start";
+	string probe_end_annotation = method + ":end";
 
 	deactivateProbe(probe_start_annotation);
 	deactivateProbe(probe_end_annotation);
@@ -107,7 +124,7 @@ void tokenize(const string& str,
 	// Skip delimiters at beginning.
 	string::size_type lastPos = str.find_first_not_of(delimiters, 0);
 	// Find first "non-delimiter".
-	string::size_type pos     = str.find_first_of(delimiters, lastPos);
+	string::size_type pos = str.find_first_of(delimiters, lastPos);
 
 	while (string::npos != pos || string::npos != lastPos)
 	{
@@ -325,6 +342,12 @@ void basic_profiler_func() {
 
 		// Release lock
 		__sync_bool_compare_and_swap(&spin_lock, 1 , 0);
+
+		if (global_data->sum > DEACTIVATION_THRESHOLD) {
+			prof->stop_profile(func_name);
+
+
+		}
 
 /*		if (global_data->count >= 1) {
 			fprintf(stderr, "\nFunction : %s\n", func_name);

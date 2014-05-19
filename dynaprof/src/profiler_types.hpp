@@ -5,8 +5,13 @@
 #include "cycle.h"
 #include <string>
 #include <map>
+#include <inttypes.h>
 
 using namespace std;
+
+int DEACTIVATION_THRESHOLD = 10000;
+
+typedef map<string, uint64_t> timestamps;
 
 class Profiler {
 
