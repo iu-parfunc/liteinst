@@ -340,14 +340,13 @@ void basic_profiler_func() {
 		data->count = 0;
 		data->sum = 0;
 
+		if (global_data->count > DEACTIVATION_THRESHOLD) {
+      deactivate_method_profiling(func_name);
+			fprintf(stderr, "\n***************************** Deactivating function : %s\n ***************************", func_name);
+		}
+
 		// Release lock
 		__sync_bool_compare_and_swap(&spin_lock, 1 , 0);
-
-		if (global_data->sum > DEACTIVATION_THRESHOLD) {
-			prof->stop_profile(func_name);
-
-
-		}
 
 /*		if (global_data->count >= 1) {
 			fprintf(stderr, "\nFunction : %s\n", func_name);
