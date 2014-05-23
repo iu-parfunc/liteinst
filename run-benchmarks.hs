@@ -17,8 +17,8 @@ import GHC.Conc           (getNumProcessors)
 benches :: [Benchmark DefaultParamMeaning]
 benches = 
 --  [ shellBenchmark "racket infer-timing.rkt" ("--hsbencher" : words args) (And [])
-  [ (mkBenchmark "benchmarks/gzip-1.6/gprof/Makefile" [] (setVariant "gprof"))
-    { progname = Just "gzip16" }
+  [ (mkBenchmark "benchmarks/gzip-1.6/gprof/Makefile" [] (setVariant "gprof")) { progname = Just "gzip16" }
+--  , (mkBenchmark "benchmarks/gzip-1.6/fubar/Makefile" [] (setVariant "fubar")) { progname = Just "gzip16" }
   ]
 
 setVariant str = (And [Set (Variant str) (CompileParam "")])
