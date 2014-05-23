@@ -34,4 +34,5 @@ bench: run-benchmarks.exe
 
 run-benchmarks.exe: run-benchmarks.cabal run-benchmarks.hs
 	$(CABAL) sandbox init
-	$(CABAL) install --bindir=. -j --disable-documentation --with-ghc=ghc-$(JENKINS_GHC)
+	$(CABAL) install --only-dep -j --disable-documentation --with-ghc=ghc-$(JENKINS_GHC)
+	$(CABAL) install --bindir=. --disable-documentation --with-ghc=ghc-$(JENKINS_GHC)
