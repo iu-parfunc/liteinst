@@ -46,6 +46,10 @@ install: build
 test: build test.cpp 
 	$(CPP) $(OPTS) test.cpp libzca-toggle.a $(LIBS) -o test.exe
 	./test.exe
+        
+tests : build tests.cpp
+	$(CPP) $(CFLAGS) -DLOG_LEVEL=2 -DPROFILE=1 tests.cpp libzca-toggle.a $(LIBS) -o tests.exe
+	./tests.exe
 
 # Benchmark binary generation targets
 test_prof_off: build bench.cpp elf-provider.o
