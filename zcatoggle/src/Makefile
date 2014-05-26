@@ -39,7 +39,9 @@ build:	$(LIBSOUT)
 install: build
 	if ! [ -d $(INSTALLD) ]; then mkdir -p $(INSTALLD); fi	
 	cp $(LIBSOUT) $(INSTALLD)
-	echo $(BENCHMARKS) | xargs -n 1 cp $(LIBSOUT)
+#	for dir in $(BENCHMARKS); do if ! [ -d ${dir} ]; then mkdir -p ${dir}; fi cp $(LIBSOUT) ${dir} done
+
+# echo $(BENCHMARKS) | xargs -n 1 cp $(LIBSOUT)
 
 test: build test.cpp 
 	$(CPP) $(OPTS) test.cpp libzca-toggle.a $(LIBS) -o test.exe

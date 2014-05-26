@@ -35,8 +35,8 @@ build:	$(LIBSOUT)
 install: build
 	if ! [ -d $(INSTALLD) ]; then mkdir -p $(INSTALLD); fi	
 	cp $(LIBSOUT) $(INSTALLD)
-	echo $(BENCHMARKS) | xargs -n 1 cp $(LIBSOUT)
-	echo $(BENCHMARKS) | xargs -n 1 cp $(HDRSOUT)
+# echo $(BENCHMARKS) | xargs -n 1 cp $(LIBSOUT)
+#	echo $(BENCHMARKS) | xargs -n 1 cp $(HDRSOUT)
 
 .cpp.o:
 	$(CPP) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
