@@ -36,6 +36,12 @@ typedef std::map<uint32_t, std::list<mem_island*>*> mem_alloc_table;
 
 extern mem_alloc_table mem_allocations;
 
+typedef std::map<std::string, uint16_t> func_table;
+
+extern func_table functions;
+
+extern int function_count;
+
 /** Read the probes available in an ELF binary.
  *
  * This examines data section headers to retrieve the ZCA probe

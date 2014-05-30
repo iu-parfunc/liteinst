@@ -15,6 +15,7 @@
 
 using namespace std;
 
+func_data* stats;
 global_stats statistics;
 volatile int spin_lock = 0;
 volatile int spin_lock_0 = 0;
@@ -33,13 +34,33 @@ void* probe_monitor(void* param) {
 	return NULL;
 }
 
-__attribute__((constructor))
-void initialize(void) {
+// __attribute__((constructor))
+void Basic_Profiler::initialize(void) {
+
+  set_profiler_function();
 
 	// pthread create
 	pthread_t tid;
 	pthread_create(&tid, NULL, probe_monitor, (void*)NULL);
 
+  stats = (func_data*)malloc(sizeof(func_data) * function_count);
+
+	typedef std::map<std::string, int>::iterator it_type;
+	for(auto iterator = functions.begin(); iterator != functions.end(); iterator++) {
+    int func_id = iterator->second;
+
+    const char* func_name = (iterator->first).c_str();
+    // string func_name = iterator->first;
+    stats[func_id].func_name = func_name; // dup this and delete functions??
+    stats[func_id].min = 0;
+    stats[func_id].max = 0;
+    stats[func_id].sum = 0;
+    stats[func_id].count = 0;
+    stats[func_id].deactivation_count = 0;
+    stats[func_id].start = -1;
+    stats[func_id].lock = 0;
+    // We don't need function id here at the moment if required later add from functions iterator->second.
+  }
 }
 
 // __attribute__((destructor)) - This doesn't seem to work properly with our heap data being tampered with when this gets called
@@ -48,17 +69,17 @@ void cleanup(void) {
 	typedef std::map<std::string, prof_data*>::iterator it_type;
 	int counter = 0;
   FILE *out_file = fopen("prof.out", "w");
-	for(auto iterator = statistics.begin(); iterator != statistics.end(); iterator++) {
-		counter++;
-		fprintf(out_file, "\nFunction : %s\n", iterator->first);
-		printf("\nFunction : %s\n", iterator->first);
 
-		prof_data* data = iterator->second;
-		fprintf(out_file, "Count : %d\n", data->count);
-		fprintf(out_file, "Min : %lu\n", data->min);
-		fprintf(out_file, "Max : %lu\n", data->max);
-		fprintf(out_file, "Avg : %lu\n", data->sum / data->count);
-	}
+  for(int i=0; i < function_count; i++) {
+    if (stats[i].count != 0) {
+      fprintf(out_file, "\nFunction : %s\n", stats[i].func_name);
+
+      fprintf(out_file, "Count : %lu\n", stats[i].count);
+      fprintf(out_file, "Min : %lu\n", stats[i].min);
+      fprintf(out_file, "Max : %lu\n", stats[i].max);
+      fprintf(out_file, "Avg : %lu\n", stats[i].sum / stats[i].count);
+    }
+  }
 
   fclose(out_file);
 
@@ -221,7 +242,6 @@ void Basic_Profiler::set_profiler_function() {
 }
 
 void basic_profiler_func() {
-
 	__thread static bool allocated;
 	// __thread static function_stats stats;
 	uint64_t addr;
@@ -231,63 +251,23 @@ void basic_profiler_func() {
 	// before the call to this method. Ideally this should be accessible by declaring an explicit method paramter according
 	// x86 calling conventions AFAIK. But it fails to work that way hence we do the inline assembly to get it.
 	// Fix this elegantly with a method parameter should be a TODO
-	asm (
-			"movq (%%rbp, %1, 8), %0\n\t"
-			: "=r"(addr)
-			  : "c" (offset)
-	);
+  long func_id = 0;
+  
+  asm(
+       "movq %%rdx, %0\n\t"
+        : "=r"(func_id)
+        :
+        : "%rdx"
+  ); 
 
-	// char test = *(NULL);
-
-	char* annotation = (char*)addr;
-
-	if (!allocated) {
-		function_stats* stats = new function_stats;
-		allocated = true;
-
-		pthread_once(&tls_init_flag, create_key);
-		pthread_setspecific(key, stats);
-	}
-
-	// function_stats& func_stats = *((function_stats*) &stats);
-	// function_stats func_stats = stats.f_stats;
-
-	prof_data* data;
-	function_stats* stats = (function_stats*)pthread_getspecific(key);
-
-	char* func_name;
-	char* tok;
-	if (annotation != NULL) {
-		char *temp = strdup(annotation);
-		func_name = strtok_r(temp, ":", &tok);
-	} else {
-		return;
-	}
-
-	if (stats->find(func_name) == stats->end()) {
-		data = (prof_data*)malloc(sizeof(prof_data));
-		data->start = -1;
-		data->min = 0;
-		data->max = 0;
-		data->sum = 0;
-		data->count = 0;
-
-		stats->insert(make_pair(func_name, data));
-
-		// printf("Initialing the map..\n");
-
-		// printf("func stat value : %d\n", func_stats.find("a")->second->start);
-		// printf("func stat is at : %p\n", &func_stats);
-		// printf("data is at : %p\n", data);
-
-	} else {
-		data = stats->find(func_name)->second;
-	}
+  func_data* data = &stats[func_id];
+  
+  // Acquire lock
+  while (!(__sync_bool_compare_and_swap(&(data->lock), 0 , 1)));
 
 	if (data->start == -1) {
 		ticks time = getticks();
 		data->start = time;
-		return;
 	} else {
 		ticks time = getticks();
 		ticks end = time;
@@ -307,8 +287,128 @@ void basic_profiler_func() {
 		data->start = -1;
 	}
 
+	__sync_bool_compare_and_swap(&(data->lock), 1 , 0); 
+
+}
+
+void basic_profiler_func_1() {
+
+	__thread static bool allocated;
+	// __thread static function_stats stats;
+	uint64_t addr;
+	uint64_t offset = 2;
+
+	// Gets [%rbp + 16] to addr. This is a hacky way to get the function parameter (annotation string) pushed to the stack
+	// before the call to this method. Ideally this should be accessible by declaring an explicit method paramter according
+	// x86 calling conventions AFAIK. But it fails to work that way hence we do the inline assembly to get it.
+	// Fix this elegantly with a method parameter should be a TODO
+	asm (
+			"movq (%%rbp, %1, 8), %0\n\t"
+			: "=r"(addr)
+		  : "c" (offset)
+	); 
+
+	// char test = *(NULL);
+
+	// char* annotation = (char*)addr;
+
+  long func_id = 0;
+/*  offset = 4;
+	asm (
+			"movl (%%rbp, %1, 8), %0\n\t"
+			: "=r"(func_id)
+		  : "c" (offset)
+	);*/ 
+
+  
+  asm(
+       "movq %%rdx, %0\n\t"
+        : "=r"(func_id)
+        :
+        : "%rdx"
+  ); 
+
+/*
+	if (!allocated) {
+		function_stats* stats = new function_stats;
+		allocated = true;
+
+		pthread_once(&tls_init_flag, create_key);
+		pthread_setspecific(key, stats);
+	} */
+
+	// function_stats& func_stats = *((function_stats*) &stats);
+	// function_stats func_stats = stats.f_stats;
+
+	// prof_data* data;
+	// function_stats* stats = (function_stats*)pthread_getspecific(key);
+
+	char* func_name = (char*)addr;
+
+  printf("Function name : %s Function id : %lu\n", func_name, func_id);
+
+	/* char* tok;
+	if (annotation != NULL) {
+		char *temp = strdup(annotation);
+		func_name = strtok_r(temp, ":", &tok);
+	} else {
+		return;
+	}*/
+
+	/* if (stats->find(func_name) == stats->end()) {
+		data = (prof_data*)malloc(sizeof(prof_data));
+		data->start = -1;
+		data->min = 0;
+		data->max = 0;
+		data->sum = 0;
+		data->count = 0;
+
+		stats->insert(make_pair(func_name, data));
+
+		// printf("Initialing the map..\n");
+
+		// printf("func stat value : %d\n", func_stats.find("a")->second->start);
+		// printf("func stat is at : %p\n", &func_stats);
+		// printf("data is at : %p\n", data);
+
+	} else {
+		data = stats->find(func_name)->second;
+	} */
+
+  func_data* data = &stats[func_id];
+
+  printf("[BPF] func_id : %d lock : %d \n", func_id, data->lock);
+  
+  // Acquire lock
+  while (!(__sync_bool_compare_and_swap(&(data->lock), 0 , 1)));
+
+	if (data->start == -1) {
+		ticks time = getticks();
+		data->start = time;
+	} else {
+		ticks time = getticks();
+		ticks end = time;
+		ticks elapsed = end - data->start;
+
+		if (elapsed < data->min || data->min == 0) {
+			data->min = elapsed;
+		}
+
+		if (elapsed > data->max) {
+			data->max = elapsed;
+		}
+
+		data->sum = data->sum + elapsed;
+		data->count += 1;
+
+		data->start = -1;
+	}
+
+	// Release lock
+	__sync_bool_compare_and_swap(&(data->lock), 1 , 0); 
+
 	// Merge to the global statistics table
-	if (data->count >= 1) {
+	/* if (data->count >= 1) {
 		prof_data* global_data;
 
 		// Acquire the spin lock
@@ -346,7 +446,8 @@ void basic_profiler_func() {
 		}
 
 		// Release lock
-		__sync_bool_compare_and_swap(&spin_lock, 1 , 0);
+		__sync_bool_compare_and_swap(&spin_lock, 1 , 0); 
+    */
 
 /*		if (global_data->count >= 1) {
 			fprintf(stderr, "\nFunction : %s\n", func_name);
@@ -354,8 +455,9 @@ void basic_profiler_func() {
 			fprintf(stderr, "Min : %lu\n", global_data->min);
 			fprintf(stderr, "Max : %lu\n", global_data->max);
 			fprintf(stderr, "Avg : %lu\n", global_data->sum / global_data->count);
-		}*/
+		}
 	}
+  */
 
 	// printf("Inside profile function..\n");
 	return;

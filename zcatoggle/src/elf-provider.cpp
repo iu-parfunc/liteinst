@@ -47,6 +47,9 @@ using namespace std;
 
 ann_table annotations;
 mem_alloc_table mem_allocations;
+func_table functions;
+int function_count = 0;
+
 // global_stats statistics;
 // volatile int spin_lock = 0;
 
@@ -278,6 +281,8 @@ int read_zca_probes(const char* path)
 
 	scn = NULL;
 
+  int next_func_id = 0;
+
 	// Loop over all sections in the ELF object
 	while((scn = elf_nextscn(e, scn))!=NULL) {
 		// Given a Elf Scn pointer, retrieve the associated section header
@@ -382,6 +387,16 @@ int read_zca_probes(const char* path)
 					ann_info[i].probespace = row->probespace;
 					ann_info[i].expr = strdup(str);
 					ann_info[i].expr_dwarf = row->expr;
+
+          char* tok;
+          char* temp = strdup(str);
+          char* func_name = strtok_r(temp, ":", &tok);
+          
+          if(functions.find(string(func_name)) == functions.end()) {
+            // printf("--- Function %s id %lu\n ---", func_name, next_func_id);
+            functions.insert(func_table::value_type(string(func_name), next_func_id++));
+            function_count++;
+          }
 
 					if (annotations.find(string(str)) == annotations.end()) {
 						list<ann_data*>* ann_list = new list<ann_data*>;

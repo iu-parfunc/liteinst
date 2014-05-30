@@ -62,6 +62,17 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*t
       );*/
 
   // printf("Annotation is : %s\n", annotation);
+  
+  char* tok;
+  char *temp = strdup((*ann_info)->expr);
+  char* func_name = strtok_r(temp, ":", &tok);
+ 
+  long func_id = 0;
+  if(functions.find(std::string(func_name)) != functions.end()) {
+    func_id = functions.find(std::string(func_name))->second;
+  }
+
+  // printf("Function id for function %s at insertion is %lu \n", func_name, func_id);
 
   // This aims to make the same one-way jump as manual_jmp_there, except from JITed code.
   // --------------------------------------------------------------------------------
@@ -84,18 +95,23 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*t
 
   // printf("ann_info->expr : %p\n", (*ann_info)->expr);
   // printf("ann_info->expr : %s\n", ((*ann_info)->expr));
-  a.mov(rax,imm((sysint_t)(*ann_info)->expr));
-  a.push(rax);
+  a.xor_(rdx,rdx);
+  a.mov(rdx, imm((sysint_t)func_id));
+  // a.push(ecx);
+  // a.mov(eax, imm((sysint_t)func_id));
+
+  // a.mov(rax,imm((sysint_t)func_name));
+  // a.push(rax);
+
   a.call(imm((sysint_t)target_fn));
   // Restore all volatile registers:
-  a.pop(rax);
+  // a.pop(rax);
   a.pop(r11); a.pop(r10); a.pop(r9); a.pop(r8);
   a.pop(rdx); a.pop(rcx); a.pop(rax); // This fixes the wierd seg fault which happens when -O3 is enabled
 
   int codesz = a.getCodeSize();
   // This works just as well, don't need the function_cast magic:
   sysuint_t code = a.relocCode(addr);
-
 
   // printf("[Gen Stub]Probe address is : %p\n", (unsigned char*)probe_loc);
   //printf("[Gen Stub]Original probe content is : %016llx\n", *((uint64_t*)probe_loc));
@@ -453,7 +469,7 @@ int deactivateProbe(std::string label) {
         uint64_t* probe = (uint64_t*) data->anchor;
         uint64_t old_val = *probe;
 
-        fprintf(stderr, "Label is : %s\n", label);
+        // fprintf(stderr, "Label is : %s\n", label);
 
         /*         if (count == 0) {
                    printf("Label is : %s\n", label);
