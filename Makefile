@@ -35,6 +35,10 @@ bench: run-benchmarks.exe
 
 run-benchmarks.exe: run-benchmarks.cabal run-benchmarks.hs
 	$(CABAL) sandbox init
+	git submodule init 
+	git submodule update 
+	cd HSBencher; git submodule init
+	cd HSBencher; git submodule update 
 	$(CABAL) install ./HSBencher/hgdata ./HSBencher/hsbencher ./HSBencher/hsbencher-fusion --disable-documentation --with-ghc=ghc-$(JENKINS_GHC)
 	$(CABAL) install --only-dep -j --disable-documentation --with-ghc=ghc-$(JENKINS_GHC)
 	$(CABAL) install --bindir=. --disable-documentation --with-ghc=ghc-$(JENKINS_GHC)
