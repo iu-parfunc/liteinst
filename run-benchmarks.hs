@@ -5,6 +5,7 @@ module Main where
 import HSBencher
 -- import HSBencher.Backend.Fusion  (defaultFusionPlugin)
 import HSBencher.Backend.Dribble (defaultDribblePlugin)
+import HSBencher.Backend.Fusion  (defaultFusionPlugin) 
 import qualified Data.Map as M
 import System.Environment (getEnvironment)
 import System.Directory   (setCurrentDirectory, getDirectoryContents, getCurrentDirectory)
@@ -29,7 +30,7 @@ main = do
   defaultMainModifyConfig $ \ conf ->
     conf{ benchlist  = benches
         , runTimeOut = Just 1000 -- Erk... need a separate compile timeout.
-        , plugIns   = [ -- SomePlugin defaultFusionPlugin,
+        , plugIns   = [ SomePlugin defaultFusionPlugin,
                         SomePlugin defaultDribblePlugin ]
         }
 
