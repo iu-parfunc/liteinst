@@ -6,6 +6,8 @@ import HSBencher
 -- import HSBencher.Backend.Fusion  (defaultFusionPlugin)
 import HSBencher.Backend.Dribble (defaultDribblePlugin)
 import HSBencher.Backend.Fusion  (defaultFusionPlugin) 
+
+import Data.Monoid  (mappend)
 import qualified Data.Map as M
 import System.Environment (getEnvironment)
 import System.Directory   (setCurrentDirectory, getDirectoryContents, getCurrentDirectory)
@@ -32,7 +34,10 @@ main = do
         , runTimeOut = Just 1000 -- Erk... need a separate compile timeout.
         , plugIns   = [ SomePlugin defaultFusionPlugin,
                         SomePlugin defaultDribblePlugin ]
+        , harvesters = customTagHarvesterDouble "INIT_TIME"
+                        `mappend` harvesters conf                        
         }
+
 
 -- -- | Check for a SELFTIMED line of output.
 -- compilerHarvester :: LineHarvester
