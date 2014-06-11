@@ -16,8 +16,8 @@ OPTS=-DLOG_LEVEL=2 -DPROFILE=1 # -DON
 INSTALLD=../build
 BENCHMARKS=../../benchmarks/gzip-1.6/instrumented ../../benchmarks/grep-2.18/instrumented/ ../../benchmarks/grep-2.18/instrumented/src
 
-HDRS = zca-toggle.hpp profiler_types.hpp dynaprof.h logger.h 
-CODE = profiler.cpp
+HDRS = zca-toggle.hpp profiler_types.hpp dynaprof.h logger.h  nbqueue.h
+CODE = profiler.cpp nbqueue.cpp
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 SRC = $(HDRS) $(CODE)
@@ -47,7 +47,7 @@ libdynaprof.so: $(OBJ) $(DEPS)
 	$(CC) $(LIBS) -shared -Wl,-soname,libdynaprof.so -Wl,-init,initZCAService -o libdynaprof.so $(OBJ) $(DEPS) -lc
 
 libdynaprof.a : $(OBJ) $(DEPS)
-	$(AR) rc libdynaprof.a profiler.o
+	$(AR) rc libdynaprof.a profiler.o nbqueue.o
 
 prof : build profiler.o
 	$(AR) rc libdynprof.a profiler.o
