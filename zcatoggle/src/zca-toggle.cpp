@@ -560,11 +560,13 @@ void initZCAService() {
   timeval_subtract(&tvDiff, &tvEnd, &tvBegin);
   elapsed_time = elapsed(end, start);
 
-  printf("\n--- Stub gen time for %d probes (cycles) : %llu \n", probe_count, stub_gen_elapsed_time);
-  printf("--- Stub gen time for %d probes (seconds): %ld.%06ld\n", probe_count, stub_gen_tvDiff.tv_sec, stub_gen_tvDiff.tv_usec);
+  // fprintf(stderr, "\n--- Stub gen time for %d probes (cycles) : %llu \n", probe_count, stub_gen_elapsed_time);
+  // fprintf(stderr, "--- Stub gen time for %d probes (seconds): %ld.%06ld\n", probe_count, stub_gen_tvDiff.tv_sec, stub_gen_tvDiff.tv_usec);
 
-  printf("\n--- Total init time for %d probes (cycles) : %llu \n", probe_count, elapsed_time);
-  printf("--- Total init time for %d probes (seconds): %ld.%06ld\n", probe_count, tvDiff.tv_sec, tvDiff.tv_usec);
+  // fprintf(stderr, "Total init time for %d probes (cycles) : %llu \n", probe_count, elapsed_time);
+  // fprintf(stderr, "--- Total init time for %d probes (seconds): %ld.%06ld\n", probe_count, tvDiff.tv_sec, tvDiff.tv_usec);
+  
+  fprintf(stderr, "INIT_TIME %ld.%06ld\n", tvDiff.tv_sec, tvDiff.tv_usec);
 #endif
 
   LOG_DEBUG("This text is printed before reaching \"main\".\n");
