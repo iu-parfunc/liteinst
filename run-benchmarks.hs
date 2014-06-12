@@ -23,7 +23,6 @@ benches =
   [ (mkBenchmark "benchmarks/gzip-1.6/gprof/Makefile" [] (setVariant "gprof")) { progname = Just "gzip16" },
    (mkBenchmark "benchmarks/gzip-1.6/dynaprof/Makefile" [] (setVariant "dynaprof")) { progname = Just "gzip16" },
    (mkBenchmark "benchmarks/gzip-1.6/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "gzip16" }
---  , (mkBenchmark "benchmarks/gzip-1.6/fubar/Makefile" [] (setVariant "fubar")) { progname = Just "gzip16" }
   ]
 
 setVariant str = (And [Set (Variant str) (CompileParam "")])
