@@ -11,7 +11,7 @@
 
 using namespace std;
 
-int DEACTIVATION_THRESHOLD = 1000;
+int DEACTIVATION_THRESHOLD = 100000;
 
 typedef map<string, uint64_t> timestamps;
 
@@ -25,6 +25,7 @@ typedef struct func_data {
   const char* func_name;
   int deactivation_count;
   bool newly_reactivated;
+  uint64_t last_count;
   uint64_t count;
   uint64_t min;
   uint64_t max;

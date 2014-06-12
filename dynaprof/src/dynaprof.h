@@ -6,9 +6,9 @@ extern "C"
 {
 #endif
 
-void activate_method_profiling(char* method, void (*fun));
+void activate_method_profiling(char* method, void (*fun)());
 
-void deactivate_method_profiling(char* method);
+void deactivate_method_profiling(const char* method);
 
 void start_profiler();
 

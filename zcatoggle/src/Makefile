@@ -20,7 +20,7 @@ THIRD_PARTY = ../3rdparty
 ASM_JIT = $(THIRD_PARTY)/AsmJit
 
 HDRS = zca-types.h include/zca-toggle.h include/zca-utils.h
-CODE = zca-toggle.cpp elf-provider.cpp profiler.cpp
+CODE = zca-toggle.cpp elf-provider.cpp 
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 DEPS0 :=  $(wildcard $(ASM_JIT)/*.cpp)

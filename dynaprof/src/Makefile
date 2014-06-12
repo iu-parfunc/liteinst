@@ -49,6 +49,10 @@ libdynaprof.so: $(OBJ) $(DEPS)
 libdynaprof.a : $(OBJ) $(DEPS)
 	$(AR) rc libdynaprof.a profiler.o nbqueue.o
 
+tests : build tests.cpp
+	$(CPP) $(CFLAGS) $(OPTS) tests.cpp libdynaprof.a $(LIBS) -o tests.exe
+	./tests.exe
+
 prof : build profiler.o
 	$(AR) rc libdynprof.a profiler.o
 	$(CPP) $(OPTS) test_profiler.cpp libdynprof.a libzca-toggle.a $(LIBS) -o prof.exe

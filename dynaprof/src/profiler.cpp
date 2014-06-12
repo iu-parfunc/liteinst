@@ -49,11 +49,9 @@ void* probe_monitor(void* param) {
   while (true) {
     int current_time = getticks();
     for (it=inactive_funcs->begin(); it!=inactive_funcs->end(); ++it){
-      fprintf(stderr, "Checking inactive functions..\n");
       int func_id = *it;
       func_data* data = &stats[func_id];
       if (current_time - data->last_deactivation > 10000) {
-        fprintf(stderr, "Inactive threshold exceeded for function : %d\n", func_id);
         prof->start_profile(func_id, NULL);
         data->newly_reactivated = true;
         it = inactive_funcs->erase(it);
@@ -401,12 +399,13 @@ void epilog_func() {
   data->sum = data->sum + elapsed;
   data->count += 1;
 
-  if (data->count >= DEACTIVATION_THRESHOLD) {
+  if ((data->count - stats[func_id].last_count) >= DEACTIVATION_THRESHOLD) {
     // fprintf(stderr,"Registering %lu for deactivation..\n", func_id);
     // deactivation_queue->enqueue(func_id);
     prof->stop_profile(func_id);
     stats[func_id].deactivation_count++;
     stats[func_id].last_deactivation = getticks();
+    stats[func_id].last_count = data->count;
     inactive_funcs->push_back(func_id);
 
     // prof->stop_profile(func_id);
@@ -457,7 +456,7 @@ void basic_profiler_func() {
 
   if (data->start == -1) {
     ticks time = getticks();
-    ts->push(2121212);
+    ts->push(time);
     data->start = time;
   } else {
     ticks time = getticks();
