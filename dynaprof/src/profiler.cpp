@@ -103,6 +103,7 @@ void Basic_Profiler::initialize(void) {
     stats[func_id].sum = 0;
     stats[func_id].count = 0;
     stats[func_id].deactivation_count = 0;
+    stats[func_id].last_count = 0;
     stats[func_id].start = -1;
     stats[func_id].lock = 0;
     // We don't need function id here at the moment if required later add from functions iterator->second.
@@ -201,7 +202,6 @@ void Profiler::start_profile(int method_id, void (*fun)() ) {
     activateProbe(probe_end_annotation, (this->profiler_epilog));
   }
 }
-
 
 void Profiler::stop_profile(string method) {
 
@@ -331,6 +331,7 @@ void create_key() {
 // int counter = 0;
 
 void prolog_func() {
+  
   __thread static bool allocated;
 
   ts_stack* ts;
@@ -351,6 +352,7 @@ void prolog_func() {
 
   ticks time = getticks();
   ts->push(time); 
+  
 }
 
 void epilog_func() {
@@ -399,6 +401,7 @@ void epilog_func() {
   data->sum = data->sum + elapsed;
   data->count += 1;
 
+  
   if ((data->count - stats[func_id].last_count) >= DEACTIVATION_THRESHOLD) {
     // fprintf(stderr,"Registering %lu for deactivation..\n", func_id);
     // deactivation_queue->enqueue(func_id);

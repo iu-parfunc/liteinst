@@ -3,6 +3,7 @@
 #include <time.h>
 #include <string>
 #include "zca-toggle.hpp"
+#include "cycle.h"
 
 int x;
 
@@ -12,20 +13,70 @@ void probe_function() {
 }
 
 /******************* Test Functions ********************/
-void foo() {
+long foo() {
 	__notify_intrinsic((void*)"foo:start",(void*)&x);
 
-        int i;
+  long sum;
+  int i;
 	for (i=0; i < 100; i++) {
 		srand(time(NULL));
-		int r = rand();
+	  sum += rand();
 	}
 
 	__notify_intrinsic((void*)"foo:end",(void*)&x);
+
+  return sum;
+}
+
+void empty_func() {
+
+}
+
+long call_emulate_func() {
+
+#pragma noinline recursive
+  empty_func();
+
+  long sum;
+  int i;
+	for (i=0; i < 100; i++) {
+		srand(time(NULL));
+	  sum += rand();
+	}
+
+#pragma noinline recursive
+  empty_func();
+  return sum;
+
 }
 
 /******************* Tests *************************/
+void test_overhead() {
+
+  ticks start = getticks();
+  int i;
+  for (i=0; i<1000000; i++) {
+    foo();
+  } 
+  ticks end = getticks();
+  ticks elapsed_1 = end - start;
+
+	initZCAService();
+
+  start = getticks();
+  for (i=0; i<1000000; i++) {
+    foo();
+  } 
+  end = getticks();
+  ticks elapsed = end - start;
+  printf("Elapsed time without zcatoggle : %lu\n", end-start);
+  printf("Elapsed time with zcatoggle : %lu\n", end-start);
+  printf("Overhead : %f%\n", ((double)elapsed / elapsed_1) * 100);
+}
+
 void test_probe_activation() {
+
+	initZCAService();
 
 	printf("Executing foo after initial probe activation..\n");
 	foo();
@@ -63,8 +114,8 @@ void test_multithreaded_probe_activation() {
 }
 
 int main () {
-	initZCAService();
 
-	test_probe_activation();
+  test_overhead();
+	// test_probe_activation();
 
 }
