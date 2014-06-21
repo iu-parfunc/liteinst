@@ -11,11 +11,16 @@
 
 using namespace std;
 
-int DEACTIVATION_THRESHOLD = 100000;
+int DEACTIVATION_THRESHOLD = 1000;
 
 typedef map<string, uint64_t> timestamps;
 
-typedef stack<ticks> ts_stack;
+typedef struct invocation_data {
+  ticks timestamp;
+  long func_id;
+} invocation_data;
+
+typedef stack<invocation_data> ts_stack;
 
 // extern stat_stack st_stack;
 

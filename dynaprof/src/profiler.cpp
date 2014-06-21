@@ -46,6 +46,7 @@ void* probe_monitor(void* param) {
 
   list<int>::iterator it;
 
+  /*
   while (true) {
     int current_time = getticks();
     for (it=inactive_funcs->begin(); it!=inactive_funcs->end(); ++it){
@@ -58,8 +59,9 @@ void* probe_monitor(void* param) {
       }
     }
 
-    sleep(5);
+    sleep(10);
   }
+  */
 
 /*
   while(!deactivation_queue->empty()) {
@@ -103,6 +105,7 @@ void Basic_Profiler::initialize(void) {
     stats[func_id].sum = 0;
     stats[func_id].count = 0;
     stats[func_id].deactivation_count = 0;
+    stats[func_id].last_deactivation = 0;
     stats[func_id].last_count = 0;
     stats[func_id].start = -1;
     stats[func_id].lock = 0;
@@ -330,9 +333,35 @@ void create_key() {
 
 // int counter = 0;
 
+/*
+void prolog_func() {
+
+}
+
+void epilog_func() {
+
+}
+*/
+
 void prolog_func() {
   
   __thread static bool allocated;
+
+  uint64_t addr;
+  uint64_t offset = 2;
+
+  // Gets [%rbp + 16] to addr. This is a hacky way to get the function parameter (annotation string) pushed to the stack
+  // before the call to this method. Ideally this should be accessible by declaring an explicit method paramter according
+  // x86 calling conventions AFAIK. But it fails to work that way hence we do the inline assembly to get it.
+  // Fix this elegantly with a method parameter should be a TODO
+  long func_id = 0;
+
+  asm(
+      "movq %%rdx, %0\n\t"
+      : "=r"(func_id)
+      :
+      : "%rdx"
+     ); 
 
   ts_stack* ts;
   if (!allocated) {
@@ -351,7 +380,8 @@ void prolog_func() {
   } */
 
   ticks time = getticks();
-  ts->push(time); 
+  invocation_data i_data = {time, func_id,};
+  ts->push(i_data); 
   
 }
 
@@ -379,8 +409,22 @@ void epilog_func() {
   ticks end = time;
   
   ticks elapsed;
+  
+  // This is to remove data from deactivated methods
+  while (!ts->empty() && func_id != ts->top().func_id) {
+    ts->pop();
+  } 
+  
   if (!ts->empty()) {
-    elapsed = end - ts->top();
+
+    if (data->last_deactivation > ts->top().timestamp) {
+      // This is when there has been a deactivation and current function prolog has not been 
+      // executed due to the reactivation happening after the function entry.
+      ts->pop();
+      return;
+    }
+
+    elapsed = end - ts->top().timestamp;
     ts->pop();
   } else {
     LOG_ERROR("Mismatching function epilog..\n");
@@ -400,8 +444,8 @@ void epilog_func() {
 
   data->sum = data->sum + elapsed;
   data->count += 1;
-
   
+  /*
   if ((data->count - stats[func_id].last_count) >= DEACTIVATION_THRESHOLD) {
     // fprintf(stderr,"Registering %lu for deactivation..\n", func_id);
     // deactivation_queue->enqueue(func_id);
@@ -413,6 +457,8 @@ void epilog_func() {
 
     // prof->stop_profile(func_id);
   }
+  */
+
 
   __sync_bool_compare_and_swap(&(data->lock), 1 , 0);
 
@@ -423,6 +469,7 @@ void Basic_Profiler::set_profiler_function() {
   this->profiler_epilog = epilog_func;
 }
 
+/*
 void basic_profiler_func() {
   __thread static bool allocated;
 
@@ -490,6 +537,7 @@ void basic_profiler_func() {
   __sync_bool_compare_and_swap(&(data->lock), 1 , 0); 
 
 }
+*/
 
 void basic_profiler_func_1() {
 
