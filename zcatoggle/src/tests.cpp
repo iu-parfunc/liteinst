@@ -136,8 +136,8 @@ void test_multithreaded_probe_activation() {
 }
 
 int main () {
-  test_inline_function();
+  // test_inline_function();
   // test_overhead();
-	// test_probe_activation();
+	test_probe_activation();
 
 }

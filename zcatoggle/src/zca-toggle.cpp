@@ -507,14 +507,18 @@ int deactivateProbe(std::string label) {
 
                    printf("Stub location is : %p\n", data->stubLocation);
                    } */
-        uint64_t* probespace = (uint64_t*) ((byte*)data->stubLocation + data->probe_offset);
+        // Commented
+        // uint64_t* probespace = (uint64_t*) ((byte*)data->stubLocation + data->probe_offset);
+        
         //printf("Probespace is : %p\n", probespace);
         //printf("Probe offset now is : %d\n", ann_info->probe_offset);
         /*          if (count == 0) {
                     printf("Probespace content is : %016llx\n", *probe);
                     } */
 
-        uint64_t new_val = *probespace;
+        // Commented
+        // uint64_t new_val = *probespace;
+        uint64_t new_val = 0x000000441f0f66; // 6 byte NOP 
 
         if (PROBESIZE < sizeof(uint64_t)) {
           uint64_t mask = 0x0FFFFFFFFFFFFFFF;

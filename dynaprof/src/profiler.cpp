@@ -45,23 +45,22 @@ void* probe_monitor(void* param) {
     // done
 
   list<int>::iterator it;
-
-  /*
+ 
   while (true) {
     int current_time = getticks();
     for (it=inactive_funcs->begin(); it!=inactive_funcs->end(); ++it){
       int func_id = *it;
       func_data* data = &stats[func_id];
-      if (current_time - data->last_deactivation > 10000) {
+      if (current_time - data->last_deactivation > 1000) {
         prof->start_profile(func_id, NULL);
         data->newly_reactivated = true;
         it = inactive_funcs->erase(it);
       }
     }
 
-    sleep(10);
+    sleep(1);
   }
-  */
+ 
 
 /*
   while(!deactivation_queue->empty()) {
@@ -445,7 +444,7 @@ void epilog_func() {
   data->sum = data->sum + elapsed;
   data->count += 1;
   
-  /*
+  
   if ((data->count - stats[func_id].last_count) >= DEACTIVATION_THRESHOLD) {
     // fprintf(stderr,"Registering %lu for deactivation..\n", func_id);
     // deactivation_queue->enqueue(func_id);
@@ -457,7 +456,7 @@ void epilog_func() {
 
     // prof->stop_profile(func_id);
   }
-  */
+ 
 
 
   __sync_bool_compare_and_swap(&(data->lock), 1 , 0);
