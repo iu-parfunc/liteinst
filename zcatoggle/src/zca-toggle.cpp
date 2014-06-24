@@ -90,8 +90,14 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*t
 #endif
 
   // Push all volatile registers:
-  a.push(rax); a.push(rcx); a.push(rdx);
+  a.push(rsi); a.push(rdi);a.push(rax); a.push(rcx); a.push(rdx);
   a.push(r8); a.push(r9); a.push(r10); a.push(r11);
+  a.push(r12); a.push(r13); a.push(r14); a.push(r15);
+
+  /*
+  a.push(rsi); a.push(rdi); a.push(rcx); a.push(rdx);
+  a.push(r8); a.push(r9); 
+  */
 
   // printf("ann_info->expr : %p\n", (*ann_info)->expr);
   // printf("ann_info->expr : %s\n", ((*ann_info)->expr));
@@ -106,8 +112,16 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*t
   a.call(imm((sysint_t)target_fn));
   // Restore all volatile registers:
   // a.pop(rax);
+  a.pop(r15); a.pop(r14); a.pop(r13); a.pop(r12);
   a.pop(r11); a.pop(r10); a.pop(r9); a.pop(r8);
-  a.pop(rdx); a.pop(rcx); a.pop(rax); // This fixes the wierd seg fault which happens when -O3 is enabled
+  a.pop(rdx); a.pop(rcx); a.pop(rax); a.pop(rdi); a.pop(rsi); // This fixes the wierd seg fault which happens when -O3 is enabled
+
+  /*
+  a.pop(r9); a.pop(r8);
+  a.pop(rdx); a.pop(rcx); a.pop(rdi); a.pop(rsi);
+  */
+
+  a.jmp(imm((sysint_t)(void*)(probe_loc + PROBESIZE)));
 
   int codesz = a.getCodeSize();
   // This works just as well, don't need the function_cast magic:
@@ -121,10 +135,14 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*t
   // printf("[Gen Stub]Probe offset is : %d\n", (*ann_info)->probe_offset);
 
   // Copy over the displaced probe bytes:
+  
+  /*
   char b[8];
   for(int i=0; i<PROBESIZE; i++) {
     addr[codesz + i] = probe_loc[i];
   }
+  */
+ 
 
   /*	for (int i=0; i<PROBESIZE; i++) {
   // b[i] = addr[codesz + i];
@@ -133,31 +151,42 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*t
   }
   printf("\n");*/
 
+
+  /*
   b[6] = 0;
   b[7] = 0;
+  */
 
   // printf("[Gen Stub]Buffer value is : %016llx\n", b);
 
   // Next generate the jump back home:
+  /*
   a2.jmp(imm((sysint_t)(void*)(probe_loc + PROBESIZE)));
   int sz2 = a2.getCodeSize();
   a2.relocCode(addr + codesz + PROBESIZE);
+  */
+  // a2.relocCode(addr + codesz);
 
   //printf("[Gen Stub]Stub content is :%016llx\n", *((uint64_t*)((byte*)addr+(*ann_info)->probe_offset)));
   //printf("[Gen Stub]Stub content direct :%016llx\n", *((uint64_t*)((byte*)addr + codesz + 1)));
   //printf("[Gen Stub]One word after the stub is : %016llx\n", *((uint64_t*)(addr + codesz + PROBESIZE)));
   //#if LOGLEVEL >= DEBUG_LEVEL
+
+  /*
   char buf[1024];
   for(int i=0; i<codesz + PROBESIZE + sz2; i++) {
 
     sprintf(&buf[5 * i], " %p", addr[i]);
 
   }
+  */
+
 
   //printf("%s\n", buf);
   //#endif
 
-  return (codesz+ PROBESIZE + sz2);
+  return (codesz);
+  // return (codesz+ PROBESIZE + sz2);
 }
 
 inline int retry_allocation(unsigned long* start_addr, unsigned long size, unsigned long** stub_address) {
@@ -317,7 +346,7 @@ inline void modify_probe_site(unsigned char* probe_address, unsigned long* stub_
   LOG_DEBUG("  Relative offset of dest from starting addr: %p %p, 32 bit: %d\n", probe_address, stub_address, (int)relative);
 
   *(uint32_t*)(probe_address+1) = (int)relative;
-  probe_address[5] = 0x0;
+  probe_address[5] = 0x90;
 }
 
 int timeval_subtract(struct timeval *result, struct timeval *t2, struct timeval *t1)
@@ -427,7 +456,7 @@ int activateProbe(std::string label, void (*fun)())
             long relative = (long)(((unsigned char*)(void*)stub_address) - (unsigned char*)probe_address - 5);
             //printf("[Activate Probe]Jump distance is : %lu\n", relative);
             *(uint32_t*)(new_val_ptr+1) = (int)relative;
-            new_val_ptr[5] = 0x0;
+            new_val_ptr[5] = 0x90;
 
             new_val = (new_val | msb);
 

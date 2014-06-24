@@ -28,13 +28,30 @@ long foo() {
   return sum;
 }
 
+inline long inline_foo(double a, double b, double c, double d, double e, double f, double g, double h, double x, double j, double k) {
+	__notify_intrinsic((void*)"inline_foo:start",(void*)&x);
+
+  long sum;
+  int i;
+	for (i=0; i < 100; i++) {
+		srand(time(NULL));
+	  sum += rand();
+	}
+
+	__notify_intrinsic((void*)"inline_foo:end",(void*)&x);
+
+  return sum + a + b + c + d + e + f + g + h + x + j + k;
+}
+
+
+
 void empty_func() {
 
 }
 
 long call_emulate_func() {
 
-#pragma noinline recursive
+// #pragma noinline recursive
   empty_func();
 
   long sum;
@@ -44,13 +61,18 @@ long call_emulate_func() {
 	  sum += rand();
 	}
 
-#pragma noinline recursive
+// #pragma noinline recursive
   empty_func();
   return sum;
 
 }
 
 /******************* Tests *************************/
+void test_inline_function() {
+	initZCAService();
+  inline_foo(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0);
+}
+
 void test_overhead() {
 
   ticks start = getticks();
@@ -114,8 +136,8 @@ void test_multithreaded_probe_activation() {
 }
 
 int main () {
-
-  test_overhead();
+  test_inline_function();
+  // test_overhead();
 	// test_probe_activation();
 
 }

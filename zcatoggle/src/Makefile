@@ -27,7 +27,7 @@ DEPS0 :=  $(wildcard $(ASM_JIT)/*.cpp)
 DEPS = $(DEPS0:.cpp=.o)
 SRC = $(HDRS) $(CODE)
 LIBS = -lelf -lpthread
-# CFLAGS=-O0
+CFLAGS=-O3
 
 LIBSOUT = libzca-toggle.so libzca-toggle.a 
 
