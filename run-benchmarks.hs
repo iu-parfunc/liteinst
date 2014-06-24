@@ -22,13 +22,13 @@ benches =
 --  [ shellBenchmark "racket infer-timing.rkt" ("--hsbencher" : words args) (And [])
   [ (mkBenchmark "benchmarks/gzip-1.6/gprof/Makefile" [] (setVariant "gprof")) { progname = Just "gzip16" },
    (mkBenchmark "benchmarks/gzip-1.6/dynaprof/Makefile" [] (setVariant "dynaprof")) { progname = Just "gzip16" },
-   (mkBenchmark "benchmarks/gzip-1.6/pin/Makefile" [] (setVariant "pin")) { progname = Just "gzip16" },
-   (mkBenchmark "benchmarks/gzip-1.6/pebil/Makefile" [] (setVariant "pebil")) { progname = Just "gzip16" },
+--   (mkBenchmark "benchmarks/gzip-1.6/pin/Makefile" [] (setVariant "pin")) { progname = Just "gzip16" },
+--   (mkBenchmark "benchmarks/gzip-1.6/pebil/Makefile" [] (setVariant "pebil")) { progname = Just "gzip16" },
    (mkBenchmark "benchmarks/gzip-1.6/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "gzip16" },
    (mkBenchmark "benchmarks/grep-2.18/gprof/Makefile" [] (setVariant "gprof")) { progname = Just "grep218" },
    (mkBenchmark "benchmarks/grep-2.18/dynaprof/Makefile" [] (setVariant "dynaprof")) { progname = Just "grep218" },
-   (mkBenchmark "benchmarks/grep-2.18/pin/Makefile" [] (setVariant "pin")) { progname = Just "grep218" },
-   (mkBenchmark "benchmarks/grep-2.18/pebil/Makefile" [] (setVariant "pebil")) { progname = Just "grep218" },
+--   (mkBenchmark "benchmarks/grep-2.18/pin/Makefile" [] (setVariant "pin")) { progname = Just "grep218" },
+--   (mkBenchmark "benchmarks/grep-2.18/pebil/Makefile" [] (setVariant "pebil")) { progname = Just "grep218" },
    (mkBenchmark "benchmarks/grep-2.18/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "grep218" }
 
   ]
