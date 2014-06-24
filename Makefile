@@ -26,8 +26,8 @@ all:
 # Nothing here currently.
 
 lib:
-	(cd ./zcatoggle/; make install; make docs)
-	(cd ./dynaprof/; make install)
+	(cd ./zcatoggle/src; make install; make docs)
+	(cd ./dynaprof/src; make install)
 
 # Run the benchmarks
 bench: run-benchmarks.exe
