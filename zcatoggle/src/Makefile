@@ -11,7 +11,7 @@ CC  = icc $(ARGS)
 CPP = icpc -std=c++11 $(ARGS) 
 AR = ar
 RM = rm
-OPTS=-DLOG_LEVEL=2 # -DPROFILE=1 # -DON
+OPTS=-DLOG_LEVEL=2 -DPROFILE=1 # -DON
 
 INSTALLD=../build
 BENCHMARKS=../../benchmarks/gzip-1.6/instrumented ../../benchmarks/grep-2.18/instrumented/ ../../benchmarks/grep-2.18/instrumented/src
@@ -20,16 +20,16 @@ THIRD_PARTY = ../3rdparty
 ASM_JIT = $(THIRD_PARTY)/AsmJit
 
 HDRS = zca-types.h include/zca-toggle.h include/zca-utils.h
-CODE = zca-toggle.cpp elf-provider.cpp profiler.cpp
+CODE = zca-toggle.cpp elf-provider.cpp 
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 DEPS0 :=  $(wildcard $(ASM_JIT)/*.cpp)
 DEPS = $(DEPS0:.cpp=.o)
 SRC = $(HDRS) $(CODE)
-LIBS = -lelf -lpthread
-# CFLAGS=-O0
+LIBS = -lelf -lpthread -lrt
+CFLAGS = -O0
 
-LIBSOUT = libzca-toggle.so libzca-toggle.a 
+LIBSOUT = libutils.a libzca-toggle.so libzca-toggle.a  
 
 .PHONY: all build install 
 
@@ -39,11 +39,17 @@ build:	$(LIBSOUT)
 install: build
 	if ! [ -d $(INSTALLD) ]; then mkdir -p $(INSTALLD); fi	
 	cp $(LIBSOUT) $(INSTALLD)
-	echo $(BENCHMARKS) | xargs -n 1 cp $(LIBSOUT)
+#	for dir in $(BENCHMARKS); do if ! [ -d ${dir} ]; then mkdir -p ${dir}; fi cp $(LIBSOUT) ${dir} done
+
+# echo $(BENCHMARKS) | xargs -n 1 cp $(LIBSOUT)
 
 test: build test.cpp 
 	$(CPP) $(OPTS) test.cpp libzca-toggle.a $(LIBS) -o test.exe
 	./test.exe
+        
+tests : build tests.cpp
+	$(CPP) $(CFLAGS) -DLOG_LEVEL=2 -DPROFILE=1 tests.cpp libzca-toggle.a $(LIBS) -o tests.exe
+	./tests.exe
 
 # Benchmark binary generation targets
 test_prof_off: build bench.cpp elf-provider.o
@@ -79,15 +85,21 @@ hello_notify.exe: hello_notify.c
 # libzca-toggle.so: $(CODE) $(DEPS0) 
 # 	$(CC) $(LIBS) -fPIC -std=c++11 -shared -Wl,-soname,libzca-toggle.so -Wl,-init,initZCAService -o libzca-toggle.so $(CODE) $(DEPS0) -lc
 
-libzca-toggle.so: $(OBJ) $(DEPS) 
+# libutils.so: $(OBJ) $(DEPS) 
+# $(CC) $(LIBS) -shared -Wl,-soname,libutils.so -Wl,-o libutils.so utils.o -lc
+
+libutils.a: utils.o 
+	$(AR) rc libutils.a utils.o
+
+libzca-toggle.so: $(OBJ) $(DEPS)
 	$(CC) $(LIBS) -shared -Wl,-soname,libzca-toggle.so -Wl,-init,initZCAService -o libzca-toggle.so $(OBJ) $(DEPS) -lc
 
-libzca-toggle.a: $(OBJ) $(DEPS) 
-	$(AR) rc libzca-toggle.a $(OBJ) $(DEPS)
+libzca-toggle.a: $(OBJ) $(DEPS) libutils.a 
+	$(AR) rc libzca-toggle.a  $(OBJ) $(DEPS)
 
 prof : build profiler.o
 	$(AR) rc libdynprof.a profiler.o
-	$(CPP) $(OPTS) test_profiler.cpp libdynprof.a libzca-toggle.a $(LIBS) -o prof.exe
+	$(CPP) $(OPTS) -O0 test_profiler.cpp libdynprof.a libzca-toggle.a libutils.a $(LIBS) -o prof.exe
 	./prof.exe
 
 notify : build read_elf.c
