@@ -62,10 +62,12 @@ int main(int argc, const char*argv[]) {
 		if(!strcmp(section_name, ".itt_notify_tab")) {
 
 			printf("Header size : %lu\n", shdr->sh_size);
-			while (n < shdr->sh_size && ((data = elf_getdata(scn, data)) != NULL )) {
+			// data = elf_getdata(scn, data);
+
+			// while (n < shdr->sh_size && ((data = elf_getdata(scn, data)) != NULL )) {
+			while (((data = elf_getdata(scn, data)) != NULL )) {
 
 			char* ptr;
-			// data = elf_getdata(scn, data);
 			ptr = (char*) data->d_buf;
 			long int offset = 0;
 

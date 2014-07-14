@@ -8,14 +8,16 @@ using namespace std;
 class NBQueue {
 
 private:
- queue<int>* nbqueue; 
+ queue<long>* nbqueue; 
  int rwlock;
+ int capacity;
+ int size;
 
 public:
- NBQueue() {initialize();}
- void initialize();
- void enqueue(int val);
- int dequeue();
+ NBQueue(int capacity) {initialize(capacity);}
+ void initialize(int capacity);
+ void enqueue(long val);
+ long dequeue();
  bool empty();
  virtual ~NBQueue() {}
 };

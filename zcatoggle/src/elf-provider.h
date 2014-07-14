@@ -38,7 +38,7 @@ extern mem_alloc_table mem_allocations;
 
 typedef std::map<std::string, uint16_t> func_table;
 
-extern func_table functions;
+extern func_table* functions;
 
 extern int function_count;
 
@@ -84,32 +84,6 @@ void print_fn();
 // void print_fn(char* annotation);
 
 void print_fn2();
-
-typedef struct prof_data {
-	ticks start;
-	int count;
-	uint64_t min;
-	uint64_t max;
-	uint64_t sum;
-} prof_data;
-
-typedef std::map<std::string, prof_data*> function_stats;
-
-typedef std::map<std::string, prof_data*> global_stats;
-
-class Statistics {
-public:
-	function_stats f_stats;
-	Statistics() {}
-	~Statistics() {
-		for (auto iter = f_stats.begin(); iter != f_stats.end(); iter++) {
-			prof_data* data = iter->second;
-			if (data != NULL) {
-				free(data);
-			}
-		}
-	}
-};
 
 // typedef typename std::aligned_storage<sizeof(function_stats*), std::alignment_of<function_stats*>::value>::type Storage;
 

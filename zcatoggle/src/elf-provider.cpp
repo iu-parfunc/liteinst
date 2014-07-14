@@ -47,11 +47,8 @@ using namespace std;
 
 ann_table annotations;
 mem_alloc_table mem_allocations;
-func_table functions;
+func_table* functions;
 int function_count = 0;
-
-// global_stats statistics;
-// volatile int spin_lock = 0;
 
 unsigned long probe_start;
 unsigned long probe_end;
@@ -282,6 +279,7 @@ int read_zca_probes(const char* path)
 	scn = NULL;
 
   int next_func_id = 0;
+  functions = new func_table;
 
 	// Loop over all sections in the ELF object
 	while((scn = elf_nextscn(e, scn))!=NULL) {
@@ -337,7 +335,7 @@ int read_zca_probes(const char* path)
 				// Here we skip the header and move on to the actual rows:
 				zca_row_11_t* row = (zca_row_11_t*) ((byte*) header + sizeof(*header));
 
-				LOG_DEBUG(" [read-zca] found first row at %p, offset %lu\n", rows, ((long)rows - (long)header));
+				LOG_DEBUG(" [read-zca] found first row at %p, offset %lu\n", row, ((long)row - (long)header));
 				LOG_DEBUG("\n\nAnnotation entry count : %d\n", header->entry_count);
 				LOG_DEBUG("Annotation table resides at : %p\n", annotations);
 
@@ -392,9 +390,9 @@ int read_zca_probes(const char* path)
           char* temp = strdup(str);
           char* func_name = strtok_r(temp, ":", &tok);
           
-          if(functions.find(string(func_name)) == functions.end()) {
+          if(functions->find(string(func_name)) == functions->end()) {
             // printf("--- Function %s id %lu\n ---", func_name, next_func_id);
-            functions.insert(func_table::value_type(string(func_name), next_func_id++));
+            functions->insert(func_table::value_type(string(func_name), next_func_id++));
             function_count++;
           }
 

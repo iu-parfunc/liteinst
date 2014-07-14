@@ -24,6 +24,7 @@
 #define _ZCA_TOGGLE_H_
 
 #include <string>
+#include <time.h>
 
 #ifdef __cplusplus
 extern "C"
@@ -74,6 +75,26 @@ extern int deactivateProbe(std::string label);
 /** Runs at startup-time and reads the current binary's ELF headers.
  */
 extern void initZCAService(); //__attribute__((constructor));
+
+/** Get per method approximate overhead induced by zca probes 
+ */
+extern double getZCAOverhead();
+
+/** Get zca probe initialization overhead
+ */
+extern long getInitOverhead();
+
+/** Get current time in milliseconds from epoch 
+ */
+extern long gettime_millis();
+
+extern long getThreadCPUTime();
+
+extern long getProcessCPUTime();
+
+extern double getTicksPerMilliSec();
+
+extern double getTicksPerNanoSec();
 
 // TODO: the basic toggling functionality should be separated from the
 // retriev-own-ELF-headers hack.

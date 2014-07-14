@@ -26,10 +26,10 @@ OBJ  = $(OBJ0:.c=.o)
 DEPS0 :=  $(wildcard $(ASM_JIT)/*.cpp)
 DEPS = $(DEPS0:.cpp=.o)
 SRC = $(HDRS) $(CODE)
-LIBS = -lelf -lpthread
-CFLAGS=-O3
+LIBS = -lelf -lpthread -lrt
+CFLAGS = -O0
 
-LIBSOUT = libzca-toggle.so libzca-toggle.a 
+LIBSOUT = libutils.a libzca-toggle.so libzca-toggle.a  
 
 .PHONY: all build install 
 
@@ -85,15 +85,21 @@ hello_notify.exe: hello_notify.c
 # libzca-toggle.so: $(CODE) $(DEPS0) 
 # 	$(CC) $(LIBS) -fPIC -std=c++11 -shared -Wl,-soname,libzca-toggle.so -Wl,-init,initZCAService -o libzca-toggle.so $(CODE) $(DEPS0) -lc
 
-libzca-toggle.so: $(OBJ) $(DEPS) 
+# libutils.so: $(OBJ) $(DEPS) 
+# $(CC) $(LIBS) -shared -Wl,-soname,libutils.so -Wl,-o libutils.so utils.o -lc
+
+libutils.a: utils.o 
+	$(AR) rc libutils.a utils.o
+
+libzca-toggle.so: $(OBJ) $(DEPS)
 	$(CC) $(LIBS) -shared -Wl,-soname,libzca-toggle.so -Wl,-init,initZCAService -o libzca-toggle.so $(OBJ) $(DEPS) -lc
 
-libzca-toggle.a: $(OBJ) $(DEPS) 
-	$(AR) rc libzca-toggle.a $(OBJ) $(DEPS)
+libzca-toggle.a: $(OBJ) $(DEPS) libutils.a 
+	$(AR) rc libzca-toggle.a  $(OBJ) $(DEPS)
 
 prof : build profiler.o
 	$(AR) rc libdynprof.a profiler.o
-	$(CPP) $(OPTS) test_profiler.cpp libdynprof.a libzca-toggle.a $(LIBS) -o prof.exe
+	$(CPP) $(OPTS) -O0 test_profiler.cpp libdynprof.a libzca-toggle.a libutils.a $(LIBS) -o prof.exe
 	./prof.exe
 
 notify : build read_elf.c

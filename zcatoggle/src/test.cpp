@@ -169,11 +169,11 @@ void test_large_probe_count() {
 	for (j=0; j<rounds; j++) {
 		int i=0;
 
-		start = getticks();
+		start = gettime();
 		annotated_func();
-		end = getticks();
+		end = gettime();
 
-		timings[j] = elapsed(end, start);
+		timings[j] = end - start ; // elapsed(end, start)
 		// printf("timings[%d] is : %llu\n", j, timings[j]);
 
 	}

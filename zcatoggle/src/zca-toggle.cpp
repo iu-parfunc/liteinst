@@ -21,6 +21,8 @@
 // #include "zca-utils.h"
 #include <errno.h>
 #include <unistd.h>
+#include <link.h>
+#include "utils.hpp"
 
 // ann_data* annotations;
 
@@ -31,6 +33,12 @@
 static ticks stub_gen_elapsed_time;
 static struct timeval stub_gen_tvDiff;
 #endif
+
+void calibrateTicks();
+
+int ZCA_OVERHEAD = 1200; // Assuming 1000 cycles overhead per function call. Need to measure this at runtime
+int ZCA_INIT_OVERHEAD = 0;
+const int NANO_SECONDS_IN_SEC = 1000000000;
 
 static int probe_count = 0;
 static mem_island* current_alloc_unit;
@@ -68,8 +76,8 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*t
   char* func_name = strtok_r(temp, ":", &tok);
  
   long func_id = 0;
-  if(functions.find(std::string(func_name)) != functions.end()) {
-    func_id = functions.find(std::string(func_name))->second;
+  if(functions->find(std::string(func_name)) != functions->end()) {
+    func_id = functions->find(std::string(func_name))->second;
   }
 
   // printf("Function id for function %s at insertion is %lu \n", func_name, func_id);
@@ -90,6 +98,7 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*t
 #endif
 
   // Push all volatile registers:
+
   a.push(rsi); a.push(rdi);a.push(rax); a.push(rcx); a.push(rdx);
   a.push(r8); a.push(r9); a.push(r10); a.push(r11);
   a.push(r12); a.push(r13); a.push(r14); a.push(r15);
@@ -101,8 +110,10 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*t
 
   // printf("ann_info->expr : %p\n", (*ann_info)->expr);
   // printf("ann_info->expr : %s\n", ((*ann_info)->expr));
+
   a.xor_(rdx,rdx);
   a.mov(rdx, imm((sysint_t)func_id));
+
   // a.push(ecx);
   // a.mov(eax, imm((sysint_t)func_id));
 
@@ -110,8 +121,10 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*t
   // a.push(rax);
 
   a.call(imm((sysint_t)target_fn));
+  
   // Restore all volatile registers:
   // a.pop(rax);
+ 
   a.pop(r15); a.pop(r14); a.pop(r13); a.pop(r12);
   a.pop(r11); a.pop(r10); a.pop(r9); a.pop(r8);
   a.pop(rdx); a.pop(rcx); a.pop(rax); a.pop(rdi); a.pop(rsi); // This fixes the wierd seg fault which happens when -O3 is enabled
@@ -324,7 +337,7 @@ inline void modify_probe_site(unsigned char* probe_address, unsigned long* stub_
   LOG_DEBUG("Stub address is : %p\n", stub_address);
 
 
-  int page_size = 4096;
+  long page_size = sysconf(_SC_PAGESIZE); 
   int code = mprotect((void*)(probe_address - (((unsigned long)probe_address)%4096)), page_size,
       PROT_READ | PROT_WRITE | PROT_EXEC);
 
@@ -335,16 +348,28 @@ inline void modify_probe_site(unsigned char* probe_address, unsigned long* stub_
     // return -1;
   }
 
+  // If this probesite crosses a page boundary change the permissions of adjacent page too.
+  if (page_size - ((unsigned long)probe_address)%4096 < PROBESIZE) {
+    code = mprotect((void*)(probe_address -((unsigned long)probe_address)%4096 + 4096) , page_size,
+        PROT_READ | PROT_WRITE | PROT_EXEC);
+    if (code) {
+      /* current code page is now writable and code from it is allowed for execution */
+      LOG_ERROR("mprotect was not successfull! code %d\n", code);
+      LOG_ERROR("errno value is : %d\n", errno);
+      // return -1;
+    } 
+  }
+
   int stub_size = gen_stub_code((unsigned char*)(stub_address), probe_address, fun, ann_info/*(&annotations[i])->fun*/);
   // Plug in the relative jump
   // This does a relative jump:
-  probe_address[0] = 0xE9;
   // Size of the JMP we insert is 5.  So +5 points to the following instruction.
   long relative = (long)(((unsigned char*)(void*) stub_address) - probe_address - 5);
   //printf ("[Modify Probe site] Jump distance is : %lu\n", relative);
 
   LOG_DEBUG("  Relative offset of dest from starting addr: %p %p, 32 bit: %d\n", probe_address, stub_address, (int)relative);
 
+  probe_address[0] = 0xE9;
   *(uint32_t*)(probe_address+1) = (int)relative;
   probe_address[5] = 0x90;
 }
@@ -567,6 +592,24 @@ int deactivateProbe(std::string label) {
   return -1;
 }
 
+static int
+callback(struct dl_phdr_info *info, size_t size, void *data)
+{
+    int j;
+
+   printf("name=%s (%d segments)\n", info->dlpi_name,
+               info->dlpi_phnum);
+
+   for (j = 0; j < info->dlpi_phnum; j++)
+         printf("\t\t header %2d: address=%10p\n", j,
+                          (void *) (info->dlpi_addr + info->dlpi_phdr[j].p_vaddr));
+    return 0;
+}
+
+void test_function() {
+    dl_iterate_phdr(callback, NULL);
+}
+
 /* This function is called automatically when the library is loaded */
 // __attribute__((constructor)) 
 // FIXME: trying to get this attribute((constructor)) business to work even in a statically linked library.
@@ -574,24 +617,14 @@ int deactivateProbe(std::string label) {
 void initZCAService() {
   /* Read all annotations here and setup stubs. How best to do it (sync or async) needs to be emperically determined */
 #ifdef PROFILE
-  ticks start;
-  ticks end;
-  ticks elapsed_time;
-
-  struct timeval tvBegin, tvEnd, tvDiff;
-  gettimeofday(&tvBegin, NULL);
-  start = getticks();
-
-  //start = getticks();
+  long start = gettime_millis();
 #endif
 
   setupStubs();
+  calibrateTicks();
 
 #ifdef PROFILE
-  gettimeofday(&tvEnd, NULL);
-  end = getticks();
-  timeval_subtract(&tvDiff, &tvEnd, &tvBegin);
-  elapsed_time = elapsed(end, start);
+  long end = gettime_millis();
 
   // fprintf(stderr, "\n--- Stub gen time for %d probes (cycles) : %llu \n", probe_count, stub_gen_elapsed_time);
   // fprintf(stderr, "--- Stub gen time for %d probes (seconds): %ld.%06ld\n", probe_count, stub_gen_tvDiff.tv_sec, stub_gen_tvDiff.tv_usec);
@@ -599,12 +632,102 @@ void initZCAService() {
   // fprintf(stderr, "Total init time for %d probes (cycles) : %llu \n", probe_count, elapsed_time);
   // fprintf(stderr, "--- Total init time for %d probes (seconds): %ld.%06ld\n", probe_count, tvDiff.tv_sec, tvDiff.tv_usec);
   
-  fprintf(stderr, "INIT_TIME %ld.%06ld\n", tvDiff.tv_sec, tvDiff.tv_usec);
+  ZCA_INIT_OVERHEAD = end - start;  
+  fprintf(stderr, "INIT_TIME %.03f\n", (double) ZCA_INIT_OVERHEAD / 1000);
 #endif
 
   LOG_DEBUG("This text is printed before reaching \"main\".\n");
 
+  // Measure trampoline overhead
+  //start = getticks();
+  // empty_function();
+  // end = getticks();
+
+  // ticks overhead = end - start;
+  // fprintf(stderr, "OVERHEAD %llu\n", overhead);
+
+  // test_function();
+
   return;
+}
+
+/*
+void empty_function() {
+
+  __notify_intrinsic((void*)"empty_function:start", (void *)&global_x);
+
+  __notify_intrinsic((void*)"empty_function:end", (void *)&global_x);
+
+}
+*/
+
+
+
+long getInitOverhead() {
+  return ZCA_INIT_OVERHEAD;
+}
+
+long gettime_millis() {
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return (ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
+}
+
+long getThreadCPUTime() {
+  struct timespec ts;
+  clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
+  return (ts.tv_sec * 1000000000LL + ts.tv_nsec);
+}
+
+long getProcessCPUTime() {
+  struct timespec ts;
+  clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts);
+  return (ts.tv_sec * 1000000000LL + ts.tv_nsec);
+}
+
+double g_TicksPerMilliSec;
+double getTicksPerMilliSec() {
+  return g_TicksPerMilliSec; 
+}
+
+double g_TicksPerNanoSec;
+double getTicksPerNanoSec() {
+  return g_TicksPerNanoSec;
+}
+
+double getZCAOverhead() {
+  return ZCA_OVERHEAD/g_TicksPerNanoSec;
+}
+
+struct timespec *timeSpecDiff(struct timespec *ts1, struct timespec *ts2)
+{
+  static struct timespec ts;
+  ts.tv_sec = ts1->tv_sec - ts2->tv_sec;
+  ts.tv_nsec = ts1->tv_nsec - ts2->tv_nsec;
+  if (ts.tv_nsec < 0) {
+      ts.tv_sec--;
+      ts.tv_nsec += NANO_SECONDS_IN_SEC;
+    }
+  return &ts;
+}
+
+static void calibrateTicks()
+{
+  struct timespec begints, endts, diff;
+  uint64_t begin = 0, end = 0;
+  clock_gettime(CLOCK_MONOTONIC, &begints);
+  begin = getticks();
+  uint64_t i,result = 0;
+  for (i = 0; i < 1000000; i++) { /* must be CPU intensive */
+    result += i;
+  }
+  end = getticks();
+  clock_gettime(CLOCK_MONOTONIC, &endts);
+  struct timespec *tmpts = timeSpecDiff(&endts, &begints);
+  uint64_t millisecElapsed = tmpts->tv_sec * 1000L + tmpts->tv_nsec / 1000000L;
+  g_TicksPerMilliSec = (double)(end - begin)/(double)millisecElapsed;
+  uint64_t nanosecElapsed = tmpts->tv_sec * 1000000000LL + tmpts->tv_nsec;
+  g_TicksPerNanoSec = (double)(end - begin)/(double)nanosecElapsed;
 }
 
 
