@@ -29,11 +29,13 @@ SRC = $(HDRS) $(CODE)
 LIBS = -lelf -lpthread -lrt
 CFLAGS = -O0
 
-LIBSOUT = libutils.a libzca-toggle.so libzca-toggle.a  
+LIBSOUT = libzca-toggle.so libzca-toggle.a  
 
 .PHONY: all build install 
 
 all: build install
+
+docs:
 
 build:	$(LIBSOUT)
 install: build

@@ -27,7 +27,7 @@ all:
 
 lib:
 	(cd ./zcatoggle/src; make install; make docs)
-	(cd ./dynaprof/src; make install)
+	(cd ./dynaprof/src; make OVERHEAD="-DOVERHEAD_5"; make install)
 
 # Run the benchmarks
 bench: run-benchmarks.exe
