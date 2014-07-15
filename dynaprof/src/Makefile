@@ -50,7 +50,7 @@ libdynaprof.a : $(OBJ) $(DEPS)
 	$(AR) rc libdynaprof.a profiler.o nbqueue.o
 
 tests : build tests.cpp
-	$(CPP) $(CFLAGS) $(OPTS) tests.cpp libdynaprof.a $(LIBS) -o tests.exe
+	$(CPP) $(CFLAGS) $(OPTS) tests.cpp libdynaprof.a $(LIBS) -lrt -o tests.exe
 	./tests.exe
 
 prof : build profiler.o
