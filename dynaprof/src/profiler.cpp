@@ -54,8 +54,8 @@ double target_overhead = 0.05;
 double target_overhead = 0.10;
 #endif
 
-#ifdef OVERHEAD_15
-double target_overhead = 0.15;
+#ifdef OVERHEAD_25
+double target_overhead = 0.25;
 #endif
 
 #ifdef OVERHEAD_50
