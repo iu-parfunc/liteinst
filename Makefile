@@ -42,3 +42,7 @@ run-benchmarks.exe: run-benchmarks.cabal run-benchmarks.hs
 	$(CABAL) install ./HSBencher/hgdata ./HSBencher/hsbencher ./HSBencher/hsbencher-fusion --disable-documentation --with-ghc=ghc-$(JENKINS_GHC)
 	$(CABAL) install --only-dep -j --disable-documentation --with-ghc=ghc-$(JENKINS_GHC)
 	$(CABAL) install --bindir=. --disable-documentation --with-ghc=ghc-$(JENKINS_GHC)
+
+clean:
+	(cd ./zcatoggle/src; make clean)
+	(cd ./dynaprof/src; make clean)

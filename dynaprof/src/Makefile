@@ -39,9 +39,9 @@ install: build
 #	echo $(BENCHMARKS) | xargs -n 1 cp $(HDRSOUT)
 
 .cpp.o:
-	$(CPP) $(CFLAGS) $(OPTS) $(OVERHEAD) $(STRATEGY) -fPIC -c -Wall -o $@ $<
+	$(CPP) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
 .c.o:
-	$(CC) $(CFLAGS) $(OPTS) $(OVERHEAD) $(STRATEGY) -fPIC -c -Wall -o $@ $<
+	$(CC) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
 
 libdynaprof.so: $(OBJ) $(DEPS) 
 	$(CC) $(LIBS) -shared -Wl,-soname,libdynaprof.so -Wl,-init,initZCAService -o libdynaprof.so $(OBJ) $(DEPS) -lc
@@ -50,7 +50,7 @@ libdynaprof.a : $(OBJ) $(DEPS)
 	$(AR) rc libdynaprof.a profiler.o nbqueue.o
 
 tests : build tests.cpp
-	$(CPP) $(CFLAGS) $(OPTS) tests.cpp libdynaprof.a $(LIBS) -o tests.exe
+	$(CPP) $(CFLAGS) $(OPTS) tests.cpp libdynaprof.a $(LIBS) -lrt -o tests.exe
 	./tests.exe
 
 prof : build profiler.o
