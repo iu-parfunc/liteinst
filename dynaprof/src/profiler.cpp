@@ -45,6 +45,7 @@ static pthread_once_t tls_init_flag = PTHREAD_ONCE_INIT;
 
 int strategy = BOP_SIMPLE;
 double target_overhead = 0.05; 
+double overhead = 0.0;
 long sample_size = 10000;
 
 void placement_delete(void *t) {
@@ -92,7 +93,7 @@ void* probe_monitor(void* param) {
     long threadCPUTime = getThreadCPUTime();
     long processCPUTime = getProcessCPUTime();
 
-    double overhead = (double)(total_invocations * zcaOverhead + 
+    overhead = (double)(total_invocations * zcaOverhead + 
                               getInitOverhead() + threadCPUTime) /
                                  processCPUTime;  
 
