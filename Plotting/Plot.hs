@@ -33,7 +33,8 @@ main = do
 
   let (ColData cols values) = tab 
 
-  let gzip_data = slice "PROGNAME" "gzip16" cols values 
+  let gzip_data = slice "PROGNAME" "gzip16" cols values
+      
       unprofiled_rows = slice "VARIANT" "unprofiled" cols gzip_data
       unprofiled_values = extractColumn "MEDIANTIME" cols unprofiled_rows
 
