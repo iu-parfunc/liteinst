@@ -63,11 +63,11 @@ benches =
 
 bop_05 = And [Set (Variant "bop_simple_05_10000") (RuntimeEnv "DYN_STRATEGY" "BOP_SIMPLE")
              ,Set NoMeaning                       (RuntimeEnv "DYN_SAMPLE_SIZE" "10000")
-             ,Set NoMeaning                       (RunTimeEnv "DYN_OVERHEAD" "0.05")]
+             ,Set NoMeaning                       (RuntimeEnv "DYN_OVERHEAD" "0.05")]
          
 bop_50 = And [Set (Variant "bop_simple_50_10000") (RuntimeEnv "DYN_STRATEGY" "BOP_SIMPLE")
              ,Set NoMeaning                       (RuntimeEnv "DYN_SAMPLE_SIZE" "10000")
-             ,Set NoMeaning                       (RunTimeEnv "DYN_OVERHEAD" "0.55")]
+             ,Set NoMeaning                       (RuntimeEnv "DYN_OVERHEAD" "0.55")]
 
 count_only = Set (Variant "count_only") (RuntimeEnv "DYN_STRATEGY" "COUNT_ONLY")
 
