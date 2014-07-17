@@ -20,14 +20,15 @@ import GHC.Conc           (getNumProcessors)
 benches :: [Benchmark DefaultParamMeaning]
 benches = 
 --  [ shellBenchmark "racket infer-timing.rkt" ("--hsbencher" : words args) (And [])
-  [ (mkBenchmark "benchmarks/gzip-1.6/gprof/Makefile" [] (setVariant "gprof")) { progname = Just "gzip16" },
-   (mkBenchmark "benchmarks/gzip-1.6/dynaprof/direct_05/Makefile" [] (setVariant "dynaprof_direct_05")) { progname = Just "gzip16" },
+--  [ (mkBenchmark "benchmarks/gzip-1.6/gprof/Makefile" [] (setVariant "gprof")) { progname = Just "gzip16" },
+--   (mkBenchmark "benchmarks/gzip-1.6/dynaprof/direct_05/Makefile" [] (setVariant "dynaprof_direct_05")) { progname = Just "gzip16" },
 --   (mkBenchmark "benchmarks/gzip-1.6/dynaprof/direct_10/Makefile" [] (setVariant "dynaprof_direct_10")) { progname = Just "gzip16" },
 --   (mkBenchmark "benchmarks/gzip-1.6/dynaprof/direct_25/Makefile" [] (setVariant "dynaprof_direct_25")) { progname = Just "gzip16" },
-   (mkBenchmark "benchmarks/gzip-1.6/dynaprof/direct_50/Makefile" [] (setVariant "dynaprof_direct_50")) { progname = Just "gzip16" },
+--   (mkBenchmark "benchmarks/gzip-1.6/dynaprof/direct_50/Makefile" [] (setVariant "dynaprof_direct_50")) { progname = Just "gzip16" },
 --   (mkBenchmark "benchmarks/gzip-1.6/pin/Makefile" [] (setVariant "pin")) { progname = Just "gzip16" },
 --   (mkBenchmark "benchmarks/gzip-1.6/pebil/Makefile" [] (setVariant "pebil")) { progname = Just "gzip16" },
-   (mkBenchmark "benchmarks/gzip-1.6/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "gzip16" },
+--   (mkBenchmark "benchmarks/gzip-1.6/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "gzip16" },
+
 -- h264ref-9.3
    (mkBenchmark "benchmarks/h264ref-9.3/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "h264ref-9.3" },
 
@@ -48,9 +49,10 @@ benches =
 
 
 -- perl-5.8.7
-   (mkBenchmark "benchmarks/perl-5.8.7/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "perl-5.8.7" },
-   (mkBenchmark "benchmarks/perl-5.8.7/dynaprof/Makefile" [] (setVariant "dynaprof_10")) { progname = Just "perl-5.8.7" },
-   (mkBenchmark "benchmarks/perl-5.8.7/gprof/Makefile" [] (setVariant "gprof")) { progname = Just "perl-5.8.7" }
+--   (mkBenchmark "benchmarks/perl-5.8.7/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "perl-5.8.7" },
+--   (mkBenchmark "benchmarks/perl-5.8.7/dynaprof/Makefile" [] (setVariant "dynaprof_10")) { progname = Just "perl-5.8.7" },
+--   (mkBenchmark "benchmarks/perl-5.8.7/gprof/Makefile" [] (setVariant "gprof")) { progname = Just "perl-5.8.7" }
+
 -- grep-2.18
 --   (mkBenchmark "benchmarks/grep-2.18/gprof/Makefile" [] (setVariant "gprof")) { progname = Just "grep218" },
 --   (mkBenchmark "benchmarks/grep-2.18/dynaprof/Makefile" [] (setVariant "dynaprof")) { progname = Just "grep218" },
