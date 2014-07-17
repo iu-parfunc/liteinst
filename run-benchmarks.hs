@@ -18,7 +18,7 @@ import GHC.Conc           (getNumProcessors)
 --------------------------------------------------------------------------------
 
 benches :: [Benchmark DefaultParamMeaning]
-benches = 
+benches = [
 --  [ shellBenchmark "racket infer-timing.rkt" ("--hsbencher" : words args) (And [])
 --  [ (mkBenchmark "benchmarks/gzip-1.6/gprof/Makefile" [] (setVariant "gprof")) { progname = Just "gzip16" },
 --   (mkBenchmark "benchmarks/gzip-1.6/dynaprof/direct_05/Makefile" [] (setVariant "dynaprof_direct_05")) { progname = Just "gzip16" },
@@ -37,7 +37,7 @@ benches =
    (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/count_only/Makefile" [] count_only) { progname = Just "h264ref-9.3" },
    (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/fixed_backoff_10000/Makefile" [] fixed_backoff_10000) { progname = Just "h264ref-9.3" },
    (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/fixed_backoff_1000000/Makefile" [] fixed_backoff_1000000) { progname = Just "h264ref-9.3" },
-   (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/no_backoff/Makefile" [] no_backoff) { progname = Just "h264ref-9.3" },
+   (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/no_backoff/Makefile" [] no_backoff) { progname = Just "h264ref-9.3" }
 
    
    -- (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/bop_simple_05_10000/Makefile" [] (setVariant "bop_simple_05_10000")) { progname = Just "h264ref-9.3" },
