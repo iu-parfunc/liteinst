@@ -30,8 +30,12 @@ benches =
    (mkBenchmark "benchmarks/gzip-1.6/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "gzip16" },
 -- h264ref-9.3
    (mkBenchmark "benchmarks/h264ref-9.3/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "h264ref-9.3" },
-   (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/Makefile" [] (setVariant "dynaprof_10")) { progname = Just "h264ref-9.3" },
-   (mkBenchmark "benchmarks/h264ref-9.3/gprof/Makefile" [] (setVariant "gprof")) { progname = Just "h264ref-9.3" },
+   (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/bop_simple_05_10000/Makefile" [] (setVariant "bop_simple_05_10000")) { progname = Just "h264ref-9.3" },
+   (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/bop_simple_50_10000/Makefile" [] (setVariant "bop_simple_50_10000")) { progname = Just "h264ref-9.3" },
+   (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/count_only/Makefile" [] (setVariant "count_only")) { progname = Just "h264ref-9.3" },
+   (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/fixed_backoff_10000/Makefile" [] (setVariant "fixed_backoff_10000")) { progname = Just "h264ref-9.3" },
+   (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/fixed_backoff_1000000/Makefile" [] (setVariant "fixed_backoff_1000000")) { progname = Just "h264ref-9.3" },
+   (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/no_backoff/Makefile" [] (setVariant "no_backoff")) { progname = Just "h264ref-9.3" },
 -- perl-5.8.7
    (mkBenchmark "benchmarks/perl-5.8.7/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "perl-5.8.7" },
    (mkBenchmark "benchmarks/perl-5.8.7/dynaprof/Makefile" [] (setVariant "dynaprof_10")) { progname = Just "perl-5.8.7" },
