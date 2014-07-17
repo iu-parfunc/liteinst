@@ -209,10 +209,17 @@ void Basic_Profiler::initialize(void) {
   }
 
   char* strategy_str = getenv("DYN_STRATEGY");
+  /*
   char no_backoff[] = "\"NO_BACKOFF\"";
   char fixed_backoff[] = "\"FIXED_BACKOFF\"";
   char bop_simple[] = "\"BOP_SIMPLE\"";
   char bop_advanced[] = "\"BOP_ADVANCED\"";
+  char count_only[] = "COUNT_ONLY";
+  */
+  char no_backoff[] = "NO_BACKOFF";
+  char fixed_backoff[] = "FIXED_BACKOFF";
+  char bop_simple[] = "BOP_SIMPLE";
+  char bop_advanced[] = "BOP_ADVANCED";
   char count_only[] = "COUNT_ONLY";
 
   if (strategy_str != NULL) {
