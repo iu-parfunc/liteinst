@@ -288,6 +288,8 @@ void cleanup(void) {
   // fprintf(out_file, "[Main]Thread local stack is at : %p\n", (ts_stack*)pthread_getspecific(key));
   // fprintf(out_file, "[Main]Current thread is : %d\n", tid);
 
+  fprintf(stderr, "FINAL_OVERHEAD %.03f\n", overhead);
+
   for(int i=0; i < function_count; i++) {
     if (dyn_stats[i].count != 0) {
       fprintf(out_file, "\nFunction : %s\n", dyn_stats[i].func_name);
