@@ -93,6 +93,7 @@ main = do
         , plugIns   = [ SomePlugin defaultFusionPlugin,
                         SomePlugin defaultDribblePlugin ]
         , harvesters = customTagHarvesterDouble "INIT_TIME"
+                        `mappend` customTagHarvesterDouble "FINAL_OVERHEAD"
                         `mappend` harvesters conf                        
         }
 
