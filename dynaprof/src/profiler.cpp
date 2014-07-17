@@ -104,6 +104,8 @@ void* probe_monitor(void* param) {
     fprintf(stderr, "Process cpu time up to now is : %lu\n", processCPUTime);
     fprintf(stderr, "Overhead up to now is : %lf\n\n", overhead);
 
+    fprintf(stderr, "OVERHEAD %.03f\n", overhead);
+
     if (target_overhead > overhead) {
       if (target_overhead * 0.50 > overhead) {
         int current_time = getticks();
