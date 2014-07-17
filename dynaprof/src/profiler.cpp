@@ -17,17 +17,19 @@
 #include "logger.h"
 #include "cycle.h"
 
+#define NO_BACKOFF 0
+#define FIXED_BACKOFF 1
+#define BOP_SIMPLE 2
+#define BOP_ADVANCED 3
+#define COUNT_ONLY 4
 
 using namespace std;
 
 func_data* dyn_stats;
 
 Profiler* prof;
-// timestamps* deactivations;
-// NBQueue* deactivation_queue;
 
 list<int>* inactive_funcs;
-int deactivation_lock = 0;
 
 volatile ticks epilog_overhead = 0;
 volatile ticks prolog_overhead = 0;
@@ -41,26 +43,9 @@ NBQueue* heavy_hitters;
 static pthread_key_t key;
 static pthread_once_t tls_init_flag = PTHREAD_ONCE_INIT;
 
-void basic_prolog_func();
-void basic_epilog_func();
-
-void func2();
-
-#ifdef OVERHEAD_5
-double target_overhead = 0.05;
-#endif
-
-#ifdef OVERHEAD_10
-double target_overhead = 0.10;
-#endif
-
-#ifdef OVERHEAD_25
-double target_overhead = 0.25;
-#endif
-
-#ifdef OVERHEAD_50
-double target_overhead = 0.50;
-#endif
+int strategy = BOP_SIMPLE;
+double target_overhead = 0.05; 
+long sample_size = 10000;
 
 void placement_delete(void *t) {
 
@@ -82,8 +67,6 @@ void placement_delete(void *t) {
   }
   }*/
 
-
-  // ((Statistics*)t)->~Statistics();
 }
 
 void create_key() {
@@ -93,17 +76,10 @@ void create_key() {
 // Check this out later
 //  http://stackoverflow.com/questions/2053029/how-exactly-does-attribute-constructor-work
 
-// #ifndef EMPTY_STRATEGY
 void* probe_monitor(void* param) {
 
-    // go through deactivate_funcs linked list
-    // for each func
-    //    check if (current_time -deactivation_timestamp > threshold)
-    //      activate func
-    //      data->newly_reactivated = true;
-    //    fi
-    // done
- 
+  fprintf(stderr, "[Overhead Monitor] Came here..\n");
+
   while (true) {
     int i;
     
@@ -175,7 +151,7 @@ void* probe_monitor(void* param) {
             dyn_stats[func_id].last_deactivation = getticks();
             dyn_stats[func_id].last_count = dyn_stats[func_id].count;
             inactive_funcs->push_back(func_id);
-            LOG_INFO("=====> Deactivated function %d\n", func_id);
+            LOG_INFO("=====> Deactivated function %lu\n", func_id);
             // fprintf(stderr, "=====> Deactivated function %lu\n", func_id);
           }
         }
@@ -188,7 +164,7 @@ void* probe_monitor(void* param) {
           dyn_stats[func_id].last_deactivation = getticks();
           dyn_stats[func_id].last_count = dyn_stats[func_id].count;
           inactive_funcs->push_back(func_id);
-          LOG_INFO("----> Deactivated function %d\n", func_id);
+          LOG_INFO("----> Deactivated function %lu\n", func_id);
           // fprintf(stderr, "----> Deactivated function %lu\n", func_id);
         }
       }
@@ -216,40 +192,47 @@ void* probe_monitor(void* param) {
 
   return NULL;
 }
-// #endif
 
-void* test_thread_function(void *param) {
-
-  __thread static bool allocated;
-  ts_stack* ts;
-  if (!allocated) {
-    ts = new ts_stack;
-    allocated = true;
-
-    // fprintf(stderr, "[Test] Before setting : %p\n", ts);
-    pthread_once(&tls_init_flag, create_key);
-    pthread_setspecific(key, ts);
-    ts_stack* ts_new = (ts_stack*)pthread_getspecific(key);
-    // fprintf(stderr, "[Test] After setting : %p\n", ts_new);
-  } 
-
-  sleep(1000);
-
-  return NULL;
-
-}
 
 // __attribute__((constructor))
 void Basic_Profiler::initialize(void) {
 
+
+  char* overhead_str = getenv("DYN_OVERHEAD");
+  if (overhead_str != NULL) {
+    target_overhead = atof(overhead_str);
+  }
+
+  char* sample_size_str = getenv("DYN_SAMPLE_SIZE");
+  if (sample_size_str != NULL) {
+    sample_size = atol(sample_size_str);
+  }
+
+  char* strategy_str = getenv("DYN_STRATEGY");
+  char no_backoff[] = "\"NO_BACKOFF\"";
+  char fixed_backoff[] = "\"FIXED_BACKOFF\"";
+  char bop_simple[] = "\"BOP_SIMPLE\"";
+  char bop_advanced[] = "\"BOP_ADVANCED\"";
+  char count_only[] = "COUNT_ONLY";
+
+  if (strategy_str != NULL) {
+    if (strcmp(strategy_str, no_backoff) == 0) {
+      strategy = NO_BACKOFF;
+    } else if (strcmp(strategy_str, fixed_backoff) == 0) {
+      strategy = FIXED_BACKOFF;
+    } else if (strcmp(strategy_str, bop_simple) == 0) {
+      strategy = BOP_SIMPLE;
+    } else if (strcmp(strategy_str, bop_advanced) == 0) {
+      strategy = BOP_ADVANCED;
+    } else if (strcmp(strategy_str, count_only) == 0) {
+      strategy = COUNT_ONLY;
+    }
+  }
+
   set_profiler_function();
 
-  // heavy_hitters.set_capacity(20);
-
-  // pthread create
-
-  // pthread_t tid_1;
-  // pthread_create(&tid_1, NULL, test_thread_function, (void*)NULL);
+  fprintf(stderr, "[Init] Strategy : %s Overhead : %s Sample size : %s\n", strategy_str, overhead_str, sample_size_str);
+  fprintf(stderr, "[Init] Strategy : %d Overhead : %lf Sample size : %lu\n", strategy, target_overhead, sample_size);
 
   dyn_stats = (func_data*)malloc(sizeof(func_data) * function_count);
 
@@ -277,10 +260,11 @@ void Basic_Profiler::initialize(void) {
     // We don't need function id here at the moment if required later add from functions iterator->second.
   }
 
-// #ifndef EMPTY_STRATEGY
-  pthread_t tid;
-  pthread_create(&tid, NULL, probe_monitor, (void*)NULL);
-// #endif
+  // Spawns the overhead monitor thread if we are following sophisticated back off strategies
+  if (strategy == BOP_SIMPLE || strategy == BOP_ADVANCED) {
+    pthread_t tid;
+    pthread_create(&tid, NULL, probe_monitor, (void*)NULL);
+  }
 
 }
 
@@ -343,11 +327,9 @@ void start_profiler() {
   inactive_funcs = new list<int>;
 
   prof = new Basic_Profiler;
-  //prof->profile_all(prof->profiler_prolog, NULL);
   prof->profile_all(NULL, NULL);
 
   atexit(cleanup); // This seems to be a viable alternative to the destructor
-  // printf("Instrumentation done..\n");
 }
 
 void stop_profiler() {
@@ -414,10 +396,6 @@ void Profiler::stop_profile(string method) {
   string probe_start_annotation = method + ":start";
   string probe_end_annotation = method + ":end";
 
-  // Mark function deactivated 
-  // 1. Stats table (increment deactivation count)
-  // 2. Deactivation bitmap
-
   deactivateProbe(probe_end_annotation);
   deactivateProbe(probe_start_annotation);
 }
@@ -427,10 +405,6 @@ void Profiler::stop_profile(int method_id) {
   string method = string(dyn_stats[method_id].func_name);
   string probe_start_annotation = method + ":start";
   string probe_end_annotation = method + ":end";
-
-  // Mark function deactivated 
-  // 1. Stats table (increment deactivation count)
-  // 2. Deactivation bitmap
 
   deactivateProbe(probe_end_annotation);
   deactivateProbe(probe_start_annotation);
@@ -504,29 +478,8 @@ void Profiler::turn_off_profiler() {
   delete deactivated_probes;
 }
 
-/*
-void(Profiler::*get_profiler_prolog())() {
-  return this->profiler_prolog;
-}
 
-void(Profiler::*get_profiler_epilog())() {
-  return this->profiler_epilog;
-}
-*/
-
-/*uint64_t gettid() {
-  pthread_t ptid = pthread_self();
-  uint64_t threadId = 0;
-  memcpy(&threadId, &ptid, std::min(sizeof(threadId), sizeof(ptid)));
-  return threadId;
-  }*/
-
-
-
-// int counter = 0;
-
-// #ifdef EMPTY_STRATEGY
-void basic_prolog_func() {
+void count_only_prolog_func() {
   
   long func_id = 0;
 
@@ -542,32 +495,13 @@ void basic_prolog_func() {
 
   while (!(__sync_bool_compare_and_swap(&(data->lock), 0 , 1)));
 
-  if (data->count != 0 && data->sum != 0) {
-    data->sum += (data->sum / data->count);
-  }
-
-  // ticks start = getticks();
-
   data->count += 1;
 
   __sync_bool_compare_and_swap(&(data->lock), 1 , 0);
 
-  /*
-   if (basic_prolog_overhead == 0) {
-    basic_prolog_overhead = getticks() - prolog_start;
-  } 
-  */
-
 }
 
-void epilog_func() {
-
-}
-// #endif
-
-// #ifdef DIRECT_UPDATE_STRATEGY
-
-void extended_prolog_func() {
+void prolog_func() {
 
   __thread static bool allocated;
 
@@ -627,7 +561,7 @@ void extended_prolog_func() {
 
 }
 
-void extended_epilog_func() {
+void no_backoff_epilog_func() {
 
   uint64_t addr;
   uint64_t offset = 2;
@@ -645,6 +579,143 @@ void extended_epilog_func() {
       : "%rdx"
      ); 
 
+  func_data* data = &dyn_stats[func_id];
+  ts_stack* ts = (ts_stack*)pthread_getspecific(key);
+
+  ticks start;
+  ticks elapsed;
+  
+  // This is to remove data from deactivated methods which failed to clean up
+  while (!ts->empty() && func_id != ts->top().func_id) {
+    ts->pop();
+  } 
+  
+  if (!ts->empty()) {
+
+    if (data->last_deactivation > ts->top().timestamp) {
+      // This is when there has been a deactivation and current function prolog has not been 
+      // executed due to the reactivation happening after the function entry.
+      ts->pop();
+      return;
+    }
+    start = ts->top().timestamp;
+    ts->pop();
+  } else {
+    // LOG_ERROR("Mismatching function epilog..\n");
+    return;
+  }
+
+  // Acquire lock
+  while (!(__sync_bool_compare_and_swap(&(data->lock), 0 , 1)));
+
+  ticks end = getticks();
+  elapsed = end - start; 
+
+  /*
+  if (elapsed < data->min || data->min == 0) {
+    data->min = elapsed;
+  }
+
+  if (elapsed > data->max) {
+    data->max = elapsed;
+  }
+  */
+
+  data->sum = data->sum + elapsed;
+  data->count += 1;
+  
+  __sync_bool_compare_and_swap(&(data->lock), 1 , 0);
+
+}
+
+void fixed_backoff_epilog_func() {
+
+  uint64_t addr;
+  uint64_t offset = 2;
+
+  // Gets [%rbp + 16] to addr. This is a hacky way to get the function parameter (annotation string) pushed to the stack
+  // before the call to this method. Ideally this should be accessible by declaring an explicit method paramter according
+  // x86 calling conventions AFAIK. But it fails to work that way hence we do the inline assembly to get it.
+  // Fix this elegantly with a method parameter should be a TODO
+  long func_id = 0;
+
+  asm(
+      "movq %%rdx, %0\n\t"
+      : "=r"(func_id)
+      :
+      : "%rdx"
+     ); 
+
+  func_data* data = &dyn_stats[func_id];
+  ts_stack* ts = (ts_stack*)pthread_getspecific(key);
+
+  ticks start;
+  ticks elapsed;
+  
+  // This is to remove data from deactivated methods which failed to clean up
+  while (!ts->empty() && func_id != ts->top().func_id) {
+    ts->pop();
+  } 
+  
+  if (!ts->empty()) {
+
+    if (data->last_deactivation > ts->top().timestamp) {
+      // This is when there has been a deactivation and current function prolog has not been 
+      // executed due to the reactivation happening after the function entry.
+      ts->pop();
+      return;
+    }
+    start = ts->top().timestamp;
+    ts->pop();
+  } else {
+    // LOG_ERROR("Mismatching function epilog..\n");
+    return;
+  }
+
+  // Acquire lock
+  while (!(__sync_bool_compare_and_swap(&(data->lock), 0 , 1)));
+
+  ticks end = getticks();
+  elapsed = end - start; 
+
+  /*
+  if (elapsed < data->min || data->min == 0) {
+    data->min = elapsed;
+  }
+
+  if (elapsed > data->max) {
+    data->max = elapsed;
+  }
+  */
+
+  data->sum = data->sum + elapsed;
+  data->count += 1;
+
+  if (data->count > sample_size) {
+    prof->stop_profile(func_id);
+  }
+  
+  __sync_bool_compare_and_swap(&(data->lock), 1 , 0);
+
+}
+
+void bop_simple_epilog_func() {
+
+  uint64_t addr;
+  uint64_t offset = 2;
+
+  // Gets [%rbp + 16] to addr. This is a hacky way to get the function parameter (annotation string) pushed to the stack
+  // before the call to this method. Ideally this should be accessible by declaring an explicit method paramter according
+  // x86 calling conventions AFAIK. But it fails to work that way hence we do the inline assembly to get it.
+  // Fix this elegantly with a method parameter should be a TODO
+  long func_id = 0;
+
+  asm(
+      "movq %%rdx, %0\n\t"
+      : "=r"(func_id)
+      :
+      : "%rdx"
+     ); 
 
   /*
   ticks epilog_start = 0;
@@ -710,8 +781,7 @@ void extended_epilog_func() {
   }
   */
 
-
-  if (new_count >= DEACTIVATION_THRESHOLD) {
+  if (new_count >= sample_size) {
     // fprintf(stderr,"Registering %lu for deactivation..\n", func_id);
     // deactivation_queue->enqueue(func_id);
     long msg_rate = new_count / ((end / 1000000L - data->last_activation)/ getTicksPerMilliSec()); // Per millisecond
@@ -747,304 +817,21 @@ void extended_epilog_func() {
   */
 
 }
-// #endif
-
-#ifdef THR_LOCAL_STRATEGY
-
-void prolog_func() {
-  
-  __thread static bool allocated;
-
-  uint64_t addr;
-  uint64_t offset = 2;
-
-  // Gets [%rbp + 16] to addr. This is a hacky way to get the function parameter (annotation string) pushed to the stack
-  // before the call to this method. Ideally this should be accessible by declaring an explicit method paramter according
-  // x86 calling conventions AFAIK. But it fails to work that way hence we do the inline assembly to get it.
-  // Fix this elegantly with a method parameter should be a TODO
-  long func_id = 0;
-
-  asm(
-      "movq %%rdx, %0\n\t"
-      : "=r"(func_id)
-      :
-      : "%rdx"
-     ); 
-
-  ts_stack* ts;
-  if (!allocated) {
-    thr_local_data* t_data = new thr_local_data;
-    
-    t_data->func_data = (func_data*)malloc(sizeof(thr_func_data) * function_count);
-    t_data->ts = new ts_stack
-    allocated = true;
-
-    pthread_once(&tls_init_flag, create_key);
-    pthread_setspecific(key, t_data);
-  } else {
-    ts = (ts_stack*)pthread_getspecific(key);
-  }
-
-  /*
-  if (data->newly_reactivated) {
-    // empty the stack
-  } */
-
-  ticks time = getticks();
-  invocation_data i_data = {time, func_id,};
-  ts->push(i_data); 
-  
-}
-
-
-#endif
-
-#ifdef BOUNDED_BACKOFF_STRATEGY
-
-#endif
 
 void Basic_Profiler::set_profiler_function() {
-  this->profiler_prolog = extended_prolog_func;
-  this->profiler_epilog = extended_epilog_func;
+  if (strategy == NO_BACKOFF) {
+    this->profiler_prolog = prolog_func; 
+    this->profiler_epilog = no_backoff_epilog_func;
+  } else if (strategy == FIXED_BACKOFF) {
+    this->profiler_prolog = prolog_func;
+    this->profiler_epilog = fixed_backoff_epilog_func;
+  } else if (strategy == BOP_SIMPLE) {
+    this->profiler_prolog = prolog_func;
+    this->profiler_epilog = bop_simple_epilog_func;
+  } else if (strategy == BOP_ADVANCED) {
+  
+  } else if (strategy == COUNT_ONLY) {
+    this->profiler_prolog = count_only_prolog_func; 
+    this->profiler_epilog = NULL;
+  }
 }
-
-/*
-void basic_profiler_func() {
-  __thread static bool allocated;
-
-  uint64_t addr;
-  uint64_t offset = 2;
-
-  // Gets [%rbp + 16] to addr. This is a hacky way to get the function parameter (annotation string) pushed to the stack
-  // before the call to this method. Ideally this should be accessible by declaring an explicit method paramter according
-  // x86 calling conventions AFAIK. But it fails to work that way hence we do the inline assembly to get it.
-  // Fix this elegantly with a method parameter should be a TODO
-  long func_id = 0;
-
-  asm(
-      "movq %%rdx, %0\n\t"
-      : "=r"(func_id)
-      :
-      : "%rdx"
-     ); 
-
-  func_data* data = &stats[func_id];
-
-  if (!allocated) {
-    ts_stack* ts = new ts_stack;
-    allocated = true;
-
-    pthread_once(&tls_init_flag, create_key);
-    pthread_setspecific(key, ts);
-  }
-
-  // Acquire lock
-  while (!(__sync_bool_compare_and_swap(&(data->lock), 0 , 1)));
-
-  ts_stack* ts = (ts_stack*)pthread_getspecific(key);
-
-  if (data->start == -1) {
-    ticks time = getticks();
-    ts->push(time);
-    data->start = time;
-  } else {
-    ticks time = getticks();
-    ticks end = time;
-    ticks elapsed = end - data->start;
-
-    ticks sdf= ts->top();
-    ts->pop();
-
-    if (elapsed < data->min || data->min == 0) {
-      data->min = elapsed;
-    }
-
-    if (elapsed > data->max) {
-      data->max = elapsed;
-    }
-
-    data->sum = data->sum + elapsed;
-    data->count += 1;
-
-    data->start = -1;
-  }
-
-  if (data->count >= DEACTIVATION_THRESHOLD) {
-    prof->stop_profile(func_id);
-  }
-
-  __sync_bool_compare_and_swap(&(data->lock), 1 , 0); 
-
-}
-*/
-
-void basic_profiler_func_1() {
-
-  uint64_t addr;
-  uint64_t offset = 2;
-
-  // Gets [%rbp + 16] to addr. This is a hacky way to get the function parameter (annotation string) pushed to the stack
-  // before the call to this method. Ideally this should be accessible by declaring an explicit method paramter according
-  // x86 calling conventions AFAIK. But it fails to work that way hence we do the inline assembly to get it.
-  // Fix this elegantly with a method parameter should be a TODO
-  asm (
-      "movq (%%rbp, %1, 8), %0\n\t"
-      : "=r"(addr)
-      : "c" (offset)
-      ); 
-
-  // char* annotation = (char*)addr;
-
-  long func_id = 0;
-  /*  offset = 4;
-      asm (
-      "movl (%%rbp, %1, 8), %0\n\t"
-      : "=r"(func_id)
-      : "c" (offset)
-      );*/ 
-
-
-  asm(
-      "movq %%rdx, %0\n\t"
-      : "=r"(func_id)
-      :
-      : "%rdx"
-     ); 
-
-  /*
-     if (!allocated) {
-     function_stats* stats = new function_stats;
-     allocated = true;
-
-     pthread_once(&tls_init_flag, create_key);
-     pthread_setspecific(key, stats);
-     } */
-
-  // function_stats& func_stats = *((function_stats*) &stats);
-  // function_stats func_stats = stats.f_stats;
-
-  // prof_data* data;
-  // function_stats* stats = (function_stats*)pthread_getspecific(key);
-
-  char* func_name = (char*)addr;
-
-  printf("Function name : %s Function id : %lu\n", func_name, func_id);
-
-  /* char* tok;
-     if (annotation != NULL) {
-     char *temp = strdup(annotation);
-     func_name = strtok_r(temp, ":", &tok);
-     } else {
-     return;
-     }*/
-
-  /* if (stats->find(func_name) == stats->end()) {
-     data = (prof_data*)malloc(sizeof(prof_data));
-     data->start = -1;
-     data->min = 0;
-     data->max = 0;
-     data->sum = 0;
-     data->count = 0;
-
-     stats->insert(make_pair(func_name, data));
-
-  // printf("Initialing the map..\n");
-
-  // printf("func stat value : %d\n", func_stats.find("a")->second->start);
-  // printf("func stat is at : %p\n", &func_stats);
-  // printf("data is at : %p\n", data);
-
-  } else {
-  data = stats->find(func_name)->second;
-  } */
-
-  func_data* data = &dyn_stats[func_id];
-
-  // printf("[BPF] func_id : %d lock : %d \n", func_id, data->lock);
-
-  // Acquire lock
-  while (!(__sync_bool_compare_and_swap(&(data->lock), 0 , 1)));
-
-  if (data->start == -1) {
-    ticks time = getticks();
-    data->start = time;
-  } else {
-    ticks time = getticks();
-    ticks end = time;
-    ticks elapsed = end - data->start;
-
-    if (elapsed < data->min || data->min == 0) {
-      data->min = elapsed;
-    }
-
-    if (elapsed > data->max) {
-      data->max = elapsed;
-    }
-
-    data->sum = data->sum + elapsed;
-    data->count += 1;
-
-    data->start = -1;
-  }
-
-  // Release lock
-  __sync_bool_compare_and_swap(&(data->lock), 1 , 0); 
-
-  // Merge to the global statistics table
-  /* if (data->count >= 1) {
-     prof_data* global_data;
-
-  // Acquire the spin lock
-  while (!(__sync_bool_compare_and_swap(&spin_lock, 0 , 1)));
-
-  if (statistics.find(func_name) == statistics.end()) {
-  global_data = (prof_data*)malloc(sizeof(prof_data));
-  global_data->min = 0;
-  global_data->max = 0;
-  global_data->sum = 0;
-  global_data->count = 0;
-
-  statistics.insert(make_pair(func_name, global_data));
-  } else {
-  global_data = statistics.find(func_name)->second;
-  }
-
-  if (global_data->min > data->min || global_data->min == 0){
-  global_data->min = data->min;
-  }
-
-  if (global_data->max < data->max) {
-  global_data->max = data->max;
-  }
-
-  global_data->sum = global_data->sum + data->sum;
-
-  global_data->count = global_data->count + data->count;
-  data->count = 0;
-  data->sum = 0;
-
-  if (global_data->count > DEACTIVATION_THRESHOLD) {
-  deactivate_method_profiling(func_name);
-  fprintf(stderr, "\n***************************** Deactivating function : %s\n ***************************", func_name);
-  }
-
-  // Release lock
-  __sync_bool_compare_and_swap(&spin_lock, 1 , 0); 
-  */
-
-  /*		if (global_data->count >= 1) {
-        fprintf(stderr, "\nFunction : %s\n", func_name);
-        fprintf(stderr, "Count : %lu\n", global_data->count);
-        fprintf(stderr, "Min : %lu\n", global_data->min);
-        fprintf(stderr, "Max : %lu\n", global_data->max);
-        fprintf(stderr, "Avg : %lu\n", global_data->sum / global_data->count);
-        }
-        }
-        */
-
-  // printf("Inside profile function..\n");
-  return;
-
-}
-
-

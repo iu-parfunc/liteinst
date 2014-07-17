@@ -39,9 +39,9 @@ install: build
 #	echo $(BENCHMARKS) | xargs -n 1 cp $(HDRSOUT)
 
 .cpp.o:
-	$(CPP) $(CFLAGS) $(OPTS) $(OVERHEAD) $(STRATEGY) -fPIC -c -Wall -o $@ $<
+	$(CPP) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
 .c.o:
-	$(CC) $(CFLAGS) $(OPTS) $(OVERHEAD) $(STRATEGY) -fPIC -c -Wall -o $@ $<
+	$(CC) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
 
 libdynaprof.so: $(OBJ) $(DEPS) 
 	$(CC) $(LIBS) -shared -Wl,-soname,libdynaprof.so -Wl,-init,initZCAService -o libdynaprof.so $(OBJ) $(DEPS) -lc

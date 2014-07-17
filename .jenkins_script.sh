@@ -16,5 +16,7 @@ set -e
 # cd $TOP/dynaprof/src
 # make OVERHEAD="-DOVERHEAD_5"
 
+make clean
+make lib
 make bench
 
