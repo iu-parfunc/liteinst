@@ -3,7 +3,7 @@
 export KMP_AFFINITY=compact
 export DYN_STRATEGY="NO_BACKOFF"
 
-for j in {1..32}
+for j in {1..10}
 do
     export OMP_NUM_THREADS=$j
 #    echo $j
@@ -37,11 +37,24 @@ do
 #    t4="$t4 `./05_notActivatedNotifyLoopParallel.exe | grep gettime | cut -d " " -f 3`"
 #    t5="$t5 `./05_notActivatedNotifyLoopParallel.exe | grep gettime | cut -d " " -f 3`"
 
-    t1="$t1 `./06_ActivatedNotifyLoopParallel.exe | grep gettime | cut -d " " -f 3`"
-    t2="$t2 `./06_ActivatedNotifyLoopParallel.exe | grep gettime | cut -d " " -f 3`"
-    t3="$t3 `./06_ActivatedNotifyLoopParallel.exe | grep gettime | cut -d " " -f 3`"
-    t4="$t4 `./06_ActivatedNotifyLoopParallel.exe | grep gettime | cut -d " " -f 3`"
-    t5="$t5 `./06_ActivatedNotifyLoopParallel.exe | grep gettime | cut -d " " -f 3`"
+#    t1="$t1 `./06_ActivatedNotifyLoopParallel.exe | grep gettime | cut -d " " -f 3`"
+#    t2="$t2 `./06_ActivatedNotifyLoopParallel.exe | grep gettime | cut -d " " -f 3`"
+#    t3="$t3 `./06_ActivatedNotifyLoopParallel.exe | grep gettime | cut -d " " -f 3`"
+#    t4="$t4 `./06_ActivatedNotifyLoopParallel.exe | grep gettime | cut -d " " -f 3`"
+#    t5="$t5 `./06_ActivatedNotifyLoopParallel.exe | grep gettime | cut -d " " -f 3`"
+
+#    t1="$t1 `./13_ActivatedNotifyFunctionParallel.exe | grep gettime | cut -d " " -f 3`"
+#    t2="$t2 `./13_ActivatedNotifyFunctionParallel.exe | grep gettime | cut -d " " -f 3`"
+#    t3="$t3 `./13_ActivatedNotifyFunctionParallel.exe | grep gettime | cut -d " " -f 3`"
+#    t4="$t4 `./13_ActivatedNotifyFunctionParallel.exe | grep gettime | cut -d " " -f 3`"
+#    t5="$t5 `./13_ActivatedNotifyFunctionParallel.exe | grep gettime | cut -d " " -f 3`"
+
+    t1="$t1 `./14_ActivatedNotifyLoopParallel.exe | grep gettime | cut -d " " -f 3`"
+    t2="$t2 `./14_ActivatedNotifyLoopParallel.exe | grep gettime | cut -d " " -f 3`"
+    t3="$t3 `./14_ActivatedNotifyLoopParallel.exe | grep gettime | cut -d " " -f 3`"
+    t4="$t4 `./14_ActivatedNotifyLoopParallel.exe | grep gettime | cut -d " " -f 3`"
+    t5="$t5 `./14_ActivatedNotifyLoopParallel.exe | grep gettime | cut -d " " -f 3`"
+
 done
 echo $t1
 echo $t2
