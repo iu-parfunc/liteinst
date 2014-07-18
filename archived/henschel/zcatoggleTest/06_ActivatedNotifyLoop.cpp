@@ -29,6 +29,12 @@ int main()
     printf( "  %3.5f GHz\n", hzRate/1000000000);
     printf( "  %3.10f cycle time in nano seconds\n", cycleTime);
 
+//to create threads
+#pragma omp parallel for
+    for (i=0; i < count; i++)
+    {
+    }
+
     printf( "Calling an empty function:\n");
     clock_gettime( CLOCK_REALTIME, &start);
     tick1=getticks();

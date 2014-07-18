@@ -1,6 +1,7 @@
 CC = icc
 CFLAGS =-lrt -Fa -O0
 CFLAGSZCA = -lelf libzca-toggle.a
+CFLAGSDYN = libdynaprof.a
 all: 01_emptyFunction.exe 01_emptyFunctionParallel.exe 02_notActivatedNotifyFunction.exe 02_notActivatedNotifyFunctionParallel.exe 03_ActivatedNotifyFunction.exe 03_ActivatedNotifyFunctionParallel.exe 04_emptyLoop.exe 04_emptyLoopParallel.exe 05_notActivatedNotifyLoop.exe 05_notActivatedNotifyLoopParallel.exe 06_ActivatedNotifyLoop.exe 06_ActivatedNotifyLoopParallel.exe
 
 01_emptyFunction.exe: 01_emptyFunction.cpp
@@ -40,4 +41,4 @@ all: 01_emptyFunction.exe 01_emptyFunctionParallel.exe 02_notActivatedNotifyFunc
 	$(CC) $(CFLAGS) -openmp 06_ActivatedNotifyLoop.cpp $(CFLAGSZCA) -o 06_ActivatedNotifyLoopParallel.exe
 
 clean:
-	rm -f *.exe *.o *.s 
+	rm -f *.exe *.o *.s
