@@ -505,8 +505,6 @@ int activateProbe(std::string label, void (*fun)())
   return -1;
 }
 
-int count = 0;
-
 // Deactivate the probe by copying original probe sequence back
 // Little bit of bitmasking trickery is needed if the probe size is less than 8 bytes since
 // CAS can only deal with in integer sizes
@@ -577,10 +575,6 @@ int deactivateProbe(std::string label) {
 
           data->active = false;
           //printf("Swapped the stuff..\n");
-
-          /*          if (count == 0) {
-                      printf("Now the probe content is : %016llx\n", *probe);
-                      } */
 
           return status;
         }
