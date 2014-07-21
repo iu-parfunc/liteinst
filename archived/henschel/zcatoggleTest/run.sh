@@ -1,7 +1,9 @@
 #!/bin/bash
 
 export KMP_AFFINITY=compact
-export DYN_STRATEGY="NO_BACKOFF"
+#export DYN_STRATEGY="NO_BACKOFF"
+export DYN_STRATEGY="FIXED_BACKOFF"
+export DYN_SAMPLE_SIZE="1000"
 
 for j in {1..10}
 do
