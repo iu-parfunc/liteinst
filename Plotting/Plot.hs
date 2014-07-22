@@ -24,8 +24,8 @@ benchmark = "h264ref-9.3" -- "gzip"
 variants = [ "no_backoff"
            , "fixed_backoff_1000000"
            , "fixed_backoff_10000"
-           , "bop_simple_05"
-           , "bop_simple_50"
+           , "bop_simple_05_10000"
+           , "bop_simple_50_10000"
            , "gprof"
            , "unprofiled"
            ]  
@@ -50,10 +50,12 @@ main = do
   -- and cols is a list of strings naming each column. 
   let (ColData cols values) = tab 
 
+  -- Collec all data of a given benchmark on a given machine. 
   let allData =
         slice "HOSTNAME" machine cols 
           (slice "PROGNAME" benchmark cols values) 
   
+  -- If there are more than one value at this "git_depth", average them out.
   let medianTimes = map (extractVariantMedianTime cols allData) variants
       -- Convert to doubles and average if there are many values 
       averages = map average $ map (map convert) medianTimes  
@@ -64,38 +66,14 @@ main = do
   putStrLn "------------------------------------------------------------"
   putStrLn $ show varTime
   putStrLn "------------------------------------------------------------"
-      
-{-  
-  let dat = unprofiled_values ++ gprof_values ++ dyna05_values ++ dyna50_values
-      tag = ["unprofiled", "gprof", "dyna05", "dyna50"]
--}
 
+
+  -- The data series that generate one set of bars in the same color 
   let the_graph = BarGraph "#F00"
                   "gzip16"
                   varTime
 
-  -- let graph1 =
-  --       BarGraph "#F00"
-  --                "unprofiled"
-  --                $zip (repeat "unprofiled") (map convert unprofiled_values)
-
-  -- let graph2 =
-  --       BarGraph "#FF0"
-  --                "gprof"
-  --                $zip (repeat "gprof") (map convert gprof_values)
-
-
-  -- let graph3 =
-  --       BarGraph "#0F0"
-  --                "dyna05"
-  --                $zip (repeat "dyna05") (map convert dyna05_values)
-
-  -- let graph4 =
-  --       BarGraph "#00f"
-  --                "dyna50"
-  --                $zip (repeat "dyna50") (map convert dyna50_values)
-
-
+  -- The Plot   
   let plot = Plot {pLines = [],
                    pPoints = [],
                    pBars = [the_graph],
@@ -105,7 +83,7 @@ main = do
                    pYLabel = "s"} 
                             
                                 
-                           
+  -- Generate the HTML and Javascript code                           
   putStrLn $ html $ renderPlot mySupply plot     
 
 
