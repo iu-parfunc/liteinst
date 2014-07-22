@@ -1,5 +1,4 @@
 
-
 import System.Environment (getArgs)
 
 import HSBencher.Analytics
@@ -17,55 +16,63 @@ csec = "MQ72ZWDde_1e1ihI5YE9YlEi"
 
 table_name = "Dynaprof_Benchmarks" 
 
+machine = "hive" -- "tank"
+git = "306"
 
+benchmark = "h264ref-9.3" -- "gzip" 
+
+variants = [ "no_backoff"
+           , "fixed_backoff_1000000"
+           , "fixed_backoff_10000"
+           , "bop_simple_05"
+           , "bop_simple_50"
+           , "gprof"
+           , "unprofiled"
+           ]  
 
 main :: IO ()
 main = do
 
   --tab <- pullEntireTable cid csec table_name
   --tab <- pullSelectively cid csec table_name "GIT_DEPTH" "266"
-  tab <- pullSelectively cid csec table_name "RUNID" "hive_1405445312"
- 
+
+  tab <- pullSelectively cid csec table_name "GIT_DEPTH" git
+         
+
+  
   putStrLn "Showing all recieved data"
   putStrLn "------------------------------------------------------------"
   putStrLn $ show tab
   putStrLn "------------------------------------------------------------"
 
+  -- Get the column names into cols and the values of all those
+  -- colums into values. (that is, values is the entire table)
+  -- and cols is a list of strings naming each column. 
   let (ColData cols values) = tab 
 
-  let gzip_data = slice "PROGNAME" "gzip16" cols values
-      
-      unprofiled_rows = slice "VARIANT" "unprofiled" cols gzip_data
-      unprofiled_values = extractColumn "MEDIANTIME" cols unprofiled_rows
-
-      gprof_rows = slice "VARIANT" "gprof" cols gzip_data
-      gprof_values = extractColumn "MEDIANTIME" cols gprof_rows
-
-      dyna05_rows = slice "VARIANT" "dynaprof_direct_05" cols gzip_data
-      dyna05_values = extractColumn "MEDIANTIME" cols dyna05_rows
-
-      dyna50_rows = slice "VARIANT" "dynaprof_direct_50" cols gzip_data
-      dyna50_values = extractColumn "MEDIANTIME" cols dyna50_rows
-
-      
+  let allData =
+        slice "HOSTNAME" machine cols 
+          (slice "PROGNAME" benchmark cols values) 
   
+  let medianTimes = map (extractVariantMedianTime cols allData) variants
+      -- Convert to doubles and average if there are many values 
+      averages = map average $ map (map convert) medianTimes  
+      varTime = zip variants averages            
   
       
-  
   putStrLn "Showing values"
   putStrLn "------------------------------------------------------------"
-  putStrLn $ show unprofiled_values
-  putStrLn $ show gprof_values
-  putStrLn $ show dyna05_values
-  putStrLn $ show dyna50_values     
+  putStrLn $ show varTime
   putStrLn "------------------------------------------------------------"
-
+      
+{-  
   let dat = unprofiled_values ++ gprof_values ++ dyna05_values ++ dyna50_values
       tag = ["unprofiled", "gprof", "dyna05", "dyna50"]
+-}
 
   let the_graph = BarGraph "#F00"
                   "gzip16"
-                  $zip tag (map convert dat) 
+                  varTime
 
   -- let graph1 =
   --       BarGraph "#F00"
@@ -101,6 +108,14 @@ main = do
                            
   putStrLn $ html $ renderPlot mySupply plot     
 
+
+--------------------------------------------------------------------------
+-- extract data given a variant
+
+extractVariantMedianTime cols dat variant =
+  let rows = slice "VARIANT" variant cols dat
+  in  extractColumn "MEDIANTIME" cols rows 
+
   
 
 --------------------------------------------------------------------------
@@ -128,3 +143,12 @@ slice col value header values =
   [x | x <- values , x !! ix == (StringValue value)] 
   where
     ix = fromJust $ elemIndex col header 
+
+
+---------------------------------------------------------------------------
+-- Compute average of a list of positive double
+-- Negative result means there is an error (probably missing data in fusiontable) 
+average :: [Double] -> Double
+average [] = -1
+average xs = sum xs / (fromIntegral (length xs))
+
