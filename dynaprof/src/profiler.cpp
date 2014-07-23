@@ -11,6 +11,7 @@
 #include <string.h>
 #include <vector>
 #include <list>
+#include <limits.h>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include "nbqueue.h"
@@ -22,6 +23,9 @@
 #define BOP_SIMPLE 2
 #define BOP_ADVANCED 3
 #define COUNT_ONLY 4
+#define SAMPLING 5
+#define EMPTY 6
+#define EMPTY_PROLOG 7
 
 using namespace std;
 
@@ -40,6 +44,8 @@ volatile ticks basic_prolog_overhead = 0;
 
 NBQueue* heavy_hitters;
 
+__thread static unsigned long long leaf_counter;
+
 static pthread_key_t key;
 static pthread_once_t tls_init_flag = PTHREAD_ONCE_INIT;
 
@@ -47,6 +53,24 @@ int strategy = BOP_SIMPLE;
 double target_overhead = 0.05; 
 double overhead = 0.0;
 long sample_size = 10000;
+
+
+void prolog_func();
+void sampling_epilog_func();
+void count_only_prolog_func();
+void empty_prolog_func();
+void empty_epilog_func();
+
+int transfer(long v) {
+  
+  int r = (v < 10) ? 0 : (v < 100) ? 1 : (v < 1000) ? 2 : (v < 10000) ? 3 : 
+            (v < 100000) ? 4 : (v < 1000000) ? 5 : (v < 10000000) ? 6 : (v < 100000000) ? 7 : 
+            (v < 1000000000) ? 8 : (v < 10000000000) ? 9 : 10; 
+
+  return r;
+
+}
+
 
 void placement_delete(void *t) {
 
@@ -77,9 +101,32 @@ void create_key() {
 // Check this out later
 //  http://stackoverflow.com/questions/2053029/how-exactly-does-attribute-constructor-work
 
-void* probe_monitor(void* param) {
+void* probe_monitor_sampling(void* param) {
 
-  fprintf(stderr, "[Overhead Monitor] Came here..\n");
+  fprintf(stderr, "Enter sampling monitor thread ..\n");
+
+  list<int>::iterator it;
+  while(true) {
+    for (it=inactive_funcs->begin(); it!=inactive_funcs->end(); ++it){
+      int func_id = *it;
+      func_data* data = &dyn_stats[func_id];
+      prof->start_profile(func_id, prolog_func, sampling_epilog_func);
+      // data->newly_reactivated = true;
+      data->last_activation = getticks();
+      it = inactive_funcs->erase(it);
+      fprintf(stderr, "[Sampler] Reactivated function %d\n", func_id);
+      // fprintf(stderr, "*****> Reactivated function %lu\n", func_id);
+      break;
+    } 
+
+   nanosleep((struct timespec[]){{0, 50000000}}, NULL);
+  }
+
+  return NULL;
+
+}
+
+void* probe_monitor(void* param) {
 
   while (true) {
     int i;
@@ -224,6 +271,9 @@ void Basic_Profiler::initialize(void) {
   char bop_simple[] = "BOP_SIMPLE";
   char bop_advanced[] = "BOP_ADVANCED";
   char count_only[] = "COUNT_ONLY";
+  char sampling[] = "SAMPLING";
+  char empty[] = "EMPTY";
+  char empty_prolog[] = "EMPTY_PROLOG";
 
   if (strategy_str != NULL) {
     if (strcmp(strategy_str, no_backoff) == 0) {
@@ -236,6 +286,12 @@ void Basic_Profiler::initialize(void) {
       strategy = BOP_ADVANCED;
     } else if (strcmp(strategy_str, count_only) == 0) {
       strategy = COUNT_ONLY;
+    } else if (strcmp(strategy_str, sampling) == 0) {
+      strategy = SAMPLING;
+    } else if (strcmp(strategy_str, empty) == 0) {
+      strategy = EMPTY;
+    } else if (strcmp(strategy_str, empty_prolog) == 0) {
+      strategy = EMPTY_PROLOG; 
     }
   }
 
@@ -266,14 +322,23 @@ void Basic_Profiler::initialize(void) {
     dyn_stats[func_id].last_count = 0;
     dyn_stats[func_id].start = -1;
     dyn_stats[func_id].lock = 0;
-    dyn_stats[func_id].histogram = new NBQueue(20);
+    dyn_stats[func_id].var = 0.0;
+    dyn_stats[func_id].avg = 0.0;
+    dyn_stats[func_id].is_leaf= true;
+    for (int j = 0; j < 11; j++) {
+      dyn_stats[func_id].time_histogram[j]=0;
+      dyn_stats[func_id].rate_histogram[j]=0;
+    }
+    // dyn_stats[func_id].time_histogram = new NBQueue(20);
     // We don't need function id here at the moment if required later add from functions iterator->second.
   }
 
   // Spawns the overhead monitor thread if we are following sophisticated back off strategies
+  pthread_t tid; 
   if (strategy == BOP_SIMPLE || strategy == BOP_ADVANCED) {
-    pthread_t tid;
     pthread_create(&tid, NULL, probe_monitor, (void*)NULL);
+  } else if (strategy == SAMPLING) {
+    pthread_create(&tid, NULL, probe_monitor_sampling, (void*)NULL);
   }
 
 }
@@ -291,30 +356,108 @@ void cleanup(void) {
 
   // fprintf(stderr, "FINAL_OVERHEAD %.03f\n", overhead);
 
+  long total_invocations = 0L;
+  for (int i=0; i<function_count;i++) {
+    total_invocations += dyn_stats[i].count;
+  }
+  fprintf(stderr, "\nTotal invocations : %lu\n", total_invocations);
+  fprintf(stderr, "\nTicks per nano seconds : %lf\n", getTicksPerNanoSec());
+  fprintf(stderr, "Total overhead from invocations (s): %lf\n", (total_invocations * 1200 / getTicksPerNanoSec()/1000000000));
+
+  fprintf(out_file, "%-30s%-13s%-13s%-11s%-8s%-10s%-10s%-10s%-10s%-5s\n\n", "Function", "Rate_Hist", "Time_Hist",
+      "Count", "Samples", "Min", "Max", "Avg", "Variance", "Leaf?");
+
   for(int i=0; i < function_count; i++) {
     if (dyn_stats[i].count != 0) {
-      fprintf(out_file, "\nFunction : %s\n", dyn_stats[i].func_name);
+      bool first_row = true;
 
-      fprintf(out_file, "Count : %lu\n", dyn_stats[i].count);
-      fprintf(out_file, "Min : %lu\n", dyn_stats[i].min);
-      fprintf(out_file, "Max : %lu\n", dyn_stats[i].max);
-      fprintf(out_file, "Avg : %lu\n", dyn_stats[i].sum / dyn_stats[i].count);
-      fprintf(out_file, "Deactivations : %d\n", dyn_stats[i].deactivation_count);
-      fprintf(out_file, "Histogram : ");
-      while (!dyn_stats[i].histogram->empty()){
-        fprintf(out_file, "%lu,", dyn_stats[i].histogram->dequeue());
+      uint64_t max_hist_time = 0;
+      int max_hist_time_idx = 0;
+      uint64_t max_hist_rate = 0;
+      int max_hist_rate_idx = 0;
+
+      for (int j=0; j < 11; j++) {
+        if (dyn_stats[i].time_histogram[j] > max_hist_time) {
+          max_hist_time = dyn_stats[i].time_histogram[j];
+          max_hist_time_idx = j;
+        }
+
+        if (dyn_stats[i].rate_histogram[j] > max_hist_rate) {
+          max_hist_rate = dyn_stats[i].rate_histogram[j];
+          max_hist_rate_idx = j;
+        }
       }
-      fprintf(out_file, "\n");
-      fprintf(out_file, "Deactivations : %d\n", dyn_stats[i].deactivation_count);
+
+      char buf[14], buf1[14];
+      snprintf(buf, 13, "%d: %llu", max_hist_time_idx, max_hist_time);
+      snprintf(buf1, 13, "%d: %llu", max_hist_rate_idx, max_hist_rate);
+        
+      double variance = 0;
+      if (dyn_stats[i].count > 2) {
+        variance = dyn_stats[i].var / (dyn_stats[i].count - 1);
+      }
+      double avg = dyn_stats[i].sum / dyn_stats[i].count;
+
+      fprintf(out_file, "%-30s%-13s%-13s%-11llu%-8d%-10llu%-10llu%-10.1lf%-10.1lf%-5s\n", dyn_stats[i].func_name, buf1, buf, 
+              dyn_stats[i].count, dyn_stats[i].deactivation_count+1, dyn_stats[i].min, dyn_stats[i].max, avg, 
+              0.0, dyn_stats[i].is_leaf ? "TRUE" : "FALSE");
+
+    }
+  }
+
+  fprintf(out_file, "\n\n-------- Histograms ------------\n");
+  fprintf(out_file, "%-50s%-13s%-13s\n\n", "Function", "Rate_Hist", "Time_Hist");
+
+  for(int i=0; i < function_count; i++) {
+    bool first_row = true;
+    for(int j=0; j < 11 ; j++) {
+      char buf[14], buf1[14];
+      snprintf(buf, 13, "%d: %llu", j, dyn_stats[i].time_histogram[j]);
+      snprintf(buf1, 13, "%d: %llu", j, dyn_stats[i].rate_histogram[j]);
+
+      if (first_row) {
+        fprintf(out_file, "%-50s%-13s%-13s\n", dyn_stats[i].func_name, buf1, buf);
+        first_row = false;
+      } else {
+        fprintf(out_file, "%-50s%-13s%-13s\n", " ", buf1, buf);
+      }
     }
   }
 
   /*
-  fprintf(out_file, "Prolog overhead : %lu\n", prolog_overhead);
-  fprintf(out_file, "Epilog overhead : %lu\n", epilog_overhead);
-  fprintf(out_file, "Prolog-1 overhead : %lu\n", prolog_overhead_1);
-  fprintf(out_file, "Epilog-1 overhead : %lu\n", epilog_overhead_1);
-  fprintf(out_file, "Basic prolog overhead : %lu\n", basic_prolog_overhead);
+  for(int i=0; i < function_count; i++) {
+    if (dyn_stats[i].count != 0) {
+      fprintf(out_file, "\nFunction : %s\n", dyn_stats[i].func_name);
+      fprintf(out_file, "Leaf: %s\n", dyn_stats[i].is_leaf ? "TRUE" : "FALSE");
+
+      fprintf(out_file, "Count : %lu\n", dyn_stats[i].count);
+      fprintf(out_file, "Min : %lu\n", dyn_stats[i].min);
+      fprintf(out_file, "Max : %lu\n", dyn_stats[i].max);
+      fprintf(out_file, "Avg : %lf\n", dyn_stats[i].avg);
+      if (dyn_stats[i].count < 2) {
+        fprintf(out_file, "Variance : %lf\n", 0.0);
+      } else {
+        fprintf(out_file, "Variance : %lf\n", dyn_stats[i].var / (dyn_stats[i].count - 1));
+      }
+      fprintf(out_file, "Deactivations : %d\n", dyn_stats[i].deactivation_count);
+      fprintf(out_file, "Histogram :\n");
+      
+      fprintf(out_file, "\t0-10    : %lu,", dyn_stats[i].histogram[0]);
+      fprintf(out_file, "\t10-10^2 : %lu,", dyn_stats[i].histogram[1]);
+      fprintf(out_file, "\t10^2-10^3 : %lu,", dyn_stats[i].histogram[2]);
+      fprintf(out_file, "\t10^3-10^4 : %lu,", dyn_stats[i].histogram[3]);
+      fprintf(out_file, "\t10^4-10^5 : %lu,", dyn_stats[i].histogram[4]);
+      fprintf(out_file, "\t10^5-10^6 : %lu,", dyn_stats[i].histogram[5]);
+      fprintf(out_file, "\t10^6-10^7 : %lu,", dyn_stats[i].histogram[6]);
+      fprintf(out_file, "\t10^7-10^8 : %lu,", dyn_stats[i].histogram[7]);
+      fprintf(out_file, "\t10^8-10^9 : %lu,", dyn_stats[i].histogram[8]);
+      fprintf(out_file, "\t10^9-10^10 : %lu,", dyn_stats[i].histogram[9]);
+      fprintf(out_file, "\t10^10-Inf  : %lu,", dyn_stats[i].histogram[10]);
+
+      fprintf(out_file, "\n");
+      fprintf(out_file, "Deactivations : %d\n", dyn_stats[i].deactivation_count);
+    }
+  }
   */
 
   fclose(out_file);
@@ -339,6 +482,12 @@ void start_profiler() {
   inactive_funcs = new list<int>;
 
   prof = new Basic_Profiler;
+  if (strategy == COUNT_ONLY) {
+    prof->profile_all(count_only_prolog_func, NULL);
+  } else if (strategy == EMPTY_PROLOG) {
+    prof->profile_all(empty_prolog_func, NULL);
+  }
+
   prof->profile_all(NULL, NULL);
 
   atexit(cleanup); // This seems to be a viable alternative to the destructor
@@ -370,8 +519,13 @@ void Profiler::start_profile(string method, void (*prolog_func)() , void (*epilo
     deactivateProbe(probe_end_annotation);
     deactivateProbe(probe_start_annotation);
 
-    activateProbe(probe_start_annotation, (this->profiler_prolog));
-    activateProbe(probe_end_annotation, (this->profiler_epilog));
+    if (this->profiler_prolog != NULL) {
+      activateProbe(probe_start_annotation, (this->profiler_prolog));
+    }
+
+    if (this->profiler_epilog != NULL) {
+      activateProbe(probe_end_annotation, (this->profiler_epilog));
+    }
   }
 }
 
@@ -398,8 +552,13 @@ void Profiler::start_profile(int method_id, void (*prolog_func)(), void (*epilog
     deactivateProbe(probe_end_annotation);
     deactivateProbe(probe_start_annotation);
 
-    activateProbe(probe_start_annotation, (this->profiler_prolog));
-    activateProbe(probe_end_annotation, (this->profiler_epilog));
+    if (this->profiler_prolog != NULL) {
+      activateProbe(probe_start_annotation, (this->profiler_prolog));
+    }
+
+    if (this->profiler_epilog != NULL) {
+      activateProbe(probe_end_annotation, (this->profiler_epilog));
+    }
   }
 }
 
@@ -490,9 +649,17 @@ void Profiler::turn_off_profiler() {
   delete deactivated_probes;
 }
 
+void empty_prolog_func() {
+
+}
+
+void empty_epilog_func() {
+
+}
 
 void count_only_prolog_func() {
   
+  /*
   long func_id = 0;
 
   asm(
@@ -510,6 +677,11 @@ void count_only_prolog_func() {
   data->count += 1;
 
   __sync_bool_compare_and_swap(&(data->lock), 1 , 0);
+  */
+
+}
+
+void count_only_epilog_func() {
 
 }
 
@@ -547,11 +719,17 @@ void prolog_func() {
   if (!allocated) {
     ts = new ts_stack;
     allocated = true;
+    leaf_counter = 0;
 
     pthread_once(&tls_init_flag, create_key);
     pthread_setspecific(key, ts);
   } else {
     ts = (ts_stack*)pthread_getspecific(key);
+    if (leaf_counter == ULLONG_MAX){
+      leaf_counter = 0;
+    } else {
+      leaf_counter++;
+    }
   }
 
   /*
@@ -560,7 +738,7 @@ void prolog_func() {
   } */
 
   ticks time = getticks();
-  invocation_data i_data = {time, func_id,};
+  invocation_data i_data = {time, func_id, leaf_counter,};
   ts->push(i_data); 
 
   /*
@@ -703,13 +881,118 @@ void fixed_backoff_epilog_func() {
   data->sum = data->sum + elapsed;
   data->count += 1;
 
-  if (data->count > sample_size) {
+  if (data->count >=  sample_size) {
+    data->status = 0;
     prof->stop_profile(func_id);
   }
   
   __sync_bool_compare_and_swap(&(data->lock), 1 , 0);
 
 }
+
+void sampling_epilog_func() {
+
+  uint64_t addr;
+  uint64_t offset = 2;
+
+  // Gets [%rbp + 16] to addr. This is a hacky way to get the function parameter (annotation string) pushed to the stack
+  // before the call to this method. Ideally this should be accessible by declaring an explicit method paramter according
+  // x86 calling conventions AFAIK. But it fails to work that way hence we do the inline assembly to get it.
+  // Fix this elegantly with a method parameter should be a TODO
+  long func_id = 0;
+
+  asm(
+      "movq %%rdx, %0\n\t"
+      : "=r"(func_id)
+      :
+      : "%rdx"
+     ); 
+
+  func_data* data = &dyn_stats[func_id];
+  ts_stack* ts = (ts_stack*)pthread_getspecific(key);
+
+  ticks start;
+  ticks elapsed;
+
+  unsigned long long initial_leaf_count = 0;
+  
+  // This is to remove data from deactivated methods which failed to clean up
+  while (!ts->empty() && func_id != ts->top().func_id) {
+    ts->pop();
+  } 
+  
+  if (!ts->empty()) {
+
+    if (data->last_deactivation > ts->top().timestamp) {
+      // This is when there has been a deactivation and current function prolog has not been 
+      // executed due to the reactivation happening after the function entry.
+      ts->pop();
+      return;
+    }
+    start = ts->top().timestamp;
+    initial_leaf_count = ts->top().leaf_count;
+    ts->pop();
+  } else {
+    // LOG_ERROR("Mismatching function epilog..\n");
+    return;
+  }
+
+  // Acquire lock
+  while (!(__sync_bool_compare_and_swap(&(data->lock), 0 , 1)));
+
+  ticks end = getticks();
+  elapsed = end - start; 
+
+  if (elapsed < data->min || data->min == 0) {
+    data->min = elapsed;
+  }
+
+  if (elapsed > data->max) {
+    data->max = elapsed;
+  }
+
+  // This segfaults mysteriously
+  /*
+  if (!strcmp(data->func_name, "CalculateOffsetParam")) {
+     fprintf(stderr, "[Epilog] %lf\n", data->var);
+  }
+  */
+
+  if (leaf_counter > initial_leaf_count) {
+    data->is_leaf = false;
+    ticks elapsed_backup = elapsed;
+    elapsed = elapsed - 2 * getZCAOverheadTicks() * (leaf_counter - initial_leaf_count);
+    if (elapsed <= 0) {
+      elapsed = elapsed_backup;
+    }
+  } else if (leaf_counter < initial_leaf_count){
+    fprintf(stderr, "%llu\n", leaf_counter);
+    LOG_INFO("Leaf counter reset..\n");
+  }
+
+  data->sum = data->sum + elapsed;
+  data->count += 1;
+  double delta = elapsed - data->avg;
+  data->avg = data->avg + delta / data->count;
+  data->var = data->var + delta * (elapsed - data->avg);
+
+  data->time_histogram[transfer(elapsed)]++;
+
+  long new_count = data->count - data->last_count;
+  if (new_count >= sample_size) {
+    data->last_deactivation = end;
+    inactive_funcs->push_back(func_id);
+    prof->stop_profile(func_id);
+    data->deactivation_count++;
+    uint64_t message_rate = new_count / ((end - data->last_activation) / getTicksPerMilliSec());
+    data->rate_histogram[transfer(message_rate)]++;
+    data->last_count = data->count;
+  }
+  
+  __sync_bool_compare_and_swap(&(data->lock), 1 , 0);
+
+}
+
 
 void bop_simple_epilog_func() {
 
@@ -797,7 +1080,7 @@ void bop_simple_epilog_func() {
     // fprintf(stderr,"Registering %lu for deactivation..\n", func_id);
     // deactivation_queue->enqueue(func_id);
     long msg_rate = new_count / ((end / 1000000L - data->last_activation)/ getTicksPerMilliSec()); // Per millisecond
-    dyn_stats[func_id].histogram->enqueue(msg_rate);
+    // dyn_stats[func_id].histogram->enqueue(msg_rate);
 
     // fprintf(stderr, "Message rate for func id %lu : %lu\n", func_id, msg_rate);
 
@@ -845,5 +1128,11 @@ void Basic_Profiler::set_profiler_function() {
   } else if (strategy == COUNT_ONLY) {
     this->profiler_prolog = count_only_prolog_func; 
     this->profiler_epilog = NULL;
+  } else if (strategy == SAMPLING) {
+    this->profiler_prolog = prolog_func; 
+    this->profiler_epilog = sampling_epilog_func;
+  } else if (strategy == EMPTY) {
+    this->profiler_prolog = empty_prolog_func; 
+    this->profiler_epilog = empty_epilog_func;
   }
 }

@@ -66,6 +66,7 @@ int MSG_RATE_THRESHOLD = 50;
 typedef struct invocation_data {
   ticks timestamp;
   long func_id;
+  unsigned long long leaf_count;
 } invocation_data;
 
 typedef stack<invocation_data> ts_stack;
@@ -91,10 +92,14 @@ typedef struct func_data {
   uint64_t min;
   uint64_t max;
   uint64_t sum;
-  uint64_t avg;
-  NBQueue* histogram;
+  double avg;
+  double var;
+  uint64_t time_histogram[11];
+  uint64_t rate_histogram[11];
+  // NBQueue* histogram;
   int lock;
   int status; // 2 - Extended 1 - Basic 0 - Disabled
+  bool is_leaf;
 } func_data;
 
 typedef struct thr_func_data {

@@ -80,6 +80,11 @@ extern void initZCAService(); //__attribute__((constructor));
  */
 extern double getZCAOverhead();
 
+/** Get per method approximate overhead induced by zca probes in ticks 
+ */
+extern double getZCAOverheadTicks();
+
+
 /** Get zca probe initialization overhead
  */
 extern long getInitOverhead();
