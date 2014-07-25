@@ -5,7 +5,7 @@ all: main.exe
 # main_vt.exe
 
 main.exe: main.c
-	$(CC) $(CFLAGS) main.c -o main.exe
+	$(CC) -fast $(CFLAGS) main.c -o main.exe
 
 main_vt.exe: main.c
 	$(VTCC) $(CFLAGS) main.c -o main_vt.exe
