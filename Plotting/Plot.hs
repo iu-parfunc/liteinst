@@ -57,8 +57,9 @@ main = do
 
   putStrLn $ "Using data at GIT_DEPTH = " ++ show git 
   
-  -- Collec all data of a given benchmark on a given machine. 
-  let allData = slice "PROGNAME" benchmark cols values
+  -- Collect all data of a given benchmark on a given machine. 
+  let allData = slice "PROGNAME" benchmark cols
+                 (slice "GIT_DEPTH" (show git) cols values)
   
   -- If there are more than one value at this "git_depth", average them out.
   let medianTimes = map (extractVariantMedianTime cols allData) variants
