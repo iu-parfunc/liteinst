@@ -414,10 +414,11 @@ void setupStubs()
       if (status != -1) {
         // Fill annotation information for later use in probe activation/ deactivation
         data->stubLocation = stub_address;
+        data->fun = NULL;
 
         // printf("Probe address %d : %p  Stub address : %p\n", i, probe_address, stub_address);
-        modify_probe_site(probe_address, stub_address, &data, print_fn2);
-        data->active = true;
+        // modify_probe_site(probe_address, stub_address, &data, print_fn2);
+        data->active = false;
       } else {
         printf("Memory allocation failed..\n");
       }
@@ -445,14 +446,15 @@ int activateProbe(std::string label, void (*fun)())
     for (std::list<ann_data*>::iterator it =  ann_list->begin(); it != ann_list->end(); ++it) {
       ann_data* data = *it;
 
-      if (data != NULL && data != NULL && data->active == false) {
+      if (data != NULL && data->active == false) {
         uint64_t* stub_address = data->stubLocation;
         uint64_t* probe_address = (uint64_t*) data->anchor;
 
         if (data->fun != fun) {
-          // printf("Current function : %p New function : %p\n", ann_info->fun, fun);
+          // fprintf(stderr, "Current function : %p New function : %p\n", data->fun, fun);
           unsigned char* probe_address = (unsigned char*) (data->anchor);
           modify_probe_site(probe_address, data->stubLocation, &data, fun);
+          data->fun = fun;
           data->active = true;
           return 0;
         }
@@ -517,7 +519,7 @@ int deactivateProbe(std::string label) {
     // ann_data* ann_info = data.second;
     for (std::list<ann_data*>::iterator it =  ann_list->begin(); it != ann_list->end(); ++it) {
       ann_data* data = *it;
-      if (data != NULL && data != NULL && data->active == true) {
+      if (data != NULL && data->active == true) {
         uint64_t* probe = (uint64_t*) data->anchor;
         uint64_t old_val = *probe;
 

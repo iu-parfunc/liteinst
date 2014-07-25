@@ -103,8 +103,6 @@ void create_key() {
 
 void* probe_monitor_sampling(void* param) {
 
-  fprintf(stderr, "Enter sampling monitor thread ..\n");
-
   list<int>::iterator it;
   while(true) {
     for (it=inactive_funcs->begin(); it!=inactive_funcs->end(); ++it){
@@ -114,7 +112,7 @@ void* probe_monitor_sampling(void* param) {
       // data->newly_reactivated = true;
       data->last_activation = getticks();
       it = inactive_funcs->erase(it);
-      fprintf(stderr, "[Sampler] Reactivated function %d\n", func_id);
+      // fprintf(stderr, "[Sampler] Reactivated function %d\n", func_id);
       // fprintf(stderr, "*****> Reactivated function %lu\n", func_id);
       break;
     } 
@@ -775,6 +773,8 @@ void no_backoff_epilog_func() {
   ticks start;
   ticks elapsed;
   
+  unsigned long long initial_leaf_count = 0;
+
   // This is to remove data from deactivated methods which failed to clean up
   while (!ts->empty() && func_id != ts->top().func_id) {
     ts->pop();
@@ -789,6 +789,7 @@ void no_backoff_epilog_func() {
       return;
     }
     start = ts->top().timestamp;
+    initial_leaf_count = ts->top().leaf_count;
     ts->pop();
   } else {
     // LOG_ERROR("Mismatching function epilog..\n");
@@ -801,7 +802,6 @@ void no_backoff_epilog_func() {
   ticks end = getticks();
   elapsed = end - start; 
 
-  /*
   if (elapsed < data->min || data->min == 0) {
     data->min = elapsed;
   }
@@ -809,11 +809,42 @@ void no_backoff_epilog_func() {
   if (elapsed > data->max) {
     data->max = elapsed;
   }
+
+  // This segfaults mysteriously
+  /*
+  if (!strcmp(data->func_name, "CalculateOffsetParam")) {
+     fprintf(stderr, "[Epilog] %lf\n", data->var);
+  }
   */
+
+  if (leaf_counter > initial_leaf_count) {
+    data->is_leaf = false;
+    ticks elapsed_backup = elapsed;
+    elapsed = elapsed - 2 * getZCAOverheadTicks() * (leaf_counter - initial_leaf_count);
+    if (elapsed <= 0) {
+      elapsed = elapsed_backup;
+    }
+  } else if (leaf_counter < initial_leaf_count){
+    fprintf(stderr, "%llu\n", leaf_counter);
+    LOG_INFO("Leaf counter reset..\n");
+  }
 
   data->sum = data->sum + elapsed;
   data->count += 1;
-  
+  double delta = elapsed - data->avg;
+  data->avg = data->avg + delta / data->count;
+  data->var = data->var + delta * (elapsed - data->avg);
+
+  data->time_histogram[transfer(elapsed)]++;
+
+  long new_count = data->count - data->last_count;
+  if (new_count >= sample_size) {
+    uint64_t message_rate = new_count / ((end - data->last_activation) / getTicksPerMilliSec());
+    data->rate_histogram[transfer(message_rate)]++;
+    data->last_count = data->count;
+    data->last_activation = end;
+  }
+ 
   __sync_bool_compare_and_swap(&(data->lock), 1 , 0);
 
 }
@@ -943,6 +974,8 @@ void sampling_epilog_func() {
   ticks end = getticks();
   elapsed = end - start; 
 
+  // Start
+  //
   if (elapsed < data->min || data->min == 0) {
     data->min = elapsed;
   }
@@ -977,6 +1010,9 @@ void sampling_epilog_func() {
   data->var = data->var + delta * (elapsed - data->avg);
 
   data->time_histogram[transfer(elapsed)]++;
+
+  // End
+  //
 
   long new_count = data->count - data->last_count;
   if (new_count >= sample_size) {
