@@ -36,7 +36,7 @@ static struct timeval stub_gen_tvDiff;
 
 void calibrateTicks();
 
-int ZCA_OVERHEAD = 1200; // Assuming 1000 cycles overhead per function call. Need to measure this at runtime
+int ZCA_OVERHEAD = 600; // Assuming 1000 cycles overhead per function call. Need to measure this at runtime
 int ZCA_INIT_OVERHEAD = 0;
 const int NANO_SECONDS_IN_SEC = 1000000000;
 
@@ -691,6 +691,10 @@ double getTicksPerNanoSec() {
 
 double getZCAOverhead() {
   return ZCA_OVERHEAD/g_TicksPerNanoSec;
+}
+
+double getZCAOverheadTicks() {  
+  return ZCA_OVERHEAD;
 }
 
 struct timespec *timeSpecDiff(struct timespec *ts1, struct timespec *ts2)
