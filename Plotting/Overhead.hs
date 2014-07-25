@@ -114,36 +114,7 @@ main = do
                      Nothing
                      (real_overheads !! 1) -- second data series 
   
-{- 
-  let dat = unprofiled_values ++ gprof_values ++ dyna05_values ++ dyna50_values
-      tag = ["unprofiled", "gprof", "dyna05", "dyna50"]
 
-  let the_graph = BarGraph "#F00"
-                  "gzip16"
-                  $zip tag (map convert dat) 
-
-  -- let graph1 =
-  --       BarGraph "#F00"
-  --                "unprofiled"
-  --                $zip (repeat "unprofiled") (map convert unprofiled_values)
-
-  -- let graph2 =
-  --       BarGraph "#FF0"
-  --                "gprof"
-  --                $zip (repeat "gprof") (map convert gprof_values)
-
-
-  -- let graph3 =
-  --       BarGraph "#0F0"
-  --                "dyna05"
-  --                $zip (repeat "dyna05") (map convert dyna05_values)
-
-  -- let graph4 =
-  --       BarGraph "#00f"
-  --                "dyna50"
-  --                $zip (repeat "dyna50") (map convert dyna50_values)
-
--} 
   let plot = Plot {pLines = [dyna05_graph,dyna50_graph],
                    pPoints = [],
                    pBars = [],
