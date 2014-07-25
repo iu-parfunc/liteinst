@@ -29,7 +29,7 @@ table_name = "Dynaprof_Benchmarks"
 benchmark = "h264ref-9.3" 
 
 -- what computer
-machine = "tank"  -- "hive" 
+machine = "hive" -- "tank"
 
 variants = [ "bop_simple_05_10000"
            , "bop_simple_50_10000" ]
@@ -79,7 +79,8 @@ main = do
       base = snd $ head unprofiled_avg
       
 
-  let overhead (g,x) =(g, base / x)
+  -- Calc overhead percentage. 
+  let overhead (g,x) =(g, (x - base) / x)
 
       real_overheads = map (map overhead) avg_combo
 
@@ -87,15 +88,15 @@ main = do
       
   
   putStrLn "Showing values"
-  putStrLn "------------------------------------------------------------"
+  putStrLn "--RUNTIMES----------------------------------------------------------"
   putStrLn $ show run_times 
-  putStrLn "------------------------------------------------------------"
+  putStrLn "--AVG COMBO----------------------------------------------------------"
   putStrLn $ show avg_combo
-  putStrLn "------------------------------------------------------------"
+  putStrLn "--OVERHEADS----------------------------------------------------------"
   putStrLn $ show overheads
-  putStrLn "------------------------------------------------------------"
+  putStrLn "--UNPROFILED AVERAGE----------------------------------------------------------"
   putStrLn $ show unprofiled_avg
-  putStrLn "------------------------------------------------------------"
+  putStrLn "--REAL OVERHEADS ----------------------------------------------------------"
   putStrLn $ show real_overheads
   putStrLn "------------------------------------------------------------"
 
