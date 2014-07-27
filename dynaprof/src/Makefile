@@ -16,8 +16,8 @@ OPTS=-DLOG_LEVEL=2 -DPROFILE=1 # -DON
 INSTALLD=../build
 BENCHMARKS=../../benchmarks/gzip-1.6/instrumented ../../benchmarks/grep-2.18/instrumented/ ../../benchmarks/grep-2.18/instrumented/src
 
-HDRS = zca-toggle.hpp profiler_types.hpp dynaprof.h logger.h  nbqueue.h
-CODE = profiler.cpp nbqueue.cpp
+HDRS = zca-toggle.hpp ptypes.hpp dynaprof.h logger.h  nbqueue.h
+CODE = prof.cpp nbqueue.cpp
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 SRC = $(HDRS) $(CODE)
@@ -47,14 +47,14 @@ libdynaprof.so: $(OBJ) $(DEPS)
 	$(CC) $(LIBS) -shared -Wl,-soname,libdynaprof.so -Wl,-init,initZCAService -o libdynaprof.so $(OBJ) $(DEPS) -lc
 
 libdynaprof.a : $(OBJ) $(DEPS)
-	$(AR) rc libdynaprof.a profiler.o nbqueue.o
+	$(AR) rc libdynaprof.a prof.o nbqueue.o
 
 tests : build tests.cpp
 	$(CPP) $(CFLAGS) $(OPTS) tests.cpp libdynaprof.a $(LIBS) -lrt -o tests.exe
 	./tests.exe
 
-prof : build profiler.o
-	$(AR) rc libdynprof.a profiler.o
+prof : build prof.o
+	$(AR) rc libdynprof.a prof.o
 	$(CPP) $(OPTS) test_profiler.cpp libdynprof.a libzca-toggle.a $(LIBS) -o prof.exe
 	./prof.exe
 
