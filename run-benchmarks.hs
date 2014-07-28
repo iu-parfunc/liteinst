@@ -30,6 +30,7 @@ benches = [
 
 -- h264ref-9.3
    (mkBenchmark "benchmarks/h264ref-9.3/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "h264ref-9.3" },
+      (mkBenchmark "benchmarks/h264ref-9.3/unprofiled-instrumented/Makefile" [] (setVariant "unprofiled-inst")) { progname = Just "h264ref-9.3" },
    (mkBenchmark "benchmarks/h264ref-9.3/gprof/Makefile" [] (setVariant "gprof")) { progname = Just "h264ref-9.3" },
 
    (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/Makefile" [] bop_05) { progname = Just "h264ref-9.3" },
