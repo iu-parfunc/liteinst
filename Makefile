@@ -7,7 +7,9 @@ ifeq ($(CABAL),)
 endif
 
 ifeq ($(JENKINS_GHC),)
-  JENKINS_GHC=7.6.3
+#  JENKINS_GHC=7.6.3
+# Changing default [2014.07.28]:
+  JENKINS_GHC=7.8.2
 endif
 
 # TRIALS=3
