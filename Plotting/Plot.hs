@@ -17,7 +17,6 @@ csec = "MQ72ZWDde_1e1ihI5YE9YlEi"
 table_name = "Dynaprof_Benchmarks" 
 
 machine = "hive" -- "tank"
-git = "306"
 
 benchmark = "h264ref-9.3" -- "gzip" 
 
@@ -36,7 +35,7 @@ main = do
   --tab <- pullEntireTable cid csec table_name
   --tab <- pullSelectively cid csec table_name "GIT_DEPTH" "266"
 
-  tab <- pullSelectively cid csec table_name "GIT_DEPTH" git
+  tab <- pullSelectively cid csec table_name "HOSTNAME" machine
          
 
   
@@ -50,10 +49,17 @@ main = do
   -- and cols is a list of strings naming each column. 
   let (ColData cols values) = tab 
 
-  -- Collec all data of a given benchmark on a given machine. 
-  let allData =
-        slice "HOSTNAME" machine cols 
-          (slice "PROGNAME" benchmark cols values) 
+  -- TODO: Expand functionality of the "pulltable" functions to do more
+  -- more filtering in the pull down phase.
+  let git = case (extractColumn "GIT_DEPTH" cols values) of
+        [] -> error "This table must be broken"
+        (xs) -> head $ reverse $ sort (map convertInt xs)
+
+  putStrLn $ "Using data at GIT_DEPTH = " ++ show git 
+  
+  -- Collect all data of a given benchmark on a given machine. 
+  let allData = slice "PROGNAME" benchmark cols
+                 (slice "GIT_DEPTH" (show git) cols values)
   
   -- If there are more than one value at this "git_depth", average them out.
   let medianTimes = map (extractVariantMedianTime cols allData) variants

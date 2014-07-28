@@ -32,8 +32,8 @@ benches = [
    (mkBenchmark "benchmarks/h264ref-9.3/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "h264ref-9.3" },
    (mkBenchmark "benchmarks/h264ref-9.3/gprof/Makefile" [] (setVariant "gprof")) { progname = Just "h264ref-9.3" },
 
-   (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/bop_simple_05_10000/Makefile" [] bop_05) { progname = Just "h264ref-9.3" },
-   (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/bop_simple_50_10000/Makefile" [] bop_50) { progname = Just "h264ref-9.3" },
+   (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/Makefile" [] bop_05) { progname = Just "h264ref-9.3" },
+   (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/Makefile" [] bop_50) { progname = Just "h264ref-9.3" },
  --  (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/count_only/Makefile" [] count_only) { progname = Just "h264ref-9.3" },
    (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/fixed_backoff_10000/Makefile" [] fixed_backoff_10000) { progname = Just "h264ref-9.3" },
    (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/fixed_backoff_1000000/Makefile" [] fixed_backoff_1000000) { progname = Just "h264ref-9.3" },
@@ -65,7 +65,7 @@ bop_05 = And [Set (Variant "bop_simple_05_10000") (RuntimeEnv "DYN_STRATEGY" "BO
          
 bop_50 = And [Set (Variant "bop_simple_50_10000") (RuntimeEnv "DYN_STRATEGY" "BOP_SIMPLE")
              ,Set NoMeaning                       (RuntimeEnv "DYN_SAMPLE_SIZE" "10000")
-             ,Set NoMeaning                       (RuntimeEnv "DYN_OVERHEAD" "0.55")]
+             ,Set NoMeaning                       (RuntimeEnv "DYN_OVERHEAD" "0.50")] --should be 50 right ?? 
 
 count_only = Set (Variant "count_only") (RuntimeEnv "DYN_STRATEGY" "COUNT_ONLY")
 
