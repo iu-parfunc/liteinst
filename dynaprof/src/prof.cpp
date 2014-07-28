@@ -207,7 +207,7 @@ void Basic_Profiler::initialize(void) {
 
   if (strategy == SAMPLING) {
     pthread_create(&tid, NULL, probe_monitor_sampling, (void*)NULL);
-  } else {
+  } else if (strategy == NO_BACKOFF) {
     pthread_create(&tid, NULL, probe_monitor, (void*)NULL);
   }
 
@@ -516,6 +516,7 @@ void Profiler::turn_off_profiler() {
   delete deactivated_probes;
 }
 
+
 /*** NO_BACKOFF_STRATEGY ***/
 
 void prolog_func() {
@@ -691,6 +692,48 @@ void no_backoff_epilog_func() {
   } 
 }
 
+/** BOUNDED_OVERHEAD_PROFILING_STRATEGY **/
+void bop_epilog_func() {
+
+}
+
+/** COUNT_ONLY_STRATEGY **/
+
+void count_only_prolog_func() {
+
+  __thread static bool allocated;
+
+  uint64_t addr;
+  uint64_t offset = 2;
+
+  // Gets [%rbp + 16] to addr. This is a hacky way to get the function parameter (annotation string) pushed to the stack
+  // before the call to this method. Ideally this should be accessible by declaring an explicit method paramter according
+  // x86 calling conventions AFAIK. But it fails to work that way hence we do the inline assembly to get it.
+  // Fix this elegantly with a method parameter should be a TODO
+  long func_id = 0;
+
+  asm(
+      "movq %%rdx, %0\n\t"
+      : "=r"(func_id)
+      :
+      : "%rdx"
+     ); 
+
+  if (!allocated) {
+    dyn_thread_stats = (dyn_thread_data*)calloc(function_count, sizeof(dyn_thread_data));
+
+    for (int i=0; i < function_count; i++) {
+      dyn_thread_stats[i].is_leaf = true;
+    }
+
+    allocated = true;
+    prof->register_thread_data(dyn_thread_stats); 
+  } 
+
+  dyn_thread_data* t_stats = &dyn_thread_stats[func_id];
+  t_stats->count += 1;
+
+}
 
 /*** SAMPLING_STRATEGY ***/
 
@@ -807,6 +850,10 @@ void sampling_epilog_func() {
   } 
 }
 
+/** EMPTY_STRATEGY **/
+void empty_func() {
+
+}
 
 void Basic_Profiler::set_profiler_function() {
 
@@ -818,6 +865,14 @@ void Basic_Profiler::set_profiler_function() {
     case SAMPLING:
       this->profiler_prolog = prolog_func;
       this->profiler_epilog = sampling_epilog_func;
+      break;
+    case COUNT_ONLY:
+      this->profiler_prolog = count_only_prolog_func;
+      this->profiler_epilog = NULL;
+      break;
+    case EMPTY:
+      this->profiler_prolog = empty_func;
+      this->profiler_epilog = empty_func;
       break;
     default:
       this->profiler_prolog = prolog_func;
