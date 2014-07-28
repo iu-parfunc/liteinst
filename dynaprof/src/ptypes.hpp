@@ -41,7 +41,7 @@ typedef struct dyn_global_data {
   ticks latest_activation_time;
   uint64_t count_at_last_activation;
   int lock;
-  int active;
+  bool active;
 
 } dyn_global_data;
 
