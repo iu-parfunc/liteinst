@@ -24,7 +24,7 @@ benches :: [Benchmark DefaultParamMeaning]
 benches = 
   [ (mkBenchmark ("benchmarks/gzip-1.6/"++varname++"/Makefile") [] variant) { progname = Just "gzip16" }
   | (varname,variant) <- [ (v, setVariant v) | v <- ["gprof", "unprofiled", "pebil", "pin"]] ++
-                         [ ("dynaprof", fixed_backoff n) | n <- backoffLevels ]
+                         [ ("dynaprof", fixed_backoff) ]
   ] ++ 
    [
 -- h264ref-9.3
@@ -95,10 +95,10 @@ bop_50 = And [Set (Variant "bop_simple_50_10000") (RuntimeEnv "DYN_STRATEGY" "BO
 count_only = Set (Variant "count_only") (RuntimeEnv "DYN_STRATEGY" "COUNT_ONLY")
 
 
-fixed_backoff num = And [ Set (Variant ("fixed_backoff_"++show num)) 
+fixed_backoff = Or [ And [ Set (Variant ("fixed_backoff_"++show num)) 
                                         (RuntimeEnv "DYN_STRATEGY" "FIXED_BACKOFF")
-                        , Set NoMeaning (RuntimeEnv "DYN_SAMPLE_SIZE" (show num)) ]
-
+                         , Set NoMeaning (RuntimeEnv "DYN_SAMPLE_SIZE" (show num)) ]
+                   | num <- backoffLevels ]
 
 fixed_backoff_10000 = And [Set (Variant "fixed_backoff_10000") (RuntimeEnv "DYN_STRATEGY" "FIXED_BACKOFF")
                           ,Set NoMeaning                       (RuntimeEnv "DYN_SAMPLE_SIZE" "10000")]
