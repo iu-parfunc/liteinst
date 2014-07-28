@@ -80,7 +80,7 @@ main = do
       
 
   -- Calc overhead percentage. 
-  let overhead (g,x) =(g, (x - base) / x)
+  let overhead (g,x) =(g, (x - base) / base) -- ((x - base) / x)
 
       real_overheads = map (map overhead) avg_combo
 
