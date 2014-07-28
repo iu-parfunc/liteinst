@@ -68,7 +68,10 @@ benches = [
    (mkBenchmark "benchmarks/grep-2.18/dynaprof/Makefile" [] (setVariant "dynaprof")) { progname = Just "grep218" },
    (mkBenchmark "benchmarks/grep-2.18/pin/Makefile" [] (setVariant "pin")) { progname = Just "grep218" },
    (mkBenchmark "benchmarks/grep-2.18/pebil/Makefile" [] (setVariant "pebil")) { progname = Just "grep218" },
-   (mkBenchmark "benchmarks/grep-2.18/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "grep218" }
+   (mkBenchmark "benchmarks/grep-2.18/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "grep218" },
+
+   (mkBenchmark "benchmarks/raxml/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "RAxML" },
+   (mkBenchmark "benchmarks/raxml/dynaprof/Makefile"   [] (setVariant "dynaprof"))   { progname = Just "RAxML" }
 
   ]
 
