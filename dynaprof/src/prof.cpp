@@ -31,8 +31,6 @@ using namespace std;
 
 Profiler* prof;
 
-list<int>* inactive_funcs;
-
 NBQueue* heavy_hitters;
 
 __thread static unsigned long long leaf_counter = 0;
@@ -67,6 +65,8 @@ int transfer(long v) {
 // Check this out later
 //  http://stackoverflow.com/questions/2053029/how-exactly-does-attribute-constructor-work
 
+/** Monitoring thread implementations for different strategies **/
+
 void* probe_monitor(void* param) {
 
   while(true) {
@@ -80,29 +80,36 @@ void* probe_monitor(void* param) {
     nanosleep((struct timespec[]){{0, 50000000}}, NULL);
   }
 
+  return NULL;
 
-  /*
-  list<int>::iterator it;
+}
+
+void* probe_monitor_sampling(void* param) {
+
   while(true) {
-    for (it=inactive_funcs->begin(); it!=inactive_funcs->end(); ++it){
-      int func_id = *it;
-      func_data* data = &dyn_stats[func_id];
-      prof->start_profile(func_id, prolog_func, sampling_epilog_func);
-      // data->newly_reactivated = true;
-      data->last_activation = getticks();
-      it = inactive_funcs->erase(it);
-      // fprintf(stderr, "[Sampler] Reactivated function %d\n", func_id);
-      // fprintf(stderr, "*****> Reactivated function %lu\n", func_id);
-      break;
-    } 
+    ticks current_time = getticks();
+    for (int j=0; j < function_count; j++) {
+      if(dyn_global_stats[j].active) {
+        dyn_global_stats[j].count = 0;
+        for (int i=0; i < thr_array_idx; i++) {
+          dyn_global_stats[j].count += dyn_thread_stats_arr[i][j].count;
+        }
+      } else {
+        dyn_global_stats[j].count_at_last_activation = dyn_global_stats[j].count;
+        dyn_global_stats[j].latest_activation_time = current_time;
+        dyn_global_stats[j].active = true;
+        prof->start_profile(j, NULL, NULL);
+        // fprintf(stderr, "[Monitor_thread] Reactivated function : %d\n", j);
+      }
+    }
 
-   nanosleep((struct timespec[]){{0, 50000000}}, NULL);
+    nanosleep((struct timespec[]){{0, 50000000}}, NULL);
   }
-  */
 
   return NULL;
 
 }
+
 
 // __attribute__((constructor))
 void Basic_Profiler::initialize(void) {
@@ -137,8 +144,6 @@ void Basic_Profiler::initialize(void) {
   if (strategy_str != NULL) {
     if (strcmp(strategy_str, no_backoff) == 0) {
       strategy = NO_BACKOFF;
-    } else if (strcmp(strategy_str, fixed_backoff) == 0) {
-      strategy = FIXED_BACKOFF;
     } else if (strcmp(strategy_str, bop_simple) == 0) {
       strategy = BOP_SIMPLE;
     } else if (strcmp(strategy_str, bop_advanced) == 0) {
@@ -169,9 +174,8 @@ void Basic_Profiler::initialize(void) {
     int func_id = iterator->second;
 
     const char* func_name = (iterator->first).c_str();
-    // string func_name = iterator->first;
     dyn_global_stats[func_id].func_name = strdup(func_name); // dup this and delete functions??
-    dyn_global_stats[func_id].active = 1;
+    dyn_global_stats[func_id].active = true;
     dyn_global_stats[func_id].latest_activation_time = current_time;
     dyn_global_stats[func_id].is_leaf= true;
 
@@ -200,13 +204,12 @@ void Basic_Profiler::initialize(void) {
   // Spawns the overhead monitor thread if we are following sophisticated back off strategies
   pthread_t tid; 
   pthread_create(&tid, NULL, probe_monitor, (void*)NULL);
-  /*
-  if (strategy == BOP_SIMPLE || strategy == BOP_ADVANCED) {
-    pthread_create(&tid, NULL, probe_monitor, (void*)NULL);
-  } else if (strategy == SAMPLING) {
+
+  if (strategy == SAMPLING) {
     pthread_create(&tid, NULL, probe_monitor_sampling, (void*)NULL);
+  } else {
+    pthread_create(&tid, NULL, probe_monitor, (void*)NULL);
   }
-  */
 
 }
 
@@ -350,7 +353,6 @@ void start_profiler() {
 
   // deactivation_queue = new NBQueue(20);
   heavy_hitters = new NBQueue(20);
-  inactive_funcs = new list<int>;
 
   prof = new Basic_Profiler;
   prof->profile_all(NULL, NULL);
@@ -514,7 +516,9 @@ void Profiler::turn_off_profiler() {
   delete deactivated_probes;
 }
 
-void fixed_prolog_func() {
+/*** NO_BACKOFF_STRATEGY ***/
+
+void prolog_func() {
 
   __thread static bool allocated;
 
@@ -583,7 +587,7 @@ void fixed_prolog_func() {
 
 }
 
-void fixed_epilog_func() {
+void no_backoff_epilog_func() {
 
   uint64_t addr;
   uint64_t offset = 2;
@@ -687,10 +691,137 @@ void fixed_epilog_func() {
   } 
 }
 
-void Basic_Profiler::set_profiler_function() {
-  if (strategy == NO_BACKOFF) {
-    this->profiler_prolog = fixed_prolog_func; 
-    this->profiler_epilog = fixed_epilog_func;
+
+/*** SAMPLING_STRATEGY ***/
+
+void sampling_epilog_func() {
+
+  uint64_t addr;
+  uint64_t offset = 2;
+
+  // Gets [%rbp + 16] to addr. This is a hacky way to get the function parameter (annotation string) pushed to the stack
+  // before the call to this method. Ideally this should be accessible by declaring an explicit method paramter according
+  // x86 calling conventions AFAIK. But it fails to work that way hence we do the inline assembly to get it.
+  // Fix this elegantly with a method parameter should be a TODO
+  long func_id = 0;
+
+  asm(
+      "movq %%rdx, %0\n\t"
+      : "=r"(func_id)
+      :
+      : "%rdx"
+     ); 
+
+  dyn_thread_data* t_stats = &dyn_thread_stats[func_id];
+  dyn_global_data* gl_stats = &dyn_global_stats[func_id];
+
+  int stack_depth = t_stats->stack_depth; 
+
+  if (t_stats->stack_depth == 0) {
+    return;
+  }
+
+  invocation_data i_data = t_stats->invocation_stack[stack_depth-1];
+  if (i_data.timestamp < gl_stats->latest_activation_time) {
+    t_stats->stack_depth = 0;
+    t_stats->ignore_count = 0;
+    return;
   } 
+
+  if (stack_depth > 20 && t_stats->ignore_count > 0) {
+    t_stats->ignore_count--;
+    t_stats->limited_count++;
+    t_stats->count++;
+
+    return;
+  }
+
+  ticks start = i_data.timestamp;
+  unsigned long long initial_leaf_count = i_data.leaf_count;
+
+  ticks end = getticks();
+  ticks elapsed = end - start; 
+
+  if (elapsed < t_stats->min || t_stats->min == 0) {
+    t_stats->min = elapsed;
+  }
+
+  if (elapsed > t_stats->max) {
+    t_stats->max = elapsed;
+  }
+
+  // This segfaults mysteriously
+  /*
+  if (!strcmp(data->func_name, "CalculateOffsetParam")) {
+     fprintf(stderr, "[Epilog] %lf\n", data->var);
+  }
+  */
+
+  if (leaf_counter > initial_leaf_count) {
+    t_stats->is_leaf = false;
+    /*
+    ticks elapsed_backup = elapsed;
+    elapsed = elapsed - 2 * getZCAOverheadTicks() * (leaf_counter - initial_leaf_count);
+    if (elapsed <= 0) {
+      elapsed = elapsed_backup;
+    }
+    */
+  } else if (leaf_counter < initial_leaf_count){
+    fprintf(stderr, "%llu\n", leaf_counter);
+    LOG_INFO("Leaf counter reset..\n");
+  }
+
+  t_stats->sum = t_stats->sum + elapsed;
+  t_stats->count += 1;
+
+  /*
+  double delta = elapsed - data->avg;
+  data->avg = data->avg + delta / data->count;
+  data->var = data->var + delta * (elapsed - data->avg);
+  */
+
+  t_stats->time_histogram[transfer(elapsed)]++;
+  
+  uint64_t global_count = 0;
+  for (int i=0; i < thr_array_idx; i++) {
+    global_count += dyn_thread_stats_arr[i][func_id].count;
+  }
+
+  long new_count = global_count - gl_stats->count_at_last_activation;
+  if (new_count >= sample_size) {
+    if (__sync_bool_compare_and_swap(&(gl_stats->lock), 0 , 1)) {
+      uint64_t message_rate = new_count / ((end - gl_stats->latest_activation_time) / getTicksPerMilliSec());
+      gl_stats->rate_histogram[transfer(message_rate)]++;
+      // fprintf(stderr, "[Sampling_epilog] Deactivated function : %lu\n", func_id);
+      prof->stop_profile(func_id);
+      gl_stats->active = false;
+      __sync_bool_compare_and_swap(&(gl_stats->lock), 1 , 0);
+    }
+  }
+  
+  if (!dyn_global_stats[func_id].active) {
+    t_stats->stack_depth = 0;
+    t_stats->ignore_count = 0;
+  } else {
+    t_stats->stack_depth--;
+  } 
+}
+
+
+void Basic_Profiler::set_profiler_function() {
+
+  switch(strategy) {
+    case NO_BACKOFF:
+      this->profiler_prolog = prolog_func;
+      this->profiler_epilog = no_backoff_epilog_func;
+      break;
+    case SAMPLING:
+      this->profiler_prolog = prolog_func;
+      this->profiler_epilog = sampling_epilog_func;
+      break;
+    default:
+      this->profiler_prolog = prolog_func;
+      this->profiler_epilog = no_backoff_epilog_func;
+  }
 }
 

@@ -338,7 +338,7 @@ inline void modify_probe_site(unsigned char* probe_address, unsigned long* stub_
 
 
   long page_size = sysconf(_SC_PAGESIZE); 
-  int code = mprotect((void*)(probe_address - (((unsigned long)probe_address)%4096)), page_size,
+  int code = mprotect((void*)(probe_address - (((unsigned long)probe_address)%page_size)), page_size,
       PROT_READ | PROT_WRITE | PROT_EXEC);
 
   if (code) {
@@ -349,8 +349,8 @@ inline void modify_probe_site(unsigned char* probe_address, unsigned long* stub_
   }
 
   // If this probesite crosses a page boundary change the permissions of adjacent page too.
-  if (page_size - ((unsigned long)probe_address)%4096 < PROBESIZE) {
-    code = mprotect((void*)(probe_address -((unsigned long)probe_address)%4096 + 4096) , page_size,
+  if (page_size - ((unsigned long)probe_address)%page_size < PROBESIZE) {
+    code = mprotect((void*)(probe_address -((unsigned long)probe_address)%page_size+ page_size) , page_size,
         PROT_READ | PROT_WRITE | PROT_EXEC);
     if (code) {
       /* current code page is now writable and code from it is allowed for execution */
