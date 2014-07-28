@@ -17,17 +17,16 @@ import GHC.Conc           (getNumProcessors)
 
 --------------------------------------------------------------------------------
 
-benches :: [Benchmark DefaultParamMeaning]
-benches = [
-   (mkBenchmark "benchmarks/gzip-1.6/gprof/Makefile" [] (setVariant "gprof")) { progname = Just "gzip16" },
-   (mkBenchmark "benchmarks/gzip-1.6/dynaprof/direct_05/Makefile" [] (setVariant "dynaprof_direct_05")) { progname = Just "gzip16" },
-   (mkBenchmark "benchmarks/gzip-1.6/dynaprof/direct_10/Makefile" [] (setVariant "dynaprof_direct_10")) { progname = Just "gzip16" },
-   (mkBenchmark "benchmarks/gzip-1.6/dynaprof/direct_25/Makefile" [] (setVariant "dynaprof_direct_25")) { progname = Just "gzip16" },
-   (mkBenchmark "benchmarks/gzip-1.6/dynaprof/direct_50/Makefile" [] (setVariant "dynaprof_direct_50")) { progname = Just "gzip16" },
-   (mkBenchmark "benchmarks/gzip-1.6/pin/Makefile" [] (setVariant "pin")) { progname = Just "gzip16" },
-   (mkBenchmark "benchmarks/gzip-1.6/pebil/Makefile" [] (setVariant "pebil")) { progname = Just "gzip16" },
-   (mkBenchmark "benchmarks/gzip-1.6/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "gzip16" },
+backoffLevels :: [Integer]
+backoffLevels = [ 10^i | i <- [0..6] ]
 
+benches :: [Benchmark DefaultParamMeaning]
+benches = 
+  [ (mkBenchmark ("benchmarks/gzip-1.6/"++varname++"/Makefile") [] variant) { progname = Just "gzip16" }
+  | (varname,variant) <- [ (v, setVariant v) | v <- ["gprof", "unprofiled", "pebil", "pin"]] ++
+                         [ ("dynaprof", fixed_backoff n) | n <- backoffLevels ]
+  ] ++ 
+   [
 -- h264ref-9.3
    (mkBenchmark "benchmarks/h264ref-9.3/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "h264ref-9.3" },
    (mkBenchmark "benchmarks/h264ref-9.3/unprofiled-instrumented/Makefile" [] (setVariant "unprofiled-inst")) { progname = Just "h264ref-9.3" },
@@ -94,6 +93,11 @@ bop_50 = And [Set (Variant "bop_simple_50_10000") (RuntimeEnv "DYN_STRATEGY" "BO
              ,Set NoMeaning                       (RuntimeEnv "DYN_OVERHEAD" "0.50")] --should be 50 right ?? 
 
 count_only = Set (Variant "count_only") (RuntimeEnv "DYN_STRATEGY" "COUNT_ONLY")
+
+
+fixed_backoff num = And [ Set (Variant ("fixed_backoff_"++show num)) 
+                                        (RuntimeEnv "DYN_STRATEGY" "FIXED_BACKOFF")
+                        , Set NoMeaning (RuntimeEnv "DYN_SAMPLE_SIZE" (show num)) ]
 
 
 fixed_backoff_10000 = And [Set (Variant "fixed_backoff_10000") (RuntimeEnv "DYN_STRATEGY" "FIXED_BACKOFF")
