@@ -17,28 +17,31 @@ import GHC.Conc           (getNumProcessors)
 
 --------------------------------------------------------------------------------
 
-benches :: [Benchmark DefaultParamMeaning]
-benches = [
-   (mkBenchmark "benchmarks/gzip-1.6/gprof/Makefile" [] (setVariant "gprof")) { progname = Just "gzip16" },
-   (mkBenchmark "benchmarks/gzip-1.6/dynaprof/direct_05/Makefile" [] (setVariant "dynaprof_direct_05")) { progname = Just "gzip16" },
-   (mkBenchmark "benchmarks/gzip-1.6/dynaprof/direct_10/Makefile" [] (setVariant "dynaprof_direct_10")) { progname = Just "gzip16" },
-   (mkBenchmark "benchmarks/gzip-1.6/dynaprof/direct_25/Makefile" [] (setVariant "dynaprof_direct_25")) { progname = Just "gzip16" },
-   (mkBenchmark "benchmarks/gzip-1.6/dynaprof/direct_50/Makefile" [] (setVariant "dynaprof_direct_50")) { progname = Just "gzip16" },
-   (mkBenchmark "benchmarks/gzip-1.6/pin/Makefile" [] (setVariant "pin")) { progname = Just "gzip16" },
-   (mkBenchmark "benchmarks/gzip-1.6/pebil/Makefile" [] (setVariant "pebil")) { progname = Just "gzip16" },
-   (mkBenchmark "benchmarks/gzip-1.6/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "gzip16" },
+backoffLevels :: [Integer]
+backoffLevels = [ 10^i | i <- [0..6] ]
 
+benches :: [Benchmark DefaultParamMeaning]
+benches = 
+  [ (mkBenchmark ("benchmarks/gzip-1.6/"++varname++"/Makefile") [] variant) { progname = Just "gzip16" }
+  | (varname,variant) <- [ (v, setVariant v) | v <- ["gprof", "unprofiled", "pebil", "pin"]] ++
+                         [ ("dynaprof", fixed_backoff) ]
+  ] ++ 
+   [
 -- h264ref-9.3
    (mkBenchmark "benchmarks/h264ref-9.3/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "h264ref-9.3" },
-      (mkBenchmark "benchmarks/h264ref-9.3/unprofiled-instrumented/Makefile" [] (setVariant "unprofiled-inst")) { progname = Just "h264ref-9.3" },
+   (mkBenchmark "benchmarks/h264ref-9.3/unprofiled-instrumented/Makefile" [] (setVariant "unprofiled-inst")) { progname = Just "h264ref-9.3" },
    (mkBenchmark "benchmarks/h264ref-9.3/gprof/Makefile" [] (setVariant "gprof")) { progname = Just "h264ref-9.3" },
 
    (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/Makefile" [] bop_05) { progname = Just "h264ref-9.3" },
    (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/Makefile" [] bop_50) { progname = Just "h264ref-9.3" },
  --  (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/count_only/Makefile" [] count_only) { progname = Just "h264ref-9.3" },
-   (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/fixed_backoff_10000/Makefile" [] fixed_backoff_10000) { progname = Just "h264ref-9.3" },
-   (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/fixed_backoff_1000000/Makefile" [] fixed_backoff_1000000) { progname = Just "h264ref-9.3" },
-   (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/no_backoff/Makefile" [] no_backoff) { progname = Just "h264ref-9.3" },
+   (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/Makefile" [] fixed_backoff_10000) { progname = Just "h264ref-9.3" },
+   (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/Makefile" [] fixed_backoff_1000000) { progname = Just "h264ref-9.3" },
+   (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/Makefile" [] no_backoff) { progname = Just "h264ref-9.3" },
+
+   --(mkBenchmark "benchmarks/h264ref-9.3/dynaprof/fixed_backoff_10000/Makefile" [] fixed_backoff_10000) { progname = Just "h264ref-9.3" },
+   --(mkBenchmark "benchmarks/h264ref-9.3/dynaprof/fixed_backoff_1000000/Makefile" [] fixed_backoff_1000000) { progname = Just "h264ref-9.3" },
+   --(mkBenchmark "benchmarks/h264ref-9.3/dynaprof/no_backoff/Makefile" [] no_backoff) { progname = Just "h264ref-9.3" },
 
 -- bzip
    (mkBenchmark "benchmarks/bzip-1.0.3/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "bzip-1.0.3" },
@@ -47,9 +50,14 @@ benches = [
 
    (mkBenchmark "benchmarks/bzip-1.0.3/dynaprof/Makefile" [] bop_05) { progname = Just "bzip-1.0.3" },
    (mkBenchmark "benchmarks/bzip-1.0.3/dynaprof/Makefile" [] bop_50) { progname = Just "bzip-1.0.3" },
-   (mkBenchmark "benchmarks/bzip-1.0.3/dynaprof/fixed_backoff_10000/Makefile" [] fixed_backoff_10000) { progname = Just "bzip-1.0.3" },
-   (mkBenchmark "benchmarks/bzip-1.0.3/dynaprof/fixed_backoff_1000000/Makefile" [] fixed_backoff_1000000) { progname = Just "bzip-1.0.3" },
-   (mkBenchmark "benchmarks/bzip-1.0.3/dynaprof/no_backoff/Makefile" [] no_backoff) { progname = Just "bzip-1.0.3" },
+   (mkBenchmark "benchmarks/bzip-1.0.3/dynaprof/Makefile" [] fixed_backoff_10000) { progname = Just "bzip-1.0.3" },
+   (mkBenchmark "benchmarks/bzip-1.0.3/dynaprof/Makefile" [] fixed_backoff_1000000) { progname = Just "bzip-1.0.3" },
+   (mkBenchmark "benchmarks/bzip-1.0.3/dynaprof/Makefile" [] no_backoff) { progname = Just "bzip-1.0.3" },
+  
+
+   --(mkBenchmark "benchmarks/bzip-1.0.3/dynaprof/fixed_backoff_10000/Makefile" [] fixed_backoff_10000) { progname = Just "bzip-1.0.3" },
+   --(mkBenchmark "benchmarks/bzip-1.0.3/dynaprof/fixed_backoff_1000000/Makefile" [] fixed_backoff_1000000) { progname = Just "bzip-1.0.3" },
+   --(mkBenchmark "benchmarks/bzip-1.0.3/dynaprof/no_backoff/Makefile" [] no_backoff) { progname = Just "bzip-1.0.3" },
    
 
    
@@ -68,7 +76,10 @@ benches = [
    (mkBenchmark "benchmarks/grep-2.18/dynaprof/Makefile" [] (setVariant "dynaprof")) { progname = Just "grep218" },
    (mkBenchmark "benchmarks/grep-2.18/pin/Makefile" [] (setVariant "pin")) { progname = Just "grep218" },
    (mkBenchmark "benchmarks/grep-2.18/pebil/Makefile" [] (setVariant "pebil")) { progname = Just "grep218" },
-   (mkBenchmark "benchmarks/grep-2.18/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "grep218" }
+   (mkBenchmark "benchmarks/grep-2.18/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "grep218" },
+
+   (mkBenchmark "benchmarks/raxml/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "RAxML" },
+   (mkBenchmark "benchmarks/raxml/dynaprof/Makefile"   [] (setVariant "dynaprof"))   { progname = Just "RAxML" }
 
   ]
 
@@ -83,6 +94,11 @@ bop_50 = And [Set (Variant "bop_simple_50_10000") (RuntimeEnv "DYN_STRATEGY" "BO
 
 count_only = Set (Variant "count_only") (RuntimeEnv "DYN_STRATEGY" "COUNT_ONLY")
 
+
+fixed_backoff = Or [ And [ Set (Variant ("fixed_backoff_"++show num)) 
+                                        (RuntimeEnv "DYN_STRATEGY" "FIXED_BACKOFF")
+                         , Set NoMeaning (RuntimeEnv "DYN_SAMPLE_SIZE" (show num)) ]
+                   | num <- backoffLevels ]
 
 fixed_backoff_10000 = And [Set (Variant "fixed_backoff_10000") (RuntimeEnv "DYN_STRATEGY" "FIXED_BACKOFF")
                           ,Set NoMeaning                       (RuntimeEnv "DYN_SAMPLE_SIZE" "10000")]
