@@ -117,6 +117,7 @@ main = do
   putStrLn "Begin Dynaprof profiling benchmarks..."
   defaultMainModifyConfig $ \ conf ->
     conf{ benchlist  = benches
+                       -- 1 hour timeout
         , runTimeOut = Just 1000 -- Erk... need a separate compile timeout.
         , plugIns   = [ SomePlugin defaultFusionPlugin,
                         SomePlugin defaultDribblePlugin ]
