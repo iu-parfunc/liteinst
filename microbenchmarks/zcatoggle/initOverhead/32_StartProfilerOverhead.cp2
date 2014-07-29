@@ -28,6 +28,6 @@ int main()
     printf( "  %3.10f cycles per activation (gettime)\n", ((((stop.tv_sec*(double)1000000000)+stop.tv_nsec) - ((start.tv_sec*(double)1000000000)+start.tv_nsec))/(double)countTEST)/cycleTime);
     printf( "  %3.10f cycles per activation (RDTSC)\n", ((double)cycles)/((double)countTEST));
 
-    printf( "SELFTIMED: %3.10f\n", ((double)cycles));
+    printf( "SELFTIMED: %3.0f\n", ((double)cycles));
     return 0;
 }

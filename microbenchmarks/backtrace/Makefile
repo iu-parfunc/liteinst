@@ -1,7 +1,8 @@
 CC = icc
 VTCC = vtcc -vt:cc icc
 CFLAGS = 
-all: main.exe 
+
+default: main.exe 
 
 LIBS = -lgcc 
 # -ldynamic
