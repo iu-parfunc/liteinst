@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # Environment variable
 export DYN_STRATEGY="NO_BACKOFF"
@@ -24,7 +25,7 @@ do
     rm -f $fileStem.cpp
 
     # Put together the source code
-    cat $fileStem.cp1 >>$fileStem.cpp
+    cat $fileStem.cp1 >> $fileStem.cpp
     for (( j=0; j<$i; j++ ))
     do
 	echo "void myEmptyFunc$j( void )">>$fileStem.cpp
@@ -34,6 +35,7 @@ do
 	echo "return;">>$fileStem.cpp
 	echo "}">>$fileStem.cpp
     done
+
     echo "unsigned long int countTEST=$j;">>$fileStem.cpp
     cat $fileStem.cp2 >>$fileStem.cpp
 
