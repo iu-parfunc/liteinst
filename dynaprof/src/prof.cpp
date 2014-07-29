@@ -154,8 +154,8 @@ void Basic_Profiler::initialize(void) {
       strategy = SAMPLING;
     } else if (strcmp(strategy_str, empty) == 0) {
       strategy = EMPTY;
-    } else if (strcmp(strategy_str, empty_prolog) == 0) {
-      strategy = EMPTY_PROLOG; 
+    } else if (strcmp(strategy_str, fixed_backoff) == 0) {
+      strategy = FIXED_BACKOFF; 
     }
   }
 
@@ -693,6 +693,7 @@ void no_backoff_epilog_func() {
 }
 
 /** BOUNDED_OVERHEAD_PROFILING_STRATEGY **/
+
 void bop_epilog_func() {
 
 }
@@ -873,6 +874,10 @@ void Basic_Profiler::set_profiler_function() {
     case EMPTY:
       this->profiler_prolog = empty_func;
       this->profiler_epilog = empty_func;
+      break;
+    case FIXED_BACKOFF:
+      this->profiler_prolog = prolog_func;
+      this->profiler_epilog = sampling_epilog_func;
       break;
     default:
       this->profiler_prolog = prolog_func;
