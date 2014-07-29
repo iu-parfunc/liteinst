@@ -15,8 +15,7 @@ echo "   - $fileStem.csv"
 echo "   - $fileStem.csv.make_output"
 
 # Iterate through function numbers
-#for i in 1 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192 16384
-for i in 1 2 4 8
+for i in 1 2 4 8 16 32 64 128 256 512 1024 2048 4096 8192 16384
 do
     # Infrastructure work... remove old files, output info
     echo "Functions: $i"
