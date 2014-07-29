@@ -81,7 +81,8 @@ benches =
    (mkBenchmark "benchmarks/raxml/unprofiled/Makefile" [] (setVariant "unprofiled")) { progname = Just "raxml" },
    (mkBenchmark "benchmarks/raxml/dynaprof/Makefile"   [] (setVariant "dynaprof"))   { progname = Just "raxml" }
 
-  ]
+  ] -- ++
+--   [ (mkBenchmark "benchmarks/h264ref-9.3/dynaprof/Makefile" [] (varied sample_rate sample_size) { progname = Just "h264ref-9.3" } | sample_rate <- [ 10,20..500], sample_size <- [1000,2000..50000]] 
 
 
 bop_05 = And [Set (Variant "bop_simple_05_10000") (RuntimeEnv "DYN_STRATEGY" "BOP_SIMPLE")
@@ -109,6 +110,11 @@ fixed_backoff_1000000 = And [Set (Variant "fixed_backoff_1000000") (RuntimeEnv "
 
 no_backoff = Set (Variant "no_backoff") (RuntimeEnv "DYN_STRATEGY" "NO_BACKOFF")
 
+-- varied "dynaprof" sample_rate sample_size
+--varied sr ss = And [ Set (Variant ("Varied_" ++ show sr ++ "_" ++ show ss)) (RunTimeEnv "DYN_STRATEGY" "SAMPLING")
+--                   , Set NoMeaning                                          (RunTimeEnv "DYN_SAMPLE_SIZE" (show ss))
+--                   , Set NoMeaning                                          (RunTimeEnv "DYN_SAMPLING_RATE" (show sr))] 
+
 
 setVariant str = (And [Set (Variant str) (CompileParam "")])
 
@@ -117,6 +123,7 @@ main = do
   putStrLn "Begin Dynaprof profiling benchmarks..."
   defaultMainModifyConfig $ \ conf ->
     conf{ benchlist  = benches
+                       -- 1 hour timeout
         , runTimeOut = Just 1000 -- Erk... need a separate compile timeout.
         , plugIns   = [ SomePlugin defaultFusionPlugin,
                         SomePlugin defaultDribblePlugin ]

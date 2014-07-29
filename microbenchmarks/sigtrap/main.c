@@ -13,7 +13,9 @@ ticks start, end;
 // void catchit(int signo, siginfo_t * inf, void * ptr) { 
 void catchit(int signo) { 
   end = getticks();
-  printf("Catching signal, num %d.. ticks elapsed %lf\n",signo, elapsed(end, start));
+  double duration = elapsed(end, start);
+  printf("Catching signal, num %d.. ticks elapsed %lf\n",signo, duration);
+  printf("SELFTMED: %3.0lf\n", duration);
 }
 
 int main () {
