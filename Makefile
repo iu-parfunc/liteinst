@@ -24,7 +24,7 @@ SEC=MQ72ZWDde_1e1ihI5YE9YlEi
 # ----------------------------------------
 
 # TODO: build everything before running/benchmarking:
-all:
+all: lib run-benchmarks.exe
 # Nothing here currently.
 
 lib:
@@ -33,7 +33,6 @@ lib:
 
 # Run the benchmarks
 bench: run-benchmarks.exe
-	./run-benchmarks.exe -l
 	./run-benchmarks.exe --keepgoing --trials=$(TRIALS) --name="Dynaprof_Benchmarks" --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH)
 
 run-benchmarks.exe: run-benchmarks.cabal run-benchmarks.hs
@@ -46,6 +45,7 @@ run-benchmarks.exe: run-benchmarks.cabal run-benchmarks.hs
 	$(CABAL) install ./HSBencher/hgdata ./HSBencher/hsbencher ./HSBencher/hsbencher-fusion --disable-documentation --with-ghc=ghc-$(JENKINS_GHC) -j
 	$(CABAL) install --only-dep -j --disable-documentation --with-ghc=ghc-$(JENKINS_GHC)
 	$(CABAL) install --bindir=. --disable-documentation --with-ghc=ghc-$(JENKINS_GHC)
+	./run-benchmarks.exe -l
 
 clean:
 	(cd ./zcatoggle/src; make clean)
