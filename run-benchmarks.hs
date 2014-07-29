@@ -118,7 +118,7 @@ main = do
   defaultMainModifyConfig $ \ conf ->
     conf{ benchlist  = benches
                        -- 1 hour timeout
-        , runTimeOut = Just 3600 -- Erk... need a separate compile timeout.
+        , runTimeOut = Just 1000 -- Erk... need a separate compile timeout.
         , plugIns   = [ SomePlugin defaultFusionPlugin,
                         SomePlugin defaultDribblePlugin ]
         , harvesters = customTagHarvesterDouble "INIT_TIME"
