@@ -27,6 +27,8 @@
 #define EMPTY 6
 #define EMPTY_PROLOG 7
 
+#define NANO_SECONDS_IN_SEC 1000000000;
+
 using namespace std;
 
 Profiler* prof;
@@ -39,6 +41,7 @@ int strategy = BOP_SIMPLE;
 double target_overhead = 0.05; 
 double overhead = 0.0;
 long sample_size = 10000;
+double sample_rate = 0.01 * NANO_SECONDS_IN_SEC; // Default sampling rate is 10ms
 
 /** global statistics **/
 dyn_global_data* dyn_global_stats;
@@ -77,7 +80,7 @@ void* probe_monitor(void* param) {
       }
     }
 
-    nanosleep((struct timespec[]){{0, 50000000}}, NULL);
+    nanosleep((struct timespec[]){{0, sample_rate}}, NULL);
   }
 
   return NULL;
@@ -103,7 +106,7 @@ void* probe_monitor_sampling(void* param) {
       }
     }
 
-    nanosleep((struct timespec[]){{0, 50000000}}, NULL);
+    nanosleep((struct timespec[]){{0, sample_rate}}, NULL);
   }
 
   return NULL;
@@ -122,6 +125,12 @@ void Basic_Profiler::initialize(void) {
   char* sample_size_str = getenv("DYN_SAMPLE_SIZE");
   if (sample_size_str != NULL) {
     sample_size = atol(sample_size_str);
+  }
+
+  char* sample_rate_str = getenv("DYN_SAMPLE_RATE");
+  if (sample_rate_str != NULL) {
+    sample_rate = atof(sample_rate_str);
+    sample_rate *= NANO_SECONDS_IN_SEC;
   }
 
   char* strategy_str = getenv("DYN_STRATEGY");
@@ -161,8 +170,10 @@ void Basic_Profiler::initialize(void) {
 
   set_profiler_function();
 
-  fprintf(stderr, "[Init] Strategy : %s Overhead : %s Sample size : %s\n", strategy_str, overhead_str, sample_size_str);
-  fprintf(stderr, "[Init] Strategy : %d Overhead : %lf Sample size : %lu\n", strategy, target_overhead, sample_size);
+  fprintf(stderr, "[Init] Strategy : %s Overhead : %s Sample size : %s Sample_rate : %s\n", 
+      strategy_str, overhead_str, sample_size_str, sample_rate_str);
+  fprintf(stderr, "[Init] Strategy : %d Overhead : %lf Sample size : %lu Sample_rate : %lf\n", 
+      strategy, target_overhead, sample_size, sample_rate);
 
   dyn_global_stats = (dyn_global_data*)calloc(function_count, sizeof(dyn_global_data));
   dyn_thread_stats_arr = (dyn_thread_data**) calloc(64, sizeof(dyn_thread_data*));
