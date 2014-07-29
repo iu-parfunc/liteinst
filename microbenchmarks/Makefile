@@ -31,7 +31,7 @@ lib:
 	(cd ..; make lib)
 
 # Run the benchmarks
-bench: run-benchmarks.exe
+bench: lib run-benchmarks.exe
 	./run-benchmarks.exe --keepgoing --trials=$(TRIALS) --name="Dynaprof_Benchmarks" --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH)
 
 run-benchmarks.exe: run-benchmarks.cabal run-benchmarks.hs

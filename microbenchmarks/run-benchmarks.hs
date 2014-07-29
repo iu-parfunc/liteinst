@@ -22,10 +22,10 @@ backoffLevels = [ 10^i | i <- [0..6] ]
 
 benches :: [Benchmark DefaultParamMeaning]
 benches = 
-  [ (mkBenchmark ("sigtrap/") [] (And[])) ] ++
+  [ mkBenchmark "sigtrap/" [] noconf ] ++
   [ (mkBenchmark "zcatoggle/initOverhead/" [show numFuns] 
       (And[ compileParam (show numFuns) ]))
-  | numFuns <- [ 2^n | n <- [1..13]] ]
+  | numFuns <- [ 2^n | n <- [1..13]] ] 
 
 setVariant str = (And [Set (Variant str) (CompileParam "")])
 
@@ -44,5 +44,6 @@ main = do
         }
 
 
+noconf = And []
 
 compileParam str = Set NoMeaning (CompileParam str)
