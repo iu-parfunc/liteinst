@@ -40,7 +40,6 @@ int ZCA_OVERHEAD = 600; // Assuming 1000 cycles overhead per function call. Need
 int ZCA_INIT_OVERHEAD = 0;
 const int NANO_SECONDS_IN_SEC = 1000000000;
 
-static int probe_count = 0;
 static mem_island* current_alloc_unit;
 
 inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*target_fn)(), ann_data** ann_info)
@@ -386,7 +385,9 @@ int timeval_subtract(struct timeval *result, struct timeval *t2, struct timeval 
 void setupStubs()
 {
   // Retrieve annotation data
-  probe_count=read_self_zca_probes();
+  int probe_count=read_self_zca_probes();
+
+  fprintf(stderr, "NUM_PROBES : %d\n", probe_count);
   unsigned long* stub_address;
 
 #ifdef PROFILE
