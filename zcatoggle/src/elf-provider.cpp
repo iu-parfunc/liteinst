@@ -297,7 +297,7 @@ int read_zca_probes(const char* path)
 		if(!strcmp(section_name, ".itt_notify_tab")) {
 
 			char* ptr;
-			data = elf_getdata(scn, data); // Apparently we need to elf_getdata twice before we get the goods....
+//			data = elf_getdata(scn, data); // Apparently we need to elf_getdata twice before we get the goods....
 
        while ((data = elf_getdata(scn,data)) != NULL) {
 			ptr = (char*) data->d_buf;
