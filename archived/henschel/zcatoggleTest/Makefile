@@ -6,7 +6,8 @@ CFLAGSDYN = libdynaprof.a
 #all : 13_ActivatedNotifyFunction.exe 13_ActivatedNotifyFunctionParallel.exe 14_ActivatedNotifyLoop.exe 14_ActivatedNotifyLoopParallel.exe
 #all: 23_ActivatedNotifyFunction.exe 23_ActivatedNotifyFunctionParallel.exe
 #all: 31_StartProfilerOverhead.exe
-all: 13_h264.exe 13_h264Parallel.exe
+all: 32_StartProfilerOverhead.exe
+#all: 13_h264.exe 13_h264Parallel.exe
 
 01_emptyFunction.exe: 01_emptyFunction.cpp
 	$(CC) $(CFLAGS) 01_emptyFunction.cpp -o 01_emptyFunction.exe
@@ -70,6 +71,9 @@ all: 13_h264.exe 13_h264Parallel.exe
 
 31_StartProfilerOverhead.exe: 31_StartProfilerOverhead.cpp
 	$(CC) $(CFLAGS) -openmp 31_StartProfilerOverhead.cpp $(CFLAGSDYN) $(CFLAGSZCA) -o 31_StartProfilerOverhead.exe
+
+32_StartProfilerOverhead.exe: 32_StartProfilerOverhead.cpp
+	$(CC) $(CFLAGS) -openmp 32_StartProfilerOverhead.cpp $(CFLAGSZCA) -o 32_StartProfilerOverhead.exe
 
 clean:
 	rm -f *.exe *.o *.s prof.out
