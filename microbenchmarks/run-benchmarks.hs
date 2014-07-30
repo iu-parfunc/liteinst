@@ -24,8 +24,11 @@ benches :: [Benchmark DefaultParamMeaning]
 benches = 
   [ mkBenchmark "sigtrap/" [] noconf ] ++
   [ (mkBenchmark "zcatoggle/initOverhead/" [show numFuns] 
-      (And[ compileParam (show numFuns) ]))
-  | numFuns <- [ 2^n | n <- [1..13]] ] 
+      (And[ compileParam (show numFuns) ])) { progname = Just "firstTimeInitOverheadZcaToggle" }
+  | numFuns <- [ 2^n | n <- [1..14]] ] ++
+  [ (mkBenchmark "dynaprof/initOverhead/" [show numFuns] 
+      (And[ compileParam (show numFuns) ])) { progname = Just "firstTimeInitOverheadDynaProf" }
+  | numFuns <- [ 2^n | n <- [1..14]] ] 
 
 setVariant str = (And [Set (Variant str) (CompileParam "")])
 
