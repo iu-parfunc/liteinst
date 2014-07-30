@@ -127,7 +127,7 @@ void Basic_Profiler::initialize(void) {
     sample_size = atol(sample_size_str);
   }
 
-  char* sample_rate_str = getenv("DYN_SAMPLE_RATE");
+  char* sample_rate_str = getenv("DYN_SAMPLE_PERIOD");
   if (sample_rate_str != NULL) {
     sample_rate = atof(sample_rate_str);
     sample_rate *= NANO_SECONDS_IN_SEC;
