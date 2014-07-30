@@ -333,8 +333,8 @@ void cleanup(void) {
     bool first_row = true;
     for(int j=0; j < 11 ; j++) {
       char buf[14], buf1[14];
-      snprintf(buf, 13, "%d: %llu", j, dyn_global_stats[i].time_histogram[j]);
-      snprintf(buf1, 13, "%d: %llu", j, dyn_global_stats[i].rate_histogram[j]);
+      snprintf(buf, 13, "%d:%llu", j, dyn_global_stats[i].time_histogram[j]);
+      snprintf(buf1, 13, "%d:%llu", j, dyn_global_stats[i].rate_histogram[j]);
 
       if (first_row) {
         fprintf(out_file, "%-50s%-13s%-13s\n", dyn_global_stats[i].func_name, buf1, buf);
