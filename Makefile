@@ -1,6 +1,12 @@
 
 # Configuration stuff
 # ----------------------------------------
+# Responds to Env vars:
+#   WHICHBENCH -- gets passed to hsbencher harness upon "make bench"
+#   BENCHARGS  -- same as WHICHBENCH, gets passed to hsbencher harness
+#   CABAL -- set executable to use for cabal
+#   JENKINS_GHC -- X.Y.Z version number for GHC
+# ----------------------------------------
 
 ifeq ($(CABAL),)
   CABAL=cabal
@@ -33,7 +39,7 @@ lib:
 
 # Run the benchmarks
 bench: run-benchmarks.exe
-	./run-benchmarks.exe --keepgoing --trials=$(TRIALS) --name="Dynaprof_Benchmarks" --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH)
+	./run-benchmarks.exe --keepgoing --trials=$(TRIALS) --name="Dynaprof_Benchmarks" --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
 
 run-benchmarks.exe: run-benchmarks.cabal run-benchmarks.hs
 	$(CABAL) sandbox init
