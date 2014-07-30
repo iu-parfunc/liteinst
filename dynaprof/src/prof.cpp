@@ -304,9 +304,35 @@ void cleanup(void) {
         }
       }
 
-      char buf[14], buf1[14];
-      snprintf(buf, 13, "%d:%llu", max_hist_time_idx, max_hist_time);
-      snprintf(buf1, 13, "%d:%llu", max_hist_rate_idx, max_hist_rate);
+      char buf[140] = {'\0'};
+      snprintf(buf, 140, "%llu %llu %llu %llu %llu %llu %llu %llu %llu %llu %llu ", 
+          dyn_global_stats[i].time_histogram[0], 
+          dyn_global_stats[i].time_histogram[1],
+          dyn_global_stats[i].time_histogram[2], 
+          dyn_global_stats[i].time_histogram[3],
+          dyn_global_stats[i].time_histogram[4], 
+          dyn_global_stats[i].time_histogram[5],
+          dyn_global_stats[i].time_histogram[6], 
+          dyn_global_stats[i].time_histogram[7],
+          dyn_global_stats[i].time_histogram[8],
+          dyn_global_stats[i].time_histogram[9], 
+          dyn_global_stats[i].time_histogram[10]
+          );
+
+      char buf1[140] = {'\0'};
+      snprintf(buf1, 140, "%llu %llu %llu %llu %llu %llu %llu %llu %llu %llu %llu ", 
+          dyn_global_stats[i].rate_histogram[0], 
+          dyn_global_stats[i].rate_histogram[1],
+          dyn_global_stats[i].rate_histogram[2], 
+          dyn_global_stats[i].rate_histogram[3],
+          dyn_global_stats[i].rate_histogram[4], 
+          dyn_global_stats[i].rate_histogram[5],
+          dyn_global_stats[i].rate_histogram[6], 
+          dyn_global_stats[i].rate_histogram[7],
+          dyn_global_stats[i].rate_histogram[8],
+          dyn_global_stats[i].rate_histogram[9], 
+          dyn_global_stats[i].rate_histogram[10]
+          );
         
       double variance = 0;
       if (dyn_global_stats[i].count > 2) {
@@ -315,10 +341,6 @@ void cleanup(void) {
 
       double avg = (double) dyn_global_stats[i].sum / dyn_global_stats[i].count;
 
-      if (!strcmp(dyn_global_stats[i].func_name, "dct_luma_16x16")) {
-        fprintf(stderr, "[Cleanup] Sum : %llu Count : %llu Average : %lf\n", dyn_global_stats[i].sum, dyn_global_stats[i].count, avg);
-      }
-
       fprintf(out_file, "%-30s%-15s%-15s%-15llu%-13d%-13llu%-15llu%-15.1lf%-15.1lf%-5s\n", dyn_global_stats[i].func_name, buf1, buf, 
               dyn_global_stats[i].count, dyn_global_stats[i].deactivation_count+1, dyn_global_stats[i].min, dyn_global_stats[i].max, avg, 
               0.0, dyn_global_stats[i].is_leaf ? "TRUE" : "FALSE");
@@ -326,6 +348,7 @@ void cleanup(void) {
     }
   }
 
+  /*
   fprintf(out_file, "\n\n-------- Histograms ------------\n");
   fprintf(out_file, "%-50s%-13s%-13s\n\n", "Function", "Rate_Hist", "Time_Hist");
 
@@ -343,7 +366,7 @@ void cleanup(void) {
         fprintf(out_file, "%-50s%-13s%-13s\n", " ", buf1, buf);
       }
     }
-  }
+  }*/
 
   fclose(out_file);
 
