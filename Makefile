@@ -56,3 +56,4 @@ run-benchmarks.exe: run-benchmarks.cabal run-benchmarks.hs
 clean:
 	(cd ./zcatoggle/src; make clean)
 	(cd ./dynaprof/src; make clean)
+	rm -rf ./run-benchmarks.exe ./dist
