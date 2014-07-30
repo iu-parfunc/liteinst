@@ -305,8 +305,8 @@ void cleanup(void) {
       }
 
       char buf[14], buf1[14];
-      snprintf(buf, 13, "%d: %llu", max_hist_time_idx, max_hist_time);
-      snprintf(buf1, 13, "%d: %llu", max_hist_rate_idx, max_hist_rate);
+      snprintf(buf, 13, "%d:%llu", max_hist_time_idx, max_hist_time);
+      snprintf(buf1, 13, "%d:%llu", max_hist_rate_idx, max_hist_rate);
         
       double variance = 0;
       if (dyn_global_stats[i].count > 2) {
