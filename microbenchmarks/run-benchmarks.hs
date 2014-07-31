@@ -28,7 +28,10 @@ benches =
   | numFuns <- [ 2^n | n <- [1..14]] ] ++
   [ (mkBenchmark "dynaprof/initOverhead/" [show numFuns] 
       (And[ compileParam (show numFuns) ])) { progname = Just "firstTimeInitOverheadDynaProf" }
-  | numFuns <- [ 2^n | n <- [1..14]] ] 
+  | numFuns <- [ 2^n | n <- [1..14]] ] ++
+  [ (mkBenchmark "dynaprof/deactivationOverhead/" [show numFuns] 
+      (And[ compileParam (show numFuns) ])) { progname = Just "deactivationOverheadDynaProf" }
+  | numFuns <- [ 2^n | n <- [1..2]] ] 
 
 setVariant str = (And [Set (Variant str) (CompileParam "")])
 
