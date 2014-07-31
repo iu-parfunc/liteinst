@@ -12,6 +12,10 @@ ifeq ($(CABAL),)
   CABAL=cabal
 endif
 
+ifeq ($(MACHINECLASS),)
+  MACHINECLASS=$(HOSTNAME)
+endif
+
 ifeq ($(JENKINS_GHC),)
 #  JENKINS_GHC=7.6.3
 # Changing default [2014.07.28]:
@@ -39,7 +43,7 @@ lib:
 
 # Run the benchmarks
 bench: run-benchmarks.exe
-	./run-benchmarks.exe --keepgoing --trials=$(TRIALS) --name="Dynaprof_Benchmarks" --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
+	./run-benchmarks.exe --hostname=$(MACHINECLASS) --keepgoing --trials=$(TRIALS) --name="Dynaprof_Benchmarks" --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
 
 run-benchmarks.exe: run-benchmarks.cabal run-benchmarks.hs
 	$(CABAL) sandbox init
