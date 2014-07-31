@@ -13,6 +13,8 @@ ifeq ($(MACHINECLASS),)
   MACHINECLASS=$(HOSTNAME)
 endif
 
+RUNID=$(shell hostname -s)_$(shell date "+%s")
+
 ifeq ($(JENKINS_GHC),)
   JENKINS_GHC=7.8.2
 endif
@@ -36,7 +38,7 @@ lib:
 
 # Run the benchmarks
 bench: lib run-benchmarks.exe
-	./run-benchmarks.exe --hostname=$(MACHINECLASS) --keepgoing --trials=$(TRIALS) --name="Dynaprof_Benchmarks" --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
+	./run-benchmarks.exe --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --name="Dynaprof_Benchmarks" --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
 
 run-benchmarks.exe: run-benchmarks.cabal run-benchmarks.hs
 	$(CABAL) sandbox init --sandbox=../.cabal-sandbox/

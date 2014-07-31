@@ -16,6 +16,8 @@ ifeq ($(MACHINECLASS),)
   MACHINECLASS=$(HOSTNAME)
 endif
 
+RUNID=$(shell hostname -s)_$(shell date "+%s")
+
 ifeq ($(JENKINS_GHC),)
 #  JENKINS_GHC=7.6.3
 # Changing default [2014.07.28]:
@@ -43,7 +45,7 @@ lib:
 
 # Run the benchmarks
 bench: run-benchmarks.exe
-	./run-benchmarks.exe --hostname=$(MACHINECLASS) --keepgoing --trials=$(TRIALS) --name="Dynaprof_Benchmarks" --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
+	./run-benchmarks.exe --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --name="Dynaprof_Benchmarks" --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
 
 run-benchmarks.exe: run-benchmarks.cabal run-benchmarks.hs
 	$(CABAL) sandbox init
@@ -51,6 +53,7 @@ run-benchmarks.exe: run-benchmarks.cabal run-benchmarks.hs
 	$(CABAL) install ./HSBencher/hgdata ./HSBencher/hsbencher ./HSBencher/hsbencher-fusion --disable-documentation --with-ghc=ghc-$(JENKINS_GHC) -j
 	$(CABAL) install --only-dep -j --disable-documentation --with-ghc=ghc-$(JENKINS_GHC)
 	$(CABAL) install --bindir=. --disable-documentation --with-ghc=ghc-$(JENKINS_GHC)
+	./run-benchmarks.exe --help
 	./run-benchmarks.exe -l
 
 clean:
