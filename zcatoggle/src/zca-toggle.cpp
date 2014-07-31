@@ -387,7 +387,7 @@ void setupStubs()
   // Retrieve annotation data
   int probe_count=read_self_zca_probes();
 
-  fprintf(stderr, "NUM_PROBES : %d\n", probe_count);
+  fprintf(stderr, "NUM_PROBES: %d\n", probe_count);
   unsigned long* stub_address;
 
 #ifdef PROFILE
