@@ -27,6 +27,10 @@
 #define EMPTY 6
 #define EMPTY_PROLOG 7
 
+#define PRETTY_OUTPUT 0
+#define CSV_OUTPUT 1
+#define MULTI_OUTPUT 2
+
 #define NANO_SECONDS_IN_SEC 1000000000;
 
 using namespace std;
@@ -42,6 +46,7 @@ double target_overhead = 0.05;
 double overhead = 0.0;
 long sample_size = 10000;
 double sample_rate = 0.01 * NANO_SECONDS_IN_SEC; // Default sampling rate is 10ms
+int output_type = CSV_OUTPUT;
 
 /** global statistics **/
 dyn_global_data* dyn_global_stats;
@@ -133,6 +138,17 @@ void Basic_Profiler::initialize(void) {
     sample_rate *= NANO_SECONDS_IN_SEC;
   }
 
+  char* output_type_str = getenv("DYN_OUTPUT_TYPE");
+  if (output_type_str != NULL) {
+    if (!strcmp(output_type_str, "PRETTY")) {
+      output_type = PRETTY_OUTPUT;
+    } else if (!strcmp(output_type_str, "CSV")){
+      output_type = CSV_OUTPUT;
+    } else if (!strcmp(output_type_str, "BOTH")) {
+      output_type = MULTI_OUTPUT;
+    }
+  }
+
   char* strategy_str = getenv("DYN_STRATEGY");
   /*
   char no_backoff[] = "\"NO_BACKOFF\"";
@@ -190,25 +206,6 @@ void Basic_Profiler::initialize(void) {
     dyn_global_stats[func_id].latest_activation_time = current_time;
     dyn_global_stats[func_id].is_leaf= true;
 
-    /*
-    dyn_global_stats[func_id].min = 0;
-    dyn_global_stats[func_id].max = 0;
-    dyn_global_stats[func_id].sum = 0;
-    dyn_global_stats[func_id].count = 0;
-    dyn_global_stats[func_id].var = 0.0;
-    dyn_global_stats[func_id].avg = 0.0;
-    dyn_global_stats[func_id].deactivation_count = 0;
-
-    for (int j = 0; j < 11; j++) {
-      dyn_global_stats[func_id].time_histogram[j]=0;
-      dyn_global_stats[func_id].rate_histogram[j]=0;
-    }
-    dyn_global_stats[func_id].is_leaf= true;
-
-    dyn_global_stats[func_id].count_at_last_activation = 0;
-    dyn_global_stats[func_id].lock = 0;
-    */
-    // dyn_stats[func_id].time_histogram = new NBQueue(20);
     // We don't need function id here at the moment if required later add from functions iterator->second.
   }
 
@@ -233,11 +230,145 @@ void Profiler::register_thread_data(dyn_thread_data* data) {
   // do realloc if we run out of indices; 
 }
 
+void output_pretty() {
+
+  FILE *out_file = fopen("prof.out", "w");
+
+  fprintf(out_file, "%-30s%-15s%-15s%-15s%-13s%-13s%-15s%-15s%-15s%-5s\n\n", "Function", "Rate_Hist", "Time_Hist",
+      "Count", "Samples", "Min", "Max", "Avg", "Variance", "Leaf?");
+  
+  for(int i=0; i < function_count; i++) {
+    if (dyn_global_stats[i].count != 0) {
+      bool first_row = true;
+
+      uint64_t max_hist_time = 0;
+      int max_hist_time_idx = 0;
+      uint64_t max_hist_rate = 0;
+      int max_hist_rate_idx = 0;
+
+      for (int j=0; j < 11; j++) {
+        if (dyn_global_stats[i].time_histogram[j] > max_hist_time) {
+          max_hist_time = dyn_global_stats[i].time_histogram[j];
+          max_hist_time_idx = j;
+        }
+
+        if (dyn_global_stats[i].rate_histogram[j] > max_hist_rate) {
+          max_hist_rate = dyn_global_stats[i].rate_histogram[j];
+          max_hist_rate_idx = j;
+        }
+      }
+
+      char buf[140] = {'\0'};
+      snprintf(buf, 140, "%d:%llu", max_hist_rate_idx, max_hist_rate);
+
+      char buf1[140] = {'\0'};
+      snprintf(buf1, 140, "%d:%llu", max_hist_time_idx, max_hist_time);
+        
+      double variance = 0;
+      if (dyn_global_stats[i].count > 2) {
+        variance = dyn_global_stats[i].var / (dyn_global_stats[i].count - 1);
+      }
+
+      double avg = (double) dyn_global_stats[i].sum / dyn_global_stats[i].count;
+
+      fprintf(out_file, "%-30s%-15s%-15s%-15llu%-13d%-13llu%-15llu%-15.1lf%-15.1lf%-5s\n", dyn_global_stats[i].func_name, buf1, buf, 
+              dyn_global_stats[i].count, dyn_global_stats[i].deactivation_count+1, dyn_global_stats[i].min, dyn_global_stats[i].max, avg, 
+              0.0, dyn_global_stats[i].is_leaf ? "TRUE" : "FALSE");
+
+    }
+  }
+
+  fprintf(out_file, "\n\n-------- Histograms ------------\n");
+  fprintf(out_file, "%-50s%-13s%-13s\n\n", "Function", "Rate_Hist", "Time_Hist");
+
+  for(int i=0; i < function_count; i++) {
+    bool first_row = true;
+    for(int j=0; j < 11 ; j++) {
+      char buf[14], buf1[14];
+      snprintf(buf, 13, "%d:%llu", j, dyn_global_stats[i].time_histogram[j]);
+      snprintf(buf1, 13, "%d:%llu", j, dyn_global_stats[i].rate_histogram[j]);
+
+      if (first_row) {
+        fprintf(out_file, "%-50s%-13s%-13s\n", dyn_global_stats[i].func_name, buf1, buf);
+        first_row = false;
+      } else {
+        fprintf(out_file, "%-50s%-13s%-13s\n", " ", buf1, buf);
+      }
+    }
+  }
+
+  fclose(out_file);
+
+}
+
+void output_csv() {
+
+  FILE *out_file = fopen("prof.out", "w");
+
+  fprintf(out_file, "%-30s%-15s%-15s%-15s%-13s%-13s%-15s%-15s%-15s%-5s\n\n", "Function", "Rate_Hist", "Time_Hist",
+      "Count", "Samples", "Min", "Max", "Avg", "Variance", "Leaf?");
+  
+  for(int i=0; i < function_count; i++) {
+    if (dyn_global_stats[i].count != 0) {
+      bool first_row = true;
+
+      uint64_t max_hist_time = 0;
+      int max_hist_time_idx = 0;
+      uint64_t max_hist_rate = 0;
+      int max_hist_rate_idx = 0;
+
+      char buf[140] = {'\0'};
+      snprintf(buf, 140, "%llu %llu %llu %llu %llu %llu %llu %llu %llu %llu %llu ", 
+          dyn_global_stats[i].time_histogram[0], 
+          dyn_global_stats[i].time_histogram[1],
+          dyn_global_stats[i].time_histogram[2], 
+          dyn_global_stats[i].time_histogram[3],
+          dyn_global_stats[i].time_histogram[4], 
+          dyn_global_stats[i].time_histogram[5],
+          dyn_global_stats[i].time_histogram[6], 
+          dyn_global_stats[i].time_histogram[7],
+          dyn_global_stats[i].time_histogram[8],
+          dyn_global_stats[i].time_histogram[9], 
+          dyn_global_stats[i].time_histogram[10]
+          );
+
+      char buf1[140] = {'\0'};
+      snprintf(buf1, 140, "%llu %llu %llu %llu %llu %llu %llu %llu %llu %llu %llu ",
+          dyn_global_stats[i].rate_histogram[0], 
+          dyn_global_stats[i].rate_histogram[1], 
+          dyn_global_stats[i].rate_histogram[2], 
+          dyn_global_stats[i].rate_histogram[3], 
+          dyn_global_stats[i].rate_histogram[4], 
+          dyn_global_stats[i].rate_histogram[5], 
+          dyn_global_stats[i].rate_histogram[6], 
+          dyn_global_stats[i].rate_histogram[7], 
+          dyn_global_stats[i].rate_histogram[8], 
+          dyn_global_stats[i].rate_histogram[9], 
+          dyn_global_stats[i].rate_histogram[10] 
+          );
+        
+      double variance = 0;
+      if (dyn_global_stats[i].count > 2) {
+        variance = dyn_global_stats[i].var / (dyn_global_stats[i].count - 1);
+      }
+
+      double avg = (double) dyn_global_stats[i].sum / dyn_global_stats[i].count;
+
+      fprintf(out_file, "%-30s,%-140s,%-140s,%-15llu,%-13d,%-13llu,%-15llu,%-15.1lf,%-15.1lf,%-5s\n", dyn_global_stats[i].func_name, buf1, buf, 
+              dyn_global_stats[i].count, dyn_global_stats[i].deactivation_count+1, dyn_global_stats[i].min, dyn_global_stats[i].max, avg, 
+              0.0, dyn_global_stats[i].is_leaf ? "TRUE" : "FALSE");
+
+    }
+  }
+
+  fclose(out_file);
+
+}
+
 // __attribute__((destructor)) - This doesn't seem to work properly with our heap data being tampered with when this gets called
 void cleanup(void) {
 
   int counter = 0;
-  FILE *out_file = fopen("prof.out", "w");
 
   // pid_t tid = syscall(SYS_gettid);
 
@@ -246,7 +377,7 @@ void cleanup(void) {
 
   // fprintf(stderr, "FINAL_OVERHEAD %.03f\n", overhead);
 
-  // Aggreate thread local statistics
+  // Aggregate thread local statistics
   for (int j=0; j < function_count; j++) {
     dyn_global_stats[j].count = 0;
     dyn_global_stats[j].sum = 0;
@@ -280,95 +411,14 @@ void cleanup(void) {
   fprintf(stderr, "\nTicks per nano seconds : %lf\n", getTicksPerNanoSec());
   fprintf(stderr, "Total overhead from invocations (s): %lf\n", (total_invocations * 1200 / getTicksPerNanoSec()/1000000000));
 
-  fprintf(out_file, "%-30s%-15s%-15s%-15s%-13s%-13s%-15s%-15s%-15s%-5s\n\n", "Function", "Rate_Hist", "Time_Hist",
-      "Count", "Samples", "Min", "Max", "Avg", "Variance", "Leaf?");
-  
-  for(int i=0; i < function_count; i++) {
-    if (dyn_global_stats[i].count != 0) {
-      bool first_row = true;
-
-      uint64_t max_hist_time = 0;
-      int max_hist_time_idx = 0;
-      uint64_t max_hist_rate = 0;
-      int max_hist_rate_idx = 0;
-
-      for (int j=0; j < 11; j++) {
-        if (dyn_global_stats[i].time_histogram[j] > max_hist_time) {
-          max_hist_time = dyn_global_stats[i].time_histogram[j];
-          max_hist_time_idx = j;
-        }
-
-        if (dyn_global_stats[i].rate_histogram[j] > max_hist_rate) {
-          max_hist_rate = dyn_global_stats[i].rate_histogram[j];
-          max_hist_rate_idx = j;
-        }
-      }
-
-      char buf[140] = {'\0'};
-      snprintf(buf, 140, "%llu %llu %llu %llu %llu %llu %llu %llu %llu %llu %llu ", 
-          dyn_global_stats[i].time_histogram[0], 
-          dyn_global_stats[i].time_histogram[1],
-          dyn_global_stats[i].time_histogram[2], 
-          dyn_global_stats[i].time_histogram[3],
-          dyn_global_stats[i].time_histogram[4], 
-          dyn_global_stats[i].time_histogram[5],
-          dyn_global_stats[i].time_histogram[6], 
-          dyn_global_stats[i].time_histogram[7],
-          dyn_global_stats[i].time_histogram[8],
-          dyn_global_stats[i].time_histogram[9], 
-          dyn_global_stats[i].time_histogram[10]
-          );
-
-      char buf1[140] = {'\0'};
-      snprintf(buf1, 140, "%llu %llu %llu %llu %llu %llu %llu %llu %llu %llu %llu ", 
-          dyn_global_stats[i].rate_histogram[0], 
-          dyn_global_stats[i].rate_histogram[1],
-          dyn_global_stats[i].rate_histogram[2], 
-          dyn_global_stats[i].rate_histogram[3],
-          dyn_global_stats[i].rate_histogram[4], 
-          dyn_global_stats[i].rate_histogram[5],
-          dyn_global_stats[i].rate_histogram[6], 
-          dyn_global_stats[i].rate_histogram[7],
-          dyn_global_stats[i].rate_histogram[8],
-          dyn_global_stats[i].rate_histogram[9], 
-          dyn_global_stats[i].rate_histogram[10]
-          );
-        
-      double variance = 0;
-      if (dyn_global_stats[i].count > 2) {
-        variance = dyn_global_stats[i].var / (dyn_global_stats[i].count - 1);
-      }
-
-      double avg = (double) dyn_global_stats[i].sum / dyn_global_stats[i].count;
-
-      fprintf(out_file, "%-30s%-15s%-15s%-15llu%-13d%-13llu%-15llu%-15.1lf%-15.1lf%-5s\n", dyn_global_stats[i].func_name, buf1, buf, 
-              dyn_global_stats[i].count, dyn_global_stats[i].deactivation_count+1, dyn_global_stats[i].min, dyn_global_stats[i].max, avg, 
-              0.0, dyn_global_stats[i].is_leaf ? "TRUE" : "FALSE");
-
-    }
+  if (output_type == CSV_OUTPUT) {
+    output_csv();
+  } else if (output_type == PRETTY_OUTPUT) {
+    output_pretty();
+  } else if (output_type == MULTI_OUTPUT) {
+    output_csv();
+    output_pretty();
   }
-
-  /*
-  fprintf(out_file, "\n\n-------- Histograms ------------\n");
-  fprintf(out_file, "%-50s%-13s%-13s\n\n", "Function", "Rate_Hist", "Time_Hist");
-
-  for(int i=0; i < function_count; i++) {
-    bool first_row = true;
-    for(int j=0; j < 11 ; j++) {
-      char buf[14], buf1[14];
-      snprintf(buf, 13, "%d:%llu", j, dyn_global_stats[i].time_histogram[j]);
-      snprintf(buf1, 13, "%d:%llu", j, dyn_global_stats[i].rate_histogram[j]);
-
-      if (first_row) {
-        fprintf(out_file, "%-50s%-13s%-13s\n", dyn_global_stats[i].func_name, buf1, buf);
-        first_row = false;
-      } else {
-        fprintf(out_file, "%-50s%-13s%-13s\n", " ", buf1, buf);
-      }
-    }
-  }*/
-
-  fclose(out_file);
 
   // Deallocate all the allocated stuff here
 
