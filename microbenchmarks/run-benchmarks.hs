@@ -28,7 +28,8 @@ benches =
   | numFuns <- [ 2^n | n <- [1..14]] ] ++
   [ (mkBenchmark "dynaprof/initOverhead/" [show numFuns] 
       (And[ compileParam (show numFuns) ])) { progname = Just "firstTimeInitOverheadDynaProf" }
-  | numFuns <- [ 2^n | n <- [1..14]] ] ++
+      -- RRN: nixing 2^14 case.. it crashes.
+  | numFuns <- [ 2^n | n <- [1..13]] ] ++ 
   [ (mkBenchmark "dynaprof/deactivationOverhead/" [show numFuns] 
       (And[ compileParam (show numFuns) ])) { progname = Just "deactivationOverheadDynaProf" }
   | numFuns <- [ 2^n | n <- [1..2]] ] 
