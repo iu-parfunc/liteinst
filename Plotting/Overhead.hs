@@ -11,12 +11,16 @@ import Prelude hiding (log, lines)
 
 -- Temporarily
 import Network.Google.FusionTables 
+-- import Network.Google (FTString)
 
 
 {- Generate Overhead plots! -} 
 
 
+cid :: String
 cid  = "925399326325-6dir7re3ik7686p6v3kkfkf1kj0ec7ck.apps.googleusercontent.com" 
+
+csec :: String
 csec = "MQ72ZWDde_1e1ihI5YE9YlEi"  
 
 table_name = "Dynaprof_Benchmarks" 
@@ -82,9 +86,7 @@ main = do
   -- Calc overhead percentage. 
   let overhead (g,x) =(g, (x - base) / base) -- ((x - base) / x)
 
-      real_overheads = map (map overhead) avg_combo
-
-  
+      real_overheads = map (map overhead) avg_combo  
       
   
   putStrLn "Showing values"
@@ -131,12 +133,14 @@ main = do
 --------------------------------------------------------------------------
 -- extract data given a variant
 
+extractVariantMedianTime :: [String] -> [[FTValue]] -> String -> [FTValue]
 extractVariantMedianTime cols dat variant =
   let rows = slice "VARIANT" variant cols dat
   in  extractColumn "MEDIANTIME" cols rows 
 
 
 -- extract the estimated overhead.
+extractVariantOverhead :: [String] -> [[FTValue]] -> String -> [FTValue]
 extractVariantOverhead cols dat variant =
   let rows = slice "VARIANT" variant cols dat
   in  extractColumn "FINAL_OVERHEAD" cols rows 
