@@ -36,7 +36,7 @@ lib:
 
 # Run the benchmarks
 bench: lib run-benchmarks.exe
-	./run-benchmarks.exe --hostname=$(MACHINECLASS) --keepgoing --trials=$(TRIALS) --name="Dynaprof_Benchmarks" --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH)
+	./run-benchmarks.exe --hostname=$(MACHINECLASS) --keepgoing --trials=$(TRIALS) --name="Dynaprof_Benchmarks" --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
 
 run-benchmarks.exe: run-benchmarks.cabal run-benchmarks.hs
 	$(CABAL) sandbox init --sandbox=../.cabal-sandbox/
