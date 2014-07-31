@@ -281,6 +281,14 @@ int read_zca_probes(const char* path)
   int next_func_id = 0;
   functions = new func_table;
 
+  int   do_hack = 1;
+  char* hack_active_str = getenv("DYN_DISABLE_ELF_HACK");
+  // If it is set to anything nonzero, then we disbable:
+  if (hack_active_str != NULL && strcmp(hack_active_str, "") && strcmp(hack_active_str, "0")) {
+    fprintf(stderr, "[zcatoggle] disabling ELF-related double-getdata hack.\n");
+    do_hack = 0;
+  }
+
 	// Loop over all sections in the ELF object
 	while((scn = elf_nextscn(e, scn))!=NULL) {
 		// Given a Elf Scn pointer, retrieve the associated section header
@@ -298,7 +306,9 @@ int read_zca_probes(const char* path)
 
 			char* ptr;
 			// NOTE: Robert needs to comment this out for running on Mason:
-			data = elf_getdata(scn, data); // Apparently we need to elf_getdata twice before we get the goods....
+			if (do_hack) {
+			  data = elf_getdata(scn, data); // Apparently we need to elf_getdata twice before we get the goods....
+			}
 
        while ((data = elf_getdata(scn,data)) != NULL) {
 			ptr = (char*) data->d_buf;
