@@ -44,7 +44,9 @@ run-benchmarks.exe: run-benchmarks.cabal run-benchmarks.hs
 	(cd ..; make run-benchmarks.exe)
 #       Then we know that ours can build:
 	$(CABAL) install --bindir=. --disable-documentation --with-ghc=ghc-$(JENKINS_GHC)
+	./run-benchmarks.exe --help
 	./run-benchmarks.exe -l
+
 
 clean:
 	rm -rf run-benchmarks.exe ./dist
