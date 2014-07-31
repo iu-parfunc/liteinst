@@ -13,8 +13,8 @@ cat $fileStem.cp1 >>$fileStem.cpp
 for (( j=0; j<$1; j++ ))
 do
     echo "void myEmptyFunc$j( void ) {">>$fileStem.cpp
-    echo ' __notify_intrinsic((void*)"myEmptyFunc$j:start", (void *)&global_x);'>>$fileStem.cpp
-    echo ' __notify_intrinsic((void*)"myEmptyFunc$j:end", (void *)&global_x);'>>$fileStem.cpp
+    echo " __notify_intrinsic((void*)\"myEmptyFunc$j:start\", (void *)&global_x);">>$fileStem.cpp
+    echo " __notify_intrinsic((void*)\"myEmptyFunc$j:end\", (void *)&global_x);">>$fileStem.cpp
     echo "return; }">>$fileStem.cpp
 done
 echo "unsigned long int countTEST=$j;">>$fileStem.cpp
