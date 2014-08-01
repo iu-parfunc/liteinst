@@ -29,8 +29,12 @@ TRIALS=1
 
 # Google API authentication
 # Parfunc account / FusionTable_DynaprofUploader project:
-CID=925399326325-6dir7re3ik7686p6v3kkfkf1kj0ec7ck.apps.googleusercontent.com
-SEC=MQ72ZWDde_1e1ihI5YE9YlEi
+# CID=925399326325-6dir7re3ik7686p6v3kkfkf1kj0ec7ck.apps.googleusercontent.com
+# SEC=MQ72ZWDde_1e1ihI5YE9YlEi
+
+# Hit quota, using this one temporarily (the 1st FT project):
+CID=905767673358.apps.googleusercontent.com
+SEC=2a2H57dBggubW1_rqglC7jtK
 
 .phony: all lib bench
 # ----------------------------------------
