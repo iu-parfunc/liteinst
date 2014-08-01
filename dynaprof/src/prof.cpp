@@ -2,6 +2,7 @@
 #include "elf-provider.h"
 #include "ptypes.hpp"
 #include "dynaprof.h"
+#include <fstream>
 #include <stdio.h>
 #include <pthread.h>
 #include <time.h>
@@ -31,13 +32,21 @@
 #define CSV_OUTPUT 1
 #define MULTI_OUTPUT 2
 
+#define NO_EXP -1
+#define QUALITY_EXP 0
+
 #define NANO_SECONDS_IN_SEC 1000000000;
 
 using namespace std;
 
 Profiler* prof;
 
+list<string> filters;
+
 NBQueue* heavy_hitters;
+
+// Useful statistics
+ticks app_start_time = 0;
 
 __thread static unsigned long long leaf_counter = 0;
 
@@ -47,6 +56,7 @@ double overhead = 0.0;
 long sample_size = 10000;
 double sample_rate = 0.01 * NANO_SECONDS_IN_SEC; // Default sampling rate is 10ms
 int output_type = CSV_OUTPUT;
+int exp_type = NO_EXP;
 
 /** global statistics **/
 dyn_global_data* dyn_global_stats;
@@ -149,6 +159,62 @@ void Basic_Profiler::initialize(void) {
     }
   }
 
+  char* experiment_str = getenv("DYN_EXPERIMENT");
+  if (experiment_str != NULL) {
+    if (!strcmp(experiment_str, "QUALITY")) {
+      exp_type = QUALITY_EXP;
+    }
+  }
+
+  char* filter_probes_str = getenv("DYN_FILTER_PROBES");
+  if (filter_probes_str != NULL) {
+    char* filter = strtok (filter_probes_str,",");
+    while (filter != NULL) {
+      filters.push_front(string(filter));
+      filter = strtok (NULL, ",");
+    }
+  }
+
+  char* filter_input_file = getenv("DYN_FILTER_FILE");
+  if (filter_input_file != NULL) {
+    /*
+    ifstream input_file(filter_input_file);
+    string filter = NULL;
+    if (input_file.is_open()) {
+      while(input_file.good()) {
+        getline(input_file, filter);
+        filters.push_front(string(filter));
+      
+      }
+      input_file.close();
+    }
+    */
+    
+    FILE* fp = fopen(filter_input_file, "r");
+    char* filter = NULL;
+    size_t len = 0;
+    size_t read;
+    while ((read = getline(&filter, &len, fp)) != -1) {
+      for (int i=0; i<read; i++) {
+        if(isspace(filter[i])) {
+          filter[i] = '\0'; // Ignore whitespaces or newline
+          break;
+        }
+      }
+
+      filters.push_front(string(filter));
+      printf("%s", filter);
+    }
+  }
+
+
+  /*
+  fprintf(stderr, "Filters are : \n");
+  for (std::list<string>::iterator it=filters.begin(); it!=filters.end(); ++it) {
+    fprintf(stderr, "%s ", *it);
+  }
+  */
+
   char* strategy_str = getenv("DYN_STRATEGY");
   /*
   char no_backoff[] = "\"NO_BACKOFF\"";
@@ -238,7 +304,7 @@ void output_pretty() {
       "Count", "Samples", "Min", "Max", "Avg", "Variance", "Leaf?");
   
   for(int i=0; i < function_count; i++) {
-    if (dyn_global_stats[i].count != 0) {
+    if (dyn_global_stats[i].count != 0 && !dyn_global_stats[i].is_leaf) {
       bool first_row = true;
 
       uint64_t max_hist_time = 0;
@@ -271,13 +337,14 @@ void output_pretty() {
 
       double avg = (double) dyn_global_stats[i].sum / dyn_global_stats[i].count;
 
-      fprintf(out_file, "%-30s%-15s%-15s%-15llu%-13d%-13llu%-15llu%-15.1lf%-15.1lf%-5s\n", dyn_global_stats[i].func_name, buf1, buf, 
+      fprintf(out_file, "%-30s%-15s%-15s%-15llu%-13d%-13llu%-15llu%-15.1lf%-15.1lf%-5s\n", dyn_global_stats[i].func_name, buf, buf1, 
               dyn_global_stats[i].count, dyn_global_stats[i].deactivation_count+1, dyn_global_stats[i].min, dyn_global_stats[i].max, avg, 
               0.0, dyn_global_stats[i].is_leaf ? "TRUE" : "FALSE");
 
     }
   }
 
+  /*
   fprintf(out_file, "\n\n-------- Histograms ------------\n");
   fprintf(out_file, "%-50s%-13s%-13s\n\n", "Function", "Rate_Hist", "Time_Hist");
 
@@ -296,6 +363,7 @@ void output_pretty() {
       }
     }
   }
+  */
 
   fclose(out_file);
 
@@ -365,8 +433,29 @@ void output_csv() {
 
 }
 
+void output_stripped() {
+
+  FILE *out_file = fopen("prof.out", "a");
+
+  fprintf(out_file, "%-50s%-15s%-15s%-15s%\n", "Function", "Min", "Max", "Avg");
+  for(int i=0; i < function_count; i++) {
+    if (dyn_global_stats[i].count != 0) {
+      fprintf(out_file, "%-50s,%-15llu,%-15llu,%-15.1lf\n", dyn_global_stats[i].func_name, dyn_global_stats[i].min,
+          dyn_global_stats[i].max, (double)dyn_global_stats[i].sum / dyn_global_stats[i].count);
+
+    }
+  }
+
+  fclose(out_file);
+
+}
+
 // __attribute__((destructor)) - This doesn't seem to work properly with our heap data being tampered with when this gets called
 void cleanup(void) {
+
+  ticks cleanup_start = getticks();
+
+  fprintf(stderr, "SELFTIMED : %.3lf\n", (cleanup_start-app_start_time)/getTicksPerMilliSec()/1000);
 
   int counter = 0;
 
@@ -407,9 +496,17 @@ void cleanup(void) {
   for (int i=0; i<function_count;i++) {
     total_invocations += dyn_global_stats[i].count;
   }
-  fprintf(stderr, "\nTotal invocations : %lu\n", total_invocations);
+  fprintf(stderr, "\nNUM_SAMPLES : %llu\n", total_invocations);
   fprintf(stderr, "\nTicks per nano seconds : %lf\n", getTicksPerNanoSec());
   fprintf(stderr, "Total overhead from invocations (s): %lf\n", (total_invocations * 1200 / getTicksPerNanoSec()/1000000000));
+
+  if (exp_type == QUALITY_EXP) {
+    output_stripped();
+
+    ticks cleanup_end = getticks();
+    fprintf(stderr,"DYN_TEARDOWN : %.1lf\n", (cleanup_start-cleanup_end)/getTicksPerNanoSec()/1000000);
+    return;
+  }
 
   if (output_type == CSV_OUTPUT) {
     output_csv();
@@ -419,6 +516,11 @@ void cleanup(void) {
     output_csv();
     output_pretty();
   }
+
+  ticks cleanup_end = getticks();
+  fprintf(stderr, "CLEANUP STRT: %llu\n", cleanup_start);
+  fprintf(stderr, "CLEANUP END : %llu\n", cleanup_end);
+  fprintf(stderr,"DYN_TEARDOWN : %.1lf\n", (cleanup_start-cleanup_end)/getTicksPerNanoSec()/1000000);
 
   // Deallocate all the allocated stuff here
 
@@ -433,8 +535,15 @@ void deactivate_method_profiling(const char* method) {
 }
 
 void start_profiler() {
-  initZCAService();
 
+
+  app_start_time = getticks();
+  initZCAService();
+  ticks end = getticks();
+
+  fprintf(stderr, "INIT_OVERHEAD_ZCATOGGLE:%.1lf\n", (end-app_start_time)/ getTicksPerMilliSec());
+
+  ticks dyn_init_start = getticks();
   // deactivation_queue = new NBQueue(20);
   heavy_hitters = new NBQueue(20);
 
@@ -442,6 +551,10 @@ void start_profiler() {
   prof->profile_all(NULL, NULL);
 
   atexit(cleanup); // This seems to be a viable alternative to the destructor
+   
+  end = getticks();
+  fprintf(stderr, "INIT_OVERHEAD_DYNAPROF:%.1lf\n", (end-dyn_init_start)/ getTicksPerMilliSec());
+
 }
 
 void stop_profiler() {
@@ -555,6 +668,11 @@ void tokenize(const string& str,
 void Profiler::profile_all(void (*prolog_func)(), void (*epilog_func)()) {
   map<string, int>* activated_probes = new map<string, int>;
 
+  bool filter_set = false;
+  if (filters.size() > 0) {
+    filter_set = true;
+  }
+
   for (auto iter = annotations.begin(); iter != annotations.end(); iter++) {
     string annotation = iter->first;
 
@@ -562,16 +680,33 @@ void Profiler::profile_all(void (*prolog_func)(), void (*epilog_func)()) {
     tokenize(annotation, tokens, ":");
 
     string func_name = tokens[0];
+    
+    if (filter_set) {
+      for (std::list<string>::iterator it=filters.begin(); it!=filters.end(); ++it) {
+        // Insert instrumentation only if the method is in the filter list
+        if(!func_name.compare(*it)) {
+          map<string, int>::iterator it;
+          it = activated_probes->find(func_name);
 
-    map<string, int>::iterator it;
-    it = activated_probes->find(func_name);
+          if (it == activated_probes->end()) {
+            start_profile(func_name, prolog_func, epilog_func);
+          }
 
-    if (it == activated_probes->end()) {
-      start_profile(func_name, prolog_func, epilog_func);
+          activated_probes->insert(make_pair(func_name,1));
+          break;
+        }
+      }
+    } else {
+      map<string, int>::iterator it;
+      it = activated_probes->find(func_name);
+
+      if (it == activated_probes->end()) {
+        start_profile(func_name, prolog_func, epilog_func);
+      }
+
+      activated_probes->insert(make_pair(func_name,1));
     }
-
-    activated_probes->insert(make_pair(func_name,1));
-  }
+ }
 
   delete activated_probes;
 }
