@@ -96,9 +96,13 @@ main = do
         , runTimeOut = Just 1000 -- Erk... need a separate compile timeout.
         , plugIns   = [ SomePlugin defaultFusionPlugin,
                         SomePlugin defaultDribblePlugin ]
-        , harvesters = customTagHarvesterDouble "INIT_TIME"
-                        `mappend` customTagHarvesterDouble "FINAL_OVERHEAD"
-                        `mappend` harvesters conf                        
+        , harvesters = customTagHarvesterDouble "INIT_OVERHEAD_ZCATOGGLE" `mappend` 
+                       customTagHarvesterDouble "INIT_OVERHEAD_DYNAPROF"  `mappend` 
+                       customTagHarvesterDouble "DYN_TEARDOWN"            `mappend` 
+                       customTagHarvesterInt    "NUM_SAMPLES"             `mappend` 
+                       customTagHarvesterInt    "NUM_PROBES"              `mappend` 
+                       customTagHarvesterDouble "FINAL_OVERHEAD" `mappend`
+                       harvesters conf
         }
 
 

@@ -252,9 +252,9 @@ void Basic_Profiler::initialize(void) {
 
   set_profiler_function();
 
-  fprintf(stderr, "[Init] Strategy : %s Overhead : %s Sample size : %s Sample_rate : %s\n", 
+  fprintf(stderr, "[DynaprofInit] Strategy : %s Overhead : %s Sample size : %s Sample_rate : %s\n", 
       strategy_str, overhead_str, sample_size_str, sample_rate_str);
-  fprintf(stderr, "[Init] Strategy : %d Overhead : %lf Sample size : %lu Sample_rate : %lf\n", 
+  fprintf(stderr, "[DynaprofInit] Strategy : %d Overhead : %lf Sample size : %lu Sample_rate : %lf\n", 
       strategy, target_overhead, sample_size, sample_rate);
 
   dyn_global_stats = (dyn_global_data*)calloc(function_count, sizeof(dyn_global_data));
@@ -455,7 +455,7 @@ void cleanup(void) {
 
   ticks cleanup_start = getticks();
 
-  fprintf(stderr, "SELFTIMED : %.3lf\n", (cleanup_start-app_start_time)/getTicksPerMilliSec()/1000);
+  fprintf(stderr, "SELFTIMED: %.3lf\n", (cleanup_start-app_start_time)/getTicksPerMilliSec()/1000);
 
   int counter = 0;
 
@@ -496,15 +496,15 @@ void cleanup(void) {
   for (int i=0; i<function_count;i++) {
     total_invocations += dyn_global_stats[i].count;
   }
-  fprintf(stderr, "\nNUM_SAMPLES : %llu\n", total_invocations);
-  fprintf(stderr, "\nTicks per nano seconds : %lf\n", getTicksPerNanoSec());
-  fprintf(stderr, "Total overhead from invocations (s): %lf\n", (total_invocations * 1200 / getTicksPerNanoSec()/1000000000));
+  fprintf(stderr, "\nNUM_SAMPLES: %llu\n", total_invocations);
+  fprintf(stderr, "\nTicks_per_nano_seconds: %lf\n", getTicksPerNanoSec());
+  fprintf(stderr, "Total_overhead_from_invocations: %lfs\n", (total_invocations * 1200 / getTicksPerNanoSec()/1000000000));
 
   if (exp_type == QUALITY_EXP) {
     output_stripped();
 
     ticks cleanup_end = getticks();
-    fprintf(stderr,"DYN_TEARDOWN : %.1lf\n", (cleanup_start-cleanup_end)/getTicksPerNanoSec()/1000000);
+    fprintf(stderr,"DYN_TEARDOWN: %.1lf\n", (cleanup_start-cleanup_end)/getTicksPerNanoSec()/1000000);
     return;
   }
 
@@ -518,9 +518,9 @@ void cleanup(void) {
   }
 
   ticks cleanup_end = getticks();
-  fprintf(stderr, "CLEANUP STRT: %llu\n", cleanup_start);
-  fprintf(stderr, "CLEANUP END : %llu\n", cleanup_end);
-  fprintf(stderr,"DYN_TEARDOWN : %.1lf\n", (cleanup_start-cleanup_end)/getTicksPerNanoSec()/1000000);
+  fprintf(stderr, "CLEANUP_STRT: %llu\n", cleanup_start);
+  fprintf(stderr, "CLEANUP_END: %llu\n", cleanup_end);
+  fprintf(stderr,"DYN_TEARDOWN: %.1lf\n", (cleanup_start-cleanup_end)/getTicksPerNanoSec()/1000000);
 
   // Deallocate all the allocated stuff here
 
@@ -541,7 +541,7 @@ void start_profiler() {
   initZCAService();
   ticks end = getticks();
 
-  fprintf(stderr, "INIT_OVERHEAD_ZCATOGGLE:%.1lf\n", (end-app_start_time)/ getTicksPerMilliSec());
+  fprintf(stderr, "INIT_OVERHEAD_ZCATOGGLE: %.1lf\n", (end-app_start_time)/ getTicksPerMilliSec());
 
   ticks dyn_init_start = getticks();
   // deactivation_queue = new NBQueue(20);
@@ -553,7 +553,7 @@ void start_profiler() {
   atexit(cleanup); // This seems to be a viable alternative to the destructor
    
   end = getticks();
-  fprintf(stderr, "INIT_OVERHEAD_DYNAPROF:%.1lf\n", (end-dyn_init_start)/ getTicksPerMilliSec());
+  fprintf(stderr, "INIT_OVERHEAD_DYNAPROF: %.1lf\n", (end-dyn_init_start)/ getTicksPerMilliSec());
 
 }
 
