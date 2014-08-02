@@ -3,12 +3,13 @@
 # Script used by Jenkins to run benchmarks.
 
 echo "Run benchmarks script starting, located at: $0"
-root=`dirname $0`
 
+rootdir=$1
+shift
 export BENCHARGS=$*
 
-cd $root
+cd $rootdir
 
-echo "Switched to directory: "`pwd`
+echo "Switched to working-copy directory: "`pwd`
 ./.jenkins_script.sh
 make bench
