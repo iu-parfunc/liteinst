@@ -21,8 +21,8 @@ CODE = prof.cpp nbqueue.cpp
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 SRC = $(HDRS) $(CODE)
-LIBS = -lelf -lpthread ../../zcatoggle/build/libzca-toggle.a # Make this libzca-toggle.so
-# CFLAGS=-O0
+LIBS = -L../../deps/ -lelf -lpthread ../../zcatoggle/build/libzca-toggle.a # Make this libzca-toggle.so
+CFLAGS += -I../../deps/
 
 LIBSOUT = libdynaprof.so libdynaprof.a 
 HDRSOUT = dynaprof.h

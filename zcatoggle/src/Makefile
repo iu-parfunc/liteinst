@@ -26,8 +26,8 @@ OBJ  = $(OBJ0:.c=.o)
 DEPS0 :=  $(wildcard $(ASM_JIT)/*.cpp)
 DEPS = $(DEPS0:.cpp=.o)
 SRC = $(HDRS) $(CODE)
-LIBS = -lelf -lpthread -lrt
-CFLAGS = -O0
+LIBS = -L../../deps/ -lelf -lpthread -lrt
+CFLAGS = -O0 -I../../deps/
 
 LIBSOUT = libzca-toggle.so libzca-toggle.a  
 
