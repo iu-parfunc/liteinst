@@ -20,6 +20,7 @@ echo "Switched to working-copy directory: "`pwd`
 
 # ----------------------------------------
 # Step (0): Hack-o-rama [2014.08.02]:
+echo "Responding to USE_FIXED_LIBS_HACK=$USE_FIXED_LIBS_HACK ..."
 if ! [ "$USE_FIXED_LIBS_HACK" == "" ]; then 
   cd ./deps/
   wget http://html.soic.indiana.edu/~parfunc/misc/libelf_0_152_rhel65.tgz
