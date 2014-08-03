@@ -29,8 +29,12 @@ TRIALS=1
 
 # Google API authentication
 # Parfunc account / FusionTable_DynaprofUploader project:
-CID=925399326325-6dir7re3ik7686p6v3kkfkf1kj0ec7ck.apps.googleusercontent.com
-SEC=MQ72ZWDde_1e1ihI5YE9YlEi
+# CID=925399326325-6dir7re3ik7686p6v3kkfkf1kj0ec7ck.apps.googleusercontent.com
+# SEC=MQ72ZWDde_1e1ihI5YE9YlEi
+
+# Hit quota, using this one temporarily (the 1st FT project):
+CID=905767673358.apps.googleusercontent.com
+SEC=2a2H57dBggubW1_rqglC7jtK
 
 .phony: all lib bench
 # ----------------------------------------
@@ -50,9 +54,9 @@ bench: run-benchmarks.exe
 run-benchmarks.exe: run-benchmarks.cabal run-benchmarks.hs
 	$(CABAL) sandbox init
 	$(CABAL) sandbox hc-pkg list
-	$(CABAL) install ./HSBencher/hgdata ./HSBencher/hsbencher ./HSBencher/hsbencher-fusion --disable-documentation --with-ghc=ghc-$(JENKINS_GHC) -j
-	$(CABAL) install --only-dep -j --disable-documentation --with-ghc=ghc-$(JENKINS_GHC)
-	$(CABAL) install --bindir=. --disable-documentation --with-ghc=ghc-$(JENKINS_GHC)
+	$(CABAL) install ./HSBencher/hgdata ./HSBencher/hsbencher ./HSBencher/hsbencher-fusion --disable-documentation --with-ghc=ghc-$(JENKINS_GHC) -j --force-reinstalls
+	$(CABAL) install --only-dep -j --disable-documentation --with-ghc=ghc-$(JENKINS_GHC) --force-reinstalls
+	$(CABAL) install --bindir=. --disable-documentation --with-ghc=ghc-$(JENKINS_GHC) --force-reinstalls
 	./run-benchmarks.exe --help
 	./run-benchmarks.exe -l
 
