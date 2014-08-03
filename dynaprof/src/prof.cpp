@@ -31,9 +31,7 @@
 #define PRETTY_OUTPUT 0
 #define CSV_OUTPUT 1
 #define MULTI_OUTPUT 2
-
-#define NO_EXP -1
-#define QUALITY_EXP 0
+#define STRIPPED_OUTPUT 3
 
 #define NANO_SECONDS_IN_SEC 1000000000;
 
@@ -50,13 +48,12 @@ ticks app_start_time = 0;
 
 __thread static unsigned long long leaf_counter = 0;
 
-int strategy = BOP_SIMPLE;
+int strategy = NO_BACKOFF;
 double target_overhead = 0.05; 
 double overhead = 0.0;
 long sample_size = 10000;
-double sample_rate = 0.01 * NANO_SECONDS_IN_SEC; // Default sampling rate is 10ms
+uint64_t sample_rate = 0.01 * NANO_SECONDS_IN_SEC; // Default sampling rate is 10ms
 int output_type = CSV_OUTPUT;
-int exp_type = NO_EXP;
 
 /** global statistics **/
 dyn_global_data* dyn_global_stats;
@@ -144,7 +141,7 @@ void Basic_Profiler::initialize(void) {
 
   char* sample_rate_str = getenv("DYN_SAMPLE_PERIOD");
   if (sample_rate_str != NULL) {
-    sample_rate = atof(sample_rate_str);
+    sample_rate = (uint64_t)atof(sample_rate_str);
     sample_rate *= NANO_SECONDS_IN_SEC;
   }
 
@@ -156,39 +153,22 @@ void Basic_Profiler::initialize(void) {
       output_type = CSV_OUTPUT;
     } else if (!strcmp(output_type_str, "BOTH")) {
       output_type = MULTI_OUTPUT;
-    }
-  }
-
-  char* experiment_str = getenv("DYN_EXPERIMENT");
-  if (experiment_str != NULL) {
-    if (!strcmp(experiment_str, "QUALITY")) {
-      exp_type = QUALITY_EXP;
+    } else if (!strcmp(output_type_str, "STRIPPED")) {
+      output_type = STRIPPED_OUTPUT;
     }
   }
 
   char* filter_probes_str = getenv("DYN_FILTER_PROBES");
   if (filter_probes_str != NULL) {
     char* filter = strtok (filter_probes_str,",");
-    while (filter != NULL) {
+    while (filter != NULL && strcmp(filter, "")) {
       filters.push_front(string(filter));
       filter = strtok (NULL, ",");
     }
   }
 
   char* filter_input_file = getenv("DYN_FILTER_FILE");
-  if (filter_input_file != NULL) {
-    /*
-    ifstream input_file(filter_input_file);
-    string filter = NULL;
-    if (input_file.is_open()) {
-      while(input_file.good()) {
-        getline(input_file, filter);
-        filters.push_front(string(filter));
-      
-      }
-      input_file.close();
-    }
-    */
+  if (filter_input_file != NULL && strcmp(filter_input_file,"")) {
     
     FILE* fp = fopen(filter_input_file, "r");
     char* filter = NULL;
@@ -207,13 +187,6 @@ void Basic_Profiler::initialize(void) {
     }
   }
 
-
-  /*
-  fprintf(stderr, "Filters are : \n");
-  for (std::list<string>::iterator it=filters.begin(); it!=filters.end(); ++it) {
-    fprintf(stderr, "%s ", *it);
-  }
-  */
 
   char* strategy_str = getenv("DYN_STRATEGY");
   /*
@@ -254,7 +227,7 @@ void Basic_Profiler::initialize(void) {
 
   fprintf(stderr, "[DynaprofInit] Strategy : %s Overhead : %s Sample size : %s Sample_rate : %s\n", 
       strategy_str, overhead_str, sample_size_str, sample_rate_str);
-  fprintf(stderr, "[DynaprofInit] Strategy : %d Overhead : %lf Sample size : %lu Sample_rate : %lf\n", 
+  fprintf(stderr, "[DynaprofInit] Strategy : %d Overhead : %lf Sample size : %lu Sample_rate : %lu\n", 
       strategy, target_overhead, sample_size, sample_rate);
 
   dyn_global_stats = (dyn_global_data*)calloc(function_count, sizeof(dyn_global_data));
@@ -293,7 +266,7 @@ void Profiler::register_thread_data(dyn_thread_data* data) {
   } else {
     LOG_ERROR("Max thread count exceeded. This thread will not be profiled..\n");
   }
-  // do realloc if we run out of indices; 
+  //TODO: do realloc if we run out of indices; 
 }
 
 void output_pretty() {
@@ -437,10 +410,9 @@ void output_stripped() {
 
   FILE *out_file = fopen("prof.out", "a");
 
-  fprintf(out_file, "%-50s%-15s%-15s%-15s%\n", "Function", "Min", "Max", "Avg");
   for(int i=0; i < function_count; i++) {
     if (dyn_global_stats[i].count != 0) {
-      fprintf(out_file, "%-50s,%-15llu,%-15llu,%-15.1lf\n", dyn_global_stats[i].func_name, dyn_global_stats[i].min,
+      fprintf(out_file, "%-40s,%-15llu,%-15llu,%-15.1lf\n", dyn_global_stats[i].func_name, dyn_global_stats[i].min,
           dyn_global_stats[i].max, (double)dyn_global_stats[i].sum / dyn_global_stats[i].count);
 
     }
@@ -455,7 +427,7 @@ void cleanup(void) {
 
   ticks cleanup_start = getticks();
 
-  fprintf(stderr, "SELFTIMED: %.3lf\n", (cleanup_start-app_start_time)/getTicksPerMilliSec()/1000);
+  fprintf(stderr, "SELFTIMED: %.6lf\n", (cleanup_start-app_start_time)/getTicksPerMilliSec()/1000);
 
   int counter = 0;
 
@@ -500,11 +472,11 @@ void cleanup(void) {
   fprintf(stderr, "\nTicks_per_nano_seconds: %lf\n", getTicksPerNanoSec());
   fprintf(stderr, "Total_overhead_from_invocations: %lfs\n", (total_invocations * 1200 / getTicksPerNanoSec()/1000000000));
 
-  if (exp_type == QUALITY_EXP) {
+  if (output_type == STRIPPED_OUTPUT) {
     output_stripped();
 
     ticks cleanup_end = getticks();
-    fprintf(stderr,"DYN_TEARDOWN: %.1lf\n", (cleanup_start-cleanup_end)/getTicksPerNanoSec()/1000000);
+    fprintf(stderr,"DYN_TEARDOWN: %.6lf\n", (cleanup_end-cleanup_start)/getTicksPerMilliSec()/1000);
     return;
   }
 
@@ -518,9 +490,9 @@ void cleanup(void) {
   }
 
   ticks cleanup_end = getticks();
-  fprintf(stderr, "CLEANUP_STRT: %llu\n", cleanup_start);
-  fprintf(stderr, "CLEANUP_END: %llu\n", cleanup_end);
-  fprintf(stderr,"DYN_TEARDOWN: %.1lf\n", (cleanup_start-cleanup_end)/getTicksPerNanoSec()/1000000);
+  // fprintf(stderr, "CLEANUP_STRT: %llu\n", cleanup_start);
+  // fprintf(stderr, "CLEANUP_END: %llu\n", cleanup_end);
+  fprintf(stderr,"DYN_TEARDOWN: %.6lf\n", (cleanup_end-cleanup_start)/getTicksPerMilliSec()/1000);
 
   // Deallocate all the allocated stuff here
 
@@ -536,12 +508,11 @@ void deactivate_method_profiling(const char* method) {
 
 void start_profiler() {
 
-
   app_start_time = getticks();
   initZCAService();
   ticks end = getticks();
 
-  fprintf(stderr, "INIT_OVERHEAD_ZCATOGGLE: %.1lf\n", (end-app_start_time)/ getTicksPerMilliSec());
+  fprintf(stderr, "INIT_OVERHEAD_ZCATOGGLE: %.6lf\n", (end-app_start_time)/ getTicksPerMilliSec()/1000);
 
   ticks dyn_init_start = getticks();
   // deactivation_queue = new NBQueue(20);
@@ -553,7 +524,7 @@ void start_profiler() {
   atexit(cleanup); // This seems to be a viable alternative to the destructor
    
   end = getticks();
-  fprintf(stderr, "INIT_OVERHEAD_DYNAPROF: %.1lf\n", (end-dyn_init_start)/ getTicksPerMilliSec());
+  fprintf(stderr, "INIT_OVERHEAD_DYNAPROF: %.6lf\n", (end-dyn_init_start)/ getTicksPerMilliSec()/1000);
 
 }
 
