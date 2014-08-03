@@ -412,8 +412,8 @@ void output_stripped() {
 
   for(int i=0; i < function_count; i++) {
     if (dyn_global_stats[i].count != 0) {
-      fprintf(out_file, "%-40s,%-15llu,%-15llu,%-15.1lf\n", dyn_global_stats[i].func_name, dyn_global_stats[i].min,
-          dyn_global_stats[i].max, (double)dyn_global_stats[i].sum / dyn_global_stats[i].count);
+      fprintf(out_file, "%-40s,%-15llu,%-15llu,%-15llu,%-15.1lf\n", dyn_global_stats[i].func_name, dyn_global_stats[i].count, 
+          dyn_global_stats[i].min, dyn_global_stats[i].max, (double)dyn_global_stats[i].sum / dyn_global_stats[i].count);
 
     }
   }
