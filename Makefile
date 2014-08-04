@@ -24,8 +24,8 @@ ifeq ($(JENKINS_GHC),)
   JENKINS_GHC=7.8.2
 endif
 
-# TRIALS=3
-TRIALS=1
+TRIALS=3
+# TRIALS=1
 
 # Google API authentication
 # Parfunc account / FusionTable_DynaprofUploader project:
