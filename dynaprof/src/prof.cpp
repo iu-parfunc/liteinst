@@ -425,7 +425,12 @@ void cleanup(void) {
 
   ticks cleanup_start = getticks();
 
-  fprintf(stderr, "SELFTIMED: %.6lf\n", (cleanup_start-app_start_time)/getTicksPerMilliSec()/1000);
+  int   do_print = 1;
+  char* no_selftimed = getenv("DYN_DISABLE_SELFTIMED");
+  // If it is set to anything nonzero, then we disbable:
+  if (no_selftimed == NULL && !strcmp(no_selftimed, "") && !strcmp(no_selftimed, "0")) {
+    fprintf(stderr, "SELFTIMED: %.6lf\n", (cleanup_start-app_start_time)/getTicksPerMilliSec()/1000);    
+  }
 
   int counter = 0;
 
