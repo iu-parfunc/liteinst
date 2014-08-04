@@ -277,7 +277,7 @@ void output_pretty() {
       "Count", "Samples", "Min", "Max", "Avg", "Variance", "Leaf?");
   
   for(int i=0; i < function_count; i++) {
-    if (dyn_global_stats[i].count != 0 && !dyn_global_stats[i].is_leaf) {
+    if (dyn_global_stats[i].count != 0) {
       bool first_row = true;
 
       uint64_t max_hist_time = 0;
@@ -317,7 +317,6 @@ void output_pretty() {
     }
   }
 
-  /*
   fprintf(out_file, "\n\n-------- Histograms ------------\n");
   fprintf(out_file, "%-50s%-13s%-13s\n\n", "Function", "Rate_Hist", "Time_Hist");
 
@@ -336,7 +335,6 @@ void output_pretty() {
       }
     }
   }
-  */
 
   fclose(out_file);
 
@@ -412,8 +410,8 @@ void output_stripped() {
 
   for(int i=0; i < function_count; i++) {
     if (dyn_global_stats[i].count != 0) {
-      fprintf(out_file, "%-40s,%-15llu,%-15llu,%-15.1lf\n", dyn_global_stats[i].func_name, dyn_global_stats[i].min,
-          dyn_global_stats[i].max, (double)dyn_global_stats[i].sum / dyn_global_stats[i].count);
+      fprintf(out_file, "%-40s,%-15llu,%-15llu,%-15llu,%-15.1lf\n", dyn_global_stats[i].func_name, dyn_global_stats[i].count, 
+          dyn_global_stats[i].min, dyn_global_stats[i].max, (double)dyn_global_stats[i].sum / dyn_global_stats[i].count);
 
     }
   }
