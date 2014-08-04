@@ -3,8 +3,6 @@ int main(int argc, char** argv)
 {
     unsigned long int i;
     struct timespec start, stop;
-    double cycleTime, hzRate;
-    hzRate=(double)1866000000;
     unsigned long long tick1,tick2,cycles;
 
     if (argc <= 3) {
@@ -41,11 +39,6 @@ int main(int argc, char** argv)
     clock_gettime( CLOCK_REALTIME, &stop);
     tick2=getticks();
     printf("Done.\n");
-
-    printf("Machine info:\n");
-    cycleTime=(double)1/hzRate*(double)1000000000;
-    printf( "  %3.5f GHz\n", hzRate/1000000000);
-    printf( "  %3.10f cycle time in nano seconds\n", cycleTime);
 
     cycles = (unsigned long long)((tick2-tick1));
     double cycles_per = ((double)cycles) / ((double)NUMCALLS * (double)NUMFUNS);
