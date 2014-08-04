@@ -32,6 +32,21 @@ long foo(int count) {
   return sum;
 }
 
+void if_conditions(int a) {
+  __notify_intrinsic((void*)"if_conditions:start",(void*)&x);
+  if(a == 1){
+    __notify_intrinsic((void*)"if_conditions:end",(void*)&x);
+    return;
+  } else if (a == 2){
+    __notify_intrinsic((void*)"if_conditions:end",(void*)&x);
+    return;
+  }
+    
+  __notify_intrinsic((void*)"if_conditions:end",(void*)&x);
+  return;
+}
+
+
 /******************* Tests *************************/
 void test_overhead_recursive() {
 
@@ -108,6 +123,14 @@ void test_probe_activation() {
 
 }
 
+void test_if_conditions() {
+  start_profiler();
+  if_conditions(1);
+  if_conditions(2);
+  if_conditions(3);
+}
+
+
 void read_elf() {
 
 }
@@ -118,5 +141,6 @@ void test_multithreaded_probe_activation() {
 
 int main () {
   // test_overhead();
-	test_probe_activation();
+	// test_probe_activation();
+  test_if_conditions();
 }

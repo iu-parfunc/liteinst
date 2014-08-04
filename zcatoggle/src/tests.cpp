@@ -127,8 +127,24 @@ void test_probe_activation() {
 
 }
 
-void read_elf() {
+void test_if_conditions(int a) {
+	__notify_intrinsic((void*)"test_if_conditions:start",(void*)&x);
+  if(a == 1){
+	  __notify_intrinsic((void*)"test_if_conditions:end",(void*)&x);
+    return;
+  } else if (a == 2){{
+	  __notify_intrinsic((void*)"test_if_conditions:end",(void*)&x);
+    return;
+  }
 
+	__notify_intrinsic((void*)"test_if_conditions:end",(void*)&x);
+  return;
+}
+
+void read_elf() {
+  test_if_conditions(1);
+  test_if_conditions(2);
+  test_if_conditions(3);
 }
 
 void test_multithreaded_probe_activation() {
@@ -138,6 +154,7 @@ void test_multithreaded_probe_activation() {
 int main () {
   // test_inline_function();
   // test_overhead();
-	test_probe_activation();
+  test_if_conditions(1);
+	// test_probe_activation();
 
 }

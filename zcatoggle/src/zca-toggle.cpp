@@ -457,7 +457,7 @@ int activateProbe(std::string label, void (*fun)())
           modify_probe_site(probe_address, data->stubLocation, &data, fun);
           data->fun = fun;
           data->active = true;
-          return 0;
+          continue;
         }
 
         //printf("[Activate Probe]The probe content is : %016llx\n", *probe_address);
@@ -495,7 +495,7 @@ int activateProbe(std::string label, void (*fun)())
             // printf("[Activate Probe]Changed probe content is : %016llx\n", *probe_address);
 
             data->active = true;
-            return status;
+            continue;
           }
 
         }
@@ -579,7 +579,7 @@ int deactivateProbe(std::string label) {
           data->active = false;
           //printf("Swapped the stuff..\n");
 
-          return status;
+          continue;
         }
 
       }
