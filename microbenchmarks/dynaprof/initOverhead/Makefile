@@ -13,7 +13,7 @@ default:
 	$(CC) $(CFLAGS)  31_StartProfilerOverhead.cpp $(CFLAGSDYN) $(CFLAGSZCA) -o 31_StartProfilerOverhead.exe
 
 run:
-	./31_StartProfilerOverhead.exe
+	DYN_DISABLE_SELFTIMED=1 ./31_StartProfilerOverhead.exe
 
 clean:
 	rm -f *.exe *.o *.s *.csv 31_StartProfilerOverhead.cpp libzca-toggle.a libdynaprof.a prof.out

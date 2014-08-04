@@ -13,7 +13,7 @@ default:
 	$(CC) $(CFLAGS)  40_deactivate.cpp $(CFLAGSDYN) $(CFLAGSZCA) -o 40_deactivate.exe
 
 run:
-	./40_deactivate.exe
+	DYN_DISABLE_SELFTIMED=1 ./40_deactivate.exe
 
 clean:
 	rm -f *.exe *.o *.s *.csv 40_deactivate.cpp libzca-toggle.a libdynaprof.a prof.out
