@@ -21,7 +21,7 @@ compile:
 	$(CC) $(CFLAGS)  31_StartProfilerOverhead.cpp $(CFLAGSDYN) $(CFLAGSZCA) -o 31_StartProfilerOverhead.exe
 
 run:
-	DYN_DISABLE_SELFTIMED=1 DYN_STRATEGY=NO_BACKOFF ./31_StartProfilerOverhead.exe ${RUN_ARGS}
+	DYN_DISABLE_SELFTIMED=1 DYN_STRATEGY=NO_BACKOFF time ./31_StartProfilerOverhead.exe ${RUN_ARGS}
 
 test:
 	$(MAKE) run RUN_ARGS="1 1 1000"
