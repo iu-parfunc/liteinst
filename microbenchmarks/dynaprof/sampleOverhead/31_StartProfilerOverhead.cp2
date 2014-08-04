@@ -21,22 +21,20 @@ int main(int argc, char** argv)
     printf("  N = NUMCALLS (per function) \n");
     printf("  M = MEMORYTRAFFIC, in words between calls\n");
 
-    if (NUMFUNS != 1) {
-      printf("TEMPERROR: sampleOverhead benchmark cannot handle N != 1 for now...");
-      return 1;
-    }
-
     int* garbage = (int*)malloc(sizeof(int) * MEMTRAFF);
     int junk_acc = 0;
     start_profiler();
+    init_funtable();
     printf("Initialization finished, now start proper benchmark.\n");
 
     clock_gettime( CLOCK_REALTIME, &start);
     tick1=getticks();
     for (int i=0; i<NUMCALLS; i++)
+      // Calling a large # of different functions also trashes the cache:
       for (int j=0; j<NUMFUNS; j++) {
 	// Call the probed function:
-	myEmptyFunc0();
+	// myEmptyFunc0(); // FINISHME!! Need an array of function pointers.
+        (funtable[j])();
 	// Trash that cache:
 	for (int k=0; k<MEMTRAFF; k++) junk_acc += garbage[k];
       }

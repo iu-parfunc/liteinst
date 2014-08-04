@@ -1,5 +1,5 @@
 CC = icc
-CFLAGS =-lrt -Fa -O0
+CFLAGS = -lrt -Fa -O0 -g
 CFLAGSZCA = -lelf libzca-toggle.a
 CFLAGSDYN = libdynaprof.a
 

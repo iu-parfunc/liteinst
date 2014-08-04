@@ -53,6 +53,20 @@ void myEmptyFunc9( void ) {
  __notify_intrinsic((void*)"myEmptyFunc9:end", (void *)&global_x);
 return; }
 unsigned long int countTEST=10;
+typedef void (*voidfun)(void);
+voidfun funtable[10];
+void init_funtable() {
+  funtable[0] = & myEmptyFunc0; 
+  funtable[1] = & myEmptyFunc1; 
+  funtable[2] = & myEmptyFunc2; 
+  funtable[3] = & myEmptyFunc3; 
+  funtable[4] = & myEmptyFunc4; 
+  funtable[5] = & myEmptyFunc5; 
+  funtable[6] = & myEmptyFunc6; 
+  funtable[7] = & myEmptyFunc7; 
+  funtable[8] = & myEmptyFunc8; 
+  funtable[9] = & myEmptyFunc9; 
+}
 
 int main(int argc, char** argv)
 {
@@ -68,30 +82,28 @@ int main(int argc, char** argv)
     }
 
     int NUMFUNS  = atoi(argv[1]);
-    int NUMCALLS = atoi(argv[1]);
-    int MEMTRAFF = atoi(argv[2]);
+    int NUMCALLS = atoi(argv[2]);
+    int MEMTRAFF = atoi(argv[3]);
     
     printf("Initializing DynaProf... sampleOverhead benchmark: F=%d, N=%d, M=%d\n", NUMFUNS, NUMCALLS, MEMTRAFF);
     printf("  F = NUMFUNS  \n");
     printf("  N = NUMCALLS (per function) \n");
     printf("  M = MEMORYTRAFFIC, in words between calls\n");
 
-    if (NUMFUNS != 1) {
-      printf("TEMPERROR: sampleOverhead benchmark cannot handle N != 1 for now...");
-      return 1;
-    }
-
     int* garbage = (int*)malloc(sizeof(int) * MEMTRAFF);
     int junk_acc = 0;
     start_profiler();
+    init_funtable();
     printf("Initialization finished, now start proper benchmark.\n");
 
     clock_gettime( CLOCK_REALTIME, &start);
     tick1=getticks();
     for (int i=0; i<NUMCALLS; i++)
+      // Calling a large # of different functions also trashes the cache:
       for (int j=0; j<NUMFUNS; j++) {
 	// Call the probed function:
-	myEmptyFunc0();
+	// myEmptyFunc0(); // FINISHME!! Need an array of function pointers.
+        (funtable[j])();
 	// Trash that cache:
 	for (int k=0; k<MEMTRAFF; k++) junk_acc += garbage[k];
       }
