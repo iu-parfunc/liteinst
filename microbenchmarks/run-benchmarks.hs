@@ -23,16 +23,28 @@ backoffLevels = [ 10^i | i <- [0..6] ]
 benches :: [Benchmark DefaultParamMeaning]
 benches = 
   [ mkBenchmark "sigtrap/" [] noconf ] ++
+
   [ (mkBenchmark "zcatoggle/initOverhead/" [show numFuns] 
       (And[ compileParam (show numFuns) ])) { progname = Just "firstTimeInitOverheadZcaToggle" }
   | numFuns <- [ 2^n | n <- [1..14]] ] ++
+
   [ (mkBenchmark "dynaprof/initOverhead/" [show numFuns] 
       (And[ compileParam (show numFuns) ])) { progname = Just "firstTimeInitOverheadDynaProf" }
       -- RRN: nixing 2^14 case.. it crashes.
   | numFuns <- [ 2^n | n <- [1..13]] ] ++ 
+
   [ (mkBenchmark "dynaprof/deactivationOverhead/" [show numFuns] 
       (And[ compileParam (show numFuns) ])) { progname = Just "deactivationOverheadDynaProf" }
-  | numFuns <- [ 2^n | n <- [1..2]] ] 
+  | numFuns <- [ 2^n | n <- [1..2]] ] ++
+
+  [ (mkBenchmark "dynaprof/sampleOverhead/" [show numFuns, show numCalls, show memTraff] 
+      (And[ compileParam (show (2^13)) ])) { progname = Just "sampleOverheadDynaProf" }
+      -- RRN: nixing 2^14 case.. it crashes.
+  | numFuns  <- [ 2^n  | n <- [1..13]] 
+  , numCalls <- [ 10^n | n <- [0..3]]
+  , memTraff <- 0 : [ 2^n  | n <- [0, 10, 20, 22, 26]]
+  ] 
+
 
 setVariant str = (And [Set (Variant str) (CompileParam "")])
 
