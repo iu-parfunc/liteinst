@@ -68,12 +68,27 @@ void init_funtable() {
   funtable[9] = & myEmptyFunc9; 
 }
 
+
+
+int* garbage; // Global
+
+int run_all(int NUMFUNS, int MEMTRAFF) {
+    int junk_acc = 0;
+    // Calling a large # of different functions also trashes the cache:
+    for (int j=0; j<NUMFUNS; j++) {
+      // Call the probed function:
+      // myEmptyFunc0(); // FINISHME!! Need an array of function pointers.
+      (funtable[j])();
+      // Trash that cache:
+      for (int k=0; k<MEMTRAFF; k++) junk_acc += garbage[k];
+    }
+    return junk_acc;
+}
+
 int main(int argc, char** argv)
 {
     unsigned long int i;
     struct timespec start, stop;
-    double cycleTime, hzRate;
-    hzRate=(double)1866000000;
     unsigned long long tick1,tick2,cycles;
 
     if (argc <= 3) {
@@ -90,38 +105,28 @@ int main(int argc, char** argv)
     printf("  N = NUMCALLS (per function) \n");
     printf("  M = MEMORYTRAFFIC, in words between calls\n");
 
-    int* garbage = (int*)malloc(sizeof(int) * MEMTRAFF);
-    int junk_acc = 0;
+    garbage = (int*)malloc(sizeof(int) * MEMTRAFF);
     start_profiler();
     init_funtable();
-    printf("Initialization finished, now start proper benchmark.\n");
 
+    printf("Initialization finished, now start proper benchmark.\n");
+    // Warm up the code cache before timing:
+    run_all(NUMFUNS, MEMTRAFF);
+    
     clock_gettime( CLOCK_REALTIME, &start);
     tick1=getticks();
     for (int i=0; i<NUMCALLS; i++)
-      // Calling a large # of different functions also trashes the cache:
-      for (int j=0; j<NUMFUNS; j++) {
-	// Call the probed function:
-	// myEmptyFunc0(); // FINISHME!! Need an array of function pointers.
-        (funtable[j])();
-	// Trash that cache:
-	for (int k=0; k<MEMTRAFF; k++) junk_acc += garbage[k];
-      }
-    clock_gettime( CLOCK_REALTIME, &stop);
+      run_all(NUMFUNS, MEMTRAFF);
     tick2=getticks();
+    clock_gettime( CLOCK_REALTIME, &stop);
     printf("Done.\n");
-
-    printf("Machine info:\n");
-    cycleTime=(double)1/hzRate*(double)1000000000;
-    printf( "  %3.5f GHz\n", hzRate/1000000000);
-    printf( "  %3.10f cycle time in nano seconds\n", cycleTime);
 
     cycles = (unsigned long long)((tick2-tick1));
     double cycles_per = ((double)cycles) / ((double)NUMCALLS * (double)NUMFUNS);
     printf( "  %3.10f runtime in seconds\n", 
            (((stop.tv_sec*(double)1000000000)+stop.tv_nsec) - 
 	    ((start.tv_sec*(double)1000000000)+start.tv_nsec))/(double)1000000000);
-    printf( "  %d / (%d * %d) = %3.10f cycles per function sample (RDTSC)\n", 
+    printf( "  %d / (%d * %d) = %3.0f cycles per function sample (RDTSC)\n", 
 	    cycles,NUMCALLS,NUMFUNS, cycles_per);
     printf( "SELFTIMED: %3.0f\n", ((double)cycles_per));
     return 0;
