@@ -76,6 +76,11 @@ int main(int argc, char** argv)
     printf("  N = NUMCALLS (per function) \n");
     printf("  M = MEMORYTRAFFIC, in words between calls\n");
 
+    if (NUMFUNS != 1) {
+      printf("TEMPERROR: sampleOverhead benchmark cannot handle N != 1 for now...");
+      return 1;
+    }
+
     int* garbage = (int*)malloc(sizeof(int) * MEMTRAFF);
     int junk_acc = 0;
     start_profiler();
@@ -90,7 +95,6 @@ int main(int argc, char** argv)
 	// Trash that cache:
 	for (int k=0; k<MEMTRAFF; k++) junk_acc += garbage[k];
       }
-    start_profiler();
     clock_gettime( CLOCK_REALTIME, &stop);
     tick2=getticks();
     printf("Done.\n");
@@ -101,11 +105,12 @@ int main(int argc, char** argv)
     printf( "  %3.10f cycle time in nano seconds\n", cycleTime);
 
     cycles = (unsigned long long)((tick2-tick1));
-    double cycles_per = ((double)cycles) / (double)NUMCALLS / (double)NUMFUNS;
+    double cycles_per = ((double)cycles) / ((double)NUMCALLS * (double)NUMFUNS);
     printf( "  %3.10f runtime in seconds\n", 
            (((stop.tv_sec*(double)1000000000)+stop.tv_nsec) - 
 	    ((start.tv_sec*(double)1000000000)+start.tv_nsec))/(double)1000000000);
-    printf( "  %3.10f cycles per function sample (RDTSC)\n", cycles_per);
+    printf( "  %d / (%d * %d) = %3.10f cycles per function sample (RDTSC)\n", 
+	    cycles,NUMCALLS,NUMFUNS, cycles_per);
     printf( "SELFTIMED: %3.0f\n", ((double)cycles_per));
     return 0;
 }
