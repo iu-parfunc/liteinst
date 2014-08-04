@@ -40,7 +40,6 @@ int main(int argc, char** argv)
 	// Trash that cache:
 	for (int k=0; k<MEMTRAFF; k++) junk_acc += garbage[k];
       }
-    start_profiler();
     clock_gettime( CLOCK_REALTIME, &stop);
     tick2=getticks();
     printf("Done.\n");
