@@ -21,8 +21,7 @@ compile:
 	$(CC) $(CFLAGS)  31_StartProfilerOverhead.cpp $(CFLAGSDYN) $(CFLAGSZCA) -o 31_StartProfilerOverhead.exe
 
 run:
-	./31_StartProfilerOverhead.exe
+	DYN_STRATEGY=NO_BACKOFF ./31_StartProfilerOverhead.exe ${RUN_ARGS}
 
 clean:
 	rm -f *.exe *.o *.s *.csv 31_StartProfilerOverhead.cpp libzca-toggle.a libdynaprof.a prof.out
-

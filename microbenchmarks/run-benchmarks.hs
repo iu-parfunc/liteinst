@@ -40,7 +40,8 @@ benches =
   [ (mkBenchmark "dynaprof/sampleOverhead/" [show numFuns, show numCalls, show memTraff] 
       (And[ compileParam (show (2^13)) ])) { progname = Just "sampleOverheadDynaProf" }
       -- RRN: nixing 2^14 case.. it crashes.
-  | numFuns  <- [ 2^n  | n <- [1..13]] 
+--  | numFuns  <- [ 2^n  | n <- [1..13]] 
+  | numFuns  <- [1]
   , numCalls <- [ 10^n | n <- [0..3]]
   , memTraff <- 0 : [ 2^n  | n <- [0, 10, 20, 22, 26]]
   ] 
