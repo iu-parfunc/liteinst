@@ -72,24 +72,33 @@ void init_funtable() {
 
 int* garbage; // Global
 
-int run_all(int NUMFUNS, int MEMTRAFF) {
+unsigned long long run_all(int NUMFUNS, int MEMTRAFF) {
     int junk_acc = 0;
+    unsigned long long tick1, tick2, time_acc = 0;
+    
     // Calling a large # of different functions also trashes the cache:
     for (int j=0; j<NUMFUNS; j++) {
       // Call the probed function:
       // myEmptyFunc0(); // FINISHME!! Need an array of function pointers.
+      tick1=getticks();
       (funtable[j])();
+      tick2=getticks();
+      time_acc += (tick2 - tick1);
       // Trash that cache:
       for (int k=0; k<MEMTRAFF; k++) junk_acc += garbage[k];
     }
-    return junk_acc;
+
+    if (junk_acc == 999999)      
+      return time_acc;
+    else       
+      return time_acc;
 }
 
 int main(int argc, char** argv)
 {
     unsigned long int i;
     struct timespec start, stop;
-    unsigned long long tick1,tick2,cycles;
+    unsigned long long cycles, time_acc = 0;
 
     if (argc <= 3) {
       printf("Error: needs 3 command line arguments: F, N, M.  See README.md.");
@@ -113,15 +122,13 @@ int main(int argc, char** argv)
     // Warm up the code cache before timing:
     run_all(NUMFUNS, MEMTRAFF);
     
-    clock_gettime( CLOCK_REALTIME, &start);
-    tick1=getticks();
+    // clock_gettime( CLOCK_REALTIME, &start);
     for (int i=0; i<NUMCALLS; i++)
-      run_all(NUMFUNS, MEMTRAFF);
-    tick2=getticks();
-    clock_gettime( CLOCK_REALTIME, &stop);
+      time_acc += run_all(NUMFUNS, MEMTRAFF);
+    // clock_gettime( CLOCK_REALTIME, &stop);
     printf("Done.\n");
 
-    cycles = (unsigned long long)((tick2-tick1));
+    cycles = (unsigned long long)time_acc;
     double cycles_per = ((double)cycles) / ((double)NUMCALLS * (double)NUMFUNS);
     printf( "  %3.10f runtime in seconds\n", 
            (((stop.tv_sec*(double)1000000000)+stop.tv_nsec) - 
