@@ -13,8 +13,8 @@ int main(int argc, char** argv)
     }
 
     int NUMFUNS  = atoi(argv[1]);
-    int NUMCALLS = atoi(argv[1]);
-    int MEMTRAFF = atoi(argv[2]);
+    int NUMCALLS = atoi(argv[2]);
+    int MEMTRAFF = atoi(argv[3]);
     
     printf("Initializing DynaProf... sampleOverhead benchmark: F=%d, N=%d, M=%d\n", NUMFUNS, NUMCALLS, MEMTRAFF);
     printf("  F = NUMFUNS  \n");
