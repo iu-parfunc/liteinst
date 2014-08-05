@@ -933,8 +933,6 @@ void count_only_prolog_func() {
 
 void sampling_epilog_func() {
 
-  ticks end = getticks();
-
   uint64_t addr;
   uint64_t offset = 2;
 
@@ -951,6 +949,7 @@ void sampling_epilog_func() {
       : "%rdx"
      ); 
 
+  ticks end = getticks();
   dyn_thread_data* t_stats = &dyn_thread_stats[func_id];
   dyn_global_data* gl_stats = &dyn_global_stats[func_id];
 
