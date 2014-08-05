@@ -308,7 +308,7 @@ void output_pretty() {
         variance = dyn_global_stats[i].var / (dyn_global_stats[i].count - 1);
       }
 
-      double avg = (double) dyn_global_stats[i].sum / dyn_global_stats[i].count;
+      double avg = (double) dyn_global_stats[i].sum / (dyn_global_stats[i].count - dyn_global_stats[i].limited_count);
 
       fprintf(out_file, "%-30s%-15s%-15s%-15llu%-13d%-13llu%-15llu%-15.1lf%-15.1lf%-5s\n", dyn_global_stats[i].func_name, buf, buf1, 
               dyn_global_stats[i].count, dyn_global_stats[i].deactivation_count+1, dyn_global_stats[i].min, dyn_global_stats[i].max, avg, 
@@ -390,8 +390,8 @@ void output_csv() {
       if (dyn_global_stats[i].count > 2) {
         variance = dyn_global_stats[i].var / (dyn_global_stats[i].count - 1);
       }
-
-      double avg = (double) dyn_global_stats[i].sum / dyn_global_stats[i].count;
+      
+      double avg = (double) dyn_global_stats[i].sum / (dyn_global_stats[i].count - dyn_global_stats[i].limited_count);
 
       fprintf(out_file, "%-30s,%-140s,%-140s,%-15llu,%-13d,%-13llu,%-15llu,%-15.1lf,%-15.1lf,%-5s\n", dyn_global_stats[i].func_name, buf1, buf, 
               dyn_global_stats[i].count, dyn_global_stats[i].deactivation_count+1, dyn_global_stats[i].min, dyn_global_stats[i].max, avg, 
@@ -411,7 +411,8 @@ void output_stripped() {
   for(int i=0; i < function_count; i++) {
     if (dyn_global_stats[i].count != 0) {
       fprintf(out_file, "%-40s,%-15llu,%-15llu,%-15llu,%-15.1lf\n", dyn_global_stats[i].func_name, dyn_global_stats[i].count, 
-          dyn_global_stats[i].min, dyn_global_stats[i].max, (double)dyn_global_stats[i].sum / dyn_global_stats[i].count);
+          dyn_global_stats[i].min, dyn_global_stats[i].max, 
+          (double)dyn_global_stats[i].sum / (dyn_global_stats[i].count-dyn_global_stats[i].limited_count));
 
     }
   }
@@ -447,6 +448,7 @@ void cleanup(void) {
     dyn_global_stats[j].sum = 0;
     for (int i=0; i < thr_array_idx; i++) {
       dyn_global_stats[j].count += dyn_thread_stats_arr[i][j].count;
+      dyn_global_stats[j].limited_count += dyn_thread_stats_arr[i][j].limited_count;
       dyn_global_stats[j].sum += dyn_thread_stats_arr[i][j].sum;
 
       if (dyn_global_stats[j].min == 0 || dyn_global_stats[j].min > dyn_thread_stats_arr[i][j].min) {
