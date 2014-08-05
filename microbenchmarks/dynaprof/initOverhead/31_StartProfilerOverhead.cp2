@@ -12,8 +12,8 @@ int main()
     clock_gettime( CLOCK_REALTIME, &start);
     tick1=getticks();
     start_profiler();
-    clock_gettime( CLOCK_REALTIME, &stop);
     tick2=getticks();
+    clock_gettime( CLOCK_REALTIME, &stop);
     printf("Done.\n");
 
     printf("Machine info:\n");
