@@ -38,7 +38,7 @@ machine = "delta" -- "tank"
 
 variantPrefix  = "resampling"
 
-git_depth = "431" 
+git_depth = "452" 
 
 
 main :: IO ()
@@ -75,15 +75,18 @@ main = do
                      $ extractColumn "MEDIANTIME" cols
                      $ slice "VARIANT" "unprofiled" cols benchdata 
   
-
+  putStrLn $ "VALUE OF base_line_rt: " ++ show base_line_rt
+  
   -- Some restructuring of the data 
   let groups = map (fst . fst . head) avgs
       -- Show y to switch the plotting tool into "category mode" 
       gdata  = map (map (\((_,y),z) -> (show y,percentage z))) avgs
 
-      percentage x = (x - base_line_rt) / base_line_rt
+      percentage x = 100 * ((x - base_line_rt) / base_line_rt)
 
   putStrLn "Showing" 
+  putStrLn "------------------------------------------------------------"
+  putStrLn $ show base_line_rt 
   putStrLn "------------------------------------------------------------"
   putStrLn $ show groups 
   putStrLn "------------------------------------------------------------"
