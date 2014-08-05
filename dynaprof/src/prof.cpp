@@ -428,7 +428,7 @@ void cleanup(void) {
   int   do_print = 1;
   char* no_selftimed = getenv("DYN_DISABLE_SELFTIMED");
   // If it is set to anything nonzero, then we disbable:
-  if (no_selftimed == NULL && !strcmp(no_selftimed, "") && !strcmp(no_selftimed, "0")) {
+  if (no_selftimed != NULL && !strcmp(no_selftimed, "") && !strcmp(no_selftimed, "0")) {
     fprintf(stderr, "SELFTIMED: %.6lf\n", (cleanup_start-app_start_time)/getTicksPerMilliSec()/1000);    
   }
 
@@ -762,10 +762,10 @@ void prolog_func() {
   }
   
   if (stack_depth < 20) {
-    t_stats->invocation_stack[stack_depth].timestamp = getticks();
     t_stats->invocation_stack[stack_depth].func_id = func_id;
     t_stats->invocation_stack[stack_depth].leaf_count = leaf_counter;
     t_stats->stack_depth++;
+    t_stats->invocation_stack[stack_depth].timestamp = getticks();
   } else {
     t_stats->ignore_count++;
     // __sync_add_and_fetch(&dyn_stats[func_id].count, 1);
@@ -799,6 +799,7 @@ void no_backoff_epilog_func() {
       : "%rdx"
      ); 
 
+  ticks end = getticks();
   dyn_thread_data* t_stats = &dyn_thread_stats[func_id];
   dyn_global_data* gl_stats = &dyn_global_stats[func_id];
 
@@ -826,7 +827,6 @@ void no_backoff_epilog_func() {
   ticks start = i_data.timestamp;
   unsigned long long initial_leaf_count = i_data.leaf_count;
 
-  ticks end = getticks();
   ticks elapsed = end - start; 
 
   if (elapsed < t_stats->min || t_stats->min == 0) {
@@ -933,6 +933,8 @@ void count_only_prolog_func() {
 
 void sampling_epilog_func() {
 
+  ticks end = getticks();
+
   uint64_t addr;
   uint64_t offset = 2;
 
@@ -976,7 +978,7 @@ void sampling_epilog_func() {
   ticks start = i_data.timestamp;
   unsigned long long initial_leaf_count = i_data.leaf_count;
 
-  ticks end = getticks();
+  // ticks end = getticks();
   ticks elapsed = end - start; 
 
   if (elapsed < t_stats->min || t_stats->min == 0) {
