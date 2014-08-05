@@ -764,8 +764,8 @@ void prolog_func() {
   if (stack_depth < 20) {
     t_stats->invocation_stack[stack_depth].func_id = func_id;
     t_stats->invocation_stack[stack_depth].leaf_count = leaf_counter;
-    t_stats->stack_depth++;
     t_stats->invocation_stack[stack_depth].timestamp = getticks();
+    t_stats->stack_depth++;
   } else {
     t_stats->ignore_count++;
     // __sync_add_and_fetch(&dyn_stats[func_id].count, 1);
