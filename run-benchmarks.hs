@@ -35,7 +35,8 @@ benches =
                              , ("raxml",       baseVariants)
                              ]
     , (varname,variant) <- [ (v, setVariant v) | v <- coreVariants ] ++
-                           [ ("dynaprof", Or [ resampling, fixed_backoff, no_backoff ]) ]
+                           [ ("dynaprof", Or [ {- resampling, -}
+                                               fixed_backoff, no_backoff ]) ]
   ]
  where baseVariants = ["gprof", "unprofiled" ]
        moreVariants = baseVariants ++ ["pebil", "pin", "oprofile"]
