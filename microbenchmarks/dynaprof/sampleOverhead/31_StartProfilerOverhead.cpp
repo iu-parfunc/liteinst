@@ -71,22 +71,31 @@ void init_funtable() {
 
 
 int* garbage; // Global
+unsigned long long minminInterval = 9999999;
 
 unsigned long long run_all(int NUMFUNS, int MEMTRAFF) {
     int junk_acc = 0;
     unsigned long long tick1, tick2, time_acc = 0;
     
-    // Calling a large # of different functions also trashes the cache:
-    for (int j=0; j<NUMFUNS; j++) {
-      // Call the probed function:
-      // myEmptyFunc0(); // FINISHME!! Need an array of function pointers.
+    if (NUMFUNS==1) {
       tick1=getticks();
-      (funtable[j])();
+      myEmptyFunc0();
       tick2=getticks();
-      time_acc += (tick2 - tick1);
+      time_acc += (tick2 - tick1 - minminInterval);
       // Trash that cache:
-      for (int k=0; k<MEMTRAFF; k++) junk_acc += garbage[k];
+      for (int k=0; k<MEMTRAFF; k++) junk_acc += garbage[k];      
     }
+    // Calling a large # of different functions also trashes the cache:
+    else 
+      for (int j=0; j<NUMFUNS; j++) {
+	// Call the probed function:
+	tick1=getticks();
+	(funtable[j])();
+	tick2=getticks();
+	time_acc += (tick2 - tick1 - minminInterval);
+	// Trash that cache:
+	for (int k=0; k<MEMTRAFF; k++) junk_acc += garbage[k];
+      }
 
     if (junk_acc == 999999)      
       return time_acc;
@@ -103,6 +112,15 @@ int main(int argc, char** argv)
     if (argc <= 3) {
       printf("Error: needs 3 command line arguments: F, N, M.  See README.md.");
       return 1;
+    }
+
+    unsigned long long t1, t2, minInterval;
+    for(int i=0; i<10; i++) {
+      t1 = getticks();
+      minInterval = getticks() - t1;
+      printf("Min rdtsc interval measured as: %ld\n", minInterval);
+      if (minInterval < minminInterval)
+	minminInterval = minInterval;
     }
 
     int NUMFUNS  = atoi(argv[1]);
@@ -137,5 +155,7 @@ int main(int argc, char** argv)
     printf( "  %d / (%d * %d) = %3.0f cycles per function sample (RDTSC)\n", 
 	    cycles,NUMCALLS,NUMFUNS, cycles_per);
     printf( "SELFTIMED: %3.0f\n", ((double)cycles_per));
+
+    printf( "NUMCALLS: %d, %3.0f\n", NUMCALLS, ((double)cycles_per));
     return 0;
 }

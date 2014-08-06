@@ -37,7 +37,16 @@ test:
 
 lots:
 	for ((i=0; i < $(LOTS); i++)); do make run RUN_ARGS="1 1 0" 2>1 | grep SELFTIMED: ; done \
-          | sed 's/SELFTIMED://' | tee samples.dat
+          | sed 's/SELFTIMED:/$i/' | tee samples.dat
+
+sumthem:
+	rm -f samples.dat
+	set -xe; \
+        for ((i=0; i < $(LOTS); i++)); do \
+	for ((j=1; j <= 100; j++)); do \
+          make run RUN_ARGS='1 '$$i' 0' 2>1 | grep NUMCALLS:  \
+            | sed 's/NUMCALLS://' | tee -a samples_averaged.dat \
+        ; done; done;
 
 clean:
 	rm -f *.exe *.o *.s *.csv 31_StartProfilerOverhead.cpp libzca-toggle.a libdynaprof.a prof.out
