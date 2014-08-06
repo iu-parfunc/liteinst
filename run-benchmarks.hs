@@ -17,8 +17,10 @@ import GHC.Conc           (getNumProcessors)
 
 --------------------------------------------------------------------------------
 
-backoffLevels :: [Integer]
-backoffLevels = [ 10^i | i <- [0..6] ]
+fixed_backoffLevels :: [Integer]
+-- fixed_backoffLevels = [ 10^i | i <- [0..6] ]
+-- fixed_backoffLevels = [1,5,10,50,100,500,1000,5000,10000,50000,100000,500000,1000000,5000000]
+fixed_backoffLevels = [ round (10 ** i) | i <- [0, 0.5 .. 6.5] ]
 
 benches :: [Benchmark DefaultParamMeaning]
 benches = 
@@ -33,7 +35,8 @@ benches =
                              , ("raxml",       baseVariants)
                              ]
     , (varname,variant) <- [ (v, setVariant v) | v <- coreVariants ] ++
-                           [ ("dynaprof", Or [ resampling, fixed_backoff, no_backoff ]) ]
+                           [ ("dynaprof", Or [ {- resampling, -}
+                                               fixed_backoff, no_backoff ]) ]
   ]
  where baseVariants = ["gprof", "unprofiled" ]
        moreVariants = baseVariants ++ ["pebil", "pin", "oprofile"]
@@ -42,7 +45,7 @@ benches =
 fixed_backoff = Or [ And [ Set (Variant ("fixed_backoff_"++show num)) 
                                         (RuntimeEnv "DYN_STRATEGY" "FIXED_BACKOFF")
                          , Set NoMeaning (RuntimeEnv "DYN_SAMPLE_SIZE" (show num)) ]
-                   | num <- backoffLevels ]
+                   | num <- fixed_backoffLevels ]
 
 
 -- | This version varies both the backoff count and the epoch length
