@@ -27,7 +27,7 @@ test:
 	$(MAKE) run RUN_ARGS="1 1 1000"
 
 lots:
-	for ((i=0; i<100; i++)); do make run RUN_ARGS="1 1 0" 2>1 | grep SELFTIMED: ; done \
+	for ((i=0; i<500; i++)); do make run RUN_ARGS="1 1 0" 2>1 | grep SELFTIMED: ; done \
           | sed 's/SELFTIMED://' | tee samples.dat
 
 clean:
