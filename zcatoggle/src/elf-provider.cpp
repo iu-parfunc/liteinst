@@ -402,7 +402,7 @@ int read_zca_probes(const char* path)
           char* func_name = strtok_r(temp, ":", &tok);
           
           if(functions->find(string(func_name)) == functions->end()) {
-            fprintf(stderr, "--- Function %s id %d\n ---", func_name, next_func_id);
+            // fprintf(stderr, "--- Function %s id %d\n ---", func_name, next_func_id);
             functions->insert(func_table::value_type(string(func_name), next_func_id++));
             function_count++;
           }

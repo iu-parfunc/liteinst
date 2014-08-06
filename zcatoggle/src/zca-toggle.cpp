@@ -77,6 +77,7 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*t
   long func_id = 0;
   if(functions->find(std::string(func_name)) != functions->end()) {
     func_id = functions->find(std::string(func_name))->second;
+    /*
     if (!strcmp("predict_nnz", func_name)) {
       fprintf(stderr, "[Gen Stub] Func id for %s with token %s : %lu\n", func_name, 
           (*ann_info)->expr, func_id);
@@ -86,6 +87,7 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*t
       fprintf(stderr, "[Gen Stub] Func id for %s with token %s : %lu\n", func_name, 
           (*ann_info)->expr, func_id);
     } 
+    */
   }
 
   // printf("Function id for function %s at insertion is %lu \n", func_name, func_id);
