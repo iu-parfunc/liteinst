@@ -39,7 +39,11 @@ main = do
                    pLegend = True,
                    pDimensions = (800,400),
                    pXLabel = "Benchmark",
-                   pYLabel = "Overhead %"} 
+                   pYLabel = "Overhead %",
+                   pXAxisTicks = Nothing,
+                   pYAxisTicks = Nothing,
+                   pXAxisLog = False,
+                   pYAxisLog = False} 
                             
                                 
   putStrLn "Writing output to ScatterExample.html" 

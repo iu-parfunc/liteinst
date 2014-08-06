@@ -72,7 +72,11 @@ main = do
                    pLegend = True,
                    pDimensions = (800,400),
                    pXLabel = "Elapsed time difference (%)",
-                   pYLabel = "Cumulative % functions"}
+                   pYLabel = "Cumulative % functions",
+                   pXAxisTicks = Nothing,
+                   pYAxisTicks = Nothing,
+                   pXAxisLog = False,
+                   pYAxisLog = False}
 
                             
                                 

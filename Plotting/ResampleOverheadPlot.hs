@@ -106,7 +106,11 @@ main = do
                    pLegend = True,
                    pDimensions = (800,400),
                    pXLabel = "Sample epoch",
-                   pYLabel = "Overhead %"} 
+                   pYLabel = "Overhead %",
+                   pXAxisTicks = Nothing,
+                   pYAxisTicks = Nothing,
+                   pXAxisLog = False,
+                   pYAxisLog = False} 
                             
                                 
                            

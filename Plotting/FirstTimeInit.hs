@@ -109,7 +109,11 @@ main = do
                    pLegend = True,
                    pDimensions = (800,400),
                    pXLabel = "ARGUMENT",
-                   pYLabel = "s"} 
+                   pYLabel = "s",
+                   pXAxisTicks = Nothing,
+                   pYAxisTicks = Nothing,
+                   pXAxisLog = False,
+                   pYAxisLog = False} 
                             
                                 
                            

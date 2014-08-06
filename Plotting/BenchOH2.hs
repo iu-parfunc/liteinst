@@ -125,7 +125,11 @@ perform git_depth machine  progname = do
                    pLegend = True,
                    pDimensions = (800,600),
                    pXLabel = "backoff",
-                   pYLabel = "Overhead %"} 
+                   pYLabel = "Overhead %",
+                   pXAxisTicks = Nothing,
+                   pYAxisTicks = Nothing,
+                   pXAxisLog = False,
+                   pYAxisLog = False} 
                             
   let outfile = "BenchOH2_" ++ progname ++"_" ++ machine ++ "_" ++ git_depth ++ ".html" 
              

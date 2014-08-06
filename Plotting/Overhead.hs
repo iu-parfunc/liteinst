@@ -123,7 +123,11 @@ main = do
                    pLegend = True,
                    pDimensions = (800,400),
                    pXLabel = "GIT DEPTH",
-                   pYLabel = "Real overhead %"} 
+                   pYLabel = "Real overhead %",
+                   pXAxisTicks = Nothing,
+                   pYAxisTicks = Nothing,
+                   pXAxisLog = False,
+                   pYAxisLog = False} 
                             
                                 
                            
