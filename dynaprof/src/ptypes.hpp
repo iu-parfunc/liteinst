@@ -21,7 +21,8 @@ int MSG_RATE_THRESHOLD = 50;
 typedef struct invocation_data {
   ticks timestamp;
   long func_id;
-  unsigned long long leaf_count;
+  unsigned long long prolog_leaf_count;
+  unsigned long long epilog_leaf_count;
 } invocation_data;
 
 typedef struct dyn_global_data {
@@ -39,7 +40,9 @@ typedef struct dyn_global_data {
 
   /** Accounting data **/
   ticks latest_activation_time;
-  uint32_t limited_count;
+  uint64_t limited_count;
+  uint64_t prolog_leaf_count;
+  uint64_t epilog_leaf_count;
   uint64_t count_at_last_activation;
   int lock;
   bool active;
@@ -61,8 +64,10 @@ typedef struct dyn_thread_data {
   /** Accounting data **/
   uint64_t count_at_last_activation;
   uint32_t stack_depth;
-  uint32_t limited_count;
-  uint32_t ignore_count;
+  uint64_t limited_count;
+  uint64_t ignore_count;
+  uint64_t prolog_leaf_count;
+  uint64_t epilog_leaf_count;
   invocation_data invocation_stack[20];
 
 } dyn_thread_data;

@@ -46,7 +46,8 @@ NBQueue* heavy_hitters;
 // Useful statistics
 ticks app_start_time = 0;
 
-__thread static unsigned long long leaf_counter = 0;
+__thread static unsigned long long prolog_leaf_counter = 0;
+__thread static unsigned long long epilog_leaf_counter = 0;
 
 int strategy = NO_BACKOFF;
 double target_overhead = 0.05; 
@@ -54,6 +55,7 @@ double overhead = 0.0;
 long sample_size = 10000;
 uint64_t sample_rate = 0.01 * NANO_SECONDS_IN_SEC; // Default sampling rate is 10ms
 int output_type = CSV_OUTPUT;
+int probe_overhead = 500;
 
 /** global statistics **/
 dyn_global_data* dyn_global_stats;
@@ -132,6 +134,11 @@ void Basic_Profiler::initialize(void) {
   char* overhead_str = getenv("DYN_OVERHEAD");
   if (overhead_str != NULL) {
     target_overhead = atof(overhead_str);
+  }
+
+  char* probe_overhead_str = getenv("DYN_PROBE_OVERHEAD");
+  if (probe_overhead_str != NULL) {
+    probe_overhead = atol(probe_overhead_str);
   }
 
   char* sample_size_str = getenv("DYN_SAMPLE_SIZE");
@@ -410,9 +417,11 @@ void output_stripped() {
 
   for(int i=0; i < function_count; i++) {
     if (dyn_global_stats[i].count != 0) {
-      fprintf(out_file, "%-40s,%-15llu,%-15llu,%-15llu,%-15.1lf\n", dyn_global_stats[i].func_name, dyn_global_stats[i].count, 
+      fprintf(out_file, "%-40s,%-15llu,%-15llu,%-15llu,%-15.1lf, %15llu, %15llu\n", 
+          dyn_global_stats[i].func_name, dyn_global_stats[i].count, 
           dyn_global_stats[i].min, dyn_global_stats[i].max, 
-          (double)dyn_global_stats[i].sum / (dyn_global_stats[i].count-dyn_global_stats[i].limited_count));
+          (double)dyn_global_stats[i].sum / (dyn_global_stats[i].count-dyn_global_stats[i].limited_count), 
+           dyn_global_stats[i].prolog_leaf_count, dyn_global_stats[i].epilog_leaf_count);
 
     }
   }
@@ -445,6 +454,7 @@ void cleanup(void) {
   // Aggregate thread local statistics
   for (int j=0; j < function_count; j++) {
     dyn_global_stats[j].count = 0;
+    dyn_global_stats[j].limited_count = 0;
     dyn_global_stats[j].sum = 0;
     for (int i=0; i < thr_array_idx; i++) {
       dyn_global_stats[j].count += dyn_thread_stats_arr[i][j].count;
@@ -453,6 +463,8 @@ void cleanup(void) {
 
       if (dyn_global_stats[j].min == 0 || dyn_global_stats[j].min > dyn_thread_stats_arr[i][j].min) {
         dyn_global_stats[j].min = dyn_thread_stats_arr[i][j].min;
+        dyn_global_stats[j].prolog_leaf_count = dyn_thread_stats_arr[i][j].prolog_leaf_count;
+        dyn_global_stats[j].epilog_leaf_count = dyn_thread_stats_arr[i][j].epilog_leaf_count;
       }
 
       if (dyn_global_stats[j].max < dyn_thread_stats_arr[i][j].max) {
@@ -739,17 +751,19 @@ void prolog_func() {
 
     for (int i=0; i < function_count; i++) {
       dyn_thread_stats[i].is_leaf = true;
+      dyn_thread_stats[i].stack_depth = 0;
     }
 
     allocated = true;
-    leaf_counter = 0;
+    prolog_leaf_counter = 0;
+    epilog_leaf_counter = 0;
     prof->register_thread_data(dyn_thread_stats); 
+  } 
+
+  if (prolog_leaf_counter == ULLONG_MAX){
+    prolog_leaf_counter = 0;
   } else {
-    if (leaf_counter == ULLONG_MAX){
-      leaf_counter = 0;
-    } else {
-      leaf_counter++;
-    }
+    prolog_leaf_counter++;
   }
 
   // Increment data->count and data->ignored_count
@@ -765,11 +779,19 @@ void prolog_func() {
   
   if (stack_depth < 20) {
     t_stats->invocation_stack[stack_depth].func_id = func_id;
-    t_stats->invocation_stack[stack_depth].leaf_count = leaf_counter;
+    t_stats->invocation_stack[stack_depth].prolog_leaf_count = prolog_leaf_counter;
+    t_stats->invocation_stack[stack_depth].epilog_leaf_count = epilog_leaf_counter;
     t_stats->invocation_stack[stack_depth].timestamp = getticks();
     t_stats->stack_depth++;
+
+    /*
+    if (!strcmp(gl_stats->func_name, "predict_nnz")) {
+      fprintf(stderr, "Stack depth for func id %lu : %d\n", func_id, t_stats->stack_depth);
+    }
+    */
   } else {
     t_stats->ignore_count++;
+    // fprintf(stderr, "[Prolog] Stack depth exceeded..\n");
     // __sync_add_and_fetch(&dyn_stats[func_id].count, 1);
     // __sync_add_and_fetch(&dyn_stats[func_id].limited_count, 1);
     // dyn_stats[func_id].count++;
@@ -802,12 +824,24 @@ void no_backoff_epilog_func() {
      ); 
 
   ticks end = getticks();
+
   dyn_thread_data* t_stats = &dyn_thread_stats[func_id];
   dyn_global_data* gl_stats = &dyn_global_stats[func_id];
+
+  /*
+  if (!strcmp(gl_stats->func_name, "predict_nnz")) {
+    fprintf(stderr, "At epilog for func id %lu\n", func_id);
+  }
+  */
 
   int stack_depth = t_stats->stack_depth; 
 
   if (t_stats->stack_depth == 0) {
+    /*
+    if (!strcmp(gl_stats->func_name, "predict_nnz")) {
+      fprintf(stderr, "Returning from zero check for func id %lu\n", func_id);
+    }
+    */
     return;
   }
 
@@ -815,24 +849,63 @@ void no_backoff_epilog_func() {
   if (i_data.timestamp < gl_stats->latest_activation_time) {
     t_stats->stack_depth = 0;
     t_stats->ignore_count = 0;
+
+    if (!strcmp(gl_stats->func_name, "predict_nnz")) {
+      fprintf(stderr, "Returning from timestamp check for func id %lu\n", func_id);
+    }
     return;
   } 
 
-  if (stack_depth > 20 && t_stats->ignore_count > 0) {
+  if (stack_depth >= 20 && t_stats->ignore_count > 0) {
     t_stats->ignore_count--;
     t_stats->limited_count++;
     t_stats->count++;
+    
+    /*
+    if (!strcmp(gl_stats->func_name, "predict_nnz")) {
+      fprintf(stderr, "Returning from stack depth check for func id %lu\n", func_id);
+    }
+    */
 
+    fprintf(stderr, "[Epilog] Stack depth exceeded..\n");
     return;
   }
 
   ticks start = i_data.timestamp;
-  unsigned long long initial_leaf_count = i_data.leaf_count;
+
+  unsigned long long prolog_leaf_count_diff = prolog_leaf_counter - i_data.prolog_leaf_count;
+  unsigned long long epilog_leaf_count_diff = epilog_leaf_counter - i_data.epilog_leaf_count;
+
+  if (epilog_leaf_counter == ULLONG_MAX){
+    epilog_leaf_counter= 0;
+  } else {
+    epilog_leaf_counter++;
+  }
+
+  unsigned long long leaf_count_diff = 0;
+  if (prolog_leaf_count_diff > 0) {
+    leaf_count_diff += prolog_leaf_count_diff;
+  }
+
+  if (epilog_leaf_count_diff > 0) {
+    leaf_count_diff += epilog_leaf_count_diff;
+  }
+
+  /*
+  if (epilog_leaf_count_diff > prolog_leaf_count_diff) {
+    fprintf(stderr, "Prolog leaf count diff : %llu\n", prolog_leaf_count_diff);
+    fprintf(stderr, "Epilog leaf count diff : %llu\n", epilog_leaf_count_diff);
+    fprintf(stderr, "Total leaf count diff : %llu\n", leaf_count_diff);
+    fprintf(stderr, "Function: %s\n", gl_stats->func_name);
+  }
+  */
 
   ticks elapsed = end - start; 
 
   if (elapsed < t_stats->min || t_stats->min == 0) {
     t_stats->min = elapsed;
+    t_stats->prolog_leaf_count = prolog_leaf_count_diff;
+    t_stats->epilog_leaf_count = epilog_leaf_count_diff;
   }
 
   if (elapsed > t_stats->max) {
@@ -846,19 +919,16 @@ void no_backoff_epilog_func() {
   }
   */
 
-  if (leaf_counter > initial_leaf_count) {
+  /*
+  if (leaf_count_diff > 0) {
     t_stats->is_leaf = false;
-    /*
     ticks elapsed_backup = elapsed;
-    elapsed = elapsed - 2 * getZCAOverheadTicks() * (leaf_counter - initial_leaf_count);
+    elapsed = elapsed - probe_overhead * leaf_count_diff;
     if (elapsed <= 0) {
       elapsed = elapsed_backup;
     }
-    */
-  } else if (leaf_counter < initial_leaf_count){
-    fprintf(stderr, "%llu\n", leaf_counter);
-    LOG_INFO("Leaf counter reset..\n");
-  }
+  } 
+  */
 
   t_stats->sum = t_stats->sum + elapsed;
   t_stats->count += 1;
@@ -882,8 +952,19 @@ void no_backoff_epilog_func() {
   if (!dyn_global_stats[func_id].active) {
     t_stats->stack_depth = 0;
     t_stats->ignore_count = 0;
+
+    /*
+    if (!strcmp(gl_stats->func_name, "predict_nnz")) {
+      fprintf(stderr, "Returning from inactive test for func id : %lu\n", func_id);
+    }
+    */
   } else {
     t_stats->stack_depth--;
+    /*
+    if (!strcmp(gl_stats->func_name, "predict_nnz")) {
+      fprintf(stderr, "Stack depth for func id %lu : %d\n", func_id, t_stats->stack_depth);
+    }
+    */
   } 
 }
 
@@ -977,7 +1058,6 @@ void sampling_epilog_func() {
   }
 
   ticks start = i_data.timestamp;
-  unsigned long long initial_leaf_count = i_data.leaf_count;
 
   // ticks end = getticks();
   ticks elapsed = end - start; 
@@ -997,19 +1077,30 @@ void sampling_epilog_func() {
   }
   */
 
-  if (leaf_counter > initial_leaf_count) {
+  unsigned long long prolog_leaf_count_diff = prolog_leaf_counter - i_data.prolog_leaf_count;
+  unsigned long long epilog_leaf_count_diff = epilog_leaf_counter - i_data.epilog_leaf_count;
+
+  unsigned long long leaf_count_diff = 0;
+  if (prolog_leaf_count_diff > 0) {
+    leaf_count_diff += prolog_leaf_count_diff;
+  }
+
+  if (epilog_leaf_count_diff > 0) {
+    leaf_count_diff += epilog_leaf_count_diff;
+  }
+
+  epilog_leaf_counter++;
+
+  if (leaf_count_diff > 0) {
     t_stats->is_leaf = false;
     /*
     ticks elapsed_backup = elapsed;
-    elapsed = elapsed - 2 * getZCAOverheadTicks() * (leaf_counter - initial_leaf_count);
+    elapsed = elapsed - probe_overhead * leaf_count_diff;
     if (elapsed <= 0) {
       elapsed = elapsed_backup;
     }
     */
-  } else if (leaf_counter < initial_leaf_count){
-    fprintf(stderr, "%llu\n", leaf_counter);
-    LOG_INFO("Leaf counter reset..\n");
-  }
+  }  
 
   t_stats->sum = t_stats->sum + elapsed;
   t_stats->count += 1;
