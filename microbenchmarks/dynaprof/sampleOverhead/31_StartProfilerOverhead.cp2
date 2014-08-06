@@ -51,6 +51,8 @@ int main(int argc, char** argv)
 
     printf("Initialization finished, now start proper benchmark.\n");
     // Warm up the code cache before timing:
+    for(int i=0; i<100; i++)
+      run_all(NUMFUNS, 0);
     run_all(NUMFUNS, MEMTRAFF);
     
     // clock_gettime( CLOCK_REALTIME, &start);
