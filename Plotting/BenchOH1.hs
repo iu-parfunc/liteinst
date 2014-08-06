@@ -1,4 +1,5 @@
 
+-- | Create a per-benchmark bargraph, comparing no-backof and gprof
 
 import System.Environment (getArgs)
 

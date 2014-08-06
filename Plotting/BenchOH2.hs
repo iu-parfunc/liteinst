@@ -1,4 +1,5 @@
 
+-- | Create a per-benchmark line-chart plotting 
 
 import System.Environment (getArgs)
 
