@@ -98,7 +98,7 @@ int main(int argc, char** argv)
 {
     unsigned long int i;
     struct timespec start, stop;
-    unsigned long long cycles, time_acc = 0;
+    unsigned long long cycles = 0;
 
     if (argc <= 3) {
       printf("Error: needs 3 command line arguments: F, N, M.  See README.md.");
@@ -120,15 +120,16 @@ int main(int argc, char** argv)
 
     printf("Initialization finished, now start proper benchmark.\n");
     // Warm up the code cache before timing:
+    for(int i=0; i<100; i++)
+      run_all(NUMFUNS, 0);
     run_all(NUMFUNS, MEMTRAFF);
     
     // clock_gettime( CLOCK_REALTIME, &start);
     for (int i=0; i<NUMCALLS; i++)
-      time_acc += run_all(NUMFUNS, MEMTRAFF);
+      cycles += run_all(NUMFUNS, MEMTRAFF);
     // clock_gettime( CLOCK_REALTIME, &stop);
     printf("Done.\n");
 
-    cycles = (unsigned long long)time_acc;
     double cycles_per = ((double)cycles) / ((double)NUMCALLS * (double)NUMFUNS);
     printf( "  %3.10f runtime in seconds\n", 
            (((stop.tv_sec*(double)1000000000)+stop.tv_nsec) - 
