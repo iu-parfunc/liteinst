@@ -33,7 +33,7 @@
 #define MULTI_OUTPUT 2
 #define STRIPPED_OUTPUT 3
 
-#define NANO_SECONDS_IN_SEC 1000000000;
+#define NANO_SECONDS_IN_SEC 1000000000
 
 using namespace std;
 
@@ -132,20 +132,24 @@ void Basic_Profiler::initialize(void) {
   char* overhead_str = getenv("DYN_OVERHEAD");
   if (overhead_str != NULL) {
     target_overhead = atof(overhead_str);
+    fprintf(stderr, " [dynaprof] Responding to env var DYN_OVERHEAD = %lf\n", target_overhead);
   }
 
   char* sample_size_str = getenv("DYN_SAMPLE_SIZE");
   if (sample_size_str != NULL) {
     sample_size = atol(sample_size_str);
+    fprintf(stderr, " [dynaprof] Responding to env var DYN_SAMPLE_SIZE = %ld\n", sample_size);
   }
 
   char* sample_rate_str = getenv("DYN_SAMPLE_PERIOD");
   if (sample_rate_str != NULL) {
-    sample_rate = (uint64_t)atof(sample_rate_str);
-    sample_rate *= NANO_SECONDS_IN_SEC;
+    double d = atof(sample_rate_str);
+    sample_rate = (uint64_t)(d * NANO_SECONDS_IN_SEC);
+    fprintf(stderr, " [dynaprof] Responding to env var DYN_SAMPLE_PERIOD as %ld nanoseconds\n", sample_rate);
   }
 
   char* output_type_str = getenv("DYN_OUTPUT_TYPE");
+  fprintf(stderr, " [dynaprof] Responding to env var DYN_OUTPUT_TYPE = %s\n", output_type_str);
   if (output_type_str != NULL) {
     if (!strcmp(output_type_str, "PRETTY")) {
       output_type = PRETTY_OUTPUT;
@@ -155,10 +159,14 @@ void Basic_Profiler::initialize(void) {
       output_type = MULTI_OUTPUT;
     } else if (!strcmp(output_type_str, "STRIPPED")) {
       output_type = STRIPPED_OUTPUT;
+    } else {
+      fprintf(stderr, " [dynaprof] Unrecognized DYN_OUTPUT_TYPE\n");
+      exit(1);
     }
   }
 
   char* filter_probes_str = getenv("DYN_FILTER_PROBES");
+  fprintf(stderr, " [dynaprof] Responding to env var DYN_FILTER_PROBES = %s\n", filter_probes_str);
   if (filter_probes_str != NULL) {
     char* filter = strtok (filter_probes_str,",");
     while (filter != NULL && strcmp(filter, "")) {
@@ -169,7 +177,7 @@ void Basic_Profiler::initialize(void) {
 
   char* filter_input_file = getenv("DYN_FILTER_FILE");
   if (filter_input_file != NULL && strcmp(filter_input_file,"")) {
-    
+    fprintf(stderr, " [dynaprof] Responding to env var DYN_FILTER_FILE = %s\n", filter_input_file);
     FILE* fp = fopen(filter_input_file, "r");
     char* filter = NULL;
     size_t len = 0;
@@ -205,6 +213,7 @@ void Basic_Profiler::initialize(void) {
   char empty[] = "EMPTY";
   char empty_prolog[] = "EMPTY_PROLOG";
 
+  fprintf(stderr, " [dynaprof] Responding to env var DYN_STRATEGY = %s\n", strategy_str);
   if (strategy_str != NULL) {
     if (strcmp(strategy_str, no_backoff) == 0) {
       strategy = NO_BACKOFF;
@@ -220,6 +229,11 @@ void Basic_Profiler::initialize(void) {
       strategy = EMPTY;
     } else if (strcmp(strategy_str, fixed_backoff) == 0) {
       strategy = FIXED_BACKOFF; 
+    } else {
+      fprintf(stderr, " [dynaprof] ERROR, unrecognized DYN_STRATEGY!!\n");
+      exit(1);
+      // fprintf(stderr, " [dynaprof] WARNING, unrecognized DYN_STRATEGY, defaulting to NO_BACKOFF\n");
+      // strategy = NO_BACKOFF;
     }
   }
 
@@ -430,6 +444,8 @@ void cleanup(void) {
   // If it is set to anything nonzero, then we disbable:
   if (no_selftimed == NULL && !strcmp(no_selftimed, "") && !strcmp(no_selftimed, "0")) {
     fprintf(stderr, "SELFTIMED: %.6lf\n", (cleanup_start-app_start_time)/getTicksPerMilliSec()/1000);    
+  } else {
+    fprintf(stderr," [dynaprof] Responding to hack: DYN_DISABLE_SELFTIMED, not printing time.");
   }
 
   int counter = 0;
