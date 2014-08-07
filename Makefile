@@ -31,6 +31,7 @@ TRIALS=3
 
 ifeq ($(MACHINECLASS),delta)
   # Parfunc account / FusionTable_DynaprofUploader project:
+  $(info Using DynaProf-specific FusionTable uploader.)
   CID=925399326325-6dir7re3ik7686p6v3kkfkf1kj0ec7ck.apps.googleusercontent.com
   SEC=MQ72ZWDde_1e1ihI5YE9YlEi
 else
@@ -41,11 +42,11 @@ ifneq (,$(filter $(MACHINECLASS),mine xmen))
 #  SEC=2a2H57dBggubW1_rqglC7jtK
 # ^ Got loaded on [2014.08.07]
 
-  # General FT project #3:
+  $(info Using general FusionTable uploader number 3)
   CID=759282369766-qbqb7sccab86m8j0jma6r3t21ng6uaoa.apps.googleusercontent.com
   SEC=TtfkUzUSR3LWfJ_udJi6wdO3
 else
-  # Second general FT "project"
+  $(info Using general FusionTable uploader number 2)
   CID=546809307027-8tm2lp5gtqg5o3pn3s016gd6467cf7j3.apps.googleusercontent.com
   SEC=148aQ08EPpgkb0DiYVLoT9X2
 endif
