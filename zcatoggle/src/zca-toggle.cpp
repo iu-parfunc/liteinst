@@ -40,6 +40,8 @@ int ZCA_OVERHEAD = 600; // Assuming 1000 cycles overhead per function call. Need
 int ZCA_INIT_OVERHEAD = 0;
 const int NANO_SECONDS_IN_SEC = 1000000000;
 
+unsigned long long mmap_retry_attempts = 0;
+
 static mem_island* current_alloc_unit;
 
 inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*target_fn)(), ann_data** ann_info)
@@ -213,17 +215,22 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*t
 }
 
 inline int retry_allocation(unsigned long* start_addr, unsigned long size, unsigned long** stub_address) {
+
   // Try with decreasing sizes until we get space to fit an available memory hole
   unsigned long new_size = size / 2;
   while (*stub_address == MAP_FAILED && new_size >= 4096) {
+    mmap_retry_attempts++;
     *stub_address = (unsigned long*)mmap(start_addr, new_size,
         PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED| MAP_ANONYMOUS, -1,0);
     new_size = new_size / 2;
   }
 
   if (*stub_address == MAP_FAILED) {
+    fprintf(stderr, "MMAP failed!!\n");
+    fprintf(stderr, "MMAP_RETRIES: -1\n");
     return -1; // We give up. Cannot allocate memory inside this memory region.
   } else {
+    fprintf(stderr, "MMAP_RETRIES %ld\n", mmap_retry_attempts);
     return new_size;
   }
 }
