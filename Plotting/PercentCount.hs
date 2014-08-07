@@ -23,72 +23,116 @@ extract str = (abs (read s1 :: Int), read s2 :: Int)
     [s1,s2] = wordsBy (==',') str 
 
 
+-- For other setups HACK THIS PART!! 
+benches = ["h264", "grep", "gzip", "bzip2"] 
+
+compensated_benches = map (++"_compensated.txt") benches
+non_compensated_benches = map (++"_non_compensated.txt") benches 
+
+
+
 main :: IO ()
 main = do
 
-  args <- getArgs
+  --args <- getArgs
 
-  when (length args == 0) $ error "Needs a filename" 
+  --when (length args == 0) $ error "Needs a "  
   
-  let fn = args  !! 0
+  --let fn = args  !! 0 
   
   --let f i = (30 :: Int)
   -- Percent/count mapping 
   --let csv = unlines $ [ show x ++ ", " ++ show (f x)  | x <- [1..100]] 
-
-
+  
+  
   -- csv <- readFile "leaf_Aug4.csv"
-  csv <- readFile fn 
+  csv_compensated <- mapM readFile compensated_benches 
+  csv_non_compensated <- mapM readFile non_compensated_benches 
+                     
+  let the_compensated_lines =  map process csv_compensated
+      the_non_compensated_lines = map process csv_non_compensated 
+
+  let colors = ["#000","#F00", "#FF0", "#07F", "#F0F", "#00F"]
   
+  let the_compensated_graph
+        = map (\(c,bench,ls) ->  
+                LineGraph c
+                bench
+                Nothing
+                ls)  $ zip3 colors benches the_compensated_lines 
+
   
-  -- putStrLn csv 
+  -- The Plots
+  let plot_compensated =
+        Plot {pLines = the_compensated_graph,
+              pPoints = [],
+              pBars = [],
+              pLegend = True,
+              pDimensions = (800,400), -- unused! 
+              pXLabel = "Elapsed time difference (%)",
+              pYLabel = "Cumulative % functions",
+              pXAxisTicks = Nothing,
+              pYAxisTicks = Nothing,
+              pXAxisLog = False,
+              pYAxisLog = False}
+
+  let the_non_compensated_graph
+        = map (\(c,bench,ls) ->  
+                LineGraph c
+                bench
+                Nothing
+                ls)  $ zip3 colors benches the_non_compensated_lines 
+
+  let plot_non_compensated =
+        Plot {pLines = the_non_compensated_graph,
+              pPoints = [],
+              pBars = [],
+              pLegend = True,
+              pDimensions = (800,400), -- unused! 
+              pXLabel = "Elapsed time difference (%)",
+              pYLabel = "Cumulative % functions",
+              pXAxisTicks = Nothing,
+              pYAxisTicks = Nothing,
+              pXAxisLog = False,
+              pYAxisLog = False}
+  
+                            
+                                
+  -- Generate the HTML and Javascript code                           
+  -- putStrLn $ html $ renderPlot mySupply plot
+
+  writeFile "compensated.html" $ html $ renderPlot mySupply plot_compensated
+  writeFile "non_compensated.html" $ html $ renderPlot mySupply plot_non_compensated
+  
+    
+  --let (_,nom) = splitFileName fn
+  --    ofile = "output_" ++ (dropExtension nom) ++ ".html" 
+  --putStrLn $ "Writing output to: " ++ ofile
+  --writeFile ofile $ html $ renderPlot mySupply plot
+  
 
 
+  
+process csv = 
   -- percent/count mapping
   let the_data = sortBy (\(x,_) (y,_) -> x `compare` y) [ extract l | l <- lines csv]
 
-  let ps  = map fst the_data -- percentages
+      ps  = map fst the_data -- percentages
       cs  = map snd the_data -- counts
       
       totc = sum cs -- total op f all "counts"
       
       pcs = map (\x -> 100 * ((fromIntegral x) / (fromIntegral totc))) cs 
       accCount = scanl1 (+) pcs 
-  let the_data2 = zip ps accCount :: [(Int,Double)]
+  in  zip ps accCount :: [(Int,Double)]
         
 
-  putStrLn $ show the_data 
+ --  putStrLn $ show the_data 
    
-  
+{-   
   -- The data series that generate one set of bars in the same color 
-  let the_graph = LineGraph "#000"
-                  "Number of functions"
-                  Nothing
-                  (init the_data2)
-
-  -- The Plot   
-  let plot = Plot {pLines = [the_graph],
-                   pPoints = [],
-                   pBars = [],
-                   pLegend = True,
-                   pDimensions = (800,400),
-                   pXLabel = "Elapsed time difference (%)",
-                   pYLabel = "Cumulative % functions",
-                   pXAxisTicks = Nothing,
-                   pYAxisTicks = Nothing,
-                   pXAxisLog = False,
-                   pYAxisLog = False}
-
-                            
-                                
-  -- Generate the HTML and Javascript code                           
-  -- putStrLn $ html $ renderPlot mySupply plot
-      
-  let (_,nom) = splitFileName fn
-      ofile = "output_" ++ (dropExtension nom) ++ ".html" 
-  putStrLn $ "Writing output to: " ++ ofile
-  writeFile ofile $ html $ renderPlot mySupply plot
-  
+ 
+-}   
   
 --------------------------------------------------------------------------
 -- extract data given a variant
