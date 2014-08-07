@@ -35,7 +35,7 @@ benches =
                              , ("raxml",       baseVariants)
                              ]
     , (varname,variant) <- [ (v, setVariant v) | v <- coreVariants ] ++
-                           [ ("dynaprof", Or [ resampling, 
+                           [ ("dynaprof", Or [ empty_strat, resampling, 
                                                fixed_backoff, no_backoff ]) ]
   ]
  where baseVariants = ["gprof", "unprofiled" ]
@@ -47,6 +47,8 @@ fixed_backoff = Or [ And [ Set (Variant ("fixed_backoff_"++show num))
                          , Set NoMeaning (RuntimeEnv "DYN_SAMPLE_SIZE" (show num)) ]
                    | num <- fixed_backoffLevels ]
 
+empty_strat = Set (Variant ("empty_strat"))
+                  (RuntimeEnv "DYN_STRATEGY" "EMPTY")
 
 -- | This version varies both the backoff count and the epoch length
 --   (time before global reenable of probes).
@@ -56,7 +58,8 @@ resampling = Or [ And [ Set (Variant ("resampling_"++show num++"_"++show period)
                       , Set NoMeaning (RuntimeEnv "DYN_SAMPLE_PERIOD" (show period))
                       ]
                    | num    <- [ 10^i | i <- [0..5] ] -- Hold back a little more
-                   , period <- [ 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0 ] ]
+--                   , period <- [ 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0 ] 
+                   , period <- [ 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0] ]
 
 no_backoff = Set (Variant "no_backoff") (RuntimeEnv "DYN_STRATEGY" "NO_BACKOFF")
 
@@ -106,7 +109,9 @@ main = do
                        customTagHarvesterInt    "NUM_PROBES"              `mappend` 
                        customTagHarvesterInt    "NUM_ISLANDS"             `mappend` 
                        customTagHarvesterInt    "MMAP_RETRIES"            `mappend` 
-                       customTagHarvesterDouble "FINAL_OVERHEAD" `mappend`
+                       customTagHarvesterInt    "TOTAL_THREADS"           `mappend` 
+                       customTagHarvesterInt    "CALLED_FUNCTIONS"        `mappend` 
+                       customTagHarvesterDouble "FINAL_OVERHEAD"   `mappend`
                        harvesters conf
         }
 

@@ -53,7 +53,7 @@ int strategy = NO_BACKOFF;
 double target_overhead = 0.05; 
 double overhead = 0.0;
 long sample_size = 10000;
-uint64_t sample_rate = 0.01 * NANO_SECONDS_IN_SEC; // Default sampling rate is 10ms
+uint64_t sample_rate = (uint64_t)(0.01 * (double)NANO_SECONDS_IN_SEC); // Default sampling rate is 10ms
 int output_type = CSV_OUTPUT;
 int probe_overhead = 500;
 
@@ -87,6 +87,8 @@ int transfer(long v) {
 void* probe_monitor(void* param) {
 
   while(true) {
+    fprintf(stderr, " [dynaprof] probe_monitor: new epoch!\n");
+
     for (int j=0; j < function_count; j++) {
       dyn_global_stats[j].count = 0;
       for (int i=0; i < thr_array_idx; i++) {
@@ -105,6 +107,7 @@ void* probe_monitor_sampling(void* param) {
 
   while(true) {
     ticks current_time = getticks();
+    fprintf(stderr, " [dynaprof] probe_monitor_sampling: new epoch @ time %ld\n", current_time);
     for (int j=0; j < function_count; j++) {
       if(dyn_global_stats[j].active) {
         dyn_global_stats[j].count = 0;
@@ -271,14 +274,14 @@ void Basic_Profiler::initialize(void) {
 
   // Spawns the overhead monitor thread if we are following sophisticated back off strategies
   pthread_t tid; 
-  pthread_create(&tid, NULL, probe_monitor, (void*)NULL);
 
   if (strategy == SAMPLING) {
     pthread_create(&tid, NULL, probe_monitor_sampling, (void*)NULL);
   } else if (strategy == NO_BACKOFF) {
     pthread_create(&tid, NULL, probe_monitor, (void*)NULL);
+  } else {
+    pthread_create(&tid, NULL, probe_monitor, (void*)NULL);
   }
-
 }
 
 void Profiler::register_thread_data(dyn_thread_data* data) {
@@ -475,6 +478,8 @@ void cleanup(void) {
 
   // fprintf(stderr, "FINAL_OVERHEAD %.03f\n", overhead);
 
+  fprintf(stderr," [dynaprof] Summing sample counts over %ld functions and %ld threads.\n", function_count, thr_array_idx);
+
   // Aggregate thread local statistics
   for (int j=0; j < function_count; j++) {
     dyn_global_stats[j].count = 0;
@@ -509,6 +514,8 @@ void cleanup(void) {
   for (int i=0; i<function_count;i++) {
     total_invocations += dyn_global_stats[i].count;
   }
+  fprintf(stderr, "\nTOTAL_THREADS: %llu\n", thr_array_idx);
+  fprintf(stderr, "\nCALLED_FUNCTIONS: %llu\n", function_count);
   fprintf(stderr, "\nNUM_SAMPLES: %llu\n", total_invocations);
   fprintf(stderr, "\nTicks_per_nano_seconds: %lf\n", getTicksPerNanoSec());
   fprintf(stderr, "Total_overhead_from_invocations: %lfs\n", (total_invocations * 1200 / getTicksPerNanoSec()/1000000000));
