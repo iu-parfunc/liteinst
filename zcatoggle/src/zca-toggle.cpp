@@ -40,7 +40,13 @@ int ZCA_OVERHEAD = 600; // Assuming 1000 cycles overhead per function call. Need
 int ZCA_INIT_OVERHEAD = 0;
 const int NANO_SECONDS_IN_SEC = 1000000000;
 
+static unsigned long long mmap_retry_attempts = 0;
+
+// RRN: The most recently allocated island?
 static mem_island* current_alloc_unit;
+
+// Count how many islands we have allocated:
+static unsigned long long num_islands = 0;
 
 inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*target_fn)(), ann_data** ann_info)
 {
@@ -213,17 +219,22 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*t
 }
 
 inline int retry_allocation(unsigned long* start_addr, unsigned long size, unsigned long** stub_address) {
+
   // Try with decreasing sizes until we get space to fit an available memory hole
   unsigned long new_size = size / 2;
   while (*stub_address == MAP_FAILED && new_size >= 4096) {
+    mmap_retry_attempts++;
     *stub_address = (unsigned long*)mmap(start_addr, new_size,
         PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED| MAP_ANONYMOUS, -1,0);
     new_size = new_size / 2;
   }
 
   if (*stub_address == MAP_FAILED) {
+    fprintf(stderr, "MMAP failed!!\n");
+    fprintf(stderr, "MMAP_RETRIES: -1\n");
     return -1; // We give up. Cannot allocate memory inside this memory region.
   } else {
+    fprintf(stderr, "MMAP_RETRIES: %ld\n", mmap_retry_attempts);
     return new_size;
   }
 }
@@ -258,6 +269,7 @@ inline int get_allocated_stub_memory_for_probe(unsigned char* probe_address, uns
       unsigned long new_island_start_addr = (*(current_alloc_unit->last_probe_address) + region_size) / 2; // Take the middle address
       unsigned long new_island_size = current_alloc_unit->unallocated_size;
 
+      fprintf(stderr, "MMAP_RETRIES: %ld\n", mmap_retry_attempts);
       *stub_address = (unsigned long*)mmap(&new_island_start_addr, new_island_size,
           PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED| MAP_ANONYMOUS, -1,0);
 
@@ -302,6 +314,7 @@ inline int get_allocated_stub_memory_for_probe(unsigned char* probe_address, uns
 
     if (first_mem != NULL) {
 
+      fprintf(stderr, "MMAP_RETRIES: %ld\n", mmap_retry_attempts);
       *stub_address = (unsigned long*)mmap(first_mem->start_addr, first_mem->size,
           PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED| MAP_ANONYMOUS, -1,0);
 
@@ -330,6 +343,9 @@ inline int get_allocated_stub_memory_for_probe(unsigned char* probe_address, uns
       first_mem->unallocated_size = 0;
 
       current_alloc_unit = first_mem;
+      num_islands ++;
+      // We just print this message every time and take the last one:
+      fprintf(stderr, "NUM_ISLANDS: %ld\n", num_islands);
     } else {
       return -1;
       // Error. Log and return

@@ -35,7 +35,7 @@ benches =
                              , ("raxml",       baseVariants)
                              ]
     , (varname,variant) <- [ (v, setVariant v) | v <- coreVariants ] ++
-                           [ ("dynaprof", Or [ {- resampling, -}
+                           [ ("dynaprof", Or [ resampling, 
                                                fixed_backoff, no_backoff ]) ]
   ]
  where baseVariants = ["gprof", "unprofiled" ]
@@ -104,6 +104,8 @@ main = do
                        customTagHarvesterDouble "DYN_TEARDOWN"            `mappend` 
                        customTagHarvesterInt    "NUM_SAMPLES"             `mappend` 
                        customTagHarvesterInt    "NUM_PROBES"              `mappend` 
+                       customTagHarvesterInt    "NUM_ISLANDS"             `mappend` 
+                       customTagHarvesterInt    "MMAP_RETRIES"            `mappend` 
                        customTagHarvesterDouble "FINAL_OVERHEAD" `mappend`
                        harvesters conf
         }
