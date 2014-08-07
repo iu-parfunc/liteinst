@@ -29,8 +29,9 @@ table_name = "Dynaprof_Benchmarks"
 base_variant = "unprofiled" 
 
 variants = ["fixed_backoff_" ++ x| x <- backoff ] 
- 
-backoff = [ "1", "10", "100", "1000", "10000", "100000", "1000000"]
+
+            -- skip last backoff variant (since the resampling one do not go that high 
+backoff = [ "1", "10", "100", "1000", "10000", "100000"] -- , "1000000"]
 
 variants2_prefix = ["rasampling_" ++ x | x <- backoff] 
 
