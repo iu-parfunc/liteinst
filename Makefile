@@ -86,7 +86,7 @@ plotter:
 	$(CABAL) sandbox hc-pkg unregister hsbencher-analytics || echo ok
 	make run-benchmarks.exe
 	(cd ./Plotting && $(CABAL) sandbox init --sandbox=$(TOP)/.cabal-sandbox/)
-	(cd ./Plotting && $(CABAL) install --bindir=. . ../HSbencher/hsbencher-analytics --force-reinstalls --disable-documentation)
+	(cd ./Plotting && $(CABAL) install --bindir=. . ../HSBencher/hsbencher-analytics --force-reinstalls --disable-documentation)
 
 clean:
 	(cd ./zcatoggle/src; make clean)
