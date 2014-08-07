@@ -82,15 +82,22 @@ perform git_depth machine  progname = do
   -- Extract baseline and gprof 
   let base_prog = extractVariantMedianTime cols prog_vals base_variant 
 
-      base_prog_rts = average $ map convert base_prog
- 
-      gprof_prog = overhead base_prog_rts $ average $ map convert $ extractVariantMedianTime cols prog_vals "gprof"
+      base_prog_rts = medianOrErr "NO Unprofiled data!" $ map convert base_prog
+   
+      gprof_prog = overhead base_prog_rts
+                   $ medianOrErr "No GProf data!"
+                   $ map convert
+                   $ extractVariantMedianTime cols prog_vals "gprof"
 
-      no_backoff_prog  = overhead base_prog_rts $ average $ map convert $ extractVariantMedianTime cols prog_vals "no_backoff"
-  
-  when (any (\x -> x<0) [base_prog_rts, gprof_prog, no_backoff_prog]) $
-    putStrLn $ "WARNING: Generating graph with !STRANGE! set of data " ++
-                show base_prog_rts ++ " " ++ show gprof_prog ++ " " ++ show no_backoff_prog
+      no_backoff_prog  = overhead base_prog_rts
+                         $ medianOrErr "No no_backoff data!" 
+                         $ map convert
+                         $ extractVariantMedianTime cols prog_vals "no_backoff"
+
+  -- If we reach this point then all the above data should be fine! 
+  --when (any (\x -> x<0) [base_prog_rts, gprof_prog, no_backoff_prog]) $
+  --  putStrLn $ "WARNING: Generating graph with !STRANGE! set of data " ++
+  --              show base_prog_rts ++ " " ++ show gprof_prog ++ " " ++ show no_backoff_prog
 
 
 
@@ -99,7 +106,8 @@ perform git_depth machine  progname = do
   let resampling_data = extract2 cols prog_vals
       resampling_organized = organize resampling_data
       resampling_tmp = catMaybes $ map doneForPlot resampling_organized
-      resampling_avg = map (\(x,d) -> (x, average_at $ sortIt d)) resampling_tmp
+      --resampling_avg = map (\(x,d) -> (x, average_at $ sortIt d)) resampling_tmp
+      resampling_avg = map (\(x,d) -> (x, median_at d)) resampling_tmp
       resampling_done = map (\(x,d) -> (x,map (\(x,y) -> (x,overhead base_prog_rts y)) d)) resampling_avg
 
   when (null resampling_data) $
@@ -114,11 +122,15 @@ perform git_depth machine  progname = do
 
   ---------------------------------------------------------------------------
   -- This is a mess! 
-  let magic o xs = let s1 = sortBy (\(x,_) (y,_) -> compare x y) xs
-                     -- e1 = groupBy (\(x,_) (y,_) -> x == y) s1
-                 in  map (\(a,b) -> (show a, overhead o b)) s1
+  let magic o xs =
+        let s1 = sortBy (\(x,_) (y,_) -> compare x y) xs
+                 -- e1 = groupBy (\(x,_) (y,_) -> x == y) s1
+        in  map (\(a,b) -> (show a, overhead o b)) s1
   
-  let prog_plotdata = magic base_prog_rts $ map (\v -> (variantToVal v,average $ map convert $ extractColumn "MEDIANTIME" cols (slice "VARIANT" v cols prog_vals))) variants
+  let prog_plotdata = magic base_prog_rts $ 
+                      map (\v -> (variantToVal v,average $
+                                                 map convert $
+                                                 extractColumn "MEDIANTIME" cols (slice "VARIANT" v cols prog_vals))) variants
   
   putStrLn $ show prog_plotdata 
       
@@ -291,6 +303,31 @@ aboveDepth str header table =
 average :: [Double] -> Double
 average [] = -1
 average xs = sum xs / (fromIntegral (length xs))
+
+median :: [Double] -> Maybe Double
+median [] = Nothing
+median [x] = Just x
+median xs | odd n = Just $ sorted !! mid
+          | otherwise = Just $ (sorted !! mid + sorted !! (mid - 1)) / 2 
+  where
+    sorted = sort xs
+    n   = length xs 
+    mid = n `div` 2
+
+median_at :: (Ord a, Eq a) =>  [(a,Double)] -> [(a,Double)]
+median_at xs  = result 
+  
+  where sorted = sortBy  (\(g,_) (g',_) -> g `compare` g') xs  
+        groups = groupBy (\(g,_) (g',_) -> g == g') sorted
+        nubbed = nub $ concat $ map (map fst) groups -- labels in right order!  
+        avgs   = map median (map (map snd) groups)
+        avgs_filtered = map fromJust
+                      $ filter (not . isNothing) avgs 
+        result = zip nubbed avgs_filtered 
+
+
+medianOrErr :: String -> [Double] -> Double
+medianOrErr str xs = maybe (error str) id $ median xs 
 
 
 
