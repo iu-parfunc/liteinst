@@ -60,12 +60,15 @@ main = do
 perform :: String -> String -> IO ()
 perform git_depth machine = do 
   
-  tab <- pullSelectively cid csec table_name "GIT_DEPTH" git_depth 
+  --tab <- pullSelectively cid csec table_name "GIT_DEPTH" git_depth
+  tab <- pullSelectively cid csec table_name "HOSTNAME" machine 
 
   -- extract the useful parts        
-  let (ColData cols values) = tab 
+  let (ColData cols values) = tab
+      
+  let filtered_by_gitdepth = aboveDepth git_depth cols values
 
-  let machine_data = slice "HOSTNAME" machine cols values    
+  let machine_data = filtered_by_gitdepth -- slice "HOSTNAME" machine cols values    
 
   when (null machine_data) $ error "No data from this machine at this GIT_DEPTH!" 
   
@@ -274,6 +277,13 @@ sliceWithPrefix col valuePrefix header values =
     ix = fromJust $ elemIndex col header 
     
 
+aboveDepth :: String -> [String] -> [[FTValue]] -> [[FTValue]] 
+aboveDepth str header table =
+  [ x | x <- table
+      , let (StringValue depth) = (x !! ix)
+      , (read depth :: Int) <= (read str :: Int)] -- gah! 
+  where
+    ix = fromJust $ elemIndex "GIT_DEPTH" header
 
 ---------------------------------------------------------------------------
 -- Compute average of a list of positive double
