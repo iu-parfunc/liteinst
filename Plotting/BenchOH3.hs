@@ -167,7 +167,7 @@ perform git_depth machine  progname = do
                                 (map (\(x,y) -> (show x,y)) ldata)) $ zip colors resampling_done 
         
   
-  let plot = Plot {pLines = lines ++ {- lines2  ++ -} lines3 ++ lines4,
+  let plot = Plot {pLines = lines ++ lines2  ++ lines3 ++ lines4,
                    pPoints = [],
                    pBars = [],
                    pLegend = True,
