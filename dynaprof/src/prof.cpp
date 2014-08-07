@@ -480,13 +480,17 @@ void cleanup(void) {
 
   fprintf(stderr," [dynaprof] Summing sample counts over %ld functions and %ld threads.\n", function_count, thr_array_idx);
 
+  long total_invocations = 0L;
+
   // Aggregate thread local statistics
   for (int j=0; j < function_count; j++) {
     dyn_global_stats[j].count = 0;
     dyn_global_stats[j].limited_count = 0;
     dyn_global_stats[j].sum = 0;
     for (int i=0; i < thr_array_idx; i++) {
-      dyn_global_stats[j].count += dyn_thread_stats_arr[i][j].count;
+      long tmp = dyn_thread_stats_arr[i][j].count;
+      dyn_global_stats[j].count += tmp;
+      total_invocations         += tmp;
       dyn_global_stats[j].limited_count += dyn_thread_stats_arr[i][j].limited_count;
       dyn_global_stats[j].sum += dyn_thread_stats_arr[i][j].sum;
 
@@ -510,13 +514,13 @@ void cleanup(void) {
     }
   }
 
-  long total_invocations = 0L;
-  for (int i=0; i<function_count;i++) {
-    total_invocations += dyn_global_stats[i].count;
-  }
-  fprintf(stderr, "\nTOTAL_THREADS: %llu\n", thr_array_idx);
+  // RRN: Trying something else:
+  // for (int i=0; i<function_count;i++) {
+  //   total_invocations += dyn_global_stats[i].count;
+  // }
+  fprintf(stderr, "\nTOTAL_THREADS: %llu\n",    thr_array_idx);
   fprintf(stderr, "\nCALLED_FUNCTIONS: %llu\n", function_count);
-  fprintf(stderr, "\nNUM_SAMPLES: %llu\n", total_invocations);
+  fprintf(stderr, "\nNUM_SAMPLES: %llu\n",      total_invocations);
   fprintf(stderr, "\nTicks_per_nano_seconds: %lf\n", getTicksPerNanoSec());
   fprintf(stderr, "Total_overhead_from_invocations: %lfs\n", (total_invocations * 1200 / getTicksPerNanoSec()/1000000000));
 
