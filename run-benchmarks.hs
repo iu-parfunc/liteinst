@@ -108,6 +108,7 @@ main = do
                        customTagHarvesterInt    "NUM_SAMPLES"             `mappend` 
                        customTagHarvesterInt    "NUM_PROBES"              `mappend` 
                        customTagHarvesterInt    "NUM_ISLANDS"             `mappend` 
+                       customTagHarvesterInt    "NUM_EPOCHS"              `mappend` 
                        customTagHarvesterInt    "MMAP_RETRIES"            `mappend` 
                        customTagHarvesterInt    "TOTAL_THREADS"           `mappend` 
                        customTagHarvesterInt    "CALLED_FUNCTIONS"        `mappend` 

@@ -59,6 +59,7 @@ int probe_overhead = 500;
 
 /** global statistics **/
 dyn_global_data* dyn_global_stats;
+static unsigned long long num_epochs = 1;
 
 /** thread local statistics **/
 __thread static dyn_thread_data* dyn_thread_stats; 
@@ -88,6 +89,7 @@ void* probe_monitor(void* param) {
 
   while(true) {
     fprintf(stderr, " [dynaprof] probe_monitor: new epoch!\n");
+    num_epochs ++;
 
     for (int j=0; j < function_count; j++) {
       dyn_global_stats[j].count = 0;
@@ -108,6 +110,7 @@ void* probe_monitor_sampling(void* param) {
   while(true) {
     ticks current_time = getticks();
     fprintf(stderr, " [dynaprof] probe_monitor_sampling: new epoch @ time %ld\n", current_time);
+    num_epochs ++;
     for (int j=0; j < function_count; j++) {
       if(dyn_global_stats[j].active) {
         dyn_global_stats[j].count = 0;
@@ -521,6 +524,7 @@ void cleanup(void) {
   fprintf(stderr, "\nTOTAL_THREADS: %llu\n",    thr_array_idx);
   fprintf(stderr, "\nCALLED_FUNCTIONS: %llu\n", function_count);
   fprintf(stderr, "\nNUM_SAMPLES: %llu\n",      total_invocations);
+  fprintf(stderr, "\nNUM_EPOCHS: %llu\n",      num_epochs);
   fprintf(stderr, "\nTicks_per_nano_seconds: %lf\n", getTicksPerNanoSec());
   fprintf(stderr, "Total_overhead_from_invocations: %lfs\n", (total_invocations * 1200 / getTicksPerNanoSec()/1000000000));
 
