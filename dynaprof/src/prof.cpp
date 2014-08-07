@@ -96,7 +96,14 @@ void* probe_monitor(void* param) {
       }
     }
 
-    nanosleep((struct timespec[]){{0, sample_rate}}, NULL);
+    int seconds = sample_rate / NANO_SECONDS_IN_SEC; 
+    if (seconds > 0) {
+      uint64_t nanos = sample_rate - seconds * NANO_SECONDS_IN_SEC;
+      nanosleep((struct timespec[]){{seconds, nanos}}, NULL);
+    } else {
+      nanosleep((struct timespec[]){{0, sample_rate}}, NULL);
+    }
+
   }
 
   return NULL;
@@ -126,7 +133,13 @@ void* probe_monitor_sampling(void* param) {
       }
     }
 
-    nanosleep((struct timespec[]){{0, sample_rate}}, NULL);
+    int seconds = sample_rate / NANO_SECONDS_IN_SEC; 
+    if (seconds > 0) {
+      uint64_t nanos = sample_rate - seconds * NANO_SECONDS_IN_SEC;
+      nanosleep((struct timespec[]){{seconds, nanos}}, NULL);
+    } else {
+      nanosleep((struct timespec[]){{0, sample_rate}}, NULL);
+    }  
   }
 
   return NULL;
