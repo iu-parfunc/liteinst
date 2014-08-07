@@ -269,6 +269,7 @@ inline int get_allocated_stub_memory_for_probe(unsigned char* probe_address, uns
       unsigned long new_island_start_addr = (*(current_alloc_unit->last_probe_address) + region_size) / 2; // Take the middle address
       unsigned long new_island_size = current_alloc_unit->unallocated_size;
 
+      fprintf(stderr, "MMAP_RETRIES: %ld\n", mmap_retry_attempts);
       *stub_address = (unsigned long*)mmap(&new_island_start_addr, new_island_size,
           PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED| MAP_ANONYMOUS, -1,0);
 
@@ -313,6 +314,7 @@ inline int get_allocated_stub_memory_for_probe(unsigned char* probe_address, uns
 
     if (first_mem != NULL) {
 
+      fprintf(stderr, "MMAP_RETRIES: %ld\n", mmap_retry_attempts);
       *stub_address = (unsigned long*)mmap(first_mem->start_addr, first_mem->size,
           PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED| MAP_ANONYMOUS, -1,0);
 
