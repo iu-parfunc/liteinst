@@ -53,7 +53,7 @@ int strategy = NO_BACKOFF;
 double target_overhead = 0.05; 
 double overhead = 0.0;
 long sample_size = 10000;
-uint64_t sample_rate = 0.01 * NANO_SECONDS_IN_SEC; // Default sampling rate is 10ms
+uint64_t sample_rate = (uint64_t)(0.01 * (double)NANO_SECONDS_IN_SEC); // Default sampling rate is 10ms
 int output_type = CSV_OUTPUT;
 int probe_overhead = 500;
 
@@ -87,6 +87,8 @@ int transfer(long v) {
 void* probe_monitor(void* param) {
 
   while(true) {
+    fprintf(stderr, " [dynaprof] Starting new epoch!\n");
+
     for (int j=0; j < function_count; j++) {
       dyn_global_stats[j].count = 0;
       for (int i=0; i < thr_array_idx; i++) {
@@ -105,6 +107,7 @@ void* probe_monitor_sampling(void* param) {
 
   while(true) {
     ticks current_time = getticks();
+    fprintf(stderr, " [dynaprof] Starting new epoch @ time %ld\n", current_time);
     for (int j=0; j < function_count; j++) {
       if(dyn_global_stats[j].active) {
         dyn_global_stats[j].count = 0;
