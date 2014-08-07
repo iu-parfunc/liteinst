@@ -68,6 +68,7 @@ lib:
 	(cd ./zcatoggle/src; make install; make docs)
 	(cd ./dynaprof/src; make install)
 
+
 # Run the benchmarks
 bench: run-benchmarks.exe
 	./run-benchmarks.exe --retry=3 --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --name=$(TABLE) --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
