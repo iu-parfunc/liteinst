@@ -76,15 +76,14 @@ bench: run-benchmarks.exe
 run-benchmarks.exe: run-benchmarks.cabal run-benchmarks.hs
 	$(CABAL) sandbox init
 	$(CABAL) sandbox hc-pkg list
+	$(CABAL) sandbox hc-pkg unregister hsbencher-analytics || echo ok
 	$(CABAL) install ./HSBencher/hgdata ./HSBencher/hsbencher ./HSBencher/hsbencher-fusion --disable-documentation --with-ghc=ghc-$(JENKINS_GHC) -j --force-reinstalls
 	$(CABAL) install --only-dep -j --disable-documentation --with-ghc=ghc-$(JENKINS_GHC) --force-reinstalls
 	$(CABAL) install --bindir=. --disable-documentation --with-ghc=ghc-$(JENKINS_GHC) --force-reinstalls
 	./run-benchmarks.exe --help
 	./run-benchmarks.exe -l
 
-plotter: 
-	$(CABAL) sandbox hc-pkg unregister hsbencher-analytics || echo ok
-	make run-benchmarks.exe
+plotter: run-benchmarks.exe
 	(cd ./Plotting && $(CABAL) sandbox init --sandbox=$(TOP)/.cabal-sandbox/)
 	(cd ./Plotting && $(CABAL) install --bindir=. . ../HSBencher/hsbencher-analytics --force-reinstalls --disable-documentation)
 
