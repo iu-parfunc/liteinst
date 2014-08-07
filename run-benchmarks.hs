@@ -104,6 +104,7 @@ main = do
                        customTagHarvesterDouble "DYN_TEARDOWN"            `mappend` 
                        customTagHarvesterInt    "NUM_SAMPLES"             `mappend` 
                        customTagHarvesterInt    "NUM_PROBES"              `mappend` 
+                       customTagHarvesterInt    "MMAP_RETRIES"            `mappend` 
                        customTagHarvesterDouble "FINAL_OVERHEAD" `mappend`
                        harvesters conf
         }
