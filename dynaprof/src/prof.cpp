@@ -211,14 +211,14 @@ void Basic_Profiler::initialize(void) {
   char bop_advanced[] = "\"BOP_ADVANCED\"";
   char count_only[] = "COUNT_ONLY";
   */
-  char no_backoff[] = "NO_BACKOFF";
+  char no_backoff[]    = "NO_BACKOFF";
   char fixed_backoff[] = "FIXED_BACKOFF";
-  char bop_simple[] = "BOP_SIMPLE";
-  char bop_advanced[] = "BOP_ADVANCED";
-  char count_only[] = "COUNT_ONLY";
-  char sampling[] = "SAMPLING";
-  char empty[] = "EMPTY";
-  char empty_prolog[] = "EMPTY_PROLOG";
+  char bop_simple[]    = "BOP_SIMPLE";
+  char bop_advanced[]  = "BOP_ADVANCED";
+  char count_only[]    = "COUNT_ONLY";
+  char sampling[]      = "SAMPLING";
+  char empty[]         = "EMPTY";
+  char empty_prolog[]  = "EMPTY_PROLOG";
 
   fprintf(stderr, " [dynaprof] Responding to env var DYN_STRATEGY = %s\n", strategy_str);
   if (strategy_str != NULL) {
@@ -460,7 +460,7 @@ void cleanup(void) {
   int   do_print = 1;
   char* no_selftimed = getenv("DYN_DISABLE_SELFTIMED");
   // If it is set to anything nonzero, then we disbable:
-  if (no_selftimed != NULL && !strcmp(no_selftimed, "") && !strcmp(no_selftimed, "0")) {
+  if (no_selftimed == NULL || (!strcmp(no_selftimed, "") && !strcmp(no_selftimed, "0"))) {
     fprintf(stderr, "SELFTIMED: %.6lf\n", (cleanup_start-app_start_time)/getTicksPerMilliSec()/1000);    
   } else {
     fprintf(stderr," [dynaprof] Responding to hack: DYN_DISABLE_SELFTIMED, not printing time.");
@@ -891,7 +891,8 @@ void no_backoff_epilog_func() {
     }
     */
 
-    fprintf(stderr, "[Epilog] Stack depth exceeded..\n");
+    // RRN: disabling:
+    // fprintf(stderr, "[Epilog] Stack depth exceeded..\n");
     return;
   }
 
