@@ -52,7 +52,7 @@ main = do
 
   -- Git_depth, Machine, progname
 
-  when (length args /= 2) $ error "Provide exactly 3 arguments, GIT_DEPTH MACHINE PROGNAME" 
+  when (length args /= 2) $ error "Provide exactly 2 arguments, GIT_DEPTH MACHINE PROGNAME" 
   
   let [git_depth, machine] = args 
 

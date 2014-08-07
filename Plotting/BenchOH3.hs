@@ -2,6 +2,7 @@
 -- | Create a per-benchmark line-chart plotting fixed_backoff as well as resampling
 
 import System.Environment (getArgs)
+import System.IO 
 
 import HSBencher.Analytics
 
@@ -18,6 +19,9 @@ import Network.Google.FusionTables
 {- Generate Overhead plots! -} 
 
 
+-- HACKY SWITCH
+_USE_TIME = "MINTIME" -- "MEDIANTIME"  
+ 
 cid :: String
 cid  = "925399326325-6dir7re3ik7686p6v3kkfkf1kj0ec7ck.apps.googleusercontent.com" 
 
@@ -56,7 +60,7 @@ main = do
   
   let [git_depth, machine, progname] = args 
 
-  perform git_depth machine progname
+  perform git_depth machine progname 
 
 
 
@@ -109,12 +113,16 @@ perform git_depth machine  progname = do
       resampling_tmp = catMaybes $ map doneForPlot resampling_organized
       --resampling_avg = map (\(x,d) -> (x, average_at $ sortIt d)) resampling_tmp
       resampling_avg = map (\(x,d) -> (x, median_at d)) resampling_tmp
-      resampling_done = map (\(x,d) -> (x,map (\(x,y) -> (x,overhead base_prog_rts y)) d)) resampling_avg
+      resampling_done' = map (\(x,d) -> (x,map (\(x,y) -> (x,overhead base_prog_rts y)) d)) resampling_avg
 
+      resampling_done = take (length resampling_done' - 2) resampling_done'
+  
   when (null resampling_data) $
     putStrLn "WARNING: no resampling data for this benchmark" 
 
-  putStrLn $ show resampling_done
+  hPutStrLn stderr "---------------------------------------------------------------------------"
+  hPutStrLn stderr "-- RESAMPLING VALUES "
+  hPutStrLn stderr $ show resampling_done
   
 
 
@@ -127,12 +135,15 @@ perform git_depth machine  progname = do
         let s1 = sortBy (\(x,_) (y,_) -> compare x y) xs
                  -- e1 = groupBy (\(x,_) (y,_) -> x == y) s1
         in  map (\(a,b) -> (show a, overhead o b)) s1
-  
+
+  -- This is fixed_backoff data (Variants = ["fixed_backoff_x",....]
   let prog_plotdata = magic base_prog_rts $ 
                       map (\v -> (variantToVal v,average $
                                                  map convert $
-                                                 extractColumn "MEDIANTIME" cols (slice "VARIANT" v cols prog_vals))) variants
-  
+                                                 extractColumn _USE_TIME cols (slice "VARIANT" v cols prog_vals))) variants
+
+  hPutStrLn stderr "---------------------------------------------------------------------------"
+  hPutStrLn stderr "-- Prog Plot Data "  
   putStrLn $ show prog_plotdata 
       
   let colors  = ["#FF0", "#0FF", "#0F0", "#00F",
@@ -190,8 +201,8 @@ perform git_depth machine  progname = do
                    pYLabel = "Overhead %",
                    pXAxisTicks = Nothing,
                    pYAxisTicks = Nothing,
-                   pXAxisLog = False,
-                   pYAxisLog = False} 
+                   pXAxisLog = False,  -- DONT USE THE LOG PLOTS 
+                   pYAxisLog = False}  -- DONT USE THE LOG PLOTS  
                             
   let outfile = "BenchOH3_" ++ progname ++"_" ++ machine ++ "_" ++ git_depth ++ ".html" 
              
@@ -222,7 +233,7 @@ variantToVal str = convertInt (StringValue backoff)
 extractVariantMedianTime :: [String] -> [[FTValue]] -> String -> [FTValue]
 extractVariantMedianTime cols dat variant =
   let rows = slice "VARIANT" variant cols dat
-  in  extractColumn "MEDIANTIME" cols rows 
+  in  extractColumn _USE_TIME cols rows 
 
 
 -- extract the estimated overhead.
@@ -339,7 +350,7 @@ extract2 :: [String] -> [[FTValue]] -> [(String, Double)]
 extract2 cols table =
   let onlyResample = sliceWithPrefix "VARIANT" "resampling" cols table
       names = extractColumn "VARIANT" cols onlyResample
-      times = extractColumn "MEDIANTIME" cols onlyResample
+      times = extractColumn _USE_TIME cols onlyResample
   in zip (map (\(StringValue n) -> n) names) (map convert times)
 
 
@@ -349,7 +360,7 @@ organize indata = map rearrangeGroup grouped
   where
 
     expanded = map (\(x,y) -> (nameToTripple x,y)) indata
-    sorted   = sortBy (\((_,_,x),_) ((_,_,y),_) -> x `compare` y) expanded 
+    sorted   = sortBy (\((_,_,x),_) ((_,_,y),_) -> (read x :: Double) `compare` (read y :: Double) ) expanded 
     grouped  = groupBy (\((_,_,x),_) ((_,_,y),_) -> x == y) sorted 
     
     rearrangeGroup = map (\((_,backoff,s),v) -> (s, backoff, v)) 
