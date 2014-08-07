@@ -24,7 +24,8 @@ cid  = "925399326325-6dir7re3ik7686p6v3kkfkf1kj0ec7ck.apps.googleusercontent.com
 csec :: String
 csec = "MQ72ZWDde_1e1ihI5YE9YlEi"  
 
-table_name = "Dynaprof_Benchmarks" 
+-- Switching to the new table. 
+table_name = "Dynaprof_Benchmarks2" 
 
 base_variant = "unprofiled" 
 
