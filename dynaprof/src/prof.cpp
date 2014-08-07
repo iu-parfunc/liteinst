@@ -88,7 +88,7 @@ int transfer(long v) {
 void* probe_monitor(void* param) {
 
   while(true) {
-    fprintf(stderr, " [dynaprof] probe_monitor: new epoch!\n");
+    // fprintf(stderr, " [dynaprof] probe_monitor: new epoch!\n");
     num_epochs ++;
 
     for (int j=0; j < function_count; j++) {
@@ -116,7 +116,7 @@ void* probe_monitor_sampling(void* param) {
 
   while(true) {
     ticks current_time = getticks();
-    fprintf(stderr, " [dynaprof] probe_monitor_sampling: new epoch @ time %ld\n", current_time);
+    // fprintf(stderr, " [dynaprof] probe_monitor_sampling: new epoch @ time %ld\n", current_time);
     num_epochs ++;
     for (int j=0; j < function_count; j++) {
       if(dyn_global_stats[j].active) {
