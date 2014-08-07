@@ -110,10 +110,13 @@ void* probe_monitor_sampling(void* param) {
     fprintf(stderr, " [dynaprof] probe_monitor_sampling: new epoch @ time %ld\n", current_time);
     for (int j=0; j < function_count; j++) {
       if(dyn_global_stats[j].active) {
+        // No need to do this aggregation since we do it at epilog
+        /*
         dyn_global_stats[j].count = 0;
         for (int i=0; i < thr_array_idx; i++) {
           dyn_global_stats[j].count += dyn_thread_stats_arr[i][j].count;
         }
+        */
       } else {
         dyn_global_stats[j].count_at_last_activation = dyn_global_stats[j].count;
         dyn_global_stats[j].latest_activation_time = current_time;
@@ -280,6 +283,7 @@ void Basic_Profiler::initialize(void) {
   } else if (strategy == NO_BACKOFF) {
     pthread_create(&tid, NULL, probe_monitor, (void*)NULL);
   } else {
+    // For fixed backoff or count_only approaches we don't need monitoring thread
     // pthread_create(&tid, NULL, probe_monitor, (void*)NULL);
   }
 }
@@ -478,7 +482,7 @@ void cleanup(void) {
 
   // fprintf(stderr, "FINAL_OVERHEAD %.03f\n", overhead);
 
-  fprintf(stderr," [dynaprof] Summing sample counts over %ld functions and %ld threads.\n", function_count, thr_array_idx);
+  fprintf(stderr," [dynaprof] Summing sample counts over %d functions and %d threads.\n", function_count, thr_array_idx);
 
   long total_invocations = 0L;
 
@@ -518,8 +522,8 @@ void cleanup(void) {
   // for (int i=0; i<function_count;i++) {
   //   total_invocations += dyn_global_stats[i].count;
   // }
-  fprintf(stderr, "\nTOTAL_THREADS: %llu\n",    thr_array_idx);
-  fprintf(stderr, "\nCALLED_FUNCTIONS: %llu\n", function_count);
+  fprintf(stderr, "\nTOTAL_THREADS: %d\n",    thr_array_idx);
+  fprintf(stderr, "\nCALLED_FUNCTIONS: %d\n", function_count);
   fprintf(stderr, "\nNUM_SAMPLES: %llu\n",      total_invocations);
   fprintf(stderr, "\nTicks_per_nano_seconds: %lf\n", getTicksPerNanoSec());
   fprintf(stderr, "Total_overhead_from_invocations: %lfs\n", (total_invocations * 1200 / getTicksPerNanoSec()/1000000000));
@@ -1149,6 +1153,7 @@ void sampling_epilog_func() {
 
   t_stats->time_histogram[transfer(elapsed)]++;
   
+  // We do this epilog itself to get an accurate count than a periodically accumilated count by the probe monitor thread
   uint64_t global_count = 0;
   for (int i=0; i < thr_array_idx; i++) {
     global_count += dyn_thread_stats_arr[i][func_id].count;
