@@ -1,5 +1,5 @@
 
--- | Create a per-benchmark line-chart plotting 
+-- | Create a per-benchmark line-chart plotting fixed_backoff as well as resampling
 
 import System.Environment (getArgs)
 
