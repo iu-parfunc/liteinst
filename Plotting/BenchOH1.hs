@@ -1,6 +1,8 @@
 
 -- | Create a per-benchmark bargraph, comparing no-backof and gprof
 
+-- OLD AND RETIRED SCRIPT! 
+
 import System.Environment (getArgs)
 
 import HSBencher.Analytics

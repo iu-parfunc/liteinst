@@ -293,7 +293,7 @@ aboveDepth :: String -> [String] -> [[FTValue]] -> [[FTValue]]
 aboveDepth str header table =
   [ x | x <- table
       , let (StringValue depth) = (x !! ix)
-      , (read depth :: Int) <= (read str :: Int)] -- gah! 
+      , (read depth :: Int) >= (read str :: Int)] -- gah! 
   where
     ix = fromJust $ elemIndex "GIT_DEPTH" header
 
@@ -328,8 +328,6 @@ median_at xs  = result
 
 medianOrErr :: String -> [Double] -> Double
 medianOrErr str xs = maybe (error str) id $ median xs 
-
-
 
 
 

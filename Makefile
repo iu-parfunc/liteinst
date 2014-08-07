@@ -82,8 +82,9 @@ run-benchmarks.exe: run-benchmarks.cabal run-benchmarks.hs
 	./run-benchmarks.exe --help
 	./run-benchmarks.exe -l
 
-plotter: run-benchmarks.exe
+plotter: 
 	$(CABAL) sandbox hc-pkg unregister hsbencher-analytics || echo ok
+	make run-benchmarks.exe
 	(cd ./Plotting && $(CABAL) sandbox init --sandbox=$(TOP)/.cabal-sandbox/)
 	(cd ./Plotting && $(CABAL) install --bindir=. . ../HSBencher/hsbencher-analytics --force-reinstalls --disable-documentation)
 
