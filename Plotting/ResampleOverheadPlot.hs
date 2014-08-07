@@ -5,6 +5,10 @@
 
   make a clustered bar graph that
 
+
+  Clustered bar graph of resampling benchmarks.
+  THIS SCRIPT HAS BEEN RETIRED! 
+
 -} 
 
 

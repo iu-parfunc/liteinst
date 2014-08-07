@@ -43,17 +43,23 @@ main = do
   --let f i = (30 :: Int)
   -- Percent/count mapping 
   --let csv = unlines $ [ show x ++ ", " ++ show (f x)  | x <- [1..100]] 
-  
-  
-  -- csv <- readFile "leaf_Aug4.csv"
+
+  -- Read all files and create lists of CSV data 
   csv_compensated <- mapM readFile compensated_benches 
   csv_non_compensated <- mapM readFile non_compensated_benches 
-                     
+
+  -- Process each chunk of CSV                        
   let the_compensated_lines =  map process csv_compensated
       the_non_compensated_lines = map process csv_non_compensated 
 
+  -- One color per benchmark (a few extra in case you grow the list
+  -- of benchmarks) 
   let colors = ["#000","#F00", "#FF0", "#07F", "#F0F", "#00F"]
-  
+
+  ---------------------------------------------------------------------------
+  -- The Plots 
+  ---------------------------------------------------------------------------  
+  -- Set upi the lines for the compensated graph
   let the_compensated_graph
         = map (\(c,bench,ls) ->  
                 LineGraph c
@@ -61,8 +67,10 @@ main = do
                 Nothing
                 ls)  $ zip3 colors benches the_compensated_lines 
 
-  
-  -- The Plots
+  -- If switching to Log axis also specify axis ticks for that axis.
+  -- The automatically generated one is bugus.
+  -- pXAxisTicks = [1,10,100,1000,10000] for example. 
+      
   let plot_compensated =
         Plot {pLines = the_compensated_graph,
               pPoints = [],
@@ -112,7 +120,7 @@ main = do
   
 
 
-  
+-- CSV to [(Int,Double)] pairs   
 process csv = 
   -- percent/count mapping
   let the_data = sortBy (\(x,_) (y,_) -> x `compare` y) [ extract l | l <- lines csv]
@@ -127,54 +135,3 @@ process csv =
   in  zip ps accCount :: [(Int,Double)]
         
 
- --  putStrLn $ show the_data 
-   
-{-   
-  -- The data series that generate one set of bars in the same color 
- 
--}   
-  
---------------------------------------------------------------------------
--- extract data given a variant
-
--- extractVariantMedianTime cols dat variant =
---   let rows = slice "VARIANT" variant cols dat
---   in  extractColumn "MEDIANTIME" cols rows 
-
-  
-
---------------------------------------------------------------------------
--- Converting and Slicing.
--- This should be improved and placed in the library. 
-
-{- 
--- convert is cheating a bit. 
-convert :: FTValue -> Double
-convert (DoubleValue v) = v
-convert (StringValue s) = read s 
-
-convertInt :: FTValue -> Int
-convertInt (DoubleValue v) = truncate v
-convertInt (StringValue s) = truncate $ (read s :: Double)
-
-extractColumn str header tab =
-  [x !! ix | x <- tab] 
-  where
-    ix  = fromJust $ elemIndex str header 
-   
-
-
-slice col value header values =
-  [x | x <- values , x !! ix == (StringValue value)] 
-  where
-    ix = fromJust $ elemIndex col header 
-
-
----------------------------------------------------------------------------
--- Compute average of a list of positive double
--- Negative result means there is an error (probably missing data in fusiontable) 
-average :: [Double] -> Double
-average [] = -1
-average xs = sum xs / (fromIntegral (length xs))
-
--}
