@@ -20,7 +20,11 @@ import GHC.Conc           (getNumProcessors)
 fixed_backoffLevels :: [Integer]
 -- fixed_backoffLevels = [ 10^i | i <- [0..6] ]
 -- fixed_backoffLevels = [1,5,10,50,100,500,1000,5000,10000,50000,100000,500000,1000000,5000000]
-fixed_backoffLevels = [ round (10 ** i) | i <- [0, 0.5 .. 6.5] ]
+
+-- fixed_backoffLevels = [ round (10 ** i) | i <- [0, 0.5 .. 6.5] ]
+
+-- [2014.08.07] Going bigger:
+fixed_backoffLevels = [ 10^7, 10^8 ]
 
 benches :: [Benchmark DefaultParamMeaning]
 benches = 
@@ -35,7 +39,8 @@ benches =
                              , ("raxml",       baseVariants)
                              ]
     , (varname,variant) <- [ (v, setVariant v) | v <- coreVariants ] ++
-                           [ ("dynaprof", Or [ empty_strat, resampling, 
+                           [ ("dynaprof", Or [ -- empty_strat, 
+                                               resampling, 
                                                fixed_backoff, no_backoff ]) ]
   ]
  where baseVariants = ["gprof", "unprofiled" ]
@@ -57,7 +62,10 @@ resampling = Or [ And [ Set (Variant ("resampling_"++show num++"_"++show period)
                       , Set NoMeaning (RuntimeEnv "DYN_SAMPLE_SIZE" (show num)) 
                       , Set NoMeaning (RuntimeEnv "DYN_SAMPLE_PERIOD" (show period))
                       ]
-                   | num    <- [ 10^i | i <- [0..5] ] -- Hold back a little more
+--                   | num    <- [ 10^i | i <- [0..5] ] -- Hold back a little more
+
+                   | num    <- [ 10^6, 10^7, 10^8 ]
+
 --                   , period <- [ 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0 ] 
                    , period <- [ 0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0] ]
 
