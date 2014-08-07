@@ -73,33 +73,30 @@ perform git_depth machine  = do
       
   let machine_data = filtered_by_gitdepth --slice "HOSTNAME" machine cols values    
 
- 
+
+  -- FixedBackoff data pipe
   let fixedBackoff_data =  fixedBackoffExtractor
                            $ medianPerVariant
                            $ byBench
                            $ extractPbV variantPrefix cols machine_data
 
-
+  -- Baseline values pipe
   let baseline_data = medianPerVariant $ 
                       byBench $
                       extractPbV "unprofiled"  cols machine_data
 
 
+  -- Apply overhead-percentage computation
   let fixedBackoff_oh = computeOverheads baseline_data fixedBackoff_data
       
       
-  putStrLn "---------------------------------------------------------------------------" 
-  putStrLn $ show baseline_data
+  hPutStrLn stderr "---------------------------------------------------------------------------" 
+  hPutStrLn stderr $ show baseline_data
 
-  putStrLn "---------------------------------------------------------------------------" 
-  putStrLn $ show fixedBackoff_oh
+  hPutStrLn stderr "---------------------------------------------------------------------------" 
+  hPutStrLn stderr $ show fixedBackoff_oh
   
   
-  --let prog_vals = slice "PROGNAME" progname cols machine_data
-    
-  --when (null prog_vals) $ 
-  --  hPutStrLn stderr "WARNING: no data for this benchmark from this machine at this git_depth"
-
   let colors  = ["#FF0", "#0FF", "#0F0", "#00F",
                  "#700","#750", "#705", "#70F", "#7F0", "#70F",
                  "#5A0","#55A", "#5A5", "#5AF", "#5FA", "#5AF"]
@@ -131,73 +128,12 @@ perform git_depth machine  = do
                             
   let outfile = "FixedBackoff_" ++ machine ++ "_" ++ git_depth ++ ".html" 
              
-  putStrLn $ "Writing output to " ++ outfile
+  hPutStrLn stderr $ "Writing output to " ++ outfile
   writeFile outfile $ html $ renderPlot mySupply plot     
   
 
-
-  
-      
-
-{- 
-  ---------------------------------------------------------------------------
-  -- Extract baseline and gprof 
-  let base_prog = extractVariantMedianTime cols prog_vals base_variant 
-
-      base_prog_rts = medianOrErr "NO Unprofiled data!" $ map convert base_prog
-   
-      gprof_prog = overhead base_prog_rts
-                   $ medianOrErr "No GProf data!"
-                   $ map convert
-                   $ extractVariantMedianTime cols prog_vals "gprof"
-
-      no_backoff_prog  = overhead base_prog_rts
-                         $ medianOrErr "No no_backoff data!" 
-                         $ map convert
-                         $ extractVariantMedianTime cols prog_vals "no_backoff"
-
-  -- If we reach this point then all the above data should be fine! 
-  --when (any (\x -> x<0) [base_prog_rts, gprof_prog, no_backoff_prog]) $
-  --  putStrLn $ "WARNING: Generating graph with !STRANGE! set of data " ++
-  --              show base_prog_rts ++ " " ++ show gprof_prog ++ " " ++ show no_backoff_prog
-
-
-
-  ---------------------------------------------------------------------------
-  -- Extract the resampling numbers 
-  let resampling_data = extract2 cols prog_vals
-      resampling_organized = organize resampling_data
-      resampling_tmp = catMaybes $ map doneForPlot resampling_organized
-      --resampling_avg = map (\(x,d) -> (x, average_at $ sortIt d)) resampling_tmp
-      resampling_avg = map (\(x,d) -> (x, median_at d)) resampling_tmp
-      resampling_done = map (\(x,d) -> (x,map (\(x,y) -> (x,overhead base_prog_rts y)) d)) resampling_avg
-
-  when (null resampling_data) $
-    putStrLn "WARNING: no resampling data for this benchmark" 
-
-  putStrLn $ show resampling_done
-  
-
-
-
-
-
-  ---------------------------------------------------------------------------
-  -- This is a mess! 
-  let magic o xs =
-        let s1 = sortBy (\(x,_) (y,_) -> compare x y) xs
-                 -- e1 = groupBy (\(x,_) (y,_) -> x == y) s1
-        in  map (\(a,b) -> (show a, overhead o b)) s1
-  
-  let prog_plotdata = magic base_prog_rts $ 
-                      map (\v -> (variantToVal v,average $
-                                                 map convert $
-                                                 extractColumn "MEDIANTIME" cols (slice "VARIANT" v cols prog_vals))) variants
-  
-  putStrLn $ show prog_plotdata 
-      
-  
--} 
+---------------------------------------------------------------------------
+-- Overhead computation   (Should really be a Maybe!) 
 overhead base x = if x < 0 then -1 else 100 * ((x - base) / base)
 
 
@@ -333,39 +269,6 @@ median_at xs  = result
 medianOrErr :: String -> [Double] -> Double
 medianOrErr str xs = maybe (error str) id $ median xs 
 
-
-
-
-
----------------------------------------------------------------------------
--- RESAMPLE variants extraction ... really messy stuff!
-
-extract2 :: [String] -> [[FTValue]] -> [(String, Double)]
-extract2 cols table =
-  let onlyResample = sliceWithPrefix "VARIANT" "resampling" cols table
-      names = extractColumn "VARIANT" cols onlyResample
-      times = extractColumn "MEDIANTIME" cols onlyResample
-  in zip (map (\(StringValue n) -> n) names) (map convert times)
-
-
-organize :: [(String, Double)] -> [[(String,Int,Double)]]
-organize indata = map rearrangeGroup grouped                                    
-
-  where
-
-    expanded = map (\(x,y) -> (nameToTripple x,y)) indata
-    sorted   = sortBy (\((_,_,x),_) ((_,_,y),_) -> x `compare` y) expanded 
-    grouped  = groupBy (\((_,_,x),_) ((_,_,y),_) -> x == y) sorted 
-    
-    rearrangeGroup = map (\((_,backoff,s),v) -> (s, backoff, v)) 
-    
-    nameToTripple str = 
-      let [name,samplesize,epoch] = words $ map (\x -> if x == '_' then ' ' else x) str 
-      in (name,read samplesize :: Int ,epoch) 
-
-doneForPlot :: [(String,Int,Double)] -> Maybe (String,[(Int,Double)])
-doneForPlot [] = Nothing
-doneForPlot xxs@((x,_,_):xs) = Just (x, map (\(a,b,c) -> (b,c)) xxs) 
 
 
 ---------------------------------------------------------------------------

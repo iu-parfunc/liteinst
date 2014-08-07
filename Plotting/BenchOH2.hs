@@ -1,6 +1,8 @@
 
 -- | Create a per-benchmark line-chart plotting 
 
+-- OLD AND RETIRED SCRIPT! 
+
 import System.Environment (getArgs)
 
 import HSBencher.Analytics

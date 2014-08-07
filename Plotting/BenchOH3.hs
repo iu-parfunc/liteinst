@@ -331,8 +331,6 @@ medianOrErr str xs = maybe (error str) id $ median xs
 
 
 
-
-
 ---------------------------------------------------------------------------
 -- RESAMPLE variants extraction ... really messy stuff!
 
