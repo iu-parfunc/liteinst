@@ -28,13 +28,28 @@ TRIALS=3
 # TRIALS=1
 
 # Google API authentication
-# Parfunc account / FusionTable_DynaprofUploader project:
-# CID=925399326325-6dir7re3ik7686p6v3kkfkf1kj0ec7ck.apps.googleusercontent.com
-# SEC=MQ72ZWDde_1e1ihI5YE9YlEi
 
-# Hit quota, using this one temporarily (the 1st FT project):
-CID=905767673358.apps.googleusercontent.com
-SEC=2a2H57dBggubW1_rqglC7jtK
+ifeq ($(MACHINECLASS),delta)
+  # Parfunc account / FusionTable_DynaprofUploader project:
+  CID=925399326325-6dir7re3ik7686p6v3kkfkf1kj0ec7ck.apps.googleusercontent.com
+  SEC=MQ72ZWDde_1e1ihI5YE9YlEi
+else
+# ifeq ($(MACHINECLASS),mine)
+ifneq (,$(filter $(MACHINECLASS),mine xmen))
+  # Hit quota, using this one temporarily (the 1st FT project):
+#  CID=905767673358.apps.googleusercontent.com
+#  SEC=2a2H57dBggubW1_rqglC7jtK
+# ^ Got loaded on [2014.08.07]
+
+  # General FT project #3:
+  CID=759282369766-qbqb7sccab86m8j0jma6r3t21ng6uaoa.apps.googleusercontent.com
+  SEC=TtfkUzUSR3LWfJ_udJi6wdO3
+else
+  # Second general FT "project"
+  CID=546809307027-8tm2lp5gtqg5o3pn3s016gd6467cf7j3.apps.googleusercontent.com
+  SEC=148aQ08EPpgkb0DiYVLoT9X2
+endif
+endif
 
 .phony: all lib bench
 # ----------------------------------------

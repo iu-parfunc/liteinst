@@ -446,7 +446,7 @@ void output_stripped() {
 
 // __attribute__((destructor)) - This doesn't seem to work properly with our heap data being tampered with when this gets called
 void cleanup(void) {
-
+  fprintf(stderr," [dynaprof] Begginning cleanup phase...");
   ticks cleanup_start = getticks();
 
   int   do_print = 1;
