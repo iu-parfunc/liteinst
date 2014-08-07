@@ -482,7 +482,7 @@ void cleanup(void) {
 
   // fprintf(stderr, "FINAL_OVERHEAD %.03f\n", overhead);
 
-  fprintf(stderr," [dynaprof] Summing sample counts over %ld functions and %ld threads.\n", function_count, thr_array_idx);
+  fprintf(stderr," [dynaprof] Summing sample counts over %d functions and %d threads.\n", function_count, thr_array_idx);
 
   long total_invocations = 0L;
 
@@ -522,8 +522,8 @@ void cleanup(void) {
   // for (int i=0; i<function_count;i++) {
   //   total_invocations += dyn_global_stats[i].count;
   // }
-  fprintf(stderr, "\nTOTAL_THREADS: %llu\n",    thr_array_idx);
-  fprintf(stderr, "\nCALLED_FUNCTIONS: %llu\n", function_count);
+  fprintf(stderr, "\nTOTAL_THREADS: %d\n",    thr_array_idx);
+  fprintf(stderr, "\nCALLED_FUNCTIONS: %d\n", function_count);
   fprintf(stderr, "\nNUM_SAMPLES: %llu\n",      total_invocations);
   fprintf(stderr, "\nTicks_per_nano_seconds: %lf\n", getTicksPerNanoSec());
   fprintf(stderr, "Total_overhead_from_invocations: %lfs\n", (total_invocations * 1200 / getTicksPerNanoSec()/1000000000));
