@@ -6,6 +6,7 @@
 -} 
 
 import System.Environment (getArgs)
+import System.FilePath.Posix
 
 import HSBencher.Analytics
 
@@ -17,7 +18,7 @@ import Prelude hiding (log)
 
 import Data.List.Split (wordsBy) 
 
-extract str = (read s1 :: Int, read s2 :: Int) 
+extract str = (abs (read s1 :: Int), read s2 :: Int) 
   where
     [s1,s2] = wordsBy (==',') str 
 
@@ -49,7 +50,7 @@ main = do
   let ps  = map fst the_data -- percentages
       cs  = map snd the_data -- counts
       
-      totc = sum cs -- total of all "counts"
+      totc = sum cs -- total op f all "counts"
       
       pcs = map (\x -> 100 * ((fromIntegral x) / (fromIntegral totc))) cs 
       accCount = scanl1 (+) pcs 
@@ -81,9 +82,14 @@ main = do
                             
                                 
   -- Generate the HTML and Javascript code                           
-  putStrLn $ html $ renderPlot mySupply plot     
-
- 
+  -- putStrLn $ html $ renderPlot mySupply plot
+      
+  let (_,nom) = splitFileName fn
+      ofile = "output_" ++ (dropExtension nom) ++ ".html" 
+  putStrLn $ "Writing output to: " ++ ofile
+  writeFile ofile $ html $ renderPlot mySupply plot
+  
+  
 --------------------------------------------------------------------------
 -- extract data given a variant
 

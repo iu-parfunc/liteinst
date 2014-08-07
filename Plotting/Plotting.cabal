@@ -53,7 +53,8 @@ executable PercentCount
                , hsbencher-fusion >= 0.1.0.2
                , hsbencher-analytics >= 0.1.0.0 
                , handa-gdata >= 0.6.9.2
-               , split               
+               , split  
+               , filepath             
   default-language:    Haskell2010
   
 
