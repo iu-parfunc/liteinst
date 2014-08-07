@@ -1,7 +1,9 @@
 
--- | Create a per-benchmark line-chart plotting fixed_backoff as well as resampling
+-- | Create a line-chart with one line per benchmark plotting fixed_backoff ONLY 
+
 
 import System.Environment (getArgs)
+import System.IO 
 
 import HSBencher.Analytics
 
@@ -24,24 +26,23 @@ cid  = "925399326325-6dir7re3ik7686p6v3kkfkf1kj0ec7ck.apps.googleusercontent.com
 csec :: String
 csec = "MQ72ZWDde_1e1ihI5YE9YlEi"  
 
-table_name = "Dynaprof_Benchmarks" 
+table_name = "Dynaprof_Benchmarks2" 
 
 base_variant = "unprofiled" 
 
-variants = ["fixed_backoff_" ++ x| x <- backoff ] 
+variantPrefix = "fixed_backoff_"
 
-            -- skip last backoff variant (since the resampling one do not go that high 
-backoff = [ "1", "10", "100", "1000", "10000", "100000"] -- , "1000000"]
-
-variants2_prefix = ["rasampling_" ++ x | x <- backoff] 
 
 ---------------------------------------------------------------------------
 -- Plan
 
--- extract [( epoch , [("1",value),("10",value)])), (epoch, [("1",value),("10",value)])] 
+-- extract [( prog , [("1",value),("10",value)])), (prog, [("1",value),("10",value)])] 
 --
---  so get all data in [(backoff, epoch, value)] then organize as above. 
+--  so get all data in [(program, backoff, value)] then organize as above. 
 -- 
+
+-- 
+                
 
 
 main :: IO ()
@@ -51,16 +52,15 @@ main = do
 
   -- Git_depth, Machine, progname
 
-  when (length args /= 3) $ error "Provide exactly 3 arguments, GIT_DEPTH MACHINE PROGNAME" 
+  when (length args /= 2) $ error "Provide exactly 3 arguments, GIT_DEPTH MACHINE PROGNAME" 
   
-  let [git_depth, machine, progname] = args 
+  let [git_depth, machine] = args 
 
-  perform git_depth machine progname
+  perform git_depth machine 
 
 
-
-perform :: String -> String -> String -> IO ()
-perform git_depth machine  progname = do 
+perform :: String -> String  -> IO ()
+perform git_depth machine  = do 
   
   -- tab <- pullEntireTable cid csec table_name
   tab <- pullSelectively cid csec table_name "HOSTNAME" machine -- git_depth 
@@ -71,13 +71,75 @@ perform git_depth machine  progname = do
 
   let filtered_by_gitdepth = aboveDepth git_depth cols values 
       
-  let machine_data = filtered_by_gitdepth -- slice "HOSTNAME" machine cols values    
+  let machine_data = filtered_by_gitdepth --slice "HOSTNAME" machine cols values    
 
-  let prog_vals = slice "PROGNAME" progname cols machine_data
+ 
+  let fixedBackoff_data =  fixedBackoffExtractor
+                           $ medianPerVariant
+                           $ byBench
+                           $ extractPbV variantPrefix cols machine_data
+
+
+  let baseline_data = medianPerVariant $ 
+                      byBench $
+                      extractPbV "unprofiled"  cols machine_data
+
+
+  let fixedBackoff_oh = computeOverheads baseline_data fixedBackoff_data
+      
+      
+  putStrLn "---------------------------------------------------------------------------" 
+  putStrLn $ show baseline_data
+
+  putStrLn "---------------------------------------------------------------------------" 
+  putStrLn $ show fixedBackoff_oh
+  
+  
+  --let prog_vals = slice "PROGNAME" progname cols machine_data
     
-  when (null prog_vals) $ 
-    putStrLn "WARNING: no data for this benchmark from this machine at this git_depth"
+  --when (null prog_vals) $ 
+  --  hPutStrLn stderr "WARNING: no data for this benchmark from this machine at this git_depth"
 
+  let colors  = ["#FF0", "#0FF", "#0F0", "#00F",
+                 "#700","#750", "#705", "#70F", "#7F0", "#70F",
+                 "#5A0","#55A", "#5A5", "#5AF", "#5FA", "#5AF"]
+
+
+   
+                
+  -- START THE PLOTING 
+  ---------------------------------------------------------------------------
+  -- ALL THE RESAMPLING LINES
+  let lines =
+        map (\(c,(bench,ldata)) -> LineGraph c
+                                   bench
+                                   (Just "") 
+                                   ldata) $ zip colors fixedBackoff_oh
+        
+  
+  let plot = Plot {pLines = lines,
+                   pPoints = [],
+                   pBars = [],
+                   pLegend = True,
+                   pDimensions = (800,600),
+                   pXLabel = "Backoff threshold",
+                   pYLabel = "Overhead %",
+                   pXAxisTicks = Just [1,10,100,1000,10000,100000,1000000],
+                   pYAxisTicks = Nothing,
+                   pXAxisLog = True,
+                   pYAxisLog = False} 
+                            
+  let outfile = "FixedBackoff_" ++ machine ++ "_" ++ git_depth ++ ".html" 
+             
+  putStrLn $ "Writing output to " ++ outfile
+  writeFile outfile $ html $ renderPlot mySupply plot     
+  
+
+
+  
+      
+
+{- 
   ---------------------------------------------------------------------------
   -- Extract baseline and gprof 
   let base_prog = extractVariantMedianTime cols prog_vals base_variant 
@@ -134,70 +196,8 @@ perform git_depth machine  progname = do
   
   putStrLn $ show prog_plotdata 
       
-  let colors  = ["#FF0", "#0FF", "#0F0", "#00F",
-                 "#700","#750", "#705", "#70F", "#7F0", "#70F",
-                 "#5A0","#55A", "#5A5", "#5AF", "#5FA", "#5AF"]
-  -- START THE PLOTING 
-
-  ---------------------------------------------------------------------------
-  -- FIXED_BACKOFF LINE 
-  --let dyna_lines = [(progname,prog_plotdata)] 
-
-  let lines = LineGraph "#000" 
-                        "dynaprof_fixed_backoff"
-                        (Just "") 
-                        prog_plotdata -- ) $ zip colors dyna_lines 
-
-
-  ---------------------------------------------------------------------------
-  -- GPROF LINE
-  --let gp_lines = [(progname,  zip backoff (repeat gprof_prog))]
-
   
-  let lines2 = LineGraph "#AAA" 
-                         "gprof"
-                         (Just "") 
-                         (zip backoff (repeat gprof_prog)) --  x ) $ zip colors2 gp_lines 
-
-
-
-
-  ---------------------------------------------------------------------------
-  -- NO BACKOFF LINE
-  --let nb_lines = [(progname, zip backoff (repeat no_backoff_prog))] 
-      
-  let lines3 = LineGraph "#F00"
-                         "dynaprof_no_backoff"
-                         (Just "") 
-                         (zip backoff (repeat no_backoff_prog)) -- x ) $ zip colors3 nb_lines
-
-  ---------------------------------------------------------------------------
-  -- ALL THE RESAMPLING LINES
-  let lines4 =
-        map (\(c,(n,ldata)) -> LineGraph c
-                                ("resampling_" ++ n)
-                                (Just "") 
-                                (map (\(x,y) -> (show x,y)) ldata)) $ zip colors resampling_done 
-        
-  
-  let plot = Plot {pLines = [lines,lines2,lines3] ++ lines4,
-                   pPoints = [],
-                   pBars = [],
-                   pLegend = True,
-                   pDimensions = (800,600),
-                   pXLabel = "Backoff threshold",
-                   pYLabel = "Overhead %",
-                   pXAxisTicks = Nothing,
-                   pYAxisTicks = Nothing,
-                   pXAxisLog = False,
-                   pYAxisLog = False} 
-                            
-  let outfile = "BenchOH3_" ++ progname ++"_" ++ machine ++ "_" ++ git_depth ++ ".html" 
-             
-  putStrLn $ "Writing output to " ++ outfile
-  writeFile outfile $ html $ renderPlot mySupply plot     
-  
-
+-} 
 overhead base x = if x < 0 then -1 else 100 * ((x - base) / base)
 
 
@@ -269,6 +269,10 @@ convert (StringValue s) = read s
 convertInt :: FTValue -> Int
 convertInt (DoubleValue v) = truncate v
 convertInt (StringValue s) = truncate $ (read s :: Double)
+
+convertStr :: FTValue -> String
+convertStr (DoubleValue v) = show v
+convertStr (StringValue s) = s 
 
 extractColumn str header tab =
   [x !! ix | x <- tab] 
@@ -362,3 +366,65 @@ organize indata = map rearrangeGroup grouped
 doneForPlot :: [(String,Int,Double)] -> Maybe (String,[(Int,Double)])
 doneForPlot [] = Nothing
 doneForPlot xxs@((x,_,_):xs) = Just (x, map (\(a,b,c) -> (b,c)) xxs) 
+
+
+---------------------------------------------------------------------------
+-- extract, [(PROGNAME, backoff, Value)]
+
+extractPbV :: String -> [String] -> [[FTValue]] -> [(String, String, Double)]
+extractPbV variant  cols table =
+  let onlyVariant = sliceWithPrefix "VARIANT" variant cols table
+      variants  = extractColumn "VARIANT"    cols onlyVariant
+      prgnames = extractColumn "PROGNAME"   cols onlyVariant
+      values   = extractColumn "MEDIANTIME" cols onlyVariant
+  in zip3 (map convertStr prgnames)
+          (map convertStr variants)
+          (map convert values) 
+      
+
+byBench :: [(String, String, Double)] -> [(String, [(String, Double)])]
+byBench raw =
+  let sorted = sortBy (\(x,_,_) (y,_,_) -> x `compare` y) raw
+      grouped = groupBy (\(x,_,_) (y,_,_) -> x == y) sorted
+
+  in catMaybes $ map groupRepr grouped     
+  where 
+    groupRepr [] = Nothing 
+    groupRepr xs@((x,_,_):_) = Just (x, map (\(_,y,z) -> (y,z)) xs)
+
+
+
+medianPerVariant :: [(String, [(String, Double)])] -> [(String , [(String, Double)])] 
+medianPerVariant = map (\(x,d) -> (x, fixBenchData d))
+  where 
+    fixBenchData :: [(String,Double)] -> [(String,Double)]
+    fixBenchData raw =
+      let sorted = sortBy (\(x,_) (y,_) -> x `compare` y) raw
+          medians = median_at sorted
+      in medians 
+
+
+fixedBackoffExtractor :: [(String, [(String, Double)])] -> [(String, [(Int, Double)])]
+fixedBackoffExtractor = map (\(x,d) -> (x, sortBy (\(x,_) (y,_) -> x `compare` y) (doFixed d)))
+  where
+    doFixed :: [(String, Double)] -> [(Int, Double)]
+    doFixed = map doTweak
+
+    doTweak (str,d) =
+      let [_,_,boff] = words $ map (\x -> if x == '_' then ' ' else x) str
+      in  (read boff, d) 
+     
+
+
+
+---------------------------------------------------------------------------
+--    
+
+computeOverheads baseline_data [] = [] 
+computeOverheads baseline_data ((bench,dat):rest) =
+  case (lookup bench baseline_data) of
+    Nothing -> computeOverheads baseline_data rest -- error $ "Baseline value is missing for Bench: " ++ show bench
+    Just [] -> computeOverheads baseline_data rest --  error $ "Baseline value is missing for Bench: " ++ show bench
+    Just [(_,base)] -> (bench, map applyOH dat):  computeOverheads baseline_data rest
+      where
+        applyOH (boff,rt) = (boff, overhead base rt) 
