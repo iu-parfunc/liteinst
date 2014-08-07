@@ -61,13 +61,16 @@ main = do
 perform :: String -> String -> String -> IO ()
 perform git_depth machine  progname = do 
   
-  --tab <- pullEntireTable cid csec table_name
-  tab <- pullSelectively cid csec table_name "GIT_DEPTH" git_depth 
+  -- tab <- pullEntireTable cid csec table_name
+  tab <- pullSelectively cid csec table_name "HOSTNAME" machine -- git_depth 
+
 
   -- extract the useful parts        
   let (ColData cols values) = tab 
 
-  let machine_data = slice "HOSTNAME" machine cols values    
+  let filtered_by_gitdepth = aboveDepth git_depth cols values 
+      
+  let machine_data = filtered_by_gitdepth -- slice "HOSTNAME" machine cols values    
 
   let prog_vals = slice "PROGNAME" progname cols machine_data
     
@@ -118,45 +121,42 @@ perform git_depth machine  progname = do
   
   putStrLn $ show prog_plotdata 
       
-  let colors  = ["#000","#F00", "#FF0", "#0FF", "#0F0", "#00F"]
-      colors2 = ["#700","#750", "#705", "#70F", "#7F0", "#70F"]
-      colors3 = ["#5A0","#55A", "#5A5", "#5AF", "#5FA", "#5AF"]
+  let colors  = ["#FF0", "#0FF", "#0F0", "#00F",
+                 "#700","#750", "#705", "#70F", "#7F0", "#70F",
+                 "#5A0","#55A", "#5A5", "#5AF", "#5FA", "#5AF"]
   -- START THE PLOTING 
 
   ---------------------------------------------------------------------------
   -- FIXED_BACKOFF LINE 
-  let dyna_lines = [(progname,prog_plotdata)] 
+  --let dyna_lines = [(progname,prog_plotdata)] 
 
-  let lines =
-        map (\(c,(n,x)) -> LineGraph c
-                          ("dynaprof_" ++ n)
-                          Nothing
-                          x ) $ zip colors dyna_lines 
+  let lines = LineGraph "#000" 
+                        "dynaprof_fixed_backoff"
+                        Nothing
+                        prog_plotdata -- ) $ zip colors dyna_lines 
 
 
   ---------------------------------------------------------------------------
   -- GPROF LINE
-  let gp_lines = [(progname,  zip backoff (repeat gprof_prog))]
+  --let gp_lines = [(progname,  zip backoff (repeat gprof_prog))]
 
   
-  let lines2 =
-        map (\(c,(n,x)) -> LineGraph c
-                          ("gprof_" ++ n)
-                          Nothing
-                          x ) $ zip colors2 gp_lines 
+  let lines2 = LineGraph "#AAA" 
+                         "gprof"
+                         Nothing
+                         (zip backoff (repeat gprof_prog)) --  x ) $ zip colors2 gp_lines 
 
 
 
 
   ---------------------------------------------------------------------------
   -- NO BACKOFF LINE
-  let nb_lines = [(progname, zip backoff (repeat no_backoff_prog))] 
+  --let nb_lines = [(progname, zip backoff (repeat no_backoff_prog))] 
       
-  let lines3 =
-        map (\(c,(n,x)) -> LineGraph c
-                           ("no_backoff_" ++ n)
-                           Nothing
-                           x ) $ zip colors3 nb_lines
+  let lines3 = LineGraph "#F00"
+                         "dynaprof_no_backoff"
+                         Nothing
+                         (zip backoff (repeat no_backoff_prog)) -- x ) $ zip colors3 nb_lines
 
   ---------------------------------------------------------------------------
   -- ALL THE RESAMPLING LINES
@@ -167,12 +167,12 @@ perform git_depth machine  progname = do
                                 (map (\(x,y) -> (show x,y)) ldata)) $ zip colors resampling_done 
         
   
-  let plot = Plot {pLines = lines ++ lines2  ++ lines3 ++ lines4,
+  let plot = Plot {pLines = [lines,lines2,lines3] ++ lines4,
                    pPoints = [],
                    pBars = [],
                    pLegend = True,
                    pDimensions = (800,600),
-                   pXLabel = "backoff",
+                   pXLabel = "Backoff threshold",
                    pYLabel = "Overhead %",
                    pXAxisTicks = Nothing,
                    pYAxisTicks = Nothing,
@@ -274,10 +274,15 @@ sliceWithPrefix col valuePrefix header values =
      , let (StringValue str) = (x !! ix)
      , valuePrefix `isPrefixOf` str   ] 
   where
-    
     ix = fromJust $ elemIndex col header 
-    
 
+aboveDepth :: String -> [String] -> [[FTValue]] -> [[FTValue]] 
+aboveDepth str header table =
+  [ x | x <- table
+      , let (StringValue depth) = (x !! ix)
+      , (read depth :: Int) <= (read str :: Int)] -- gah! 
+  where
+    ix = fromJust $ elemIndex "GIT_DEPTH" header
 
 ---------------------------------------------------------------------------
 -- Compute average of a list of positive double
