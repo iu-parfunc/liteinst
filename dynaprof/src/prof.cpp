@@ -53,7 +53,7 @@ int strategy = NO_BACKOFF;
 double target_overhead = 0.05; 
 double overhead = 0.0;
 long sample_size = 10000;
-uint64_t sample_rate = (uint64_t)(0.01 * (double)NANO_SECONDS_IN_SEC); // Default sampling rate is 10ms
+uint64_t sample_rate = (uint64_t)(0.1 * (double)NANO_SECONDS_IN_SEC); // Default sampling rate is 10ms
 int output_type = CSV_OUTPUT;
 int probe_overhead = 500;
 
@@ -280,7 +280,7 @@ void Basic_Profiler::initialize(void) {
   } else if (strategy == NO_BACKOFF) {
     pthread_create(&tid, NULL, probe_monitor, (void*)NULL);
   } else {
-    pthread_create(&tid, NULL, probe_monitor, (void*)NULL);
+    // pthread_create(&tid, NULL, probe_monitor, (void*)NULL);
   }
 }
 
