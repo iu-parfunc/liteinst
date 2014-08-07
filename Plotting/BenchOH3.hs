@@ -145,7 +145,7 @@ perform git_depth machine  progname = do
 
   let lines = LineGraph "#000" 
                         "dynaprof_fixed_backoff"
-                        Nothing
+                        (Just "") 
                         prog_plotdata -- ) $ zip colors dyna_lines 
 
 
@@ -156,7 +156,7 @@ perform git_depth machine  progname = do
   
   let lines2 = LineGraph "#AAA" 
                          "gprof"
-                         Nothing
+                         (Just "") 
                          (zip backoff (repeat gprof_prog)) --  x ) $ zip colors2 gp_lines 
 
 
@@ -168,7 +168,7 @@ perform git_depth machine  progname = do
       
   let lines3 = LineGraph "#F00"
                          "dynaprof_no_backoff"
-                         Nothing
+                         (Just "") 
                          (zip backoff (repeat no_backoff_prog)) -- x ) $ zip colors3 nb_lines
 
   ---------------------------------------------------------------------------
@@ -176,7 +176,7 @@ perform git_depth machine  progname = do
   let lines4 =
         map (\(c,(n,ldata)) -> LineGraph c
                                 ("resampling_" ++ n)
-                                Nothing
+                                (Just "") 
                                 (map (\(x,y) -> (show x,y)) ldata)) $ zip colors resampling_done 
         
   
