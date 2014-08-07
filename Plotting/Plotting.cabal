@@ -120,6 +120,15 @@ executable BenchOH2
                , handa-gdata >= 0.6.9.2               
   default-language:    Haskell2010
 
+executable BenchOH3
+  main-is:             BenchOH3.hs
+  build-depends: base >=4.5 && <4.8
+               , hsbencher >= 1.8.0.7
+               , hsbencher-fusion >= 0.1.0.2
+               , hsbencher-analytics >= 0.1.0.0 
+               , handa-gdata >= 0.6.9.2               
+  default-language:    Haskell2010
+
 
 executable ScatterExample
   main-is:             ScatterExample.hs
