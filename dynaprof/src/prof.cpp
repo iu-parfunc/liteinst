@@ -274,14 +274,14 @@ void Basic_Profiler::initialize(void) {
 
   // Spawns the overhead monitor thread if we are following sophisticated back off strategies
   pthread_t tid; 
-  pthread_create(&tid, NULL, probe_monitor, (void*)NULL);
 
   if (strategy == SAMPLING) {
     pthread_create(&tid, NULL, probe_monitor_sampling, (void*)NULL);
   } else if (strategy == NO_BACKOFF) {
     pthread_create(&tid, NULL, probe_monitor, (void*)NULL);
+  } else {
+    pthread_create(&tid, NULL, probe_monitor, (void*)NULL);
   }
-
 }
 
 void Profiler::register_thread_data(dyn_thread_data* data) {
