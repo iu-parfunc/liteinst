@@ -36,4 +36,5 @@ fi
 ./.jenkins_script.sh
 
 # (2) Then benchmark:
+export DYN_OUTPUT_TYPE=CSV
 make bench
