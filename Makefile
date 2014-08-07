@@ -26,6 +26,7 @@ endif
 
 TRIALS=3
 # TRIALS=1
+TOP=$(shell pwd)
 
 # Google API authentication
 
@@ -79,6 +80,11 @@ run-benchmarks.exe: run-benchmarks.cabal run-benchmarks.hs
 	$(CABAL) install --bindir=. --disable-documentation --with-ghc=ghc-$(JENKINS_GHC) --force-reinstalls
 	./run-benchmarks.exe --help
 	./run-benchmarks.exe -l
+
+plotter: run-benchmarks.exe
+	$(CABAL) sandbox hc-pkg unregister hsbencher-analytics || echo ok
+	(cd ./Plotting && $(CABAL) sandbox init --sandbox=$(TOP)/.cabal-sandbox/)
+	(cd ./Plotting && $(CABAL) install --bindir=. . ../HSbencher/hsbencher-analytics --force-reinstalls --disable-documentation)
 
 clean:
 	(cd ./zcatoggle/src; make clean)

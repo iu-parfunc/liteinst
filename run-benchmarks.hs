@@ -59,7 +59,7 @@ resampling = Or [ And [ Set (Variant ("resampling_"++show num++"_"++show period)
                       ]
                    | num    <- [ 10^i | i <- [0..5] ] -- Hold back a little more
 --                   , period <- [ 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0 ] 
-                   , period <- [ 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0] ]
+                   , period <- [ 0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0] ]
 
 no_backoff = Set (Variant "no_backoff") (RuntimeEnv "DYN_STRATEGY" "NO_BACKOFF")
 
@@ -108,6 +108,7 @@ main = do
                        customTagHarvesterInt    "NUM_SAMPLES"             `mappend` 
                        customTagHarvesterInt    "NUM_PROBES"              `mappend` 
                        customTagHarvesterInt    "NUM_ISLANDS"             `mappend` 
+                       customTagHarvesterInt    "NUM_EPOCHS"              `mappend` 
                        customTagHarvesterInt    "MMAP_RETRIES"            `mappend` 
                        customTagHarvesterInt    "TOTAL_THREADS"           `mappend` 
                        customTagHarvesterInt    "CALLED_FUNCTIONS"        `mappend` 
