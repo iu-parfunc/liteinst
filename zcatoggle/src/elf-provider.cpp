@@ -260,7 +260,7 @@ int read_zca_probes(const char* path)
 
 	Elf *e;           // ELF struct
 	Elf_Scn *scn;     // Section index struct
-	Elf_Data *data;     // Section index struct
+	Elf_Data *data = NULL;     // Section index struct
 	Elf64_Shdr *shdr;  // Section strkkkuct
 
 	if(elf_version(EV_CURRENT)==EV_NONE)
@@ -306,9 +306,11 @@ int read_zca_probes(const char* path)
 
 			char* ptr;
 			// NOTE: Robert needs to comment this out for running on Mason:
+      /*
 			if (do_hack) {
 			  data = elf_getdata(scn, data); // Apparently we need to elf_getdata twice before we get the goods....
 			}
+      */
 
        while ((data = elf_getdata(scn,data)) != NULL) {
 			ptr = (char*) data->d_buf;
