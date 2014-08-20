@@ -530,7 +530,7 @@ int activateProbe(std::string label, void (*fun)())
       }
     }
   } else {
-    printf("Couldn't find the annotation : %s \n", label);
+    printf("Couldn't find the annotation : %s \n", label.c_str());
   }
   return -1;
 }
