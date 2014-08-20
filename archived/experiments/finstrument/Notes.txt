@@ -1,0 +1,36 @@
+
+Calling sequence 
+
+GCC
+---
+ * Calling sequence
+    - mov ebp to param (4+3)
+    - mov func_address to param (5)
+    - call __cyg_profile_func_entry/exit (5)
+ * GCC-4.4.7 - Inlining doesn't seem to preseve the profiler functionc calls with parent function address passed. Caller address is also busted
+   since returned ebp contains the parent function's caller.
+   GCC-4.7.3 - Inlining works as expected. (Still caller address is busted. But that is fine)
+
+-O2
+
+__cyg_profile_func_entry/exit (void *func, void *caller)
+ * func - Func start address (Hard coded by the compiler at compile time for this call)
+ * caller - Return address from the stack (Immediately the next instruction after the call to this function)
+
+-O3
+ 
+ * Calling sequence the same
+ * Seems to include some libc calls inlined as well
+
+
+lock xadd 
+ * 4 - Add register to register
+
+rdtsc
+
+Timing
+
+ * On silo
+    - zcatoggle (static) : 40 cycles
+    - finstrument (static) : 35 cycles
+    - finstrument (dynamic) : 44 cycles
