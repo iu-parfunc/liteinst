@@ -34,7 +34,7 @@ static ticks stub_gen_elapsed_time;
 static struct timeval stub_gen_tvDiff;
 #endif
 
-void calibrateTicks();
+static void calibrateTicks();
 
 int ZCA_OVERHEAD = 600; // Assuming 1000 cycles overhead per function call. Need to measure this at runtime
 int ZCA_INIT_OVERHEAD = 0;
