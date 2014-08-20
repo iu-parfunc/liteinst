@@ -14,7 +14,7 @@ runso:
 	$(CC) -fPIC -g -c -Wall trace.c
 	$(CC) -shared -Wl,-soname,libprof.so -o libprof.so trace.o -lc
 	$(CC) -finstrument-functions -g -c -o main.o main.c
-	$(CC) main.o -o main
+	$(CC) -L. -lprof main.o -o main
 	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./main
 
 inc :
