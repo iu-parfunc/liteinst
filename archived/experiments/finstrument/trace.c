@@ -108,7 +108,8 @@ __cyg_profile_func_enter (void *func,  void *caller)
     */
     uint64_t* b = (uint64_t*)addr;
     uint64_t c = *b;
-    uint64_t wi = 2;
+    // uint64_t c = 1;
+    uint64_t wi = 0x9090909090909090; // 8 NO-Ops
      
     fprintf(stderr, "b : %" PRIu64 " c : %" PRIu64 " wi : %" PRIu64 "\n", *b, c, wi); 
     bool result = 0;
