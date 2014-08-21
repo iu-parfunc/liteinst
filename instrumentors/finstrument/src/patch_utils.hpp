@@ -9,7 +9,7 @@
 #include <errno.h>
 #include <unistd.h>
 
-#include "logger.h"
+#include "logger.hpp"
 
 inline bool modify_page_permissions(uint8_t* addr) {
 
