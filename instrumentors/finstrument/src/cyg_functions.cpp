@@ -28,7 +28,7 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
 
   uint64_t* ptr = addr-2; // 8 * 2 = 16 bytes
-  int8_t probe_start_idx = -1; // Cannot use -1 since it's a legitimate value for a start_idx
+  int8_t probe_start_idx = -1; 
 
   uint8_t* probe_start = (uint8_t*) ptr;
   for (int i=0; i<4; i++) { // Probe site should start at most 4 bytes in
@@ -66,34 +66,6 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   status = patch_with_jmp(ptr, probe_start_idx, relative);
 
   LOG_DEBUG("CAS status is :%d..\n", status);
-
-  /*
-
-  uint8_t* probe_site_start = ptr + probe_start_idx;
-  uint64_t probe_hi_byte_val = *((uint64_t*) ptr);
-  uint8_t* probe_hi_byte_val_ptr = (uint8_t*) &probe_hi_byte_val;
-
-  uint64_t mask = 0xFFFFFFFFFFFFFFFF;
-  int8_t shift_size = probe_start_idx * 8;
-
-  mask = (mask << shift_size);  
-  probe_hi_byte_val = (probe_hi_byte_val & ~mask);
-  */
-
-  /* Patch with the temporary jump to skip executing next instruction byte until it is written with proper call site information */
-  /*
-  probe_hi_byte_val_ptr[probe_start_idx] = 0xE9;
-  */
-
-  /* Negative 5 deducts the size of the jump itself. Jump distance calculated from next address after jmp */
-  /*
-  uint8_t relative = 16 - probe_start_idx - 5;
-  *(uint32_t*)(probe_hi_byte_val_ptr+probe_start_idx+1) = (uint32_t) relative;
-
-  status = __sync_bool_compare_and_swap((uint64_t*)probe_boundary_start,
-             *((uint64_t*)probe_boundary_start), probe_hi_byte_val);
-             */
-
 
   // instrumentation_func epilog = (instrumentation_func) INSTRUMENTOR_INSTANCE->get_profiler_epilog();
 
