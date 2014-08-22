@@ -15,6 +15,12 @@
 #define RDI 7
 
 /* -- MOV operand encodings -- */
+/* 
+ * Reference: 
+ *   http://www.intel.com/content/dam/www/public/us/en/documents/manuals/
+ *   64-ia-32-architectures-software-developer-instruction-set-reference-manual-325383.pdf
+ *   [page 165]
+ */
 
 /* Register to memory movs */
 #define MOV_REG_8 0x88
