@@ -3,6 +3,8 @@
 
 int call_count = 0;
 
+void print_fn(short);
+
 void foo() {
   printf("foo : %d\n", call_count++);
 }
@@ -17,11 +19,20 @@ int inc (int *a){
 int main() {
 
   int x = 0;
-  inc(&x);
-  inc(&x);
+  // inc(&x);
+  // inc(&x);
 
   foo();
   foo();
+
+  // inc(&x);
+  // inc(&x);
+
+  foo();
+  foo();
+
+  // print_fn(5554);
+  // print_fn(5554);
 
   return 0;
 }

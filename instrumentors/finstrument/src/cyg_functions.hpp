@@ -50,7 +50,8 @@
 #define MOV_IMM_16_RSI 0xBE // 0xB8 + RSI
 #define MOV_IMM_16_RDI 0xBF // 0xB8 + RDI
 
-#define REX_PREFIX 0x48
+#define REX_PREFIX_0 0x48
+#define REX_PREFIX_1 0x4c
 
 #define PROBESIZE 16
 
