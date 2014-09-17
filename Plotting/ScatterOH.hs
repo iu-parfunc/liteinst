@@ -24,13 +24,13 @@ cid  = "925399326325-6dir7re3ik7686p6v3kkfkf1kj0ec7ck.apps.googleusercontent.com
 csec :: String
 csec = "MQ72ZWDde_1e1ihI5YE9YlEi"  
 
-table_name = "Dynaprof_Benchmarks" 
+table_name = "Dynaprof_Benchmarks2" 
 
 base_variant = "unprofiled" 
 
 variantPrefixes = ["fixed_backoff", "resampling", "no_backoff"]
 
-prognames = ["perl-5.8.7", "raxml" , "gzip-1.6", "h264ref-9.3"] -- benchmarks of interest.
+prognames = ["perl-5.8.7", "raxml" , "gzip-1.6", "h264ref-9.3", "bzip-1.0.3", "grep-2.18" ] -- benchmarks of interest.
 
 
 
@@ -125,7 +125,7 @@ perform git_depth machine = do
 
   let points = concatMap snd tripples_diff
   
-      
+{-       
   let colors  = ["#000","#F00", "#FF0", "#0FF", "#0F0", "#00F"]
       colors2 = ["#700","#750", "#705", "#70F", "#7F0", "#70F"]
       colors3 = ["#5A0","#55A", "#5A5", "#5AF", "#5FA", "#5AF"]
@@ -152,7 +152,15 @@ perform git_depth machine = do
              
   putStrLn $ "Writing output to " ++ outfile
   writeFile outfile $ html $ renderPlot mySupply plot     
- 
+ -} 
+
+  let schema = "samples overhead\n" 
+      string = concatMap (\(x,y) -> show x ++ " " ++ show y ++ "\n" ) points 
+
+
+  writeFile "scatterdat.txt" $ schema ++ string
+
+  
 overhead base x = if x < 0 then -1 else 100 * ((x - base) / base)
 
 
@@ -281,7 +289,7 @@ aboveDepth :: String -> [String] -> [[FTValue]] -> [[FTValue]]
 aboveDepth str header table =
   [ x | x <- table
       , let (StringValue depth) = (x !! ix)
-      , (read depth :: Int) <= (read str :: Int)] -- gah! 
+      , (read depth :: Int) >= (read str :: Int)] -- gah! 
   where
     ix = fromJust $ elemIndex "GIT_DEPTH" header
 

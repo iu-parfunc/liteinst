@@ -20,7 +20,7 @@ import Network.Google.FusionTables
 
 
 -- HACKY SWITCH
-_USE_TIME = "MINTIME" -- "MEDIANTIME"  
+-- _USE_TIME = "MEDIANTIME" -- "MINTIME" -- "MEDIANTIME"  
  
 cid :: String
 cid  = "925399326325-6dir7re3ik7686p6v3kkfkf1kj0ec7ck.apps.googleusercontent.com" 
@@ -56,10 +56,13 @@ main = do
 
   -- Git_depth, Machine, progname
 
-  when (length args /= 3) $ error "Provide exactly 3 arguments, GIT_DEPTH MACHINE PROGNAME" 
-  
-  let [git_depth, machine, progname] = args 
+  when (length args /= 3) $  error "Provide exactly 3 arguments, GIT_DEPTH MACHINE PROGNAME"  
 
+  
+  let [git_depth, machine, progname]  = args 
+
+  putStrLn $git_depth ++ " " ++ machine ++ " " ++ progname 
+      
   perform git_depth machine progname 
 
 
@@ -140,7 +143,7 @@ perform git_depth machine  progname = do
   let prog_plotdata = magic base_prog_rts $ 
                       map (\v -> (variantToVal v,average $
                                                  map convert $
-                                                 extractColumn _USE_TIME cols (slice "VARIANT" v cols prog_vals))) variants
+                                                 extractColumn "MINTIME" cols (slice "VARIANT" v cols prog_vals))) variants
 
   hPutStrLn stderr "---------------------------------------------------------------------------"
   hPutStrLn stderr "-- Prog Plot Data "  
@@ -208,6 +211,43 @@ perform git_depth machine  progname = do
              
   putStrLn $ "Writing output to " ++ outfile
   writeFile outfile $ html $ renderPlot mySupply plot     
+
+  ---------------------------------------------------------------------------
+  -- Output txt file with:
+  -- # benchName min max  gprof_min gprof_max fixed_min fixed_max  
+
+  -- data to use resampling done, no_backoff_prog, gprof_prog
+  let cut_down = take 3 $ drop 4 $ map snd resampling_done
+      samplingValues = if (length cut_down < 3)
+                       then error "Missing data!"
+                       else map snd $ concat $ cut_down
+      min_val = minimum samplingValues
+      max_val = maximum samplingValues
+
+      fixed_backoff_values =  map snd prog_plotdata
+      fixed_backoff_min_val = minimum fixed_backoff_values
+      fixed_backoff_max_val = maximum fixed_backoff_values
+
+      no_backoff_min_val = no_backoff_prog
+      no_backoff_max_val = no_backoff_prog
+  
+      gprof_min_val = gprof_prog
+      gprof_max_val = gprof_prog
+      
+      string = progname ++ " " ++ (concat $ intersperse " " $ map show [min_val, max_val
+                                                                       , no_backoff_min_val
+                                                                       , no_backoff_max_val
+                                                                       , fixed_backoff_min_val
+                                                                       , fixed_backoff_max_val
+                                                                       , gprof_min_val
+                                                                       , gprof_max_val]) ++ "\n" 
+      schema = "# PROGRAM resampling_min resampling_max no_backoff_min no_backoff_max fixed_backoff_min fixed_backoff_max gprof_min gprof_max \n" 
+  -- error $ show string  
+               
+  let txtout = "BenchOH3_" ++ progname ++ "_" ++ machine ++ "_" ++ git_depth ++ ".txt"
+  writeFile txtout string
+  writeFile "schema.txt" schema
+  
   
 
 overhead base x = if x < 0 then -1 else 100 * ((x - base) / base)
@@ -233,7 +273,7 @@ variantToVal str = convertInt (StringValue backoff)
 extractVariantMedianTime :: [String] -> [[FTValue]] -> String -> [FTValue]
 extractVariantMedianTime cols dat variant =
   let rows = slice "VARIANT" variant cols dat
-  in  extractColumn _USE_TIME cols rows 
+  in  extractColumn "MINTIME" cols rows 
 
 
 -- extract the estimated overhead.
@@ -350,7 +390,7 @@ extract2 :: [String] -> [[FTValue]] -> [(String, Double)]
 extract2 cols table =
   let onlyResample = sliceWithPrefix "VARIANT" "resampling" cols table
       names = extractColumn "VARIANT" cols onlyResample
-      times = extractColumn _USE_TIME cols onlyResample
+      times = extractColumn "MINTIME" cols onlyResample
   in zip (map (\(StringValue n) -> n) names) (map convert times)
 
 
