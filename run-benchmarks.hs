@@ -52,7 +52,9 @@ benches =
 
 fixed_backoff = Or [ And [ Set (Variant ("fixed_backoff_"++show num)) 
                                         (RuntimeEnv "DYN_STRATEGY" "FIXED_BACKOFF")
-                         , Set NoMeaning (RuntimeEnv "DYN_SAMPLE_SIZE" (show num)) ]
+                         , Set NoMeaning (RuntimeEnv "DYN_SAMPLE_SIZE" (show num)) 
+                         , Set NoMeaning (RuntimeEnv "DYN_DISABLE_SELFTIMED" "1"))
+                         ]
                    | num <- fixed_backoffLevels ]
 
 empty_strat = Set (Variant ("empty_strat"))
@@ -64,6 +66,7 @@ resampling = Or [ And [ Set (Variant ("resampling_"++show num++"_"++show period)
                                         (RuntimeEnv "DYN_STRATEGY" "SAMPLING")
                       , Set NoMeaning (RuntimeEnv "DYN_SAMPLE_SIZE" (show num)) 
                       , Set NoMeaning (RuntimeEnv "DYN_SAMPLE_PERIOD" (show period))
+                      , Set NoMeaning (RuntimeEnv "DYN_DISABLE_SELFTIMED" "1"))
                       ]
 --                   | num    <- [ 10^i | i <- [0..5] ] -- Hold back a little more
 
