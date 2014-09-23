@@ -41,7 +41,7 @@ benches =
                              ]
     , (varname,variant) <- [ (v, setVariant v) | v <- coreVariants ] ++
                            [ ("dynaprof", Or [ -- empty_strat, 
---                                               resampling, 
+                                               resampling, 
                                                fixed_backoff
 --                                               no_backoff 
                                              ]) ]
