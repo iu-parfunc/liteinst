@@ -71,8 +71,8 @@ resampling = Or [ And [ Set (Variant ("resampling_"++show num++"_"++show period)
                       , Set NoMeaning (RuntimeEnv "DYN_OUTPUT_TYPE" "NONE")
                       ]
 --                   | num    <- [ 10^i | i <- [0..5] ] -- Hold back a little more
-
-                   | num    <- [ 10^6, 10^7, 10^8 ]
+                   | num <- [10^i | i <- [3..5]] 
+--                   | num    <- [ 10^6, 10^7, 10^8 ]
 
 --                   , period <- [ 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0, 2.0 ] 
                    , period <- [ 0.05, 0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0] ]
