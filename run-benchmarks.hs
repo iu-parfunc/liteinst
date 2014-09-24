@@ -41,9 +41,9 @@ benches =
                              ]
     , (varname,variant) <- [ (v, setVariant v) | v <- coreVariants ] ++
                            [ ("dynaprof", Or [ -- empty_strat, 
-                                               resampling, 
-                                               fixed_backoff
---                                               no_backoff 
+                                               resampling
+                                             , fixed_backoff
+                                             , no_backoff 
                                              ]) ]
   ]
  where baseVariants = ["gprof", "unprofiled" ]
