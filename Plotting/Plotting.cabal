@@ -163,7 +163,7 @@ executable FixedBackoffBench
 
 
 executable ResampleOverheadPlotNew
-  main-is:             ResampleOverheadPlot.hs
+  main-is:             ResampleOverheadPlotNew.hs
   build-depends: base >=4.5 && <4.8
                , hsbencher >= 1.8.0.7
                , hsbencher-fusion >= 0.1.0.2
