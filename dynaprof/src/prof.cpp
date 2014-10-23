@@ -32,6 +32,7 @@
 #define CSV_OUTPUT 1
 #define MULTI_OUTPUT 2
 #define STRIPPED_OUTPUT 3
+#define NONE 4
 
 #define NANO_SECONDS_IN_SEC 1000000000
 
@@ -188,7 +189,9 @@ void Basic_Profiler::initialize(void) {
       output_type = MULTI_OUTPUT;
     } else if (!strcmp(output_type_str, "STRIPPED")) {
       output_type = STRIPPED_OUTPUT;
-    } else {
+    } else if (!strcmp(output_type_str, "NONE")) {
+      output_type = NONE;
+    }else {
       fprintf(stderr, " [dynaprof] Unrecognized DYN_OUTPUT_TYPE\n");
       exit(1);
     }
@@ -560,6 +563,8 @@ void cleanup(void) {
   } else if (output_type == MULTI_OUTPUT) {
     output_csv();
     output_pretty();
+  } else if (output_type == NONE) {
+    // Do not output to disk
   }
 
   ticks cleanup_end = getticks();
