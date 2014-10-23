@@ -2,26 +2,45 @@
 using namespace std;
 
 #include "finstrumentor.hpp"
+#include "dynamicarray.h"
 
-Finstrumentor::Finstrumentor(instrumentation_func prolog_function, instrumentation_func epilog_function) {
-  this->prolog_func = prolog_function; 
-  this->epilog_func = epilog_function; 
+Instrumentor* INSTRUMENTOR_INSTANCE;
+InstrumentationFunc prologFunc;
+InstrumentationFunc epilogFunc;
+FinsProbeInfo* probeInfo;
+
+Finstrumentor::Finstrumentor(InstrumentationFunc prolog, InstrumentationFunc epilog) {
+  this->prologFunc = prolog; 
+  this->epilogFunc = epilog; 
+  prologFunc = prolog;
+  epilogFunc = epilog;
 }
 
-void Finstrumentor::initialize(Instrumentor* inst) {
-  INSTRUMENTOR_INSTANCE = inst;
+void Finstrumentor::initialize() {
+  // Here we are leaking object data to global variables so that we don't incur
+  // overhead of object access to get to these data. This should be fine since 
+  // Finstrumentor is really a singleton object.
+  INSTRUMENTOR_INSTANCE = this;
+  probeInfo = this->probeInfo;
+
+  //setting up global data structures
+  // this->probeInfo = new DynamicArray<FinsProbeInfo>(DEFAULT_PROBE_COUNT); 
+  this->probeInfo = new FinsProbeInfo[DEFAULT_PROBE_COUNT]; // C++ value intialization. Behaves like calloc  
 }
 
-int Finstrumentor::activate_probe(string name, void* func_ptr) {
-  instrumentation_func func = (instrumentation_func)func_ptr;
-
+int Finstrumentor::activateProbe(string name, void* funcPtr) {
+  InstrumentationFunc func = (InstrumentationFunc)funcPtr;
 
   return 0;
 
 }
 
-int Finstrumentor::deactivate_probe(string name) {
+int Finstrumentor::deactivateProbe(string name) {
 
   return 0;
+
+}
+
+Finstrumentor::~Finstrumentor() {
 
 }

@@ -13,11 +13,11 @@
 class Instrumentor {
 
   public :
-    virtual void initialize(Instrumentor* inst) = 0;
-    virtual int activate_probe(std::string name, void *func_ptr) = 0;
-    virtual int deactivate_probe(std::string name) = 0;
-    virtual void* get_profiler_epilog() = 0;
-    virtual void* get_profiler_prolog() = 0;
+    virtual void initialize() = 0;
+    virtual int activateProbe(std::string name, void *func_ptr) = 0;
+    virtual int deactivateProbe(std::string name) = 0;
+    // virtual void* get_profiler_epilog() = 0;
+    // virtual void* get_profiler_prolog() = 0;
     virtual ~Instrumentor() {}
 
 };

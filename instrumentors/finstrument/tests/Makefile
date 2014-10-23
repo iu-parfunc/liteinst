@@ -1,10 +1,12 @@
 
 ARGS= -g -Wall
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
-# CFLAGS=-O3
+CFLAGS=-O2
 
 CC = icc $(ARGS)
 CPP = icpc -std=c++11 $(ARGS)
+# CC = clang $(ARGS)
+# CPP = clang -std=c++11 $(ARGS)
 # CC = gcc $(ARGS)
 # CPP = g++ -std=c++0x $(ARGS)
 
@@ -28,14 +30,17 @@ all: tests
 run_c: 
 	# $(CPP) $(CFLAGS) $(OPTS) -c -o tests.o tests.c 
 	$(CC) $(CFLAGS) $(OPTS) -finstrument-functions -g -c -o tests.o tests.c
+	$(CPP) $(CFLAGS) $(OPTS) -c -o finstrumentor.o ../src/finstrumentor.cpp
 	$(CPP) $(CFLAGS) $(OPTS) -c -o cyg_functions.o ../src/cyg_functions.cpp
-	$(CPP) tests.o cyg_functions.o -o tests.exe
+	$(CPP) tests.o cyg_functions.o finstrumentor.o ../../../deps/distorm/distorm3.a -o tests.exe
 	./tests.exe 
 
 run_cpp: $(OBJ)
 	cd ../src;make clean;make
 	$(CPP) $(CFLAGS) $(OPTS) -finstrument-functions -g -c -o tests.o tests.c
-	$(CPP) tests.o ../src/cyg_functions.o -o tests.exe
+	$(CPP) $(CFLAGS) $(OPTS) -c -o cyg_functions.o ../src/cyg_functions.cpp
+	$(CPP) tests.o cyg_functions.o ../../../deps/distorm/distorm3.a -o tests.exe
+	# $(CPP) tests.o ../src/cyg_functions.o -o tests.exe
 	./tests.exe 
 
 runso_c: 
@@ -75,15 +80,15 @@ tests: $(OBJ)
 	@echo -e "\n\n========================================"
 	@echo "Running as a linked shared library (C)"
 	@echo "========================================"
-	make runso_c
+	# make runso_c
 	@echo -e "\n\n========================================"
 	@echo "Running directly linked to the binary (C++)"
 	@echo "========================================"
-	make run_cpp
+	# make run_cpp
 	@echo -e "\n\n========================================"
 	@echo "Running as a linked shared library (C++)"
 	@echo "========================================"
-	make runso_cpp
+	# make runso_cpp
 
 exp: $(OBJ)
 	$(CC) -c -o funcs.o funcs.c

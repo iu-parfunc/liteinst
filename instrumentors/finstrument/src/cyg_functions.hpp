@@ -2,7 +2,7 @@
 #ifndef _CYG_FUNCTIONS_HPP_
 #define _CYG_FUNCTIONS_HPP_
 
-#include <stdint.h>
+#include <cstdint>
 
 /* Register encodings */
 #define RAX 0
@@ -54,6 +54,9 @@
 #define REX_PREFIX_1 0x4c
 
 #define PROBESIZE 16
+
+#define ARGUMENT_PATCH_STRATEGY 0
+#define CALL_REDIRECT_STRATEGY 1
 
 #ifdef __cplusplus
 extern "C"

@@ -5,7 +5,8 @@ int call_count = 0;
 
 void print_fn(short);
 
-void foo() {
+void foo(int i) {
+  i= (i + call_count>> 2);
   printf("foo : %d\n", call_count++);
 }
 
@@ -22,14 +23,14 @@ int main() {
   // inc(&x);
   // inc(&x);
 
-  foo();
-  foo();
+  // foo(2);
+  foo(4);
 
   // inc(&x);
   // inc(&x);
 
-  foo();
-  foo();
+  // foo(2);
+  // foo(2);
 
   // print_fn(5554);
   // print_fn(5554);

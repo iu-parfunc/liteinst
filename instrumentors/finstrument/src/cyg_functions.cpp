@@ -3,6 +3,13 @@
 #include "patch_utils.hpp"
 #include "finstrumentor.hpp"
 
+#include "distorm.h"
+#include "mnemonics.h"
+// #include "../../../deps/capstone/include/capstone.h"
+
+// How many instructions to allocate on stack.
+#define MAX_INSTRUCTIONS 32
+
 static uint8_t mov_encodings[20] = {MOV_REG_8, MOV_REG_16, MOV_MEM_8, MOV_MEM_16,
   MOV_IMM_8_RAX, MOV_IMM_8_RCX, MOV_IMM_8_RDX, MOV_IMM_8_RBX,
   MOV_IMM_8_RSP, MOV_IMM_8_RBP, MOV_IMM_8_RSI, MOV_IMM_8_RDI,
@@ -21,18 +28,261 @@ inline bool check_if_mov(uint8_t progbit) {
 
 int counter = 0;
 
-extern "C" 
-{
-  void print_fn(short t);
+inline void print_fn(short t) {
+  // fprintf(stderr, "Do or die trying %d..\n", (int)t);
 }
 
-inline void print_fn(short t) {
-   // fprintf(stderr, "Do or die trying %d..\n", (int)t);
+bool starts_with(const char *str, const char *pre) {
+  size_t lenpre = strlen(pre), lenstr = strlen(str);
+  return lenstr < lenpre ? false : strncmp(pre, str, lenpre) == 0;
+}
+
+bool disassemble_sequence(uint8_t* addr, uint8_t size, _DInst* result, uint8_t result_size) {
+
+  unsigned int instructions_count = 0;
+
+  _DecodedInst inst;
+
+  _CodeInfo ci = {0};
+  ci.code = (uint8_t*)addr;
+  ci.codeLen = size;
+  ci.dt = Decode64Bits;
+  ci.codeOffset = 0x100000;
+
+  distorm_decompose(&ci, result, result_size, &instructions_count);
+
+  printf("--------- Probe site : %p ---------\n", addr);
+  for (unsigned int i = 0; i < instructions_count; i++) {
+     if (result[i].flags == FLAG_NOT_DECODABLE) {
+       fprintf(stderr, "Error while decoding instructions at %p\n", addr);
+       return false;
+     }
+
+     distorm_format(&ci, &result[i], &inst);
+     printf("%s %s\n", inst.mnemonic.p, inst.operands.p);
+  }
+
 }
 
 typedef void (*FuncPtr)(short);
 
+static void print_string_hex(char *comment, unsigned char *str, int len)
+{
+  unsigned char *c;
+
+  printf("%s", comment);
+  for (c = str; c < str + len; c++) {
+    printf("0x%02x ", *c & 0xff);
+  }
+
+  printf("\n");
+}
+
+bool decode_instructions(void *caller) {
+
+  uint8_t* call_addr = (uint8_t*) caller - 5;
+  uint8_t* probe_start = call_addr - 16;
+  
+  uint8_t idx;
+  for (idx = 0; idx < 16; idx++) { 
+    bool is_mov = check_if_mov(*(probe_start+idx)); 
+    if (is_mov) {
+      break;
+    }
+  }
+
+  probe_start += idx;
+
+  // Include the REX prefix if there is a one
+  if (*(probe_start-1) == REX_PREFIX_0 || *(probe_start-1) == REX_PREFIX_1 ) {
+    probe_start -= 1;
+  }
+
+  uint8_t probe_site_size = call_addr - probe_start;
+  printf("++++++++++ Return address : %p ++++++++++ \n", caller);
+  printf("++++++++++ Call address : %p ++++++++++ \n", call_addr);
+
+  do {
+    if (probe_site_size < 8) {
+      LOG_ERROR("Probesite is too small (<8). Size : %d Location : %p. Skipping..\n", probe_site_size,  probe_start);
+      return false;
+    }
+
+    printf("---------- Probe site : %p   ----------\n", probe_start);
+
+    // Dissasemble the probe site
+    _DInst result[16];
+    unsigned int instructions_count = 0;
+
+    _DecodedInst inst;
+
+    _CodeInfo ci = {0};
+    ci.code = (uint8_t*)probe_start;
+    ci.codeLen = probe_site_size;
+    ci.dt = Decode64Bits;
+    ci.codeOffset = 0x100000;
+
+    distorm_decompose(&ci, result, 16, &instructions_count);
+
+    bool bad_data = false;
+    uint8_t ptr = 0;
+    for (unsigned int i = 0; i < instructions_count; i++) {
+      if (result[i].flags == FLAG_NOT_DECODABLE) {
+        bad_data = true;
+        printf("Bad decode attempt..\n");
+        break;
+      }
+
+      distorm_format(&ci, &result[i], &inst);
+      printf("%s %s\n", inst.mnemonic.p, inst.operands.p);
+
+      if (i == 0) {
+        if (result[i].opcode != I_MOV) {
+          bad_data = true;
+          printf("Bad decode attempt..\n");
+          break;
+        }
+      }
+
+      if (result[i].opcode == I_MOV) {
+        if (result[i].ops[0].type == O_REG && 
+            (result[i].ops[0].index == R_EDI || result[i].ops[0].index == R_RDI ||
+             result[i].ops[0].index == R_ESI || result[i].ops[0].index == R_RSI)) {
+            break;
+        }
+      }
+
+      ptr += result[i].size;
+    }
+
+    if (!bad_data) {
+      probe_start += ptr;
+      break;
+    } else {
+      uint8_t resume_idx = idx;
+      for (; idx < 8; idx++) { 
+        idx++;
+        bool is_mov = check_if_mov(*(probe_start+idx-resume_idx)); 
+        if (is_mov) {
+          break;
+        }
+      }
+
+      if (idx >= 8) {
+        LOG_ERROR("Probesite is too small (<8). Size : %d Location : %p. Skipping..\n", probe_site_size,  probe_start);
+        return false;
+      }
+
+      probe_start += (idx - resume_idx);
+
+      // Include the REX prefix if there is a one
+      if (*(probe_start-1) == REX_PREFIX_0 || *(probe_start-1) == REX_PREFIX_1 ) {
+        probe_start -= 1;
+      }
+
+      probe_site_size = call_addr - probe_start;
+
+    }
+
+  } while (idx < 8);
+
+  if (idx >= 8) {
+
+  }
+
+  probe_site_size = call_addr - probe_start;
+  printf("\n Probe site size : %d\n", probe_site_size);
+
+  if (probe_site_size >= 10) {
+    // Direct call patching strategy
+  }
+  
+  if (probe_site_size >= 8) {
+
+  } else {
+
+  }
+
+  /*
+  bool  status = modify_page_permissions(probe_start);
+  if (!status) {
+    LOG_ERROR("Unable to make probesite patchable at %p. Skipping..\n", probe_start);
+    return status;
+  }
+  */
+
+  return true;
+
+}
+
+void dummy_prolog(uint16_t func_id) {
+  fprintf(stderr, "Dummy prolog invoked with func id %d\n", func_id);
+}
+
+void dummy_epilog(uint16_t func_id) {
+  fprintf(stderr, "Dummy epilog invoked with func id %d\n", func_id);
+}
+
+inline uint16_t get_func_id(uint64_t func_addr) {
+  return 0;
+}
+
+/**
+ * If caller != 0 / (if address is not already in global data structure)
+ *   [Patch param]
+ *   Initialize global data structure with this probes entry
+ * else
+ *   call finstrumentor instance with address
+ * fi
+ */
+
 void __cyg_profile_func_enter(void* func, void* caller) {
+
+  fprintf(stderr, "############ Function Prolog #############\n");
+
+  Finstrumentor* ins = new Finstrumentor(dummy_prolog, dummy_epilog);
+  ins->initialize();
+
+  fprintf(stderr, "After allocating instrumentor.\n");
+
+  if ((uint64_t) caller == 0) {
+    return;
+  }
+
+  uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
+  // decode_instructions(addr);
+  uint16_t func_id = get_func_id((uint64_t)func);
+
+  fprintf(stderr, "Calling prolog function.\n");
+  fprintf(stderr, "Prolog function %p.\n", prologFunc);
+  // Delegates to actual profiler code
+  // prologFunc(func_id); 
+
+  fprintf(stderr, "After calling prolog function.\n");
+}
+
+void __cyg_profile_func_exit(void* func, void* caller) {
+
+  fprintf(stderr, "############ Function Epilog #############\n");
+
+  if ( (uint64_t) caller == 0) {
+    return;
+  }
+
+  printf("-------------- Function addresss ---------------- : %p\n", (uint8_t*)func);
+  printf("-------------- Return addresss ---------------- : %p\n", (uint8_t*)caller);
+
+  uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
+  // decode_instructions(addr);
+
+  uint16_t func_id = get_func_id((uint64_t)func);
+
+  // Delegates to actual profiler code
+  // epilogFunc(func_id); 
+
+}
+
+void __cyg_profile_func_enter_1(void* func, void* caller) {
 
   LOG_DEBUG("Executing cyg_enter for %d time at function %p..\n", counter++, func);
 
@@ -44,7 +294,7 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 
   uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
 
-// #ifdef __INTEL_COMPILER
+  // #ifdef __INTEL_COMPILER
   uint64_t* ptr = addr-2; // 8 * 2 = 16 bytes
   int8_t probe_start_idx = -1; 
 
@@ -59,13 +309,6 @@ void __cyg_profile_func_enter(void* func, void* caller) {
       }
     }
   }
-
-  /*
-  if (probe_start_idx != 0) {
-    LOG_ERROR("Minimum size (15 bytes) required for probesite not available at %p\n. Skipping..\n", ptr);
-    return;
-  }
-  */
 
   bool status = modify_page_permissions(probe_start);
   if (!status) {
@@ -86,19 +329,19 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   // status = patch_with_call(addr, (uint64_t)print_fn);
   // LOG_DEBUG("CAS status for call is :%d..\n", status);
 
-// #endif
+  // #endif
 
   LOG_INFO("print_fn is at %p\n", &print_fn);
 
   /*
-  FuncPtr hello_func = print_fn;
-  hello_func(3);
-  */
+     FuncPtr hello_func = print_fn;
+     hello_func(3);
+     */
 
 
   // uint64_t addr = (uint64_t)__builtin_extract_return_addr(__builtin_return_address(0));
   // uint64_t distance = ((uint64_t)print_fn - addr);
-  
+
   // fprintf(stderr, "print_fn is : %p addr is at : %p \n", &print_fn, (unsigned char*) addr);
   // fprintf(stderr, "Distance is : %lu with %lu 2^32 segments away\n", (unsigned long) distance, (unsigned long) distance >> 32);
 
@@ -108,14 +351,16 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 
 }
 
-void __cyg_profile_func_exit(void* func, void* caller) {
+void __cyg_profile_func_enter_0(void* func, void* caller) {
 
+  uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
+  fprintf(stderr, "Function Address is : %p\n", (unsigned char*) func);
+  fprintf(stderr, "Call site Address is : %p\n", (unsigned char*) addr);
 
-  /*
-  FuncPtr hello_func = print_fn;
-  hello_func(3);
-  */
+  unsigned long distance = (unsigned long)addr - (unsigned long)func;
+  fprintf(stderr, "Distance is : %lu\n", distance);
 
-  // print_fn(1);
+  fprintf(stderr, "@@@@@@@@@@@ Function Prolog @@@@@@@@@@@@@\n");
+//   disassemble_sequence((uint8_t*)addr);
 
 }
