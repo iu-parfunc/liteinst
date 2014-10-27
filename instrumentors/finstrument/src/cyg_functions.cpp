@@ -1,4 +1,6 @@
 
+#include <inttypes.h>
+
 #include "cyg_functions.hpp"
 #include "patch_utils.hpp"
 #include "finstrumentor.hpp"
@@ -223,9 +225,94 @@ void dummy_epilog(uint16_t func_id) {
   fprintf(stderr, "Dummy epilog invoked with func id %d\n", func_id);
 }
 
+// TODO : 
+// 1. Assuming uint64_t function addresses not portable I guess. Change it to be portable
+// 2. This needs to be protected by a lock
 inline uint16_t get_func_id(uint64_t func_addr) {
-  return 0;
+  Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
+  if(ins->functions->find(func_addr) == ins->functions->end()) {
+    ins->functions->insert(func_table::value_type(func_addr, 
+          __sync_fetch_and_add(&func_id_counter, 1)));
+  }
+
+  return ins->functions->find(func_addr)->second;
 }
+
+// TODO: Make this thread safe
+inline void init_probe_info(uint64_t func_addr, uint8_t* probe_addr) {
+
+  // fprintf(stderr, "Function address at init probe : %p\n", func_addr);
+  Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
+  if(ins->probe_info->find(func_addr) == ins->probe_info->end()) {
+    std::list<FinsProbeInfo*>* probe_list = new std::list<FinsProbeInfo*>;
+    FinsProbeInfo* probeInfo = new FinsProbeInfo;
+    probeInfo->probeStartAddr = (probe_addr-8);
+    probeInfo->activeSequence = (uint64_t)(probe_addr - 8); // Should be return address - 8
+
+    uint64_t sequence = (uint64_t)(probe_addr - 8);
+    uint64_t mask = 0xFFFFFF0000000000;
+    probeInfo->deactiveSequence = (uint64_t) (sequence & mask);
+
+    probe_list->push_back(probeInfo);
+    // fprintf(stderr, "Adding probe %p for function %p\n", probe_addr, (uint64_t*) func_addr);
+    ins->probe_info->insert(make_pair(func_addr, probe_list));
+  } else {
+    std::list<FinsProbeInfo*>* probe_list = ins->probe_info->find(func_addr)->second;
+    for(std::list<FinsProbeInfo*>::iterator iter = probe_list->begin(); iter != probe_list->end(); iter++) {
+      FinsProbeInfo* probeInfo= *iter;
+      if (probeInfo->probeStartAddr == probe_addr) {
+        return; // Probe already initialized. Nothing to do.
+      }
+    }
+
+    FinsProbeInfo* probeInfo= new FinsProbeInfo;
+    probeInfo->probeStartAddr = (probe_addr - 8);
+    probeInfo->activeSequence = (uint64_t)(probe_addr - 8); // Should be return address - 8
+
+    uint64_t sequence = (uint64_t)(probe_addr - 8);
+    uint64_t mask = 0xFFFFFF0000000000;
+    probeInfo->deactiveSequence = (uint64_t) (sequence & mask);
+
+    // fprintf(stderr, "Adding probe %p for existing function %p\n", probe_addr, (uint64_t*) func_addr);
+    probe_list->push_back(probeInfo);
+  }
+}
+
+void print_probe_info() {
+
+  Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
+  // fprintf(stderr, "Map size : %d\n", ins->probe_info->size());
+  for(auto iter = ins->probe_info->begin(); iter != ins->probe_info->end(); iter++) {
+    std::list<FinsProbeInfo*>* probe_list = iter->second;
+    // fprintf(stderr, "Function address : %p\n", iter->first);
+
+    for (std::list<FinsProbeInfo*>::iterator it = probe_list->begin(); it!= probe_list->end(); it++) {
+      FinsProbeInfo* probeData = *it;
+      
+      // fprintf(stderr, "Probe start address : %p\n", probeData->probeStartAddr);
+    }
+
+  }
+}
+
+__attribute__((constructor))
+void initInstrumentor() {
+
+  INSTRUMENTOR_INSTANCE = new Finstrumentor(dummy_prolog, dummy_epilog);
+  ((Finstrumentor*) INSTRUMENTOR_INSTANCE)->initialize();
+
+}
+
+__attribute__((destructor))
+void destroyInstrumentor() {
+
+  fprintf(stderr, "Number of entries in the prob map : %lu\n", ((Finstrumentor*) INSTRUMENTOR_INSTANCE)->probe_info->size());
+  delete ((Finstrumentor*) INSTRUMENTOR_INSTANCE)->probe_info;
+  delete ((Finstrumentor*) INSTRUMENTOR_INSTANCE)->functions;
+  delete INSTRUMENTOR_INSTANCE;
+
+}
+
 
 /**
  * If caller != 0 / (if address is not already in global data structure)
@@ -238,12 +325,10 @@ inline uint16_t get_func_id(uint64_t func_addr) {
 
 void __cyg_profile_func_enter(void* func, void* caller) {
 
-  fprintf(stderr, "############ Function Prolog #############\n");
+  // fprintf(stderr, "############ Function Prolog #############\n");
 
-  Finstrumentor* ins = new Finstrumentor(dummy_prolog, dummy_epilog);
-  ins->initialize();
 
-  fprintf(stderr, "After allocating instrumentor.\n");
+  // fprintf(stderr, "After allocating instrumentor.\n");
 
   if ((uint64_t) caller == 0) {
     return;
@@ -253,32 +338,42 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   // decode_instructions(addr);
   uint16_t func_id = get_func_id((uint64_t)func);
 
-  fprintf(stderr, "Calling prolog function.\n");
-  fprintf(stderr, "Prolog function %p.\n", prologFunc);
-  // Delegates to actual profiler code
-  // prologFunc(func_id); 
+  init_probe_info((uint64_t)func, (uint8_t*)addr);
 
-  fprintf(stderr, "After calling prolog function.\n");
+  // print_probe_info();
+
+  // fprintf(stderr, "Calling prolog function.\n");
+  // fprintf(stderr, "Prolog function %p.\n", prologFunc);
+  // Delegates to actual profiler code
+  Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE; 
+  ins->prologFunc(func_id); 
+
+  // fprintf(stderr, "After calling prolog function.\n");
 }
 
 void __cyg_profile_func_exit(void* func, void* caller) {
 
-  fprintf(stderr, "############ Function Epilog #############\n");
+  // fprintf(stderr, "############ Function Epilog #############\n");
 
   if ( (uint64_t) caller == 0) {
     return;
   }
 
-  printf("-------------- Function addresss ---------------- : %p\n", (uint8_t*)func);
-  printf("-------------- Return addresss ---------------- : %p\n", (uint8_t*)caller);
+  //printf("-------------- Function addresss ---------------- : %p\n", (uint8_t*)func);
+  //printf("-------------- Return addresss ---------------- : %p\n", (uint8_t*)caller);
 
   uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
   // decode_instructions(addr);
 
   uint16_t func_id = get_func_id((uint64_t)func);
 
+  init_probe_info((uint64_t)func, (uint8_t*)addr);
+
+  // print_probe_info();
+
   // Delegates to actual profiler code
-  // epilogFunc(func_id); 
+  Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE; 
+  ins->epilogFunc(func_id); 
 
 }
 

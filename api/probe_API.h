@@ -19,11 +19,10 @@ extern "C"
  *  Parameters : 
  *    name - Probe name. For block level probes the convention is "block_name:start" or "block_name:end" to signify probes at beginning and 
  *           end of instrumented blocks.  
- *    func - Function pointer of the function to be injected at the probe callsite
  * 
  *  Returns :  The success code 0 or negative values for faliures.  
  **/
-extern int activate_probe(char* name, void (*func)());
+extern int activate_probe(char* name);
 
 /** 
  *  Description : Deactivate probe point for profiling. Usually this is done by overwriting NO-OPs to the probe call site or
