@@ -1,7 +1,7 @@
 
 ARGS= -g -Wall
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
-CFLAGS=-O2
+CFLAGS=-O3
 
 CC = icc $(ARGS)
 CPP = icpc -std=c++11 $(ARGS)
@@ -14,7 +14,7 @@ AR = ar
 RM = rm
 OPTS =
 
-CODE = tests.c 
+CODE = c_test.c cpp_test.cpp
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 
@@ -27,32 +27,36 @@ OBJ  = $(OBJ0:.c=.o)
 
 all: tests
 
-run_c: 
+run_c: $(OBJ)
+	cd ../src;make clean;make
 	# $(CPP) $(CFLAGS) $(OPTS) -c -o tests.o tests.c 
-	$(CC) $(CFLAGS) $(OPTS) -finstrument-functions -g -c -o tests.o tests.c
-	$(CPP) $(CFLAGS) $(OPTS) -c -o finstrumentor.o ../src/finstrumentor.cpp
-	$(CPP) $(CFLAGS) $(OPTS) -c -o cyg_functions.o ../src/cyg_functions.cpp
-	$(CPP) tests.o cyg_functions.o finstrumentor.o ../../../deps/distorm/distorm3.a -o tests.exe
+	# $(CC) $(CFLAGS) $(OPTS) -finstrument-functions -g -c -o tests.o tests.c
+	# $(CPP) $(CFLAGS) $(OPTS) -c -o finstrumentor.o ../src/finstrumentor.cpp
+	# $(CPP) $(CFLAGS) $(OPTS) -c -o cyg_functions.o ../src/cyg_functions.cpp
+	$(CPP) c_test.o ../src/cyg_functions.o ../src/finstrumentor.o ../../../deps/distorm/distorm3.a -o tests.exe
+	# $(CPP) tests.o cyg_functions.o finstrumentor.o ../../../deps/capstone/libcapstone.a -o tests.exe
 	./tests.exe 
 
 run_cpp: $(OBJ)
 	cd ../src;make clean;make
-	$(CPP) $(CFLAGS) $(OPTS) -finstrument-functions -g -c -o tests.o tests.c
-	$(CPP) $(CFLAGS) $(OPTS) -c -o cyg_functions.o ../src/cyg_functions.cpp
-	$(CPP) tests.o cyg_functions.o ../../../deps/distorm/distorm3.a -o tests.exe
+	# $(CPP) $(CFLAGS) $(OPTS) -finstrument-functions -g -c -o tests.o tests.cpp
+	# $(CPP) $(CFLAGS) $(OPTS) -c -o cyg_functions.o ../src/cyg_functions.cpp
+	$(CPP) cpp_test.o ../src/cyg_functions.o ../src/finstrumentor.o ../../../deps/distorm/distorm3.a -o tests.exe
 	# $(CPP) tests.o ../src/cyg_functions.o -o tests.exe
 	./tests.exe 
 
-runso_c: 
-	# cd ../src;make clean;make
-	$(CC) $(CFLAGS) $(OPTS) -finstrument-functions -g -c -o tests.o tests.c
-	$(CC) -shared -Wl,-soname,libinst.so -o libinst.so ../src/cyg_functions.o -lc
-	$(CC) -L. -linst tests.o -o tests.exe
+runso_c: $(OBJ)
+	cd ../src;make clean;make
+	#$(CPP) $(CFLAGS) $(OPTS) -finstrument-functions -g -c -o tests.o tests.cpp
+	# $(CC) $(CFLAGS) $(OPTS) -finstrument-functions -g -c -o tests.o tests.c
+	$(CC) -shared -Wl,-soname,libinst.so -o libinst.so ../src/cyg_functions.o ../src/finstrumentor.o ../../../deps/distorm/distorm3.a -lc
+	$(CC) -L. -linst c_test.o -o tests.exe
 	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./tests.exe
 
 runso_cpp: $(OBJ)
-	$(CPP) -shared -Wl,-soname,libinst.so -o libinst.so ../src/cyg_functions.o -lc
-	$(CPP) -L. -linst tests.o -o tests.exe
+	cd ../src;make clean;make
+	$(CPP) -shared -Wl,-soname,libinst.so -o libinst.so ../src/cyg_functions.o ../src/finstrumentor.o ../../../deps/distorm/distorm3.a -lc
+	$(CPP) -L. -linst cpp_test.o -o tests.exe
 	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./tests.exe
 
 time_so:
@@ -61,7 +65,7 @@ time_so:
 	# $(CC) -lrt time.o -o time.exe
 	# ./time.exe
 	$(CC) -finstrument-functions -g -c -o time.o time.c
-	$(CC) -shared -Wl,-soname,libinst.so -o libinst.so ../src/cyg_functions.o -lc
+	$(CC) -shared -Wl,-soname,libinst.so -o libinst.so ../src/cyg_functions.o ../../../deps/distorm/distorm3.a -lc
 	$(CC) -L. -linst -lrt time.o -o time.exe
 	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./time.exe
 
@@ -80,15 +84,15 @@ tests: $(OBJ)
 	@echo -e "\n\n========================================"
 	@echo "Running as a linked shared library (C)"
 	@echo "========================================"
-	# make runso_c
+	make runso_c
 	@echo -e "\n\n========================================"
 	@echo "Running directly linked to the binary (C++)"
 	@echo "========================================"
-	# make run_cpp
+	make run_cpp
 	@echo -e "\n\n========================================"
 	@echo "Running as a linked shared library (C++)"
 	@echo "========================================"
-	# make runso_cpp
+	make runso_cpp
 
 exp: $(OBJ)
 	$(CC) -c -o funcs.o funcs.c
