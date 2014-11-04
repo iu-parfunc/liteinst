@@ -11,9 +11,7 @@
 
 #define DEFAULT_PROBE_COUNT 1024 
 
-typedef void (*InstrumentationFunc)(uint16_t);
-
-
+// typedef void (*InstrumentationFunc)(uint16_t);
 
 typedef struct FinsProbeInfo {
     uint8_t patch_strategy;
@@ -51,9 +49,9 @@ extern volatile uint16_t func_id_counter;
 #ifdef __cplusplus
 extern "C"
 {
-  extern Instrumentor* INSTRUMENTOR_INSTANCE; // Need to be set by the Profiler
-  extern InstrumentationFunc prologFunc;
-  extern InstrumentationFunc epilogFunc;
+  // extern Instrumentor* INSTRUMENTOR_INSTANCE; // Need to be set by the Profiler
+  extern InstrumentationFunc prologFunction;
+  extern InstrumentationFunc epilogFunction;
   extern void* probeInfo;
 }
 #endif
@@ -71,8 +69,8 @@ class Finstrumentor : public Instrumentor {
 
     Finstrumentor(InstrumentationFunc prologFunc, InstrumentationFunc epilogFunc); 
     void initialize();
-    int activateProbe(void* id);
-    int deactivateProbe(void* id);
+    int activateProbe(void* id, int type);
+    int deactivateProbe(void* id, int type);
     virtual ~Finstrumentor();
 
 };

@@ -12,6 +12,8 @@
 
 #include "logger.hpp"
 
+#define PROBESIZE 16
+
 inline uint64_t convert_to_little_endian(uint64_t num) {
 
   uint64_t res = 0;

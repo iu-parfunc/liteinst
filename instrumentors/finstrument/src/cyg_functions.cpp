@@ -1,5 +1,7 @@
 
 #include <inttypes.h>
+#include <alloca.h>
+#include <setjmp.h>
 
 #include "cyg_functions.hpp"
 #include "patch_utils.hpp"
@@ -243,15 +245,23 @@ inline void init_probe_info(uint64_t func_addr, uint8_t* probe_addr) {
 
   // fprintf(stderr, "Function address at init probe : %p\n", func_addr);
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
+
+  // fprintf(stderr, "probe_info address at init probe : %p\n", ins->probe_info);
   if(ins->probe_info->find(func_addr) == ins->probe_info->end()) {
     std::list<FinsProbeInfo*>* probe_list = new std::list<FinsProbeInfo*>;
+    // fprintf(stderr, "Probe list address for func id %d : %p\n", func_addr, probe_list);
     FinsProbeInfo* probeInfo = new FinsProbeInfo;
     probeInfo->probeStartAddr = (probe_addr-8);
-    probeInfo->activeSequence = (uint64_t)(probe_addr - 8); // Should be return address - 8
+    // probeInfo->activeSequence = (uint64_t)(probe_addr - 8); // Should be return address - 8
+    probeInfo->isActive = 1;
 
-    uint64_t sequence = (uint64_t)(probe_addr - 8);
-    uint64_t mask = 0xFFFFFF0000000000;
-    probeInfo->deactiveSequence = (uint64_t) (sequence & mask);
+    uint64_t sequence = *((uint64_t*)(probe_addr-8));
+    uint64_t mask = 0x0000000000FFFFFF;
+    uint64_t deactiveSequence = (uint64_t) (sequence & mask); 
+    mask = 0x9090909090000000;
+
+    probeInfo->activeSequence = sequence;
+    probeInfo->deactiveSequence = deactiveSequence | mask;
 
     probe_list->push_back(probeInfo);
     // fprintf(stderr, "Adding probe %p for function %p\n", probe_addr, (uint64_t*) func_addr);
@@ -260,18 +270,30 @@ inline void init_probe_info(uint64_t func_addr, uint8_t* probe_addr) {
     std::list<FinsProbeInfo*>* probe_list = ins->probe_info->find(func_addr)->second;
     for(std::list<FinsProbeInfo*>::iterator iter = probe_list->begin(); iter != probe_list->end(); iter++) {
       FinsProbeInfo* probeInfo= *iter;
-      if (probeInfo->probeStartAddr == probe_addr) {
+      if (probeInfo->probeStartAddr == (probe_addr-8)) {
         return; // Probe already initialized. Nothing to do.
       }
     }
 
     FinsProbeInfo* probeInfo= new FinsProbeInfo;
     probeInfo->probeStartAddr = (probe_addr - 8);
-    probeInfo->activeSequence = (uint64_t)(probe_addr - 8); // Should be return address - 8
+    // probeInfo->activeSequence = (uint64_t)(probe_addr - 8); // Should be return address - 8
+    probeInfo->isActive = 1;
 
+    /*
     uint64_t sequence = (uint64_t)(probe_addr - 8);
     uint64_t mask = 0xFFFFFF0000000000;
     probeInfo->deactiveSequence = (uint64_t) (sequence & mask);
+    */
+
+    uint64_t sequence = *((uint64_t*)(probe_addr-8));
+    uint64_t mask = 0x0000000000FFFFFF;
+    uint64_t deactiveSequence = (uint64_t) (sequence & mask); 
+    mask = 0x9090909090000000;
+
+    probeInfo->activeSequence = sequence;
+    probeInfo->deactiveSequence = deactiveSequence | mask;
+
 
     // fprintf(stderr, "Adding probe %p for existing function %p\n", probe_addr, (uint64_t*) func_addr);
     probe_list->push_back(probeInfo);
@@ -289,12 +311,13 @@ void print_probe_info() {
     for (std::list<FinsProbeInfo*>::iterator it = probe_list->begin(); it!= probe_list->end(); it++) {
       FinsProbeInfo* probeData = *it;
       
-      // fprintf(stderr, "Probe start address : %p\n", probeData->probeStartAddr);
+      fprintf(stderr, "Probe start address : %p\n", probeData->probeStartAddr);
     }
 
   }
 }
 
+/*
 __attribute__((constructor))
 void initInstrumentor() {
 
@@ -302,16 +325,19 @@ void initInstrumentor() {
   ((Finstrumentor*) INSTRUMENTOR_INSTANCE)->initialize();
 
 }
+*/
 
+/*
 __attribute__((destructor))
 void destroyInstrumentor() {
 
   fprintf(stderr, "Number of entries in the prob map : %lu\n", ((Finstrumentor*) INSTRUMENTOR_INSTANCE)->probe_info->size());
-  delete ((Finstrumentor*) INSTRUMENTOR_INSTANCE)->probe_info;
-  delete ((Finstrumentor*) INSTRUMENTOR_INSTANCE)->functions;
+  // delete ((Finstrumentor*) INSTRUMENTOR_INSTANCE)->probe_info;
+  // delete ((Finstrumentor*) INSTRUMENTOR_INSTANCE)->functions;
   delete INSTRUMENTOR_INSTANCE;
 
 }
+*/
 
 
 /**
@@ -327,8 +353,8 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 
   // fprintf(stderr, "############ Function Prolog #############\n");
 
-
   // fprintf(stderr, "After allocating instrumentor.\n");
+  // fprintf(stderr, "Function address at entry %p\n", func);
 
   if ((uint64_t) caller == 0) {
     return;
@@ -338,7 +364,8 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   // decode_instructions(addr);
   uint16_t func_id = get_func_id((uint64_t)func);
 
-  init_probe_info((uint64_t)func, (uint8_t*)addr);
+  init_probe_info((uint64_t)func_id, (uint8_t*)addr);
+
 
   // print_probe_info();
 
@@ -346,11 +373,13 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   // fprintf(stderr, "Prolog function %p.\n", prologFunc);
   // Delegates to actual profiler code
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE; 
-  ins->prologFunc(func_id); 
+  prologFunction(func_id);
+  // ins->prologFunc(func_id); 
 
   // fprintf(stderr, "After calling prolog function.\n");
 }
 
+__attribute__((noinline))
 void __cyg_profile_func_exit(void* func, void* caller) {
 
   // fprintf(stderr, "############ Function Epilog #############\n");
@@ -358,6 +387,19 @@ void __cyg_profile_func_exit(void* func, void* caller) {
   if ( (uint64_t) caller == 0) {
     return;
   }
+  
+  /*
+  int x = 1;
+  int* y = &x;
+  *y = 2;
+  */
+
+  /*
+  jmp_buf env;
+  setjmp(env);
+  */
+
+  // alloca(1);
 
   //printf("-------------- Function addresss ---------------- : %p\n", (uint8_t*)func);
   //printf("-------------- Return addresss ---------------- : %p\n", (uint8_t*)caller);
@@ -367,13 +409,15 @@ void __cyg_profile_func_exit(void* func, void* caller) {
 
   uint16_t func_id = get_func_id((uint64_t)func);
 
-  init_probe_info((uint64_t)func, (uint8_t*)addr);
+  init_probe_info((uint64_t)func_id, (uint8_t*)addr);
 
   // print_probe_info();
 
   // Delegates to actual profiler code
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE; 
-  ins->epilogFunc(func_id); 
+  epilogFunction(func_id);
+
+  // ins->epilogFunc(func_id); 
 
 }
 
