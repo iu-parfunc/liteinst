@@ -2,6 +2,8 @@
 #ifndef _PROBE_API_H_
 #define _PROBE_API_H_
 
+#include "constants.h"
+
 /*
  * C API for probe activation and deactivation 
  */

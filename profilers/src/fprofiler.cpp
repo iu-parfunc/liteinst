@@ -5,7 +5,7 @@
 using namespace std;
 
 // Instrumentation Functions
-void fb_prologFunction(uint16_t funcId) {
+void backoffPrologFunction(uint16_t func_id) {
 
   // fprintf(stderr, "stat address at fb_prologFunction %p\n", stats);
   
@@ -15,26 +15,37 @@ void fb_prologFunction(uint16_t funcId) {
   }
   */
 
-  Fstats* g_stats = (Fstats*) stats;
-  if(g_stats->find(funcId) == g_stats->end()) {
-    fprintf(stderr, "Initializing function %d statistics..\n", funcId);
-    Fstat* stat = new Fstat;
-    stat->funcId = funcId;
+  BackoffProfilerStats* g_stats = (BackoffProfilerStats*) stats;
+
+  /*
+  if (funcId == 88) {
+    fprintf(stderr, "Checking function 88\n");
+    if (g_stats->find(funcId) == g_stats->end());
+    return;
+  }
+  */
+
+  if(g_stats->find(func_id) == g_stats->end()) {
+    fprintf(stderr, "Initializing function %d statistics..\n", func_id);
+    BackoffProfilerStat* stat = new BackoffProfilerStat;
+    stat->func_id = func_id;
     stat->count = 1;
-    g_stats->insert(make_pair(funcId, stat));
+    g_stats->insert(make_pair(func_id, stat));
   } else {
     // fprintf(stderr, "At function %d prolog..\n", funcId);
-    Fstat* stat = g_stats->find(funcId)->second;
+    BackoffProfilerStat* stat = g_stats->find(func_id)->second;
     stat->count++;
 
+    /*
     if (stat->count >= 50000) {
       PROFILER_INSTANCE->deactivateFunction(&funcId);
     }
+    */
   }
 
 }
 
-void fb_epilogFunction(uint16_t funcId) {
+void backoffEpilogFunction(uint16_t func_id) {
   
   /*
   if (funcId == 1) {
@@ -54,10 +65,10 @@ void fb_epilogFunction(uint16_t funcId) {
 }
 
 // Profiler implementation 
-void FBprofiler::initialize() {
+void BackoffProfiler::initialize() {
 
-  Profiler::init_internal(fb_prologFunction, fb_epilogFunction);
-  statistics = new Fstats;
+  Profiler::initInstrumentor(backoffPrologFunction, backoffEpilogFunction);
+  statistics = new BackoffProfilerStats;
 
   // Leaking the reference to the global variable so that 
   // instrumentaion functions can access it without going through object reference
@@ -67,7 +78,7 @@ void FBprofiler::initialize() {
 
 }
 
-void FBprofiler::dumpStatistics() {
+void BackoffProfiler::dumpStatistics() {
 
   FILE* fp = fopen("prof.out", "a");
 
@@ -79,9 +90,9 @@ void FBprofiler::dumpStatistics() {
 
 }
 
-FBprofiler::~FBprofiler() {
+BackoffProfiler::~BackoffProfiler() {
   fprintf(stderr, "At FBprofier destructor\n");
   dumpStatistics();
-  Profiler::cleanup_internal();
-  delete (Fstats*)stats;
+  Profiler::cleanupInstrumentor();
+  delete (BackoffProfilerStats*)stats;
 }

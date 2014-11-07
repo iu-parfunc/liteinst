@@ -1,5 +1,6 @@
 
 ARGS= -g -Wall
+LIBS = -lpthread
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 
 # COMP = icc
@@ -15,7 +16,7 @@ OPTS =
 
 DEPS = ../../deps/distorm/distorm3.a
 
-CODE = fprofiler.cpp profiler.cpp initializer.cpp 
+CODE = fprofiler.cpp sprofiler.cpp profiler.cpp initializer.cpp 
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 
@@ -29,9 +30,6 @@ INST_OBJ = $(INST_OBJ0:.c=.o)
 INSTALL = ../../build
 
 .PHONY: all build install
-
-test:
-	echo -e "$(INST_OBJ)"
 
 libubiprof.so: $(OBJ) $(DEPS)
 	$(CC) $(LIBS) -shared -Wl,-soname,libubiprof.so -o libubiprof.so $(OBJ) $(INST_OBJ) $(DEPS) -lc

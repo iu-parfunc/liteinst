@@ -2,18 +2,18 @@
 ARGS= -g -Wall
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 
-COMP = icc
-# CC = icc $(ARGS)
-# CPP = icpc -std=c++11 $(ARGS)
+# COMP = icc
+CC = icc $(ARGS)
+CPP = icpc -std=c++11 $(ARGS)
 # COMP = gcc
-CC = gcc $(ARGS)
-CPP = g++ -std=c++0x $(ARGS)
+# CC = gcc $(ARGS)
+# CPP = g++ -std=c++0x $(ARGS)
 
 AR = ar
 RM = rm
 OPTS = 
 
-CODE = finstrumentor.cpp cyg_functions.cpp 
+CODE = finstrumentor.cpp cyg_functions.cpp instrumentor.cpp
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 

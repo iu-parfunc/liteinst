@@ -1,5 +1,6 @@
 
 ARGS= -g -Wall
+LIBS = -lpthread
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 CFLAGS=-O2
 
@@ -16,7 +17,7 @@ OPTS =
 
 DEPS = ../../deps/distorm/distorm3.a
 
-CODE = c_test.c cpp_test.cpp
+CODE = c_test.c cpp_test.cpp time.c
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 
@@ -48,12 +49,12 @@ inst:
 
 run_c: $(OBJ) inst 
 	cd ../src;make clean;make build
-	$(CPP) c_test.o $(PROF_OBJ) $(INST_OBJ) $(DEPS) -o tests.exe
+	$(CPP) c_test.o $(PROF_OBJ) $(INST_OBJ) $(DEPS) $(LIBS) -o tests.exe
 	./tests.exe 
 
 run_cpp: $(OBJ) inst
 	cd ../src;make clean;make build
-	$(CPP) cpp_test.o $(PROF_OBJ) $(INST_OBJ) $(DEPS) -o tests.exe
+	$(CPP) cpp_test.o $(PROF_OBJ) $(INST_OBJ) $(DEPS) $(LIBS) -o tests.exe
 	./tests.exe 
 
 runso_c: $(OBJ) inst
@@ -77,11 +78,10 @@ time_so:
 	$(CC) -L. -linst -lrt time.o -o time.exe
 	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./time.exe
 
-time:
-	cd ../src;make clean;make
-	$(CC) -finstrument-functions -g -c -o time.o time.c
-	$(CC) -lrt time.o ../src/cyg_functions.o -o time.exe
-	./time.exe
+time: $(OBJ) inst
+	cd ../src;make clean;make install
+	$(CC) -L../../build -lubiprof -lrt time.o -o time.exe
+	LD_LIBRARY_PATH=../../build:$(LD_LIBRARY_PATH) ./time.exe
 
 tests: $(OBJ)  
 	cd ../src;make clean;make

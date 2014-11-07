@@ -6,21 +6,21 @@
 #include <map>
 #include "profiler.hpp"
 
-typedef struct Fstat {
-  uint16_t funcId;
+typedef struct BackoffProfilerStat {
+  uint16_t func_id;
   uint64_t count;
-} Fstat; 
+} BackoffProfilerStat; 
 
-typedef std::map<uint16_t, Fstat*> Fstats;  
+typedef std::map<uint16_t, BackoffProfilerStat*> BackoffProfilerStats;  
 
-class FBprofiler : public Profiler {
+class BackoffProfiler : public Profiler {
 
   public:
     void initialize();
     void dumpStatistics();
-    virtual ~FBprofiler();
+    virtual ~BackoffProfiler();
 
-    Fstats* statistics; 
+    BackoffProfilerStats* statistics; 
 };
 
 #endif /* _FPROFILER_HPP_ */

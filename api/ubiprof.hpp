@@ -23,8 +23,8 @@ class Profiler {
     virtual ~Profiler();
 
   protected:
-    virtual void init_internal(InstrumentationFunc prologFunc, InstrumentationFunc epilogFunc);
-    virtual void cleanup_internal();
+    virtual void initInstrumentor(InstrumentationFunc prologFunc, InstrumentationFunc epilogFunc);
+    virtual void cleanupInstrumentor();
     // static void prologFunction(uint16_t funcId) = 0;
     // static void epilogFunction(uint16_t funcId) = 0;
 

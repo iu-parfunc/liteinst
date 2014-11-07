@@ -2,6 +2,7 @@
 #include <cstdio>
 #include "profiler.hpp"
 #include "fprofiler.hpp"
+#include "sprofiler.hpp"
 
 #define FINSTRUMENT 0
 
@@ -11,21 +12,26 @@ void* stats = 0;
 Profiler* Profiler::getInstance(int type) {
 
   if(!PROFILER_INSTANCE) {
-    PROFILER_INSTANCE = new FBprofiler();
-    PROFILER_INSTANCE->initialize();
+    if (type == 0) {
+      PROFILER_INSTANCE = new BackoffProfiler();
+      PROFILER_INSTANCE->initialize();
+    } else if (type == 1) {
+      PROFILER_INSTANCE = new SamplingProfiler();
+      PROFILER_INSTANCE->initialize();
+    }
   }
 
   return PROFILER_INSTANCE;
 
 }
 
-void Profiler::init_internal(InstrumentationFunc prologFunction, InstrumentationFunc epilogFunction) {
+void Profiler::initInstrumentor(InstrumentationFunc prologFunction, InstrumentationFunc epilogFunction) {
 
   ins = Instrumentor::getInstance(FINSTRUMENT, prologFunction, epilogFunction);
 
 }
 
-void Profiler::cleanup_internal() {
+void Profiler::cleanupInstrumentor() {
   delete ins;
 }
 

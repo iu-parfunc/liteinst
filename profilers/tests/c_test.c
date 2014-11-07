@@ -4,12 +4,19 @@
 #include <alloca.h>
 
 int call_count = 0;
+int j = 0;
 
 void print_fn(short);
 
+void bar() {
+
+  j= (j + call_count>> 2);
+
+}
+
 void foo(int i) {
   i= (i + call_count>> 2);
-  printf("foo : %d\n", call_count++);
+  // printf("foo : %d\n", call_count++);
   // alloca(1);
 
   // jmp_buf env;
@@ -53,8 +60,9 @@ int main() {
 
   // foo(2);
   int i=0;
-  for (i=0; i< 100000; i++) {
-    foo(2);
+  for (i=0; i< 1000000; i++) {
+    foo(8);
+    bar();
   }
 
   // print_fn(5554);

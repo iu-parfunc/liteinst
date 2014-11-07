@@ -258,7 +258,7 @@ inline void init_probe_info(uint64_t func_addr, uint8_t* probe_addr) {
     uint64_t sequence = *((uint64_t*)(probe_addr-8));
     uint64_t mask = 0x0000000000FFFFFF;
     uint64_t deactiveSequence = (uint64_t) (sequence & mask); 
-    mask = 0x9090909090000000;
+    mask = 0x0000441F0F000000; // Mask with a 5 byte NOP
 
     probeInfo->activeSequence = sequence;
     probeInfo->deactiveSequence = deactiveSequence | mask;
@@ -289,7 +289,7 @@ inline void init_probe_info(uint64_t func_addr, uint8_t* probe_addr) {
     uint64_t sequence = *((uint64_t*)(probe_addr-8));
     uint64_t mask = 0x0000000000FFFFFF;
     uint64_t deactiveSequence = (uint64_t) (sequence & mask); 
-    mask = 0x9090909090000000;
+    mask = 0x0000441F0F000000;
 
     probeInfo->activeSequence = sequence;
     probeInfo->deactiveSequence = deactiveSequence | mask;
@@ -369,7 +369,7 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 
   // print_probe_info();
 
-  // fprintf(stderr, "Calling prolog function.\n");
+  // fprintf(stderr, "Calling prolog function with function id %d\n", func_id);
   // fprintf(stderr, "Prolog function %p.\n", prologFunc);
   // Delegates to actual profiler code
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE; 
@@ -414,6 +414,7 @@ void __cyg_profile_func_exit(void* func, void* caller) {
   // print_probe_info();
 
   // Delegates to actual profiler code
+  // fprintf(stderr, "Calling epilog function with function id %d\n", func_id);
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE; 
   epilogFunction(func_id);
 

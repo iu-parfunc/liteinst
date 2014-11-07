@@ -3,6 +3,7 @@
 #define _PROFILER_HPP_
 
 #include "../../api/ubiprof.hpp"
+#include "../../common/include/cycle.h"
 
 /**
  *  Profilers needing to run a monitor (e.g: a background thread) for bookkeeping tasks etc.

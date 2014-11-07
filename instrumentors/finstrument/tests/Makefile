@@ -105,5 +105,9 @@ exp_so: $(OBJ)
 	$(CC) -L. -lex tests.o -o tests.exe
 	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./tests.exe
 
+toggle: 
+	$(CC) -lpthread -o toggle.exe toggle.c
+	$(CC) -lpthread -o toggler.exe toggler.c
+
 clean:
 	$(RM) -f $(OBJ) *.exe *.so *.o
