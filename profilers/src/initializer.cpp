@@ -12,8 +12,8 @@ void initProfiler() {
 
   fprintf(stderr, "Intializing the profiler..\n");
   // Init the suitable profiler depending on enviornment variable
-  Profiler::getInstance(SAMPLING);
-  // Profiler::getInstance(FIXED_BACKOFF);
+  // Profiler::getInstance(SAMPLING);
+  Profiler::getInstance(FIXED_BACKOFF);
 
   fprintf(stderr, "Done intializing the profiler..\n");
 
@@ -24,7 +24,7 @@ void destroyProfiler() {
 
   // print_probe_info();
   fprintf(stderr, "Destroying the profiler..\n");
-  delete Profiler::getInstance(SAMPLING);
-  // delete Profiler::getInstance(FIXED_BACKOFF);
+  // delete Profiler::getInstance(SAMPLING);
+  delete Profiler::getInstance(FIXED_BACKOFF);
 
 } 

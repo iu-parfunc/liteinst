@@ -1,19 +1,20 @@
 
-#include <cstdio>
 #include "sprofiler.hpp"
+
+#include <cstdio>
 #include <pthread.h>
 #include <time.h>
+#include <stdlib.h>
 
 using namespace std;
 
 int lock = 0;
 
-TLSSamplingProfilerStats* sampling_thread_stats;
+__thread static TLSSamplingProfilerStats* sampling_thread_stats;
 
 // Instrumentation Functions
 void samplingPrologFunction(uint16_t func_id) {
 
-  /*
   __thread static bool allocated;
 
   if (!allocated) {
@@ -22,8 +23,6 @@ void samplingPrologFunction(uint16_t func_id) {
 
     ((SamplingProfiler*)PROFILER_INSTANCE)->registerThreadStatistics(sampling_thread_stats);
   }
-  */
-
 
   // fprintf(stderr, "stat address at fb_prologFunction %p\n", stats);
   
@@ -36,6 +35,16 @@ void samplingPrologFunction(uint16_t func_id) {
 
   SamplingProfilerStats* g_stats = (SamplingProfilerStats*) stats;
 
+  if (g_stats->find(func_id) == g_stats->end()) {
+    SamplingProfilerStat* stat = new SamplingProfilerStat;
+    stat->func_id = func_id;
+    stat->count = 1;
+    stat->count_at_last_activation = 0;
+    stat->deactivation_count = 0;
+    stat->lock = 0;
+    g_stats->insert(make_pair(func_id, stat));
+  }
+
   /*
   if (funcId == 88) {
     fprintf(stderr, "Checking function 88\n");
@@ -44,75 +53,56 @@ void samplingPrologFunction(uint16_t func_id) {
   }
   */
 
-  if(g_stats->find(func_id) == g_stats->end()) {
+  if (sampling_thread_stats->find(func_id) == sampling_thread_stats->end()) {
     fprintf(stderr, "Initializing function %d statistics..\n", func_id);
-    SamplingProfilerStat* stat = new SamplingProfilerStat;
+    TLSSamplingProfilerStat* stat = new TLSSamplingProfilerStat;
     stat->func_id = func_id;
     stat->count = 1;
+    stat->total_time = 0;
     stat->count_at_last_activation = 0;
     stat->deactivation_count = 0;
-    g_stats->insert(make_pair(func_id, stat));
+    stat->start_timestamp = getticks();
+    sampling_thread_stats->insert(make_pair(func_id, stat));
   } else {
     // fprintf(stderr, "At function %d prolog..\n", funcId);
-    SamplingProfilerStat* stat = g_stats->find(func_id)->second;
+    TLSSamplingProfilerStat* stat = sampling_thread_stats->find(func_id)->second;
     stat->count++;
-
-    uint64_t new_count = stat->count - stat->count_at_last_activation; 
-    if (new_count >= 10000) {
-      
-      // Aquire lock
-      /*
-      while(!__sync_bool_compare_and_swap(&lock, 0 , 1)) {
-        fprintf(stderr, "waiting to aquire lock at prolog..\n");
-      }
-      */
-
-      // fprintf(stderr, "Deactivating function %d\n", stat->func_id);
-      PROFILER_INSTANCE->deactivateFunction(&func_id);
-      stat->deactivation_count++;
-      stat->is_active = false;
-
-      // Release lock
-      // __sync_bool_compare_and_swap(&lock, 1 , 0);
-
-      /*
-      for(auto iter = g_stats->begin(); iter != g_stats->end(); iter++) {
-        Sstat* funcStat = iter->second;
-
-        if (!funcStat->isActive && funcStat->funcId != funcId) {
-
-          // Acquire lock
-          // while(__sync_bool_compare_and_swap(&lock, 0 , 1));
-
-          // fprintf(stderr, "Reactivating function %d\n", funcStat->funcId);
-          funcStat->count_at_last_activation = funcStat->count;
-          PROFILER_INSTANCE->activateFunction(&(funcStat->funcId));
-          funcStat->isActive = true;
-        }
-      }
-      */
-
-    }
+    stat->start_timestamp = getticks();
   }
 
 }
 
 void samplingEpilogFunction(uint16_t func_id) {
-  
-  /*
-  if (funcId == 1) {
-    fprintf(stderr, "At function %d epilog..\n", funcId);
-  }
-  */
 
-  /*
-  Fstats* g_stats = (Fstats*) stats;
-  Fstat* stat = g_stats->find(funcId)->second;
-    
-  if (stat->count >= 2) {
-      PROFILER_INSTANCE->deactivateFunction(&funcId);
+  SamplingProfilerStats* g_stats = (SamplingProfilerStats*) stats;
+  SamplingProfilerStat* g_stat = g_stats->find(func_id)->second;
+  
+  TLSSamplingProfilerStat* tls_stat = sampling_thread_stats->find(func_id)->second;
+
+  int thread_count = ((SamplingProfiler*)PROFILER_INSTANCE)->getThreadCount(); 
+  TLSSamplingProfilerStats** tls_stats = ((SamplingProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
+
+  // We do this epilog itself to get an accurate count than a periodically accumilated count by the probe monitor thread
+  uint64_t global_count = 0;
+  for (int i=0; i < thread_count; i++) {
+    global_count += tls_stats[i]->find(func_id)->second->count; 
   }
-  */
+
+  uint64_t new_count = global_count - g_stat->count_at_last_activation; 
+  // fprintf(stderr, "New count %lu\n", new_count);
+
+  ticks elapsed = getticks() - tls_stat->start_timestamp;
+  tls_stat->total_time += elapsed;
+  if (new_count >= 1000000000) {
+    if (__sync_bool_compare_and_swap(&(g_stat->lock), 0 , 1)) {
+      // fprintf(stderr, "Deactivating function %d at deactivation count %d\n", func_id, g_stat->deactivation_count);
+      PROFILER_INSTANCE->deactivateFunction(&func_id);
+      g_stat->count_at_last_activation = global_count;
+      g_stat->deactivation_count++;
+      g_stat->is_active = false;
+      __sync_bool_compare_and_swap(&(g_stat->lock), 1 , 0);
+    }
+  }
 
 }
 
@@ -122,7 +112,7 @@ void* samplingProbeMonitor(void* param) {
   SamplingProfilerStats* g_stats = (SamplingProfilerStats*) stats;
   struct timespec ts;
   ts.tv_sec = 0;
-  ts.tv_nsec = 1000000;
+  ts.tv_nsec = 10000000;
 
   while(true) {
     for(auto iter = g_stats->begin(); iter != g_stats->end(); iter++) {
@@ -138,7 +128,8 @@ void* samplingProbeMonitor(void* param) {
         */
 
         // fprintf(stderr, "Reactivating function %d\n", func_stat->func_id);
-        func_stat->count_at_last_activation = func_stat->count;
+        // TLSSamplingProfilerStat* tls_stat = sampling_thread_stats->find(func_stat->func_id)->second;
+        // func_stat->count_at_last_activation = func_stat->count;
         PROFILER_INSTANCE->activateFunction(&(func_stat->func_id));
         func_stat->is_active = true;
       
@@ -161,6 +152,8 @@ void SamplingProfiler::initialize() {
   // Leaking the reference to the global variable so that 
   // instrumentaion functions can access it without going through object reference
   stats = statistics; 
+  // tls_stats = calloc(64, sizeof(TLSSamplingProfilerStats*));
+  tls_stats = new TLSSamplingProfilerStats*[64]; 
 
   spawnMonitor();
   
@@ -169,17 +162,51 @@ void SamplingProfiler::initialize() {
 }
 
 void SamplingProfiler::spawnMonitor() {
+
   pthread_t tid;
   pthread_create(&tid, NULL, samplingProbeMonitor, (void*)NULL);
+
+}
+
+void SamplingProfiler::registerThreadStatistics(TLSSamplingProfilerStats* stats) {
+
+  if (thread_counter+ 1 < 64) {
+    tls_stats[thread_counter++] = stats;
+  } else {
+    fprintf(stderr, "[SamplingProfiler] Max thread count exceeded. This thread will not be profiled..\n");
+  }
+
+}
+
+int SamplingProfiler::getThreadCount() {
+  return thread_counter;
+}
+
+TLSSamplingProfilerStats** SamplingProfiler::getThreadStatistics() {
+  return tls_stats;
 }
 
 void SamplingProfiler::dumpStatistics() {
 
+  fprintf(stderr, "[SamplingProfiler] Thread count : %d\n", thread_counter);
+
   FILE* fp = fopen("prof.out", "a");
 
-  for(auto iter = statistics->begin(); iter != statistics->end(); iter++) {
-    fprintf(fp, "Function id : %d Count %lu Deactivation Count %d\n", iter->first, iter->second->count, 
-        iter->second->deactivation_count);
+  for (auto iter = statistics->begin(); iter != statistics->end(); iter++) {
+    SamplingProfilerStat* g_stat = iter->second;
+    int func_id = g_stat->func_id;
+    g_stat->count = 0;
+    g_stat->total_time = 0;
+
+    for (int i = 0; i < thread_counter; i++) {
+      TLSSamplingProfilerStats* tls_stat = tls_stats[i];
+      g_stat->count += tls_stat->find(func_id)->second->count;
+      g_stat->total_time += tls_stat->find(func_id)->second->total_time;
+    }
+
+    fprintf(fp, "Function id : %d Count %lu Deactivation Count : %d Total time (cycles) : %lu\n", func_id,  g_stat->count, 
+        g_stat->deactivation_count, g_stat->total_time); 
+
   }
 
   fclose(fp);
@@ -191,4 +218,5 @@ SamplingProfiler::~SamplingProfiler() {
   dumpStatistics();
   Profiler::cleanupInstrumentor();
   delete (SamplingProfilerStats*)stats;
+  delete tls_stats;
 }

@@ -18,12 +18,18 @@ typedef struct SamplingProfilerStat {
   uint64_t count_at_last_activation;
   bool is_active;
   uint32_t deactivation_count;
+  ticks total_time;
+  uint64_t lock;
 } SamplingProfilerStat; 
 
 typedef struct TLSSamplingProfilerStat {
   uint16_t func_id;
   uint16_t count;
   uint64_t count_at_last_activation;
+  uint32_t deactivation_count;
+  bool is_active;
+  ticks start_timestamp;
+  ticks total_time;
 
   uint32_t stack_depth;
   uint64_t limited_count;
@@ -42,9 +48,16 @@ class SamplingProfiler : public Profiler, public Monitorable {
     void spawnMonitor();
     void dumpStatistics();
     void registerThreadStatistics(TLSSamplingProfilerStats* stats);
+    int getThreadCount();
+    TLSSamplingProfilerStats** getThreadStatistics();
     virtual ~SamplingProfiler();
 
     SamplingProfilerStats* statistics; 
+
+  private:
+    TLSSamplingProfilerStats** tls_stats;
+    int thread_counter = 0;
+
 };
 
 #endif /* _SPROFILER_HPP_ */
