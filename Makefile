@@ -64,7 +64,11 @@ TABLE=Dynaprof_Benchmarks2
 all: lib run-benchmarks.exe
 # Nothing here currently.
 
+# INST_OBJS := $(patsubst %.cpp,%.o,$(wildcard ./instrumentors/finstrument/src/*.cpp))
+
 lib:
+	# (cd instrumentors/finstrument/src/; make)
+	# (cd profilers/src/; make install)
 	(cd ./zcatoggle/src; make install; make docs)
 	(cd ./dynaprof/src; make install)
 
@@ -88,6 +92,6 @@ plotter: run-benchmarks.exe
 	(cd ./Plotting && $(CABAL) install --bindir=. . ../HSBencher/hsbencher-analytics --force-reinstalls --disable-documentation)
 
 clean:
-	(cd ./zcatoggle/src; make clean)
-	(cd ./dynaprof/src; make clean)
+	(cd ./instrumentors/finstrument/src; make clean)
+	(cd ./profilers/src; make clean)
 	rm -rf ./run-benchmarks.exe ./dist
