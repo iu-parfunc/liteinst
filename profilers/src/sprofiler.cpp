@@ -24,15 +24,6 @@ void samplingPrologFunction(uint16_t func_id) {
     ((SamplingProfiler*)PROFILER_INSTANCE)->registerThreadStatistics(sampling_thread_stats);
   }
 
-  // fprintf(stderr, "stat address at fb_prologFunction %p\n", stats);
-  
-  /*
-  if (funcId == 1) {
-    fprintf(stderr, "At function %d prolog..\n", funcId);
-  }
-  */
-
-
   SamplingProfilerStats* g_stats = (SamplingProfilerStats*) stats;
 
   if (g_stats->find(func_id) == g_stats->end()) {
@@ -45,16 +36,7 @@ void samplingPrologFunction(uint16_t func_id) {
     g_stats->insert(make_pair(func_id, stat));
   }
 
-  /*
-  if (funcId == 88) {
-    fprintf(stderr, "Checking function 88\n");
-    if (g_stats->find(funcId) == g_stats->end());
-    return;
-  }
-  */
-
   if (sampling_thread_stats->find(func_id) == sampling_thread_stats->end()) {
-    fprintf(stderr, "Initializing function %d statistics..\n", func_id);
     TLSSamplingProfilerStat* stat = new TLSSamplingProfilerStat;
     stat->func_id = func_id;
     stat->count = 1;
@@ -64,9 +46,7 @@ void samplingPrologFunction(uint16_t func_id) {
     stat->start_timestamp = getticks();
     sampling_thread_stats->insert(make_pair(func_id, stat));
   } else {
-    // fprintf(stderr, "At function %d prolog..\n", funcId);
     TLSSamplingProfilerStat* stat = sampling_thread_stats->find(func_id)->second;
-    stat->count++;
     stat->start_timestamp = getticks();
   }
 
@@ -84,18 +64,19 @@ void samplingEpilogFunction(uint16_t func_id) {
 
   // We do this epilog itself to get an accurate count than a periodically accumilated count by the probe monitor thread
   uint64_t global_count = 0;
+  TLSSamplingProfilerStat* stat = sampling_thread_stats->find(func_id)->second;
+  stat->count++;
+
   for (int i=0; i < thread_count; i++) {
     global_count += tls_stats[i]->find(func_id)->second->count; 
   }
 
   uint64_t new_count = global_count - g_stat->count_at_last_activation; 
-  // fprintf(stderr, "New count %lu\n", new_count);
 
   ticks elapsed = getticks() - tls_stat->start_timestamp;
   tls_stat->total_time += elapsed;
-  if (new_count >= 1000000000) {
+  if (new_count >= 10000) {
     if (__sync_bool_compare_and_swap(&(g_stat->lock), 0 , 1)) {
-      // fprintf(stderr, "Deactivating function %d at deactivation count %d\n", func_id, g_stat->deactivation_count);
       PROFILER_INSTANCE->deactivateFunction(&func_id);
       g_stat->count_at_last_activation = global_count;
       g_stat->deactivation_count++;
@@ -120,21 +101,9 @@ void* samplingProbeMonitor(void* param) {
 
       if (!func_stat->is_active) {
 
-        // Acquire lock
-        /*
-        while(!__sync_bool_compare_and_swap(&lock, 0 , 1)) {
-          fprintf(stderr, "waiting to aquire lock at sampler..\n");
-        }
-        */
-
-        // fprintf(stderr, "Reactivating function %d\n", func_stat->func_id);
-        // TLSSamplingProfilerStat* tls_stat = sampling_thread_stats->find(func_stat->func_id)->second;
-        // func_stat->count_at_last_activation = func_stat->count;
         PROFILER_INSTANCE->activateFunction(&(func_stat->func_id));
         func_stat->is_active = true;
       
-        // Release lock
-        // __sync_bool_compare_and_swap(&lock, 1 , 0);
       }
 
       nanosleep(&ts, NULL);

@@ -24,7 +24,7 @@ typedef struct SamplingProfilerStat {
 
 typedef struct TLSSamplingProfilerStat {
   uint16_t func_id;
-  uint16_t count;
+  uint64_t count;
   uint64_t count_at_last_activation;
   uint32_t deactivation_count;
   bool is_active;

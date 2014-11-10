@@ -74,7 +74,7 @@ time_so:
 	# $(CC) -lrt time.o -o time.exe
 	# ./time.exe
 	$(CC) -finstrument-functions -g -c -o time.o time.c
-	$(CC) -shared -Wl,-soname,libinst.so -o libinst.so ../src/cyg_functions.o ../../../deps/distorm/distorm3.a -lc
+	$(CC) -shared -Wl,-soname,libinst.so -o libinst.so ../src/cyg_functions.o ../../deps/distorm/distorm3.a -lc
 	$(CC) -L. -linst -lrt time.o -o time.exe
 	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) ./time.exe
 

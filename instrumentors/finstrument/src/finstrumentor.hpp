@@ -44,6 +44,10 @@ extern probe_map probe_info;
 typedef std::map<uint64_t, volatile uint16_t> func_table;
 extern func_table functions;
 
+typedef std::map<uint16_t, uint64_t> func_id_table;
+extern func_id_table function_ids;
+
+
 extern volatile uint16_t func_id_counter;
 
 #ifdef __cplusplus
@@ -61,6 +65,7 @@ class Finstrumentor : public Instrumentor {
   public :
     probe_map* probe_info;
     func_table* functions;
+    func_id_table* function_ids;
     volatile uint16_t func_id_counter;
     InstrumentationFunc prologFunc;
     InstrumentationFunc epilogFunc;

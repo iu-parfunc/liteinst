@@ -33,6 +33,7 @@ void Finstrumentor::initialize() {
   //setting up global data structures
   // this->probeInfo = new DynamicArray<FinsProbeInfo>(DEFAULT_PROBE_COUNT); 
   this->functions = new func_table; 
+  this->function_ids = new func_id_table;
   this->probe_info = new probe_map; 
 }
 
