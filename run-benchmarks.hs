@@ -86,7 +86,7 @@ sampling = Or [And [ Set (Variant ("Sampling_"++show s_size++"_"++show epoch)) (
                    ]
               | s_size <- samplesize, epoch <- epochs] 
 
-backoff  = Or [And [ Set (Variant ("Backoff_"++show s_size)) (RuntimeEnv "PROFILER_TYPE" "BACKOFF")
+backoff  = Or [And [ Set (Variant ("Backoff_"++show s_size)) (RuntimeEnv "PROFILER_TYPE" "FIXED_BACKOFF")
                    , Set NoMeaning (RuntimeEnv "SAMPLE_SIZE" (show s_size))
                    ]
               | s_size <- samplesize] 
