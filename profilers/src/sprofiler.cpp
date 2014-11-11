@@ -8,8 +8,11 @@
 
 using namespace std;
 
-int lock = 0;
+/* Globals for this profiler */
+uint64_t sp_sample_size;
+uint64_t sp_epoch_period;
 
+// Thread local statistics table 
 __thread static TLSSamplingProfilerStats* sampling_thread_stats;
 
 // Instrumentation Functions
@@ -62,7 +65,7 @@ void samplingEpilogFunction(uint16_t func_id) {
   int thread_count = ((SamplingProfiler*)PROFILER_INSTANCE)->getThreadCount(); 
   TLSSamplingProfilerStats** tls_stats = ((SamplingProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
 
-  // We do this epilog itself to get an accurate count than a periodically accumilated count by the probe monitor thread
+  // We do this at epilog itself to get an accurate count than a periodically accumilated count by the probe monitor thread
   uint64_t global_count = 0;
   TLSSamplingProfilerStat* stat = sampling_thread_stats->find(func_id)->second;
   stat->count++;
@@ -75,7 +78,7 @@ void samplingEpilogFunction(uint16_t func_id) {
 
   ticks elapsed = getticks() - tls_stat->start_timestamp;
   tls_stat->total_time += elapsed;
-  if (new_count >= 10000) {
+  if (new_count >= sp_sample_size) {
     if (__sync_bool_compare_and_swap(&(g_stat->lock), 0 , 1)) {
       PROFILER_INSTANCE->deactivateFunction(&func_id);
       g_stat->count_at_last_activation = global_count;
@@ -91,9 +94,14 @@ void samplingEpilogFunction(uint16_t func_id) {
 void* samplingProbeMonitor(void* param) {
 
   SamplingProfilerStats* g_stats = (SamplingProfilerStats*) stats;
+
+  uint64_t nanos = sp_epoch_period * 1000000; 
+  uint64_t secs = nanos / 1000000000;
+  uint64_t nsecs = nanos % 1000000000;
+
   struct timespec ts;
-  ts.tv_sec = 0;
-  ts.tv_nsec = 10000000;
+  ts.tv_sec = secs;
+  ts.tv_nsec = nsecs;
 
   while(true) {
     for(auto iter = g_stats->begin(); iter != g_stats->end(); iter++) {
@@ -124,6 +132,32 @@ void SamplingProfiler::initialize() {
   // tls_stats = calloc(64, sizeof(TLSSamplingProfilerStats*));
   tls_stats = new TLSSamplingProfilerStats*[64]; 
 
+  char* sample_size_str = getenv("SAMPLE_SIZE");
+  if (sample_size_str != NULL) {
+    uint64_t size = atol(sample_size_str);
+    if (size != 0) {
+      sp_sample_size = size;
+    } else {
+      sp_sample_size = sample_size;
+    }
+  } else {
+    sp_sample_size = sample_size;
+  }
+
+  char* epoch_period_str = getenv("EPOCH_PERIOD");
+  if (epoch_period_str != NULL) {
+    uint64_t period = atol(epoch_period_str);
+    if (period != 0) {
+      sp_epoch_period = period;
+    } else {
+      sp_epoch_period = epoch_period;
+    }
+  } else {
+    sp_epoch_period = epoch_period;
+  }
+
+  fprintf(stderr, "[Sampling Profiler] **** Parameters : Sample size => %lu Epoch period => %lu\n", sp_sample_size, sp_epoch_period); 
+
   spawnMonitor();
   
   // fprintf(stderr, "Stats address %p\n", stats);
@@ -142,7 +176,7 @@ void SamplingProfiler::registerThreadStatistics(TLSSamplingProfilerStats* stats)
   if (thread_counter+ 1 < 64) {
     tls_stats[thread_counter++] = stats;
   } else {
-    fprintf(stderr, "[SamplingProfiler] Max thread count exceeded. This thread will not be profiled..\n");
+    fprintf(stderr, "[Sampling Profiler] Max thread count exceeded. This thread will not be profiled..\n");
   }
 
 }
@@ -157,7 +191,7 @@ TLSSamplingProfilerStats** SamplingProfiler::getThreadStatistics() {
 
 void SamplingProfiler::dumpStatistics() {
 
-  fprintf(stderr, "[SamplingProfiler] Thread count : %d\n", thread_counter);
+  fprintf(stderr, "[Sampling Profiler] Thread count : %d\n", thread_counter);
 
   FILE* fp = fopen("prof.out", "a");
 
@@ -173,8 +207,8 @@ void SamplingProfiler::dumpStatistics() {
       g_stat->total_time += tls_stat->find(func_id)->second->total_time;
     }
 
-    fprintf(fp, "Function id : %d Count %lu Deactivation Count : %d Total time (cycles) : %lu\n", func_id,  g_stat->count, 
-        g_stat->deactivation_count, g_stat->total_time); 
+    fprintf(fp, "Function id : %d Count %lu Deactivation Count : %d Avg time (cycles) : %lu\n", func_id,  g_stat->count, 
+        g_stat->deactivation_count, g_stat->count / g_stat->total_time); 
 
   }
 
@@ -183,7 +217,6 @@ void SamplingProfiler::dumpStatistics() {
 }
 
 SamplingProfiler::~SamplingProfiler() {
-  fprintf(stderr, "At Sprofier destructor\n");
   dumpStatistics();
   Profiler::cleanupInstrumentor();
   delete (SamplingProfilerStats*)stats;

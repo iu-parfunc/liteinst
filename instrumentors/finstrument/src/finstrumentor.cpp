@@ -28,7 +28,7 @@ void Finstrumentor::initialize() {
   INSTRUMENTOR_INSTANCE = this;
   // this->probeInfo;
 
-  fprintf(stderr, "Initializing the finstrumentor\n");
+  fprintf(stderr, "[Finstrumentor] Initializing the instrumentor\n");
 
   //setting up global data structures
   // this->probeInfo = new DynamicArray<FinsProbeInfo>(DEFAULT_PROBE_COUNT); 
