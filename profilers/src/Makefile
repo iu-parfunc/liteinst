@@ -3,7 +3,7 @@ ARGS= -g -Wall
 LIBS = -lpthread
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 
-# COMP = icc
+CCC = icc
 CC = icc $(ARGS)
 CPP = icpc -std=c++11 $(ARGS)
 # COMP = gcc
@@ -31,11 +31,11 @@ INSTALL = ../../build
 
 .PHONY: all build install
 
-libubiprof.so: $(OBJ) $(DEPS)
+libubiprof.so: libubiprof.a 
 	$(CC) $(LIBS) -shared -Wl,-soname,libubiprof.so -o libubiprof.so $(OBJ) $(INST_OBJ) $(DEPS) -lc
 	#$(CC) $(LIBS) -shared -Wl,-soname,libubiprof.so -Wl,-init,initProfiler -o libubiprof.so $(OBJ) $(INST_OBJ) $(DEPS) -lc
 
-libubiprof.a: $(OBJ) $(DEPS)  
+libubiprof.a: build distorm
 	mkdir temp;cd temp; $(AR) -x ../$(DEPS)
 	$(AR) rc libubiprof.a  $(OBJ) $(INST_OBJ) temp/*.o
 
@@ -47,12 +47,11 @@ install:
 	-rm -r $(INSTALL)
 	mkdir $(INSTALL)
 	make libubiprof.so
-	make libubiprof.a
 	cp libubiprof.so $(INSTALL) 
 	cp libubiprof.a $(INSTALL) 
 
-distorm: ../../deps/distorm/distorm3.a
-	cd ../../../deps/distorm/make/linux;make clean;make CC=$(COMP)
+distorm: 
+	cd ../../deps/distorm/make/linux;make clean;make CC=$(CCC)
 
 .cpp.o:
 	  $(CPP) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
