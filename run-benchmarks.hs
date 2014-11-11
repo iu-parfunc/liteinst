@@ -68,6 +68,8 @@ benches =
                              , ("perl-5.8.7",  baseVariants)
                             -- , ("raxml",       baseVariants)
                              , ("hmmer",       baseVariants)
+                             , ("sjeng",       baseVariants)
+                             , ("lbm",         baseVariants)
 
                              ]
     -- Here are the Ubiprof benches
