@@ -208,7 +208,7 @@ void SamplingProfiler::dumpStatistics() {
     }
 
     fprintf(fp, "Function id : %d Count %lu Deactivation Count : %d Avg time (cycles) : %lu\n", func_id,  g_stat->count, 
-        g_stat->deactivation_count, g_stat->count / g_stat->total_time); 
+        g_stat->deactivation_count, g_stat->total_time / g_stat->count); 
 
   }
 
