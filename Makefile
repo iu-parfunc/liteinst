@@ -67,10 +67,10 @@ all: lib run-benchmarks.exe
 # INST_OBJS := $(patsubst %.cpp,%.o,$(wildcard ./instrumentors/finstrument/src/*.cpp))
 
 lib:
-	# (cd instrumentors/finstrument/src/; make)
-	# (cd profilers/src/; make install)
-	(cd ./zcatoggle/src; make install; make docs)
-	(cd ./dynaprof/src; make install)
+	(cd instrumentors/finstrument/src/; make)
+	(cd profilers/src/; make install)
+	# (cd ./zcatoggle/src; make install; make docs)
+	# (cd ./dynaprof/src; make install)
 
 
 # Run the benchmarks
