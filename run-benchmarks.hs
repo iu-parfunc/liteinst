@@ -38,7 +38,7 @@ SAMPLE_SIZE="100,1000,10000,100000"
 
 main :: IO ()
 main = do
-  putStrLn "Begin Dynaprof profiling benchmarks..."
+  putStrLn "Begin Ubiprof profiling benchmarks..."
   defaultMainModifyConfig $ \ conf ->
     conf{ benchlist  = benches
                        -- 1 hour timeout
@@ -70,9 +70,9 @@ benches =
                              , ("hmmer",       baseVariants)
 
                              ]
-    -- Here are the Dynaprof benches
+    -- Here are the Ubiprof benches
     , (varname,variant) <- [ (v, setVariant v) | v <- coreVariants ] ++
-                           [ ("dynaprof", Or [ sampling 
+                           [ ("ubiprof", Or [ sampling 
                                              , backoff  
                                              ]) ]
     ]

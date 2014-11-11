@@ -51,7 +51,7 @@ install:
 	cp libubiprof.so $(INSTALL) 
 	cp libubiprof.a $(INSTALL) 
 
-distorm: 
+distorm: ../../deps/distorm/distorm3.a
 	cd ../../../deps/distorm/make/linux;make clean;make CC=$(COMP)
 
 .cpp.o:
