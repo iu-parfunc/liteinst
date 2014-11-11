@@ -4,9 +4,10 @@ inline void foo() {
  printf("foo\n");
 }
  
-__attribute__((always_inline))
+// __attribute__((always_inline))
 int inc (int *a){
  (*a)++;
+ printf("a is %d\n", *a);
 }
 
 int main() {
@@ -14,6 +15,7 @@ int main() {
  // foo();
  //foo();
  int x = 0;
+ inc(&x); 
  inc(&x); 
  inc(&x); 
  inc(&x); 

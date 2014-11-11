@@ -127,7 +127,7 @@ inline int gen_stub_code(unsigned char* addr, unsigned char* probe_loc, void (*t
   // printf("ann_info->expr : %p\n", (*ann_info)->expr);
   // printf("ann_info->expr : %s\n", ((*ann_info)->expr));
 
-  a.xor_(rdx,rdx);
+  a.xor_(rdi,rdi);
   a.mov(rdx, imm((sysint_t)func_id));
 
   // a.push(ecx);
@@ -432,7 +432,7 @@ void setupStubs()
     std::list<ann_data*>* ann_list = iter->second;
     // printf("String %d: %s\n", i, iter->first);
 
-    for (std::list<ann_data*>::iterator it =  ann_list->begin(); it != ann_list->end(); ++it) {
+    for (std::list<ann_data*>::iterator it =  ann_list->begin(); it != ann_list->end(); it++) {
       ann_data* data = *it;
       unsigned char* probe_address = (unsigned char*) (data->anchor);
       // ann_data* ann_info = data.second;

@@ -63,6 +63,10 @@ trace_end (void)
  fclose(fp_trace);
  }
 }
+
+void print_fn() {
+  printf("Hello world!!\n");
+}
  
 void
 __cyg_profile_func_enter (void *func,  void *caller)

@@ -33,7 +33,6 @@ INSTALL = ../../build
 
 libubiprof.so: libubiprof.a 
 	$(CC) $(LIBS) -shared -Wl,-soname,libubiprof.so -o libubiprof.so $(OBJ) $(INST_OBJ) $(DEPS) -lc
-	#$(CC) $(LIBS) -shared -Wl,-soname,libubiprof.so -Wl,-init,initProfiler -o libubiprof.so $(OBJ) $(INST_OBJ) $(DEPS) -lc
 
 libubiprof.a: build distorm
 	mkdir temp;cd temp; $(AR) -x ../$(DEPS)

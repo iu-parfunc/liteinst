@@ -14,6 +14,9 @@ static __inline__ unsigned long long getticks(void)
 void myEmptyFunc( void )
 {
     __notify_intrinsic((void*)"myEmptyFunc:start", (void *)&global_x);
+    __notify_intrinsic((void*)"myEmptyFunc:end", (void *)&global_x);
+    __notify_intrinsic((void*)"myEmptyFunc:end", (void *)&global_x);
+    __notify_intrinsic((void*)"myEmptyFunc:end", (void *)&global_x);
     return;
 }
 
