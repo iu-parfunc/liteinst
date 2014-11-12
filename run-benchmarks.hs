@@ -42,7 +42,7 @@ main = do
   defaultMainModifyConfig $ \ conf ->
     conf{ benchlist  = benches
                        -- long timeout 
-        , runTimeOut = Just 3600 -- Erk... need a separate compile timeout.
+        , runTimeOut = Just 600 -- Erk... need a separate compile timeout.
         , plugIns   = [ SomePlugin defaultFusionPlugin,
                         SomePlugin defaultDribblePlugin ]
         }
