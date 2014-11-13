@@ -16,7 +16,9 @@ class Profiler {
     static Profiler* getInstance(int type);
     virtual void initialize() = 0;
     virtual int activateFunction(void* id);
+    virtual int activateFunctionByName(void* id);
     virtual int deactivateFunction(void* id);
+    virtual int deactivateFunctionByName(void* id);
     virtual void startProfiler();
     virtual void stopProfiler();
     virtual void dumpStatistics() = 0;

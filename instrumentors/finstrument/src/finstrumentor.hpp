@@ -75,7 +75,9 @@ class Finstrumentor : public Instrumentor {
     Finstrumentor(InstrumentationFunc prologFunc, InstrumentationFunc epilogFunc); 
     void initialize();
     int activateProbe(void* id, int type);
+    int activateProbeByName(void* id, int type);
     int deactivateProbe(void* id, int type);
+    int deactivateProbeByName(void* id, int type);
     virtual ~Finstrumentor();
 
 };

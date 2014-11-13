@@ -365,7 +365,7 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
   uint16_t func_id = get_func_id((uint64_t)func);
 
-  init_probe_info((uint64_t)func_id, (uint8_t*)addr);
+  init_probe_info((uint64_t)func, (uint8_t*)addr);
 
   // Delegates to actual profiler code
   prologFunction(func_id);
@@ -416,7 +416,7 @@ void __cyg_profile_func_exit(void* func, void* caller) {
 
   uint16_t func_id = get_func_id((uint64_t)func);
 
-  init_probe_info((uint64_t)func_id, (uint8_t*)addr);
+  init_probe_info((uint64_t)func, (uint8_t*)addr);
 
   // Delegates to actual profiler code
   epilogFunction(func_id);
