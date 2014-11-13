@@ -1,0 +1,17 @@
+
+int main()
+{
+    unsigned long int i;
+    struct timespec start, stop;
+    double cycleTime, hzRate;
+    hzRate=(double)1866000000;
+    unsigned long long tick1,tick2,cycles;
+
+    printf("Initializing DynaProf...\n");
+    printf("Done.\n");
+
+    invoke();
+
+    clock_gettime( CLOCK_REALTIME, &start);
+    tick1=getticks();
+
