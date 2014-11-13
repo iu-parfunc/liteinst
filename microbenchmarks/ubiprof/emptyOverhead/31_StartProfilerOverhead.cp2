@@ -51,11 +51,8 @@ int main(int argc, char** argv)
       minInterval = getticks() - t1;
       printf("Min rdtsc interval measured as: %ld\n", minInterval);
       if (minInterval < minminInterval)
-	      minminInterval = minInterval;
+	minminInterval = minInterval;
     }
-
-    double ticksPerSecond = calibrateTicks();
-    printf("\n Ticks per second : %ld\n", ticksPerSecond);
 
     int NUMFUNS  = atoi(argv[1]);
     int NUMCALLS = atoi(argv[2]);

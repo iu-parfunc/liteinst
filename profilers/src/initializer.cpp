@@ -7,6 +7,7 @@
 
 #define FIXED_BACKOFF 0
 #define SAMPLING 1
+#define EMPTY 2
 
 /* Global to hold the profiler type */
 int profiler_type = 0;
@@ -24,6 +25,9 @@ __attribute__((constructor))
       } else if (!strcmp(profiler_type_str, "SAMPLING")) {
         fprintf(stderr, "[Ubiprof] Intializing the SamplingProfiler..\n");
         profiler_type = SAMPLING;
+      } else if (!strcmp(profiler_type_str, "EMPTY")) {
+        fprintf(stderr, "[Ubiprof] Intializing the SamplingProfiler..\n");
+        profiler_type = EMPTY;
       } else {
         fprintf(stderr, "[Ubiprof] Intializing the SamplingProfiler..\n");
         profiler_type = SAMPLING;

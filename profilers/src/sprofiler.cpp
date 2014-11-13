@@ -195,6 +195,7 @@ void SamplingProfiler::dumpStatistics() {
 
   FILE* fp = fopen("prof.out", "a");
 
+  uint64_t total_count = 0;
   for (auto iter = statistics->begin(); iter != statistics->end(); iter++) {
     SamplingProfilerStat* g_stat = iter->second;
     int func_id = g_stat->func_id;
@@ -207,10 +208,15 @@ void SamplingProfiler::dumpStatistics() {
       g_stat->total_time += tls_stat->find(func_id)->second->total_time;
     }
 
+    total_count += g_stat->count;
+
     fprintf(fp, "Function id : %d Count %lu Deactivation Count : %d Avg time (cycles) : %lu\n", func_id,  g_stat->count, 
         g_stat->deactivation_count, g_stat->total_time / g_stat->count); 
 
   }
+
+  fprintf(fp, "\n CALLED_FUNCTIONS : %lu\n", total_count);
+  fprintf(stderr, "\n CALLED_FUNCTIONS : %lu\n", total_count);
 
   fclose(fp);
 

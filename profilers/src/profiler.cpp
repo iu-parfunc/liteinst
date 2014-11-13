@@ -3,6 +3,7 @@
 #include "profiler.hpp"
 #include "fprofiler.hpp"
 #include "sprofiler.hpp"
+#include "eprofiler.hpp"
 
 #define FINSTRUMENT 0
 
@@ -11,12 +12,16 @@ void* stats = 0;
 
 Profiler* Profiler::getInstance(int type) {
 
+  // TODO: Change to proper constants. Use constants.h
   if(!PROFILER_INSTANCE) {
     if (type == 0) {
       PROFILER_INSTANCE = new BackoffProfiler();
       PROFILER_INSTANCE->initialize();
     } else if (type == 1) {
       PROFILER_INSTANCE = new SamplingProfiler();
+      PROFILER_INSTANCE->initialize();
+    } else if (type == 2) {
+      PROFILER_INSTANCE = new EmptyProfiler();
       PROFILER_INSTANCE->initialize();
     }
   }

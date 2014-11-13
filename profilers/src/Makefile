@@ -16,7 +16,7 @@ OPTS =
 
 DEPS = ../../deps/distorm/distorm3.a
 
-CODE = fprofiler.cpp sprofiler.cpp profiler.cpp initializer.cpp 
+CODE = fprofiler.cpp sprofiler.cpp eprofiler.cpp profiler.cpp initializer.cpp 
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 
