@@ -45,6 +45,10 @@ main = do
         , runTimeOut = Just 600 -- Erk... need a separate compile timeout.
         , plugIns   = [ SomePlugin defaultFusionPlugin,
                         SomePlugin defaultDribblePlugin ]
+        , harvesters = customTagHarvesterInt    "NUM_PROBES"              `mappend` 
+                       customTagHarvesterInt    "CALLED_FUNCTIONS"        `mappend` 
+                       harvesters conf
+
         }
 
 epochs :: [Int] 
