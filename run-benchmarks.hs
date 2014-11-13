@@ -59,7 +59,10 @@ samplesize = [100,1000,10000,100000]
 
 
 benches :: [Benchmark DefaultParamMeaning]
-benches = 
+benches =
+  [ (mkBenchmark ("benchmarks/"++name++"/ubiprof/Makefile") [] strangeVariant)
+  | name <- [ "bzip-1.0.3"
+            , "perl-5.8.7"]] ++ 
   [ (mkBenchmark ("benchmarks/"++name++"/"++varname++"/Makefile") [] variant) 
      { progname = Just name }
     -- All benchmarks support the basic variants, but grep/gzip also support pebil/pin:
@@ -83,6 +86,10 @@ benches =
   where baseVariants = ["gprof", "unprofiled" ]
         moreVariants = baseVariants ++ ["pebil", "pin", "oprofile"]
         setVariant str = (And [Set (Variant str) (CompileParam "")])
+
+strangeVariant = Or [And [ Set (Variant ("MicroBench")) (RuntimeEnv "PROFILER_TYPE" "FIXED_BACKOFF")
+                   , Set NoMeaning (RuntimeEnv "SAMPLE_SIZE" (show 100000))]
+                   ]
 
 sampling = Or [And [ Set (Variant ("Sampling_"++show s_size++"_"++show epoch)) (RuntimeEnv "PROFILER_TYPE" "SAMPLING")
                    , Set NoMeaning (RuntimeEnv "SAMPLE_SIZE" (show s_size))
