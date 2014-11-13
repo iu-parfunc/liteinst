@@ -37,14 +37,25 @@ void Finstrumentor::initialize() {
   this->probe_info = new probe_map; 
 }
 
+
+int Finstrumentor::activateProbeByName(void* probe_id, int flag) {
+
+  uint64_t func_addr = (uint64_t)probe_id;
+  uint64_t func_id =  functions->find(func_addr)->second;
+
+  return activateProbe(&func_id, flag);
+
+}
+
 // Here probe_id is actually function id. We only have function level 
 // probe toggling granularity at the moment
 // TODO : Protect this call with a lock
 int Finstrumentor::activateProbe(void* probe_id, int flag) {
 
   uint16_t func_id = *(uint16_t*)probe_id;
+  uint64_t func_addr =  function_ids->find(func_id)->second;
 
-  std::list<FinsProbeInfo*>* ls = probe_info->find(func_id)->second;  
+  std::list<FinsProbeInfo*>* ls = probe_info->find(func_addr)->second;  
   for (std::list<FinsProbeInfo*>::iterator it = ls->begin(); it != ls->end(); it++) {
     FinsProbeInfo* info = *it;
 
@@ -74,17 +85,26 @@ int Finstrumentor::activateProbe(void* probe_id, int flag) {
 
 }
 
+int Finstrumentor::deactivateProbeByName(void* probe_id, int flag) {
+
+  uint64_t func_addr = (uint64_t)probe_id;
+  uint64_t func_id =  functions->find(func_addr)->second;
+
+  return deactivateProbe(&func_id, flag);
+
+}
+
 // Here probe_id is actually function id. We only have function level 
 // probe toggling granularity at the moment
 // TODO : Protect this call with a lock
 int Finstrumentor::deactivateProbe(void* probe_id, int flag) {
 
   uint16_t func_id = *(uint16_t*)probe_id;
+  uint64_t func_addr =  function_ids->find(func_id)->second;
   // fprintf(stderr, "Deactivating the probes for function %d..\n", func_id);
   // fprintf(stderr, "probe_info address is : %p\n", probe_info);
 
-
-  std::list<FinsProbeInfo*>* ls = probe_info->find(func_id)->second;  
+  std::list<FinsProbeInfo*>* ls = probe_info->find(func_addr)->second;  
 
   // fprintf(stderr, "List address for func id %d : %p\n", func_id, ls);
   int count = 0;

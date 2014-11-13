@@ -17,7 +17,9 @@ class Instrumentor {
   public :
     static Instrumentor* getInstance(int type, InstrumentationFunc prolog, InstrumentationFunc epilog); 
     virtual void initialize() = 0;
+    virtual int activateProbeByName(void* id, int type) = 0;
     virtual int activateProbe(void* id, int type) = 0;
+    virtual int deactivateProbeByName(void* id, int type) = 0;
     virtual int deactivateProbe(void* id, int type) = 0;
     // virtual void* get_profiler_epilog() = 0;
     // virtual void* get_profiler_prolog() = 0;

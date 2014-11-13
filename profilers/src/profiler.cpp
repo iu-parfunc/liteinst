@@ -41,9 +41,22 @@ int Profiler::activateFunction(void* id) {
 
 }
 
+int Profiler::activateFunctionByName(void* id) {
+
+  return ins->activateProbeByName(id, FUNC);
+
+}
+
+
 int Profiler::deactivateFunction(void* id) {
 
   return ins->deactivateProbe(id, FUNC);
+
+}
+
+int Profiler::deactivateFunctionByName(void* id) {
+
+  return ins->deactivateProbeByName(id, FUNC);
 
 }
 
