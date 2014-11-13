@@ -47,10 +47,8 @@ main = do
                         SomePlugin defaultDribblePlugin ]
         }
 
-
-
 epochs :: [Int] 
-epochs = [1,10,100,1000]
+epochs = [100,250,500,750,1000,2500,5000]
 
 samplesize :: [Int] 
 samplesize = [100,1000,10000,100000]
