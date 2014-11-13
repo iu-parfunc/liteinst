@@ -26,7 +26,7 @@ compile:
 
 run:
 	# PROFILER_TYPE=NO_BACKOFF time taskset -c $(CPU) ./31_StartProfilerOverhead.exe ${RUN_ARGS}
-	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) PROFILER_TYPE=FIXED_BACKOFF SAMPLE_SIZE=1000000000 time ./31_StartProfilerOverhead.exe ${RUN_ARGS}
+	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) PROFILER_TYPE=FIXED_BACKOFF SAMPLE_SIZE=1000000000 time taskset -c $(CPU) ./31_StartProfilerOverhead.exe ${RUN_ARGS}
 
 test:
 	$(MAKE) run RUN_ARGS="1 1000 1000"

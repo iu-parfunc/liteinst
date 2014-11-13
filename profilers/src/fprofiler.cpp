@@ -8,6 +8,7 @@ using namespace std;
 /* Globals for this profiler */
 uint64_t fb_sample_size;
 
+
 // Thread local statistics table
 __thread static TLSBackoffProfilerStats* sampling_thread_stats;
 
@@ -38,8 +39,8 @@ void backoffPrologFunction(uint16_t func_id) {
     stat->func_id = func_id;
     stat->count = 1;
     stat->total_time = 0;
-    stat->start_timestamp = getticks();
     sampling_thread_stats->insert(make_pair(func_id, stat));
+    stat->start_timestamp = getticks();
   } else {
     TLSBackoffProfilerStat* stat = sampling_thread_stats->find(func_id)->second;
     stat->start_timestamp = getticks();
@@ -48,11 +49,13 @@ void backoffPrologFunction(uint16_t func_id) {
 }
 
 void backoffEpilogFunction(uint16_t func_id) {
+  
+  TLSBackoffProfilerStat* tls_stat = sampling_thread_stats->find(func_id)->second;
+  ticks elapsed = getticks() - tls_stat->start_timestamp;
+  tls_stat->total_time += elapsed;
 
   BackoffProfilerStats* g_stats = (BackoffProfilerStats*) stats;
   BackoffProfilerStat* g_stat = g_stats->find(func_id)->second;
-
-  TLSBackoffProfilerStat* tls_stat = sampling_thread_stats->find(func_id)->second;
 
   int thread_count = ((BackoffProfiler*)PROFILER_INSTANCE)->getThreadCount();
   TLSBackoffProfilerStats** tls_stats = ((BackoffProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
@@ -61,13 +64,9 @@ void backoffEpilogFunction(uint16_t func_id) {
   TLSBackoffProfilerStat* stat = sampling_thread_stats->find(func_id)->second;
   stat->count++;
 
-
   for (int i=0; i < thread_count; i++) {
     global_count += tls_stats[i]->find(func_id)->second->count;
   }
-
-  ticks elapsed = getticks() - tls_stat->start_timestamp;
-  tls_stat->total_time += elapsed;
 
   if (global_count >= fb_sample_size) {
     if (__sync_bool_compare_and_swap(&(g_stat->lock), 0 , 1)) {
@@ -128,6 +127,7 @@ void BackoffProfiler::dumpStatistics() {
 
   FILE* fp = fopen("prof.out", "a");
 
+  uint64_t total_count = 0;
   for(auto iter = statistics->begin(); iter != statistics->end(); iter++) {
     BackoffProfilerStat* g_stat = iter->second;
     int func_id = g_stat->func_id;
@@ -140,9 +140,14 @@ void BackoffProfiler::dumpStatistics() {
       g_stat->total_time += tls_stat->find(func_id)->second->total_time;
     }
 
+    total_count = g_stat->count;
+
     fprintf(fp, "Function id : %d Count %lu Avg time (cycles) : %lu\n", 
         g_stat->func_id, g_stat->count, g_stat->total_time / g_stat->count);
   }
+
+  fprintf(fp, "\n CALLED_FUNCTIONS : %lu\n", total_count);
+  fprintf(stderr, "\n CALLED_FUNCTIONS : %lu\n", total_count);
 
   fclose(fp);
 
