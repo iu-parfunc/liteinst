@@ -151,6 +151,10 @@ int Finstrumentor::deactivateProbe(void* probe_id, int flag) {
 
 }
 
+functionInfo* Finstrumentor::readFunctionInfo() {
+  return NULL;
+}
+
 Finstrumentor::~Finstrumentor() {
   fprintf(stderr, "NUM_PROBES : %lu\n", ((Finstrumentor*) INSTRUMENTOR_INSTANCE)->probe_info->size()); 
   delete this->probe_info;

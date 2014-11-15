@@ -59,6 +59,12 @@ extern "C"
   extern void* probeInfo;
 }
 #endif
+
+typedef struct functionInfo {
+  char* address_vector; // Using char* since we CMP needs that way
+  std::map<uint64_t, char*> func_names;
+} functionInfo;
+
   
 class Finstrumentor : public Instrumentor {
 
@@ -79,6 +85,9 @@ class Finstrumentor : public Instrumentor {
     int deactivateProbe(void* id, int type);
     int deactivateProbeByName(void* id, int type);
     virtual ~Finstrumentor();
+
+  private:
+    functionInfo* readFunctionInfo();
 
 };
 
