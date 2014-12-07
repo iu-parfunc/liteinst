@@ -4,6 +4,7 @@
 
 #include "../../../api/probe_API.hpp"
 #include <cstdint> 
+#include <string>
 #include <list>
 #include <unordered_map>
 #include <map>
@@ -47,6 +48,14 @@ extern func_table functions;
 typedef std::map<uint16_t, uint64_t> func_id_table;
 extern func_id_table function_ids;
 
+typedef struct FunctionInfo {
+  uint16_t func_id;
+  uint64_t func_addr;
+  std::string func_name;
+} FunctionInfo;
+
+typedef std::map<uint64_t, FunctionInfo*> FuncAddrMappings;
+typedef std::map<uint16_t, FunctionInfo*> FuncIDMappings;
 
 extern volatile uint16_t func_id_counter;
 
@@ -60,12 +69,6 @@ extern "C"
 }
 #endif
 
-typedef struct functionInfo {
-  char* address_vector; // Using char* since we CMP needs that way
-  std::map<uint64_t, char*> func_names;
-} functionInfo;
-
-  
 class Finstrumentor : public Instrumentor {
 
   public :
@@ -84,10 +87,15 @@ class Finstrumentor : public Instrumentor {
     int activateProbeByName(void* id, int type);
     int deactivateProbe(void* id, int type);
     int deactivateProbeByName(void* id, int type);
+    uint16_t getFunctionId(uint64_t addr);
+    uint64_t getFunctionAddress(uint16_t id);
+    std::string getFunctionName(uint16_t id);
     virtual ~Finstrumentor();
 
   private:
-    functionInfo* readFunctionInfo();
+    FuncAddrMappings* func_addr_mappings;
+    FuncIDMappings* func_id_mappings;
+    void readFunctionInfo();
 
 };
 

@@ -7,6 +7,7 @@ int global_x;
 
 const int NANO_SECONDS_IN_SEC = 1000000000;
 
+__attribute__ ((no_instrument_function))
 static __inline__ unsigned long long getticks(void)
 {
     unsigned long long int x;

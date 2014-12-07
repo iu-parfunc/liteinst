@@ -29,7 +29,7 @@ run:
 	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) PROFILER_TYPE=FIXED_BACKOFF SAMPLE_SIZE=1000000000 time taskset -c $(CPU) ./31_StartProfilerOverhead.exe ${RUN_ARGS}
 
 test:
-	$(MAKE) run RUN_ARGS="1 1000 1000"
+	$(MAKE) run RUN_ARGS="1 10 1000"
 
 lots:
 	for ((i=0; i < $(LOTS); i++)); do make run RUN_ARGS="1 1 0" 2>1 | grep SELFTIMED: ; done \

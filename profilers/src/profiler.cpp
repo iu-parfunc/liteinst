@@ -8,19 +8,19 @@
 #define FINSTRUMENT 0
 
 Profiler* PROFILER_INSTANCE = 0;
-void* stats = 0;
+void* g_ubiprof_stats = 0;
 
 Profiler* Profiler::getInstance(int type) {
 
   // TODO: Change to proper constants. Use constants.h
   if(!PROFILER_INSTANCE) {
-    if (type == 0) {
+    if (type == BACKOFF) {
       PROFILER_INSTANCE = new BackoffProfiler();
       PROFILER_INSTANCE->initialize();
-    } else if (type == 1) {
+    } else if (type == SAMPLING) {
       PROFILER_INSTANCE = new SamplingProfiler();
       PROFILER_INSTANCE->initialize();
-    } else if (type == 2) {
+    } else if (type == EMPTY) {
       PROFILER_INSTANCE = new EmptyProfiler();
       PROFILER_INSTANCE->initialize();
     }

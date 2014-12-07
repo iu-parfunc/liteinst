@@ -13,7 +13,7 @@ uint64_t sp_sample_size;
 uint64_t sp_epoch_period;
 
 // Thread local statistics table 
-__thread static TLSSamplingProfilerStats* sampling_thread_stats;
+__thread static TLSSamplingProfilerStat* sampling_thread_stats;
 
 // Instrumentation Functions
 void samplingPrologFunction(uint16_t func_id) {
@@ -21,13 +21,17 @@ void samplingPrologFunction(uint16_t func_id) {
   __thread static bool allocated;
 
   if (!allocated) {
-    sampling_thread_stats = new TLSSamplingProfilerStats;
     allocated = true;
+    // C++ value initilization.. Similar to calloc
+    sampling_thread_stats = new TLSSamplingProfilerStat[INSTRUMENTOR_INSTANCE->getFunctionCount()]();
 
     ((SamplingProfiler*)PROFILER_INSTANCE)->registerThreadStatistics(sampling_thread_stats);
   }
 
-  SamplingProfilerStats* g_stats = (SamplingProfilerStats*) stats;
+  sampling_thread_stats[func_id].start_timestamp = getticks();
+
+  /*
+  SamplingProfilerStat* g_stats = (SamplingProfilerStat*) g_ubiprof_stats;
 
   if (g_stats->find(func_id) == g_stats->end()) {
     SamplingProfilerStat* stat = new SamplingProfilerStat;
@@ -52,39 +56,43 @@ void samplingPrologFunction(uint16_t func_id) {
     TLSSamplingProfilerStat* stat = sampling_thread_stats->find(func_id)->second;
     stat->start_timestamp = getticks();
   }
+  
+  */
 
 }
 
 void samplingEpilogFunction(uint16_t func_id) {
 
-  SamplingProfilerStats* g_stats = (SamplingProfilerStats*) stats;
-  SamplingProfilerStat* g_stat = g_stats->find(func_id)->second;
+  ticks end = getticks();
+
+  SamplingProfilerStat* g_stats = (SamplingProfilerStat*) g_ubiprof_stats;
+  // SamplingProfilerStat* g_stat = g_stats->find(func_id)->second;
   
-  TLSSamplingProfilerStat* tls_stat = sampling_thread_stats->find(func_id)->second;
+  // TLSSamplingProfilerStat* tls_stat = sampling_thread_stats->find(func_id)->second;
 
   int thread_count = ((SamplingProfiler*)PROFILER_INSTANCE)->getThreadCount(); 
-  TLSSamplingProfilerStats** tls_stats = ((SamplingProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
+  TLSSamplingProfilerStat** tls_stats = ((SamplingProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
 
   // We do this at epilog itself to get an accurate count than a periodically accumilated count by the probe monitor thread
   uint64_t global_count = 0;
-  TLSSamplingProfilerStat* stat = sampling_thread_stats->find(func_id)->second;
-  stat->count++;
+  // TLSSamplingProfilerStat* stat = sampling_thread_stats->find(func_id)->second;
+  sampling_thread_stats[func_id].count++;
 
   for (int i=0; i < thread_count; i++) {
-    global_count += tls_stats[i]->find(func_id)->second->count; 
+    global_count += tls_stats[i][func_id].count; 
   }
 
-  uint64_t new_count = global_count - g_stat->count_at_last_activation; 
+  uint64_t new_count = global_count - g_stats[func_id].count_at_last_activation; 
 
-  ticks elapsed = getticks() - tls_stat->start_timestamp;
-  tls_stat->total_time += elapsed;
+  ticks elapsed = end - sampling_thread_stats[func_id].start_timestamp;
+  sampling_thread_stats[func_id].total_time += elapsed;
   if (new_count >= sp_sample_size) {
-    if (__sync_bool_compare_and_swap(&(g_stat->lock), 0 , 1)) {
+    if (__sync_bool_compare_and_swap(&(g_stats[func_id].lock), 0 , 1)) {
       PROFILER_INSTANCE->deactivateFunction(&func_id);
-      g_stat->count_at_last_activation = global_count;
-      g_stat->deactivation_count++;
-      g_stat->is_active = false;
-      __sync_bool_compare_and_swap(&(g_stat->lock), 1 , 0);
+      g_stats[func_id].count_at_last_activation = global_count;
+      g_stats[func_id].deactivation_count++;
+      g_stats[func_id].is_active = false;
+      __sync_bool_compare_and_swap(&(g_stats[func_id].lock), 1 , 0);
     }
   }
 
@@ -93,7 +101,7 @@ void samplingEpilogFunction(uint16_t func_id) {
 // Probe monitor
 void* samplingProbeMonitor(void* param) {
 
-  SamplingProfilerStats* g_stats = (SamplingProfilerStats*) stats;
+  SamplingProfilerStat* g_stats = (SamplingProfilerStat*) g_ubiprof_stats;
 
   uint64_t nanos = sp_epoch_period * 1000000; 
   uint64_t secs = nanos / 1000000000;
@@ -104,6 +112,17 @@ void* samplingProbeMonitor(void* param) {
   ts.tv_nsec = nsecs;
 
   while(true) {
+    int func_count = INSTRUMENTOR_INSTANCE->getFunctionCount();
+    for(int i = 0; i < func_count; i++) {
+      if (!g_stats[i].is_active) {
+        PROFILER_INSTANCE->activateFunction(&i);
+        g_stats[i].is_active = true;
+      }
+    }
+
+    nanosleep(&ts, NULL);
+
+    /*
     for(auto iter = g_stats->begin(); iter != g_stats->end(); iter++) {
       SamplingProfilerStat* func_stat = iter->second;
 
@@ -116,21 +135,27 @@ void* samplingProbeMonitor(void* param) {
 
       nanosleep(&ts, NULL);
     }
+    */
   }
-
 }
 
 // Profiler implementation 
 void SamplingProfiler::initialize() {
 
   Profiler::initInstrumentor(samplingPrologFunction, samplingEpilogFunction);
-  statistics = new SamplingProfilerStats;
+
+  int func_count = ins->getFunctionCount();
+  statistics = new SamplingProfilerStat[func_count](); // C++ value initialization. Similar to calloc
+
+  for (int i=0; i < func_count; i++) {
+    statistics[i].is_active = true;
+  }
 
   // Leaking the reference to the global variable so that 
   // instrumentaion functions can access it without going through object reference
-  stats = statistics; 
+  g_ubiprof_stats = statistics; 
   // tls_stats = calloc(64, sizeof(TLSSamplingProfilerStats*));
-  tls_stats = new TLSSamplingProfilerStats*[64]; 
+  tls_stats = new TLSSamplingProfilerStat*[64](); // C++ value initialization. Similar to calloc 
 
   char* sample_size_str = getenv("SAMPLE_SIZE");
   if (sample_size_str != NULL) {
@@ -171,7 +196,7 @@ void SamplingProfiler::spawnMonitor() {
 
 }
 
-void SamplingProfiler::registerThreadStatistics(TLSSamplingProfilerStats* stats) {
+void SamplingProfiler::registerThreadStatistics(TLSSamplingProfilerStat* stats) {
 
   if (thread_counter+ 1 < 64) {
     tls_stats[thread_counter++] = stats;
@@ -185,7 +210,7 @@ int SamplingProfiler::getThreadCount() {
   return thread_counter;
 }
 
-TLSSamplingProfilerStats** SamplingProfiler::getThreadStatistics() {
+TLSSamplingProfilerStat** SamplingProfiler::getThreadStatistics() {
   return tls_stats;
 }
 
@@ -196,26 +221,28 @@ void SamplingProfiler::dumpStatistics() {
   FILE* fp = fopen("prof.out", "a");
 
   uint64_t total_count = 0;
-  for (auto iter = statistics->begin(); iter != statistics->end(); iter++) {
-    SamplingProfilerStat* g_stat = iter->second;
-    int func_id = g_stat->func_id;
-    g_stat->count = 0;
-    g_stat->total_time = 0;
+  int func_count = ins->getFunctionCount();
+  fprintf(stderr, "\nTotal function count : %d\n", func_count);
+  fprintf(stderr, "Thread count : %d\n", thread_counter);
+  for(int i=0; i < func_count; i++) {
+    statistics[i].count = 0;
+    statistics[i].total_time = 0;
 
-    for (int i = 0; i < thread_counter; i++) {
-      TLSSamplingProfilerStats* tls_stat = tls_stats[i];
-      g_stat->count += tls_stat->find(func_id)->second->count;
-      g_stat->total_time += tls_stat->find(func_id)->second->total_time;
+    for(int j=0; j < thread_counter; j++) {
+      TLSSamplingProfilerStat* tls_stat = tls_stats[j];
+      statistics[i].count += tls_stat[i].count;
+      statistics[i].total_time += tls_stat[i].total_time;
     }
 
-    total_count += g_stat->count;
+    total_count += statistics[i].count;
 
-    fprintf(fp, "Function id : %d Count %lu Deactivation Count : %d Avg time (cycles) : %lu\n", func_id,  g_stat->count, 
-        g_stat->deactivation_count, g_stat->total_time / g_stat->count); 
-
+    if (statistics[i].count != 0) {
+      fprintf(fp, "Function Name : %s Count %lu Deactivation Count : %d Avg time (cycles) : %lu\n", 
+          ins->getFunctionName(i).c_str(),  statistics[i].count, 
+          statistics[i].deactivation_count, statistics[i].total_time / statistics[i].count); 
+    }
   }
 
-  fprintf(fp, "\n CALLED_FUNCTIONS : %lu\n", total_count);
   fprintf(stderr, "\n CALLED_FUNCTIONS : %lu\n", total_count);
 
   fclose(fp);
@@ -225,6 +252,11 @@ void SamplingProfiler::dumpStatistics() {
 SamplingProfiler::~SamplingProfiler() {
   dumpStatistics();
   Profiler::cleanupInstrumentor();
-  delete (SamplingProfilerStats*)stats;
+  delete (SamplingProfilerStat*)g_ubiprof_stats;
+
+  for (int i = 0; i < 64; i++) {
+    delete tls_stats[i];
+  }
+
   delete tls_stats;
 }

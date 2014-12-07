@@ -1,8 +1,16 @@
 
-#include "cstdio"
 #include "finstrumentor.hpp"
 #include "patch_utils.hpp"
 #include "dynamicarray.h"
+
+#include <stdlib.h>
+
+#include <cstdio>
+#include <vector>
+#include <string>
+#include <iostream>
+#include <fstream>
+#include <sstream>
 
 using namespace std;
 
@@ -35,25 +43,39 @@ void Finstrumentor::initialize() {
   this->functions = new func_table; 
   this->function_ids = new func_id_table;
   this->probe_info = new probe_map; 
+
+  readFunctionInfo();
 }
 
-
+/*
+ * Parameters :
+ * probe_id = This is the address of the function
+ * flag = Specifies which probes within the probe site to be disabled. Currently 
+ *        defaults to function start and end
+ */
 int Finstrumentor::activateProbeByName(void* probe_id, int flag) {
 
   uint64_t func_addr = (uint64_t)probe_id;
-  uint64_t func_id =  functions->find(func_addr)->second;
+  uint64_t func_id =  func_addr_mappings->find(func_addr)->second->func_id;
 
   return activateProbe(&func_id, flag);
 
 }
 
+/*
+ * Parameters :
+ * probe_id = This is an integer representing the function.To be used by profiler
+ *            implementations internally 
+ * flag = Specifies which probes within the probe site to be disabled. Currently 
+ *        defaults to function start and end
+ */
 // Here probe_id is actually function id. We only have function level 
 // probe toggling granularity at the moment
 // TODO : Protect this call with a lock
 int Finstrumentor::activateProbe(void* probe_id, int flag) {
 
   uint16_t func_id = *(uint16_t*)probe_id;
-  uint64_t func_addr =  function_ids->find(func_id)->second;
+  uint64_t func_addr =  func_id_mappings->find(func_id)->second->func_addr;
 
   std::list<FinsProbeInfo*>* ls = probe_info->find(func_addr)->second;  
   for (std::list<FinsProbeInfo*>::iterator it = ls->begin(); it != ls->end(); it++) {
@@ -85,22 +107,35 @@ int Finstrumentor::activateProbe(void* probe_id, int flag) {
 
 }
 
+/*
+ * Parameters :
+ * probe_id = This is the address of the function
+ * flag = Specifies which probes within the probe site to be disabled. Currently 
+ *        defaults to function start and end
+ */
 int Finstrumentor::deactivateProbeByName(void* probe_id, int flag) {
 
   uint64_t func_addr = (uint64_t)probe_id;
-  uint64_t func_id =  functions->find(func_addr)->second;
+  uint64_t func_id =  func_addr_mappings->find(func_addr)->second->func_id;
 
   return deactivateProbe(&func_id, flag);
 
 }
 
+/*
+ * Parameters :
+ * probe_id = This is an integer representing the function.To be used by profiler
+ *            implementations internally 
+ * flag = Specifies which probes within the probe site to be disabled. Currently 
+ *        defaults to function start and end
+ */
 // Here probe_id is actually function id. We only have function level 
 // probe toggling granularity at the moment
 // TODO : Protect this call with a lock
 int Finstrumentor::deactivateProbe(void* probe_id, int flag) {
 
   uint16_t func_id = *(uint16_t*)probe_id;
-  uint64_t func_addr =  function_ids->find(func_id)->second;
+  uint64_t func_addr =  func_id_mappings->find(func_id)->second->func_addr;
   // fprintf(stderr, "Deactivating the probes for function %d..\n", func_id);
   // fprintf(stderr, "probe_info address is : %p\n", probe_info);
 
@@ -124,12 +159,12 @@ int Finstrumentor::deactivateProbe(void* probe_id, int flag) {
     // fprintf(stderr, "Probe start address %04x\n", (info->probeStartAddr));
 
     /*
-    uint64_t sequence = *((uint64_t*)info->probeStartAddr);
-    uint64_t mask = 0x0000000000FFFFFF;
-    uint64_t deactiveSequence = (uint64_t) (sequence & mask); 
-    mask = 0x9090909090000000;
-    deactiveSequence = deactiveSequence | mask;
-    */
+       uint64_t sequence = *((uint64_t*)info->probeStartAddr);
+       uint64_t mask = 0x0000000000FFFFFF;
+       uint64_t deactiveSequence = (uint64_t) (sequence & mask); 
+       mask = 0x9090909090000000;
+       deactiveSequence = deactiveSequence | mask;
+       */
 
     // fprintf(stderr, "Active sequence %08x\n", info->activeSequence);
     // fprintf(stderr, "Deactive sequence %08x\n", info->deactiveSequence);
@@ -151,12 +186,69 @@ int Finstrumentor::deactivateProbe(void* probe_id, int flag) {
 
 }
 
-functionInfo* Finstrumentor::readFunctionInfo() {
-  return NULL;
+void tokenize(const string& str, vector<string>& tokens, const string& delimiters = " ") {
+  string::size_type lastPos = str.find_first_not_of(delimiters, 0);
+  string::size_type pos = str.find_first_of(delimiters, lastPos);
+
+  while (string::npos != pos || string::npos != lastPos)
+  {
+    tokens.push_back(str.substr(lastPos, pos - lastPos));
+    lastPos = str.find_first_not_of(delimiters, pos);
+    pos = str.find_first_of(delimiters, lastPos);
+  }
+}
+
+uint16_t Finstrumentor::getFunctionId(uint64_t func_addr) {
+  return func_addr_mappings->find(func_addr)->second->func_id;
+}
+
+uint64_t Finstrumentor::getFunctionAddress(uint16_t func_id) {
+  return func_id_mappings->find(func_id)->second->func_addr;
+}
+
+string Finstrumentor::getFunctionName(uint16_t func_id) {
+  return func_id_mappings->find(func_id)->second->func_name;
+}
+
+void Finstrumentor::readFunctionInfo() {
+
+  fprintf(stderr, "Initializing mappings data structure..\n");
+  func_addr_mappings = new FuncAddrMappings;
+  func_id_mappings = new FuncIDMappings;
+
+  string line;
+  ifstream fp ("functions.txt");
+  std::string::size_type sz = 16;
+
+  func_count = 0;
+  if (fp.is_open()) {
+    while (getline (fp,line)){
+      string token;
+      istringstream iss(line);
+
+      vector<string> tokens;
+      tokenize(line, tokens, ",");
+
+      FunctionInfo* func_info = new FunctionInfo;
+      // func_addr = (uint64_t) std::stol(tokens[0], &sz);
+      func_info->func_addr = (uint64_t) strtoul(tokens[0].c_str(), NULL, 16);
+      func_info->func_name = tokens[1];
+      func_info->func_id = func_count++;
+
+      fprintf(stderr, "[Finstrumentor] Got line  %s\n", line.c_str());
+      fprintf(stderr, "[Finstrumentor] Addr : %lx Func name : %s\n", func_info->func_addr, func_info->func_name.c_str());
+
+      func_addr_mappings->insert(make_pair(func_info->func_addr, func_info));
+      func_id_mappings->insert(make_pair(func_info->func_id, func_info));
+    }
+    fp.close();
+  }
 }
 
 Finstrumentor::~Finstrumentor() {
   fprintf(stderr, "NUM_PROBES : %lu\n", ((Finstrumentor*) INSTRUMENTOR_INSTANCE)->probe_info->size()); 
   delete this->probe_info;
   delete this->functions;
+  delete this->func_addr_mappings; // Delete individual entries as well 
+  delete this->func_id_mappings; 
 }

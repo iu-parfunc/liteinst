@@ -40,8 +40,10 @@ typedef struct TLSSamplingProfilerStat {
   InvocationData invocation_stack[20];
 } TLSSamplingProfilerStat;
 
+/*
 typedef std::map<uint16_t, SamplingProfilerStat*> SamplingProfilerStats;  // Global statistics table
 typedef std::map<uint16_t, TLSSamplingProfilerStat*> TLSSamplingProfilerStats; // Thread local statistics table 
+*/
 
 class SamplingProfiler : public Profiler, public Monitorable {
 
@@ -49,15 +51,15 @@ class SamplingProfiler : public Profiler, public Monitorable {
     void initialize();
     void spawnMonitor();
     void dumpStatistics();
-    void registerThreadStatistics(TLSSamplingProfilerStats* stats);
+    void registerThreadStatistics(TLSSamplingProfilerStat* stats);
     int getThreadCount();
-    TLSSamplingProfilerStats** getThreadStatistics();
+    TLSSamplingProfilerStat** getThreadStatistics();
     virtual ~SamplingProfiler();
 
-    SamplingProfilerStats* statistics; 
+    SamplingProfilerStat* statistics; 
 
   private:
-    TLSSamplingProfilerStats** tls_stats;
+    TLSSamplingProfilerStat** tls_stats;
     int thread_counter = 0; // Number of threads running
     uint64_t sample_size = 10000; // Size of one sample
     uint64_t epoch_period = 10; // Monitor thread sleep period between checks in milliseconds
