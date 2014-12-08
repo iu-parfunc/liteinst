@@ -11,12 +11,12 @@
  */
 
 /// ProbeId type
-typedef uint32_t ProbeId;
+typedef uint16_t ProbeId;
 
 /// Instrumentation function format
 /** Instrumentation function should accept one argument for probe identifier.
  */
-typedef void (*InstrumentationFunc)(ProbeId);
+typedef void (*InstrumentationFunc)(uint16_t);
 
 
 class Instrumentor {
