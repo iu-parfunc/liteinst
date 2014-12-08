@@ -10,7 +10,14 @@
  * C++ API for probe activation and deactivation 
  */
 
-typedef void (*InstrumentationFunc)(uint16_t);
+/// ProbeId type
+typedef uint32_t ProbeId;
+
+/// Instrumentation function format
+/** Instrumentation function should accept one argument for probe identifier.
+ */
+typedef void (*InstrumentationFunc)(ProbeId);
+
 
 class Instrumentor {
 
