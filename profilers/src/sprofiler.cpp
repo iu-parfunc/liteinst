@@ -237,7 +237,7 @@ void SamplingProfiler::dumpStatistics() {
     total_count += statistics[i].count;
 
     if (statistics[i].count != 0) {
-      fprintf(fp, "Function Name : %s Count %lu Deactivation Count : %d Avg time (cycles) : %lu\n", 
+      fprintf(fp, "Function Name: %s Count %lu Deactivation Count : %d Avg time (cycles) : %lu\n", 
           ins->getFunctionName(i).c_str(),  statistics[i].count, 
           statistics[i].deactivation_count, statistics[i].total_time / statistics[i].count); 
     }
