@@ -120,8 +120,8 @@ benches =
 sampling = Or [And [ Set (Variant (compiler ++ "_" ++ optlevel ++ "_Sampling_"++show s_size++"_"++show epoch)) (RuntimeEnv "PROFILER_TYPE" "SAMPLING")
                    , Set NoMeaning (RuntimeEnv "SAMPLE_SIZE" (show s_size))
                    , Set NoMeaning (RuntimeEnv "EPOCH_PERIOD" (show epoch))
-                   , Set NoMeaning (CompileParam compiler)
-                   , Set NoMeaning (CompileParam optlevel) 
+                   , Set NoMeaning (CompileEnv "CC"  compiler)
+                   , Set NoMeaning (CompileEnv "OPTLEVEL"  optlevel) 
                    ]
               | s_size <- samplesize
               , epoch <- epochs
@@ -131,8 +131,8 @@ sampling = Or [And [ Set (Variant (compiler ++ "_" ++ optlevel ++ "_Sampling_"++
 
 backoff  = Or [And [ Set (Variant (compiler ++ "_" ++ optlevel ++ "_Backoff_"++show s_size)) (RuntimeEnv "PROFILER_TYPE" "FIXED_BACKOFF")
                    , Set NoMeaning (RuntimeEnv "SAMPLE_SIZE" (show s_size))
-                   , Set NoMeaning (CompileParam compiler)
-                   , Set NoMeaning (CompileParam optlevel)  
+                   , Set NoMeaning (CompileEnv "CC" compiler)
+                   , Set NoMeaning (CompileEnv "OPTLEVEL" optlevel)  
                    ]
               | s_size <- samplesize
               , compiler <- ["gcc", "icc"]
