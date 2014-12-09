@@ -243,7 +243,7 @@ void SamplingProfiler::dumpStatistics() {
     }
   }
 
-  fprintf(stderr, "\n CALLED_FUNCTIONS : %lu\n", total_count);
+  fprintf(stderr, "\n CALLED_FUNCTIONS: %lu\n", total_count);
 
   fclose(fp);
 
