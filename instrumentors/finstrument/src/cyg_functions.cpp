@@ -419,7 +419,7 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
 
   if (addr < func) {
-    fprintf(stderr, "Function start is great than the cyg_enter return address.. Function address: %p Call address : %p \n", func, addr);
+    // fprintf(stderr, "Function start is great than the cyg_enter return address.. Function address: %p Call address : %p \n", func, addr);
     return;
   }
 
@@ -461,14 +461,16 @@ void __cyg_profile_func_exit(void* func, void* caller) {
     return;
   }
 
+  /*
   if((uint64_t) func == 0x00000000004a2af0) {
     fprintf(stderr, "In Perl_pp_const\n");
   }
+  */
 
   uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
 
   if (addr < func) {
-    fprintf(stderr, "Function start is great than the cyg_exit return address.. Function address: %p Call address : %p \n", func, addr);
+    // fprintf(stderr, "Function start is great than the cyg_exit return address.. Function address: %p Call address : %p \n", func, addr);
     return;
   }
 
