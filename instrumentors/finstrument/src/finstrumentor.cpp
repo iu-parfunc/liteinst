@@ -235,8 +235,8 @@ void Finstrumentor::readFunctionInfo() {
       func_info->func_name = tokens[1];
       func_info->func_id = func_count++;
 
-      fprintf(stderr, "[Finstrumentor] Got line  %s\n", line.c_str());
-      fprintf(stderr, "[Finstrumentor] Addr : %lx Func name : %s\n", func_info->func_addr, func_info->func_name.c_str());
+      // fprintf(stderr, "[Finstrumentor] Got line  %s\n", line.c_str());
+      // fprintf(stderr, "[Finstrumentor] Addr : %lx Func name : %s\n", func_info->func_addr, func_info->func_name.c_str());
 
       func_addr_mappings->insert(make_pair(func_info->func_addr, func_info));
       func_id_mappings->insert(make_pair(func_info->func_id, func_info));
