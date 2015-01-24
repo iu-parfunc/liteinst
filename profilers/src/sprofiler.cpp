@@ -11,13 +11,20 @@ using namespace std;
 /* Globals for this profiler */
 uint64_t sp_sample_size;
 uint64_t sp_epoch_period;
+uint64_t total_overhead = 0; // Overhead incurred due to profiling
+uint64_t total_process_time = 0; // Total process time until last epoch sample
+uint64_t last_epoch_random = 0; // Random added to last epoch period
 
 // Thread local statistics table 
 __thread static TLSSamplingProfilerStat* sampling_thread_stats;
 
+// Thread local overhead counter
+__thread static uint64_t thread_local_overhead = 0;
+
 // Instrumentation Functions
 void samplingPrologFunction(uint16_t func_id) {
 
+  ticks prolog_start = getticks();
   __thread static bool allocated;
 
   if (!allocated) {
@@ -29,6 +36,7 @@ void samplingPrologFunction(uint16_t func_id) {
   }
 
   sampling_thread_stats[func_id].start_timestamp = getticks();
+  thread_local_overhead += (sampling_thread_stats[func_id].start_timestamp - prolog_start);
 
   /*
   SamplingProfilerStat* g_stats = (SamplingProfilerStat*) g_ubiprof_stats;
@@ -63,7 +71,7 @@ void samplingPrologFunction(uint16_t func_id) {
 
 void samplingEpilogFunction(uint16_t func_id) {
 
-  ticks end = getticks();
+  ticks epilog_start = getticks();
 
   SamplingProfilerStat* g_stats = (SamplingProfilerStat*) g_ubiprof_stats;
   // SamplingProfilerStat* g_stat = g_stats->find(func_id)->second;
@@ -84,7 +92,7 @@ void samplingEpilogFunction(uint16_t func_id) {
 
   uint64_t new_count = global_count - g_stats[func_id].count_at_last_activation; 
 
-  ticks elapsed = end - sampling_thread_stats[func_id].start_timestamp;
+  ticks elapsed = epilog_start - sampling_thread_stats[func_id].start_timestamp;
   sampling_thread_stats[func_id].total_time += elapsed;
   if (new_count >= sp_sample_size) {
     if (__sync_bool_compare_and_swap(&(g_stats[func_id].lock), 0 , 1)) {
@@ -95,6 +103,9 @@ void samplingEpilogFunction(uint16_t func_id) {
       __sync_bool_compare_and_swap(&(g_stats[func_id].lock), 1 , 0);
     }
   }
+
+  ticks epilog_end = getticks();
+  thread_local_overhead += (epilog_end - epilog_start);
 
 }
 
