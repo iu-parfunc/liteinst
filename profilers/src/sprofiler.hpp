@@ -22,6 +22,7 @@ typedef struct SamplingProfilerStat {
   uint32_t deactivation_count;
   ticks total_time;
   uint64_t lock;
+  uint64_t sample_size; // Function specific sample size
 } SamplingProfilerStat; 
 
 typedef struct TLSSamplingProfilerStat {
@@ -42,8 +43,8 @@ typedef struct TLSSamplingProfilerStat {
 
 typedef struct TLStatistics {
   uint64_t thread_local_overhead;
-  TLSSamplingProfilerStat* tls_stat;
-}
+  TLSSamplingProfilerStat* func_stats;
+} TLStatistics;
 
 /*
 typedef std::map<uint16_t, SamplingProfilerStat*> SamplingProfilerStats;  // Global statistics table
@@ -56,18 +57,19 @@ class SamplingProfiler : public Profiler, public Monitorable {
     void initialize();
     void spawnMonitor();
     void dumpStatistics();
-    void registerThreadStatistics(TLSSamplingProfilerStat* stats);
+    void registerThreadStatistics(TLStatistics* stats);
     int getThreadCount();
-    TLSSamplingProfilerStat** getThreadStatistics();
+    TLStatistics** getThreadStatistics();
     virtual ~SamplingProfiler();
 
     SamplingProfilerStat* statistics; 
 
   private:
-    TLSSamplingProfilerStat** tls_stats;
+    TLStatistics** tls_stats;
     int thread_counter = 0; // Number of threads running
     uint64_t sample_size = 10000; // Size of one sample
     uint64_t epoch_period = 10; // Monitor thread sleep period between checks in milliseconds
+    uint64_t target_overhead = 10; // Target profiling overhead cap
 
 };
 
