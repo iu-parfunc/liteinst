@@ -46,9 +46,19 @@ main = do
         , plugIns   = [ SomePlugin defaultFusionPlugin,
                         SomePlugin defaultDribblePlugin ]
         , harvesters = customTagHarvesterInt    "NUM_PROBES"              `mappend` 
-                       customTagHarvesterInt    "CALLED_FUNCTIONS"        `mappend` 
+                       customTagHarvesterInt    "CALLED_FUNCTIONS"        `mappend`
+                       customTagHarvesterDouble "MAIN"                    `mappend`
+                       customTagHarvesterDouble "MONITOR"                 `mappend`
+                       customTagHarvesterDouble "DELTA"                   `mappend`
+                       customTagHarvesterDouble "PROBE_OVERHEAD"          `mappend`
+                       customTagHarvesterDouble "JUMP_OVERHEAD"           `mappend`
+                       customTagHarvesterDouble "CUMULATIVE_OVERHEAD"     `mappend`
+                       customTagHarvesterDouble "REAL_EXEC_TIME"          `mappend`
+                       customTagHarvesterDouble "EXEC_TIME"               `mappend`
+                       customTagHarvesterInt    "PROBE_COUNT"             `mappend`
                        harvesters conf
 
+                       MAIN, MONITOR, PROCESS, DELTA, PROBE_OVERHEAD, JUMP_OVERHEAD, CUMULATIVE_OVERHEAD, REAL_EXEC_TIME, EXEC_TIME, PROBE_COUNT
         }
 
 epochs :: [Int] 
