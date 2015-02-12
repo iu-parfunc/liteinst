@@ -57,8 +57,6 @@ main = do
                        customTagHarvesterDouble "EXEC_TIME"               `mappend`
                        customTagHarvesterInt    "PROBE_COUNT"             `mappend`
                        harvesters conf
-
-                       MAIN, MONITOR, PROCESS, DELTA, PROBE_OVERHEAD, JUMP_OVERHEAD, CUMULATIVE_OVERHEAD, REAL_EXEC_TIME, EXEC_TIME, PROBE_COUNT
         }
 
 epochs :: [Int] 
