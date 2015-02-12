@@ -31,15 +31,16 @@ class BackoffProfiler : public Profiler {
   public:
     void initialize();
     void dumpStatistics();
-    int registerThreadStatistics(TLSBackoffProfilerStat* tls_stat);
+    int registerThreadStatistics(TLStatistics* tls_stat);
     int getThreadCount();
-    TLSBackoffProfilerStat** getThreadStatistics();
+    TLStatistics** getThreadStatistics();
     virtual ~BackoffProfiler();
 
     BackoffProfilerStat* statistics; 
 
   private:
-    TLSBackoffProfilerStat** tls_stats;
+    TLStatistics** tls_stats;
+    // TLSBackoffProfilerStat** tls_stats;
     int thread_counter = 0; // Number of threads running
     uint64_t sample_size = 10000; // Size of one sample
 };

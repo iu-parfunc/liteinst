@@ -41,11 +41,6 @@ typedef struct TLSSamplingProfilerStat {
   InvocationData invocation_stack[20];
 } TLSSamplingProfilerStat;
 
-typedef struct TLStatistics {
-  uint64_t thread_local_overhead;
-  TLSSamplingProfilerStat* func_stats;
-} TLStatistics;
-
 /*
 typedef std::map<uint16_t, SamplingProfilerStat*> SamplingProfilerStats;  // Global statistics table
 typedef std::map<uint16_t, TLSSamplingProfilerStat*> TLSSamplingProfilerStats; // Thread local statistics table 
@@ -73,4 +68,7 @@ class SamplingProfiler : public Profiler, public Monitorable {
 
 };
 
+
+
+ 
 #endif /* _SPROFILER_HPP_ */

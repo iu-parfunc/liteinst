@@ -18,6 +18,9 @@ uint64_t g_total_overhead = 0; // Overhead incurred due to profiling
 uint64_t g_total_process_time = 0; // Total process time until last epoch sample
 uint64_t g_last_epoch_random = 0; // Random added to last epoch period
 uint64_t g_TicksPerNanoSec = 0; // Calibrated ticks per nano second
+uint64_t g_call_overhead = 0; // Call overhead calibrated value
+
+
 
 // All thread local statistics data
 static __thread TLStatistics** tl_stats;
@@ -27,6 +30,46 @@ static __thread TLStatistics* tl_stat;
 
 // Thread local statistics table of current thread 
 static __thread TLSSamplingProfilerStat* tl_func_stats;
+
+/*
+void __attribute__ ((noinline)) emptyFunc(uint64_t* a, uint64_t* b) {
+
+}
+
+struct timespec *timeSpecDiff(struct timespec *ts1, struct timespec *ts2) {
+  static struct timespec ts;
+  ts.tv_sec = ts1->tv_sec - ts2->tv_sec;
+  ts.tv_nsec = ts1->tv_nsec - ts2->tv_nsec;
+  if (ts.tv_nsec < 0) {
+    ts.tv_sec--;
+    ts.tv_nsec += 1000000000LL;
+  }
+  return &ts;
+}
+
+void calibrateTicks() {
+  struct timespec begints, endts, diff;
+  uint64_t begin = 0, end = 0;
+  clock_gettime(CLOCK_MONOTONIC, &begints);
+  begin = getticks();
+  uint64_t i, result = 0;
+  for (i=0; i < 10000; i++) {
+    // result += 1;
+    emptyFunc(&i, &result); 
+  }
+  end = getticks();
+  clock_gettime(CLOCK_MONOTONIC, &endts);
+  struct timespec *tmpts = timeSpecDiff(&endts, &begints);
+  // uint64_t millisecElapsed = tmpts->tv_sec * 1000L + tmpts->tv_nsec / 1000000L;
+  // g_ticksPerMilliSec = (double) (end - begin) / (double) millisecElapsed;
+  uint64_t nanoSecElapsed = tmpts->tv_sec * 1000000000LL + tmpts->tv_nsec;
+  g_TicksPerNanoSec = (double) (end - begin) / (double) nanoSecElapsed;
+  g_call_overhead = (end - begin) / 10000;
+
+  // fprintf(stderr, "Call Overhead : %n", g_call_overhead);
+}
+
+*/
 
 // Instrumentation Functions
 void samplingPrologFunction(uint16_t func_id) {
@@ -41,6 +84,7 @@ void samplingPrologFunction(uint16_t func_id) {
     tl_stat = new TLStatistics;
     tl_stat->func_stats = tl_func_stats;
     tl_stat->thread_local_overhead = 0;
+    tl_stat->thread_local_count = 0;
 
     ((SamplingProfiler*)PROFILER_INSTANCE)->registerThreadStatistics(tl_stat);
     tl_stats = ((SamplingProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
@@ -48,6 +92,7 @@ void samplingPrologFunction(uint16_t func_id) {
 
   tl_func_stats[func_id].start_timestamp = getticks();
   tl_stat->thread_local_overhead += (tl_func_stats[func_id].start_timestamp - prolog_start);
+  tl_stat->thread_local_count++;
 
   /*
   SamplingProfilerStat* g_stats = (SamplingProfilerStat*) g_ubiprof_stats;
@@ -97,7 +142,7 @@ void samplingEpilogFunction(uint16_t func_id) {
   tl_func_stats[func_id].count++;
 
   for (int i=0; i < thread_count; i++) {
-    global_count += tl_stats[i]->func_stats[func_id].count; 
+    global_count += ((TLSSamplingProfilerStat*) tl_stats[i]->func_stats)[func_id].count; 
   }
 
   uint64_t new_count = global_count - g_stats[func_id].count_at_last_activation; 
@@ -116,48 +161,14 @@ void samplingEpilogFunction(uint16_t func_id) {
 
   ticks epilog_end = getticks();
   tl_stat->thread_local_overhead += (epilog_end - epilog_start);
+  tl_stat->thread_local_count++;
 
-}
-
-struct timespec *timeSpecDiff(struct timespec *ts1, struct timespec *ts2) {
-  static struct timespec ts;
-  ts.tv_sec = ts1->tv_sec - ts2->tv_sec;
-  ts.tv_nsec = ts1->tv_nsec - ts2->tv_nsec;
-  if (ts.tv_nsec < 0) {
-    ts.tv_sec--;
-    ts.tv_nsec += 1000000000LL;
-  }
-  return &ts;
-}
-
-void calibrateTicks() {
-  struct timespec begints, endts, diff;
-  uint64_t begin = 0, end = 0;
-  clock_gettime(CLOCK_MONOTONIC, &begints);
-  begin = getticks();
-  uint64_t i, result = 0;
-  for (i=0; i < 1000000; i++) {
-    result += i;
-  }
-  end = getticks();
-  clock_gettime(CLOCK_MONOTONIC, &endts);
-  struct timespec *tmpts = timeSpecDiff(&endts, &begints);
-  // uint64_t millisecElapsed = tmpts->tv_sec * 1000L + tmpts->tv_nsec / 1000000L;
-  // g_ticksPerMilliSec = (double) (end - begin) / (double) millisecElapsed;
-  uint64_t nanoSecElapsed = tmpts->tv_sec * 1000000000LL + tmpts->tv_nsec;
-  g_TicksPerNanoSec = (double) (end - begin) / (double) nanoSecElapsed;
 }
 
 // Probe monitor
 void* samplingProbeMonitor(void* param) {
 
-  calibrateTicks();
-
   SamplingProfilerStat* g_stats = (SamplingProfilerStat*) g_ubiprof_stats;
-
-  uint64_t nanos = sp_epoch_period * 1000000; 
-  uint64_t secs = nanos / 1000000000;
-  uint64_t nsecs = nanos % 1000000000;
 
   while(true) {
     int func_count = INSTRUMENTOR_INSTANCE->getFunctionCount();
@@ -166,9 +177,14 @@ void* samplingProbeMonitor(void* param) {
     TLStatistics** tls_stat = ((SamplingProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
 
     uint64_t thread_overheads = 0;
+    uint64_t global_count = 0;
     for (int i=0; i < thread_count; i++) {
       thread_overheads += tls_stat[i]->thread_local_overhead; 
+      global_count += tls_stat[i]->thread_local_count;
     }
+
+    uint64_t call_overhead = global_count * g_call_overhead;
+    // fprintf(stderr, "Call overhead : %lu\n", call_overhead);
 
     struct timespec ts;
     clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
@@ -179,26 +195,29 @@ void* samplingProbeMonitor(void* param) {
     uint64_t tmp_total_overhead  = g_total_overhead;
     uint64_t tmp_total_process_time = g_total_process_time;
 
-    fprintf(stderr, "Initial total overhead : %lu Thread overhead : %lu Probe thread Overhead : %lu\n", 
-        g_total_overhead, thread_overheads, probe_thread_overhead);
-    g_total_overhead = thread_overheads + probe_thread_overhead;
+    // fprintf(stderr, "Initial total overhead : %lu Thread overhead : %lu Probe thread Overhead : %lu\n", 
+    //     g_total_overhead, thread_overheads, probe_thread_overhead);
+    g_total_overhead = thread_overheads + probe_thread_overhead + call_overhead;
 
     struct timespec ts1;
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts1);
     nanoSecs = ts1.tv_sec * 1000000000LL + ts1.tv_nsec;
 
     g_total_process_time = nanoSecs * g_TicksPerNanoSec;
+    g_total_process_time -= g_total_overhead;
+    // g_total_process_time -= thread_overheads;
 
     uint64_t overhead_delta = g_total_overhead - tmp_total_overhead;
     uint64_t process_time_delta = g_total_process_time - tmp_total_process_time;
 
     // uint64_t overhead_of_last_epoch = ((double)overhead_delta / process_time_delta) * 100;
     uint64_t overhead_of_last_epoch = ((double)g_total_overhead / g_total_process_time) * 100;
-    fprintf(stderr, "Global overhead (cycles) : %lu Global process time : %lu \n", g_total_overhead,
-        g_total_process_time);
-    fprintf(stderr, "Global overhead delta : %lu Global process delta : %lu \n", overhead_delta,
-        process_time_delta);
-    fprintf(stderr, "Overhead : %lu\n", overhead_of_last_epoch);
+    // fprintf(stderr, "Per function call overhead (cycles) : %lu\n", g_call_overhead);
+    // fprintf(stderr, "Global overhead (cycles) : %lu Global process time : %lu \n", g_total_overhead,
+    //     g_total_process_time);
+    // fprintf(stderr, "Global overhead delta : %lu Global process delta : %lu \n", overhead_delta,
+    //     process_time_delta);
+    // fprintf(stderr, "Overhead : %lu\n", overhead_of_last_epoch);
 
     if (overhead_of_last_epoch != 0 && overhead_of_last_epoch >  sp_target_overhead) {
       uint64_t new_sample_size = ((double)sp_target_overhead / overhead_of_last_epoch) * sp_sample_size; 
@@ -213,7 +232,7 @@ void* samplingProbeMonitor(void* param) {
     }
 
     if (overhead_of_last_epoch != 0 && overhead_of_last_epoch <  0.75 * sp_target_overhead) {
-      uint64_t new_sample_size = ((double)sp_target_overhead / overhead_of_last_epoch) * sp_initial_sample_size; 
+      uint64_t new_sample_size = ((double)sp_target_overhead / overhead_of_last_epoch) * sp_sample_size; 
 
       if (new_sample_size < sp_initial_sample_size) {
         sp_sample_size = new_sample_size;
@@ -224,9 +243,8 @@ void* samplingProbeMonitor(void* param) {
       }
     }
 
-    fprintf(stderr, "New sample size : %lu\n", sp_sample_size);
+    // fprintf(stderr, "New sample size : %lu\n", sp_sample_size);
       
-
     for(int i = 0; i < func_count; i++) {
       if (!g_stats[i].is_active) {
         g_stats[i].sample_size = sp_sample_size;
@@ -236,24 +254,13 @@ void* samplingProbeMonitor(void* param) {
     }
 
 sleep:
+    uint64_t nanos = sp_epoch_period * 1000000; 
+    uint64_t secs = nanos / 1000000000;
+    uint64_t nsecs = nanos % 1000000000;
     ts.tv_sec = secs;
     ts.tv_nsec = nsecs;
     nanosleep(&ts, NULL);
 
-    /*
-    for(auto iter = g_stats->begin(); iter != g_stats->end(); iter++) {
-      SamplingProfilerStat* func_stat = iter->second;
-
-      if (!func_stat->is_active) {
-
-        PROFILER_INSTANCE->activateFunction(&(func_stat->func_id));
-        func_stat->is_active = true;
-      
-      }
-
-      nanosleep(&ts, NULL);
-    }
-    */
   }
 }
 
@@ -330,8 +337,7 @@ void SamplingProfiler::initialize() {
 
 void SamplingProfiler::spawnMonitor() {
 
-  pthread_t tid;
-  pthread_create(&tid, NULL, samplingProbeMonitor, (void*)NULL);
+  pthread_create(&g_monitor_thread, NULL, samplingProbeMonitor, (void*)NULL);
 
 }
 
@@ -368,7 +374,7 @@ void SamplingProfiler::dumpStatistics() {
     statistics[i].total_time = 0;
 
     for(int j=0; j < thread_counter; j++) {
-      TLSSamplingProfilerStat* tls_func_stat = tls_stats[j]->func_stats;
+      TLSSamplingProfilerStat* tls_func_stat = (TLSSamplingProfilerStat*) tls_stats[j]->func_stats;
       statistics[i].count += tls_func_stat[i].count;
       statistics[i].total_time += tls_func_stat[i].total_time;
     }
@@ -382,7 +388,7 @@ void SamplingProfiler::dumpStatistics() {
     }
   }
 
-  fprintf(stderr, "\n CALLED_FUNCTIONS: %lu\n", total_count);
+  fprintf(stderr, "\nCALLED_FUNCTIONS: %lu\n", total_count);
 
   fclose(fp);
 
@@ -390,6 +396,14 @@ void SamplingProfiler::dumpStatistics() {
 
 SamplingProfiler::~SamplingProfiler() {
   dumpStatistics();
+
+  TLStatistics** tls_stat = ((SamplingProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
+  int thread_count = ((SamplingProfiler*)PROFILER_INSTANCE)->getThreadCount(); 
+
+  for (int i=0; i < thread_count; i++) {
+    g_probe_overheads += tls_stat[i]->thread_local_overhead; 
+    g_probe_count += tls_stat[i]->thread_local_count;
+  }
   Profiler::cleanupInstrumentor();
   delete (SamplingProfilerStat*)g_ubiprof_stats;
 
@@ -398,4 +412,5 @@ SamplingProfiler::~SamplingProfiler() {
   }
 
   delete tls_stats;
+
 }

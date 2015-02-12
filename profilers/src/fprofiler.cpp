@@ -8,6 +8,11 @@ using namespace std;
 /* Globals for this profiler */
 uint64_t fb_sample_size;
 
+// All thread local statistics data
+static __thread TLStatistics** tl_stats;
+
+// Thread local statistics data for current thread
+static __thread TLStatistics* tl_stat;
 
 // Thread local statistics table
 __thread static TLSBackoffProfilerStat* sampling_thread_stats;
@@ -16,18 +21,25 @@ __thread static int thread_id;
 // Instrumentation Functions
 void backoffPrologFunction(uint16_t func_id) {
 
+  ticks prolog_start = getticks();
   __thread static bool allocated;
 
   if (!allocated) {
     allocated = true;
     // C++ value initilization.. Similar to calloc
     sampling_thread_stats = new TLSBackoffProfilerStat[INSTRUMENTOR_INSTANCE->getFunctionCount()](); 
+    tl_stat = new TLStatistics;
+    tl_stat->func_stats = sampling_thread_stats;
+    tl_stat->thread_local_overhead = 0;
+    tl_stat->thread_local_count = 0;
 
-    thread_id = ((BackoffProfiler*)PROFILER_INSTANCE)->registerThreadStatistics(sampling_thread_stats);
+    ((BackoffProfiler*)PROFILER_INSTANCE)->registerThreadStatistics(tl_stat);
+    tl_stats = ((BackoffProfiler*) PROFILER_INSTANCE)->getThreadStatistics();
   }
 
   sampling_thread_stats[func_id].start_timestamp = getticks();
-
+  tl_stat->thread_local_overhead += (sampling_thread_stats[func_id].start_timestamp - prolog_start);
+  tl_stat->thread_local_count++;
 
   /*
   BackoffProfilerStat* g_stats = (BackoffProfilerStat*) g_ubiprof_stats;
@@ -62,28 +74,35 @@ void backoffPrologFunction(uint16_t func_id) {
 
 void backoffEpilogFunction(uint16_t func_id) {
   
-  ticks elapsed = getticks() - sampling_thread_stats[func_id].start_timestamp;
+  ticks epilog_start = getticks();
+  ticks elapsed = epilog_start - sampling_thread_stats[func_id].start_timestamp;
   sampling_thread_stats[func_id].total_time += elapsed;
 
   BackoffProfilerStat* g_stats = (BackoffProfilerStat*) g_ubiprof_stats;
 
   int thread_count = ((BackoffProfiler*)PROFILER_INSTANCE)->getThreadCount();
-  TLSBackoffProfilerStat** tls_stats = ((BackoffProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
+  TLStatistics** tls_stats = ((BackoffProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
 
   uint64_t global_count = 0;
   // TLSBackoffProfilerStat* stat = sampling_thread_stats->find(func_id)->second;
   sampling_thread_stats[func_id].count++;
 
+  tl_stat->thread_local_count++;
   for (int i=0; i < thread_count; i++) {
-    global_count += tls_stats[i][func_id].count;
+    // global_count += ((TLSBackoffProfilerStat*) tls_stats[i]-> func_stats)[func_id].count;
+    global_count += tl_stats[i]->thread_local_count;
   }
 
   if (global_count >= fb_sample_size) {
+    // fprintf(stderr, "Deactivating function : %d\n", func_id);
     if (__sync_bool_compare_and_swap(&(g_stats[func_id].lock), 0 , 1)) {
       PROFILER_INSTANCE->deactivateFunction(&func_id);
       __sync_bool_compare_and_swap(&(g_stats[func_id].lock), 1 , 0);
     }
   }
+
+  ticks epilog_end = getticks();
+  tl_stat->thread_local_overhead += (epilog_end - epilog_start);
 
 }
 
@@ -98,7 +117,7 @@ void BackoffProfiler::initialize() {
   // instrumentaion functions can access it without going through object reference
   g_ubiprof_stats = statistics; 
 
-  tls_stats = new TLSBackoffProfilerStat*[64](); // C++ value initialization.. Similar to calloc
+  tls_stats = new TLStatistics*[64](); // C++ value initialization.. Similar to calloc
 
   char* sample_size_str = getenv("SAMPLE_SIZE");
   if (sample_size_str != NULL) {
@@ -116,7 +135,7 @@ void BackoffProfiler::initialize() {
 
 }
 
-int BackoffProfiler::registerThreadStatistics(TLSBackoffProfilerStat* stats) {
+int BackoffProfiler::registerThreadStatistics(TLStatistics* stats) {
 
   if (thread_counter + 1 < 64) {
     tls_stats[thread_counter++] = stats;
@@ -131,7 +150,7 @@ int BackoffProfiler::getThreadCount() {
   return thread_counter;
 }
 
-TLSBackoffProfilerStat** BackoffProfiler::getThreadStatistics() {
+TLStatistics** BackoffProfiler::getThreadStatistics() {
   return tls_stats;
 }
 
@@ -148,9 +167,9 @@ void BackoffProfiler::dumpStatistics() {
     statistics[i].total_time = 0;
 
     for (int j = 0; j < thread_counter; j++) {
-      TLSBackoffProfilerStat* tls_stat = tls_stats[j];
-      statistics[i].count += tls_stat[i].count;
-      statistics[i].total_time += tls_stat[i].total_time;
+      TLSBackoffProfilerStat* tls_func_stat = (TLSBackoffProfilerStat*) tls_stats[j]->func_stats;
+      statistics[i].count += tls_func_stat[i].count;
+      statistics[i].total_time += tls_func_stat[i].total_time;
     }
 
     total_count += statistics[i].count;
@@ -170,12 +189,21 @@ void BackoffProfiler::dumpStatistics() {
 
 BackoffProfiler::~BackoffProfiler() {
   dumpStatistics();
+
+  TLStatistics** tls_stat = ((BackoffProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
+  int thread_count = ((BackoffProfiler*)PROFILER_INSTANCE)->getThreadCount();
+
+  for (int i=0; i < thread_count; i++) {
+    g_probe_overheads += tls_stat[i]->thread_local_overhead;
+    g_probe_count += tls_stat[i]->thread_local_count;
+  }
+
   Profiler::cleanupInstrumentor();
   delete (BackoffProfilerStat*)g_ubiprof_stats;
 
   for (int i = 0; i < 64; i++) {
-    delete tls_stats[i];
+    delete (TLStatistics*)(tls_stats[i]);
   }
 
-  delete tls_stats;
+  delete (TLStatistics**) tls_stats;
 }

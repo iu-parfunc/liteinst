@@ -17,4 +17,21 @@ class Monitorable {
 
 };
 
+/**
+ *  Common data structure where profilers can store thread local profiling statistics.
+ *  func_stats structure holds profiler specific profiling statistics for each function.
+ */
+typedef struct TLStatistics {
+  uint64_t thread_local_overhead; // Profiling overhead incurred by this thread
+  uint64_t thread_local_count;    // Number of samples captured by this thread
+  void* func_stats;
+} TLStatistics;
+
+// Temporary exports to make overhead statistics visible to finalizer
+extern pthread_t g_monitor_thread;
+extern uint64_t g_call_overhead; 
+extern uint64_t g_TicksPerNanoSec; 
+extern uint64_t g_probe_overheads;
+extern uint64_t g_probe_count;
+
 #endif /* _PROFILER_HPP_ */
