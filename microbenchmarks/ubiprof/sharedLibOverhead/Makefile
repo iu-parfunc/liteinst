@@ -12,7 +12,7 @@ AR = ar
 RM = rm
 OPTS =
 
-CODE = app_static.cpp app_so.cpp 
+CODE = app_so.cpp 
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 
@@ -27,7 +27,8 @@ so:
 	$(CPP) -shared -Wl,-soname,libtest.so -o libtest.so cyg_functions.o 
 
 runstatic: so build
-	$(CPP) app_static.o -o app_static.exe
+	$(CPP) $(CFLAGS) $(OPTS) app_static.cpp -c -Wall -o app_static.o 
+	$(CPP) app_static.o  -o app_static.exe
 	/usr/bin/time -f "SELFTIMED %e\nuser %U\nsys %S\n" ./app_static.exe
 
 runso: so build
@@ -35,8 +36,8 @@ runso: so build
 	LD_LIBRARY_PATH=.:$(LD_LIBRARY_PATH) /usr/bin/time -f "SELFTIMED %e\nuser %U\nsys %S\n" ./app_so.exe
 
 runlib: build
-	$(CPP) -L../../../build -lrt -lubiprof app_so.o -o app_lib.exe
-	LD_LIBRARY_PATH=../../../build:$(LD_LIBRARY_PATH) /usr/bin/time -f "SELFTIMED %e\nuser %U\nsys %S\n" ./app_lib.exe
+	$(CPP) -L/u/budkahaw/Builds/ubiprof/build -lrt -lubiprof app_so.o -o app_lib.exe
+	LD_LIBRARY_PATH=/u/budkahaw/Builds/ubiprof/build:$(LD_LIBRARY_PATH) /usr/bin/time -f "SELFTIMED %e\nuser %U\nsys %S\n" ./app_lib.exe
 
 .cpp.o:
 	$(CPP) $(CFLAGS) $(OPTS) -finstrument-functions -fno-optimize-sibling-calls -c -Wall -o $@ $<
