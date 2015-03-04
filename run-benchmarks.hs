@@ -45,9 +45,19 @@ main = do
         , runTimeOut = Just 600 -- Erk... need a separate compile timeout.
         , plugIns   = [ SomePlugin defaultFusionPlugin,
                         SomePlugin defaultDribblePlugin ]
-        , harvesters = customTagHarvesterInt    "NUM_PROBES"              `mappend` 
-                       customTagHarvesterInt    "CALLED_FUNCTIONS"        `mappend` 
-                       harvesters conf
+         , harvesters = customTagHarvesterInt    "NUM_PROBES"              `mappend` 
+                       customTagHarvesterInt    "CALLED_FUNCTIONS"        `mappend`
+                       customTagHarvesterDouble "MAIN"                    `mappend`
+                       customTagHarvesterDouble "MONITOR"                 `mappend`
+                       customTagHarvesterDouble "DELTA"                   `mappend`
+                       customTagHarvesterDouble "PROBE_OVERHEAD"          `mappend`
+                       customTagHarvesterDouble "JUMP_OVERHEAD"           `mappend`
+                       customTagHarvesterDouble "CUMULATIVE_OVERHEAD"     `mappend`
+                       customTagHarvesterDouble "REAL_EXEC_TIME"          `mappend`
+                       customTagHarvesterDouble "EXEC_TIME"               `mappend`
+                       customTagHarvesterInt    "PROBE_COUNT"             `mappend`
+                       harvesters conf             
+       
 
         }
 

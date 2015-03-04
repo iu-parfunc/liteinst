@@ -246,7 +246,7 @@ void Finstrumentor::readFunctionInfo() {
 }
 
 Finstrumentor::~Finstrumentor() {
-  fprintf(stderr, "NUM_PROBES: %lu\n", ((Finstrumentor*) INSTRUMENTOR_INSTANCE)->probe_info->size()); 
+  fprintf(stderr, "[finstrumentor] NUM_ACCESSED_PROBE_SITES: %lu\n", ((Finstrumentor*) INSTRUMENTOR_INSTANCE)->probe_info->size()); 
   delete this->probe_info;
   delete this->functions;
   delete this->func_addr_mappings; // Delete individual entries as well 

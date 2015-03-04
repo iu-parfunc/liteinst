@@ -59,14 +59,26 @@ run_cpp: $(OBJ) inst
 
 runso_c: $(OBJ) inst
 	cd ../src;make clean;make install
-	$(CC) -L../../build -lubiprof c_test.o -o tests.exe
+	$(CC) -L../../build -lubiprof -lrt c_test.o -o tests.exe
 	LD_LIBRARY_PATH=../../build:$(LD_LIBRARY_PATH) ./tests.exe
 
 runso_cpp: $(OBJ) inst
 	cd ../src;make clean;make install
 #	$(CPP) -shared -Wl,-soname,libinst.so -o libinst.so ../src/cyg_functions.o ../src/finstrumentor.o ../../../deps/distorm/distorm3.a -lc
-	$(CPP) -L../../build -lubiprof cpp_test.o -o tests.exe
+	$(CPP) -L../../build -lubiprof -lrt cpp_test.o -o tests.exe
 	LD_LIBRARY_PATH=../../build:$(LD_LIBRARY_PATH) ./tests.exe
+
+runso_noprof_c: $(OBJ) inst
+	cd ../src;make clean;make install
+	$(CC) -L../../build/noprof -lubiprof -lrt c_test.o -o tests.exe
+	LD_LIBRARY_PATH=../../build/noprof:$(LD_LIBRARY_PATH) ./tests.exe
+
+runso_noprof_cpp: $(OBJ) inst
+	cd ../src;make clean;make install
+#	$(CPP) -shared -Wl,-soname,libinst.so -o libinst.so ../src/cyg_functions.o ../src/finstrumentor.o ../../../deps/distorm/distorm3.a -lc
+	$(CPP) -L../../build/noprof -lubiprof -lrt cpp_test.o -o tests.exe
+	LD_LIBRARY_PATH=../../build/noprof:$(LD_LIBRARY_PATH) ./tests.exe
+
 
 time_so:
 	cd ../src;make clean;make

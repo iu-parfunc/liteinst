@@ -110,17 +110,16 @@ void getFinalOverhead() {
   double calculated_overheads = probe_overhead + jump_overhead;
 
   fprintf(stderr, "\n\n\n\n");
-  fprintf(stderr, "MAIN: %lf\n", main_thread_cpu_time);
-  fprintf(stderr, "MONITOR: %lf\n", probe_thread_cpu_time);
-  fprintf(stderr, "PROCESS: %lf\n", process_cpu_time);
-  fprintf(stderr, "DELTA: %lf\n", process_overhead_delta);
+  fprintf(stderr, "[ubiprof] APPLICATION_CPU_TIME (s): %lf\n", main_thread_cpu_time);
+  fprintf(stderr, "[ubiprof] MONITOR_THREAD_CPU_TIME (s): %lf\n", probe_thread_cpu_time);
+  fprintf(stderr, "[ubiprof] PROCESS_CPU_TIME (s): %lf\n", process_cpu_time);
+  // fprintf(stderr, "[ubiprof] PROCESS_OVERHEAD_DELTA: %lf\n", process_overhead_delta);
 
-  fprintf(stderr, "PROBE_OVERHEAD: %lf\n", probe_overhead);
-  fprintf(stderr, "JUMP_OVERHEAD: %lf\n", jump_overhead);
-  fprintf(stderr, "CUMULATIVE_OVERHEAD: %lf\n", calculated_overheads);
-  fprintf(stderr, "REAL_EXEC_TIME: %lf\n", main_thread_cpu_time - calculated_overheads);
-  fprintf(stderr, "EXEC_TIME: %lf\n", main_thread_cpu_time - probe_overhead);
-  fprintf(stderr, "PROBE_COUNT: %lu\n", g_probe_count);
+  fprintf(stderr, "[ubiprof] PROBE_OVERHEAD: %lf\n", probe_overhead);
+  fprintf(stderr, "[ubiprof] JUMP_OVERHEAD: %lf\n", jump_overhead);
+  fprintf(stderr, "[ubiprof] CUMULATIVE_OVERHEAD: %lf\n", calculated_overheads);
+  fprintf(stderr, "[ubiprof] REAL_EXEC_TIME: %lf\n", main_thread_cpu_time - calculated_overheads);
+  fprintf(stderr, "[ubiprof] EXEC_TIME: %lf\n", main_thread_cpu_time - probe_overhead);
 
 }
 
@@ -169,6 +168,6 @@ __attribute__((destructor))
     timeSpecDiff(&g_endts, &g_begints);
 
     getFinalOverhead();
-    fprintf(stderr, "\nELAPSED_TIME : %lf\n", getSecondsFromTS(&g_diff));
+    fprintf(stderr, "\n[ubiprof] UBIPROF_ELAPSED_TIME : %lf\n", getSecondsFromTS(&g_diff));
 
   } 

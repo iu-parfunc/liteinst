@@ -315,14 +315,14 @@ void SamplingProfiler::initialize() {
   if (target_overhead_str != NULL) {
     uint64_t overhead = atol(target_overhead_str);
     if (overhead!= 0) {
-      fprintf(stderr, "[1] Overhead : %lu\n", overhead);
+      // fprintf(stderr, "[1] Overhead : %lu\n", overhead);
       sp_target_overhead = overhead;
     } else {
-      fprintf(stderr, "[2] Overhead : %lu\n", target_overhead);
+      // fprintf(stderr, "[2] Overhead : %lu\n", target_overhead);
       sp_target_overhead = target_overhead ;
     }
   } else {
-    fprintf(stderr, "[3] Overhead : %lu\n", target_overhead);
+    // fprintf(stderr, "[3] Overhead : %lu\n", target_overhead);
     sp_target_overhead = target_overhead;
   }
 
@@ -361,14 +361,12 @@ TLStatistics** SamplingProfiler::getThreadStatistics() {
 
 void SamplingProfiler::dumpStatistics() {
 
-  fprintf(stderr, "[Sampling Profiler] Thread count : %d\n", thread_counter);
-
   FILE* fp = fopen("prof.out", "a");
 
   uint64_t total_count = 0;
   int func_count = ins->getFunctionCount();
-  fprintf(stderr, "\nTotal function count : %d\n", func_count);
-  fprintf(stderr, "Thread count : %d\n", thread_counter);
+  fprintf(stderr, "[finstrumentor] Total function count : %d\n", func_count);
+  fprintf(stderr, "[Sampling Profiler] Thread count : %d\n", thread_counter);
   for(int i=0; i < func_count; i++) {
     statistics[i].count = 0;
     statistics[i].total_time = 0;
@@ -388,7 +386,7 @@ void SamplingProfiler::dumpStatistics() {
     }
   }
 
-  fprintf(stderr, "\nCALLED_FUNCTIONS: %lu\n", total_count);
+  fprintf(stderr, "\n[Sampling Profiler] NUMBER_OF_FUNCTION_CALLS: %lu\n", total_count);
 
   fclose(fp);
 
