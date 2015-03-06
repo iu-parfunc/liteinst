@@ -56,7 +56,12 @@ void Finstrumentor::initialize() {
 int Finstrumentor::activateProbeByName(void* probe_id, int flag) {
 
   uint64_t func_addr = (uint64_t)probe_id;
-  uint64_t func_id =  func_addr_mappings->find(func_addr)->second->func_id;
+  uint64_t func_id; 
+  if (func_addr_mappings->find(func_addr) != func_addr_mappings->end()) {
+    func_id =  func_addr_mappings->find(func_addr)->second->func_id;
+  } else {
+    return -1;
+  }
 
   return activateProbe(&func_id, flag);
 
@@ -75,7 +80,12 @@ int Finstrumentor::activateProbeByName(void* probe_id, int flag) {
 int Finstrumentor::activateProbe(void* probe_id, int flag) {
 
   uint16_t func_id = *(uint16_t*)probe_id;
-  uint64_t func_addr =  func_id_mappings->find(func_id)->second->func_addr;
+  uint64_t func_addr; 
+  if (func_id_mappings->find(func_id) != func_id_mappings->end()) {
+    func_addr =  func_id_mappings->find(func_id)->second->func_addr;
+  } else {
+    return -1;
+  }
 
   std::list<FinsProbeInfo*>* ls = probe_info->find(func_addr)->second;  
   for (std::list<FinsProbeInfo*>::iterator it = ls->begin(); it != ls->end(); it++) {
@@ -116,7 +126,12 @@ int Finstrumentor::activateProbe(void* probe_id, int flag) {
 int Finstrumentor::deactivateProbeByName(void* probe_id, int flag) {
 
   uint64_t func_addr = (uint64_t)probe_id;
-  uint64_t func_id =  func_addr_mappings->find(func_addr)->second->func_id;
+  uint64_t func_id;
+  if (func_addr_mappings->find(func_addr) != func_addr_mappings->end()) {
+    func_id =  func_addr_mappings->find(func_addr)->second->func_id;
+  } else {
+    return -1;
+  }
 
   return deactivateProbe(&func_id, flag);
 
@@ -135,7 +150,12 @@ int Finstrumentor::deactivateProbeByName(void* probe_id, int flag) {
 int Finstrumentor::deactivateProbe(void* probe_id, int flag) {
 
   uint16_t func_id = *(uint16_t*)probe_id;
-  uint64_t func_addr =  func_id_mappings->find(func_id)->second->func_addr;
+  uint64_t func_addr;
+  if (func_id_mappings->find(func_id) != func_id_mappings->end()) { 
+    func_addr =  func_id_mappings->find(func_id)->second->func_addr;
+  } else {
+    return -1;
+  }
   // fprintf(stderr, "Deactivating the probes for function %d..\n", func_id);
   // fprintf(stderr, "probe_info address is : %p\n", probe_info);
 
@@ -199,15 +219,28 @@ void tokenize(const string& str, vector<string>& tokens, const string& delimiter
 }
 
 uint16_t Finstrumentor::getFunctionId(uint64_t func_addr) {
-  return func_addr_mappings->find(func_addr)->second->func_id;
+  if (func_addr_mappings->find(func_addr) != func_addr_mappings->end()) {
+    return func_addr_mappings->find(func_addr)->second->func_id;
+    // return func_addr_mappings->find(func_addr)->second->func_id;
+  } else {
+   return 0;
+  } 
 }
 
 uint64_t Finstrumentor::getFunctionAddress(uint16_t func_id) {
-  return func_id_mappings->find(func_id)->second->func_addr;
+  if (func_id_mappings->find(func_id) != func_id_mappings->end()) {
+    return func_id_mappings->find(func_id)->second->func_addr;
+  } else {
+    return 0;
+  }
 }
 
 string Finstrumentor::getFunctionName(uint16_t func_id) {
-  return func_id_mappings->find(func_id)->second->func_name;
+  if (func_id_mappings->find(func_id) != func_id_mappings->end()) {
+    return func_id_mappings->find(func_id)->second->func_name;
+  } else {
+    return NULL;
+  }
 }
 
 void Finstrumentor::readFunctionInfo() {
@@ -220,7 +253,7 @@ void Finstrumentor::readFunctionInfo() {
   ifstream fp ("functions.txt");
   std::string::size_type sz = 16;
 
-  func_count = 0;
+  func_count = 1; // Starts with 1 so that id 0 can be used to signal errors
   if (fp.is_open()) {
     while (getline (fp,line)){
       string token;
@@ -242,6 +275,10 @@ void Finstrumentor::readFunctionInfo() {
       func_id_mappings->insert(make_pair(func_info->func_id, func_info));
     }
     fp.close();
+  }
+
+  if (func_count == 1) {
+    fprintf(stderr, "[Ubiprof] ERROR : functions.txt not present. Ubiprof will not profile this application...\n");
   }
 }
 

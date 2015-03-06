@@ -424,6 +424,11 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   }
 
   uint16_t func_id = get_func_id((uint64_t)func);
+  // If the function id mappings are not properly initialized fail gracefully
+  if (!func_id) { 
+    return;
+  }
+
   uint8_t* edi_set_addr = patch_first_parameter(addr, (uint64_t*) func, func_id);
 
   init_probe_info((uint64_t)func, (uint8_t*)addr);
@@ -475,6 +480,11 @@ void __cyg_profile_func_exit(void* func, void* caller) {
   }
 
   uint16_t func_id = get_func_id((uint64_t)func);
+  // If the function id mappings are not properly initialized fail gracefully
+  if (!func_id) {
+    return;
+  }
+
   uint8_t* edi_set_addr = patch_first_parameter(addr, (uint64_t*) func, func_id);
 
   init_probe_info((uint64_t)func, (uint8_t*)addr);
