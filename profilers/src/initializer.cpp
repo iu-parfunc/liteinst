@@ -110,9 +110,9 @@ void getFinalOverhead() {
   double calculated_overheads = probe_overhead + jump_overhead;
 
   fprintf(stderr, "\n\n\n\n");
-  fprintf(stderr, "[ubiprof] APPLICATION_CPU_TIME (s): %lf\n", main_thread_cpu_time);
-  fprintf(stderr, "[ubiprof] MONITOR_THREAD_CPU_TIME (s): %lf\n", probe_thread_cpu_time);
-  fprintf(stderr, "[ubiprof] PROCESS_CPU_TIME (s): %lf\n", process_cpu_time);
+  fprintf(stderr, "[ubiprof] APPLICATION_CPU_TIME(s): %lf\n", main_thread_cpu_time);
+  fprintf(stderr, "[ubiprof] MONITOR_THREAD_CPU_TIME(s): %lf\n", probe_thread_cpu_time);
+  fprintf(stderr, "[ubiprof] PROCESS_CPU_TIME(s): %lf\n", process_cpu_time);
   // fprintf(stderr, "[ubiprof] PROCESS_OVERHEAD_DELTA: %lf\n", process_overhead_delta);
 
   fprintf(stderr, "[ubiprof] PROBE_OVERHEAD: %lf\n", probe_overhead);

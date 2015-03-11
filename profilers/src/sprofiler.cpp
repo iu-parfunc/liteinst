@@ -72,9 +72,9 @@ void calibrateTicks() {
 */
 
 // Instrumentation Functions
-void samplingPrologFunction(uint16_t func_id) {
+TLStatistics* samplingPrologFunction(uint16_t func_id) {
 
-  ticks prolog_start = getticks();
+  // ticks prolog_start = getticks();
   static __thread bool allocated;
 
   if (!allocated) {
@@ -91,8 +91,9 @@ void samplingPrologFunction(uint16_t func_id) {
   }
 
   tl_func_stats[func_id].start_timestamp = getticks();
-  tl_stat->thread_local_overhead += (tl_func_stats[func_id].start_timestamp - prolog_start);
+  // tl_stat->thread_local_overhead += (tl_func_stats[func_id].start_timestamp - prolog_start);
   tl_stat->thread_local_count++;
+  return tl_stat;
 
   /*
   SamplingProfilerStat* g_stats = (SamplingProfilerStat*) g_ubiprof_stats;
@@ -125,7 +126,7 @@ void samplingPrologFunction(uint16_t func_id) {
 
 }
 
-void samplingEpilogFunction(uint16_t func_id) {
+TLStatistics* samplingEpilogFunction(uint16_t func_id) {
 
   ticks epilog_start = getticks();
 
@@ -147,7 +148,7 @@ void samplingEpilogFunction(uint16_t func_id) {
 
   uint64_t new_count = global_count - g_stats[func_id].count_at_last_activation; 
 
-  ticks elapsed = tl_func_stats[func_id].start_timestamp - epilog_start;
+  ticks elapsed = epilog_start - tl_func_stats[func_id].start_timestamp ;
   tl_func_stats[func_id].total_time += elapsed;
   if (new_count >= g_stats[func_id].sample_size) {
     if (__sync_bool_compare_and_swap(&(g_stats[func_id].lock), 0 , 1)) {
@@ -159,9 +160,10 @@ void samplingEpilogFunction(uint16_t func_id) {
     }
   }
 
-  ticks epilog_end = getticks();
-  tl_stat->thread_local_overhead += (epilog_end - epilog_start);
+  // ticks epilog_end = getticks();
+  // tl_stat->thread_local_overhead += (epilog_end - epilog_start);
   tl_stat->thread_local_count++;
+  return tl_stat;
 
 }
 

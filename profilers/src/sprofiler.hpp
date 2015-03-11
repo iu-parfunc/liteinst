@@ -68,7 +68,4 @@ class SamplingProfiler : public Profiler, public Monitorable {
 
 };
 
-
-
- 
 #endif /* _SPROFILER_HPP_ */

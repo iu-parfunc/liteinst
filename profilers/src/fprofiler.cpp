@@ -19,9 +19,9 @@ __thread static TLSBackoffProfilerStat* sampling_thread_stats;
 __thread static int thread_id;
 
 // Instrumentation Functions
-void backoffPrologFunction(uint16_t func_id) {
+TLStatistics* backoffPrologFunction(uint16_t func_id) {
 
-  ticks prolog_start = getticks();
+  // ticks prolog_start = getticks();
   __thread static bool allocated;
 
   if (!allocated) {
@@ -38,8 +38,10 @@ void backoffPrologFunction(uint16_t func_id) {
   }
 
   sampling_thread_stats[func_id].start_timestamp = getticks();
-  tl_stat->thread_local_overhead += (sampling_thread_stats[func_id].start_timestamp - prolog_start);
+  // tl_stat->thread_local_overhead += (sampling_thread_stats[func_id].start_timestamp - prolog_start);
   tl_stat->thread_local_count++;
+
+  return tl_stat;
 
   /*
   BackoffProfilerStat* g_stats = (BackoffProfilerStat*) g_ubiprof_stats;
@@ -72,7 +74,7 @@ void backoffPrologFunction(uint16_t func_id) {
 
 }
 
-void backoffEpilogFunction(uint16_t func_id) {
+TLStatistics* backoffEpilogFunction(uint16_t func_id) {
   
   ticks epilog_start = getticks();
   ticks elapsed = epilog_start - sampling_thread_stats[func_id].start_timestamp;
@@ -101,8 +103,9 @@ void backoffEpilogFunction(uint16_t func_id) {
     }
   }
 
-  ticks epilog_end = getticks();
-  tl_stat->thread_local_overhead += (epilog_end - epilog_start);
+  // ticks epilog_end = getticks();
+  // tl_stat->thread_local_overhead += (epilog_end - epilog_start);
+  return tl_stat;
 
 }
 

@@ -7,6 +7,7 @@
 #include "cyg_functions.hpp"
 #include "patch_utils.hpp"
 #include "finstrumentor.hpp"
+#include "../../../common/include/cycle.h"
 
 #include "distorm.h"
 #include "mnemonics.h"
@@ -148,6 +149,7 @@ bool starts_with(const char *str, const char *pre) {
   return lenstr < lenpre ? false : strncmp(pre, str, lenpre) == 0;
 }
 
+/*
 bool disassemble_sequence(uint8_t* addr, uint8_t size, _DInst* result, uint8_t result_size) {
 
   unsigned int instructions_count = 0;
@@ -174,6 +176,7 @@ bool disassemble_sequence(uint8_t* addr, uint8_t size, _DInst* result, uint8_t r
   }
 
 }
+*/
 
 static void print_string_hex(char *comment, unsigned char *str, int len)
 {
@@ -404,14 +407,49 @@ void print_probe_info() {
   }
 }
 
+#ifdef PROBE_HIST_ON
+void update_overhead_histograms(TLStatistics* ts, uint64_t overhead, int type) {
+  int bin;
+  if (overhead > PROBE_HIST_MAX_VALUE) {
+    bin = g_num_bins - 1;
+  } else {
+    bin = overhead / BIN_SIZE;
+  }
+
+  if (type) {
+    g_prolog_timings[bin]++; 
+  } else {
+    g_epilog_timings[bin]++;
+    uint64_t total_probe_overhead = ts->prolog_overhead + overhead;
+    if (total_probe_overhead > PROBE_HIST_MAX_VALUE) {
+      bin = g_num_bins - 1;
+    } else {
+      bin = total_probe_overhead / BIN_SIZE;
+    }
+    g_probe_timings[bin]++;
+  }
+}
+#endif
+
 void __cyg_profile_func_enter(void* func, void* caller) {
 
+  ticks start = getticks();
   // Experimental parameter patching code
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
 
+  TLStatistics* ts;
   if ((uint64_t) func < 0x400200) {
     // fprintf(stderr, "\n[cyg_enter] Low function address  : %lu\n", ((uint64_t)func));
-    prologFunction((uint16_t)func);
+    ts = prologFunction((uint16_t)func);
+    ticks end = getticks();
+    uint64_t prolog_overhead = (end - start);
+    ts->thread_local_overhead += prolog_overhead;
+    ts->prolog_overhead = prolog_overhead;
+
+#ifdef PROBE_HIST_ON
+    update_overhead_histograms(ts, prolog_overhead, PROLOG); 
+#endif
+
     return;
     // abort();
   }
@@ -420,6 +458,14 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 
   if (addr < func) {
     // fprintf(stderr, "Function start is great than the cyg_enter return address.. Function address: %p Call address : %p \n", func, addr);
+    ticks end = getticks();
+    uint64_t prolog_overhead = (end - start);
+    ts->thread_local_overhead += prolog_overhead;
+
+#ifdef PROBE_HIST_ON
+    update_overhead_histograms(ts, prolog_overhead, PROLOG); 
+#endif
+
     return;
   }
 
@@ -437,7 +483,15 @@ void __cyg_profile_func_enter(void* func, void* caller) {
     abort();
   }
 
-  prologFunction(func_id);
+  ts = prologFunction(func_id);
+  ticks end = getticks();
+  ts->thread_local_overhead += (end - start);
+  uint64_t prolog_overhead = (end - start);
+  ts->prolog_overhead = prolog_overhead;
+
+#ifdef PROBE_HIST_ON
+    update_overhead_histograms(ts, prolog_overhead, PROLOG); 
+#endif
 
   // fprintf(stderr, "\n[cyg_enter] Function address : %p\n", ((uint8_t*)func));
   // fprintf(stderr, "[cyg_enter] Call address : %p\n", ((uint8_t*)addr - 5));
@@ -458,11 +512,21 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 
 void __cyg_profile_func_exit(void* func, void* caller) {
 
+  ticks start = getticks();
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
 
+  TLStatistics* ts;
   if ((uint64_t) func < 0x400200) {
     // fprintf(stderr, "\n[cyg_exit] Low function address  : %lu\n", ((uint64_t)func));
-    epilogFunction((uint16_t)func);
+    ts = epilogFunction((uint16_t)func);
+    ticks end = getticks();
+    uint64_t epilog_overhead = (end - start);
+    ts->thread_local_overhead += epilog_overhead;
+
+#ifdef PROBE_HIST_ON
+    update_overhead_histograms(ts, epilog_overhead, EPILOG); 
+#endif
+
     return;
   }
 
@@ -476,6 +540,14 @@ void __cyg_profile_func_exit(void* func, void* caller) {
 
   if (addr < func) {
     // fprintf(stderr, "Function start is great than the cyg_exit return address.. Function address: %p Call address : %p \n", func, addr);
+    ticks end = getticks();
+    uint64_t epilog_overhead = (end - start);
+    ts->thread_local_overhead += epilog_overhead;
+
+#ifdef PROBE_HIST_ON
+    update_overhead_histograms(ts, epilog_overhead, EPILOG); 
+#endif
+
     return;
   }
 
@@ -493,7 +565,14 @@ void __cyg_profile_func_exit(void* func, void* caller) {
     abort();
   }
 
-  epilogFunction(func_id);
+  ts = epilogFunction(func_id);
+  ticks end = getticks();
+  ticks epilog_overhead = (end - start);
+  ts->thread_local_overhead += epilog_overhead;
+
+#ifdef PROBE_HIST_ON
+    update_overhead_histograms(ts, epilog_overhead, EPILOG); 
+#endif
 
   /*
   // Experimental parameter patching code
