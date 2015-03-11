@@ -1,5 +1,7 @@
 #!/bin/bash
 
+git submodule update --init --recursive 
+
 # Script used by Jenkins to run benchmarks.
 
 echo "Run benchmarks script starting, located at: $0"
