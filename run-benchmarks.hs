@@ -45,7 +45,7 @@ main = do
         , runTimeOut = Just 600 -- Erk... need a separate compile timeout.
         , plugIns   = [ SomePlugin defaultFusionPlugin,
                         SomePlugin defaultDribblePlugin ]
-         , harvesters = customTagHarvesterInt    "NUM_PROBES"              `mappend` 
+         , harvesters = customTagHarvesterInt   "NUM_PROBES"              `mappend` 
                        customTagHarvesterInt    "CALLED_FUNCTIONS"        `mappend`
                        customTagHarvesterDouble "MAIN"                    `mappend`
                        customTagHarvesterDouble "MONITOR"                 `mappend`
@@ -67,36 +67,6 @@ epochs = [100,250,500,750,1000,2500,5000]
 samplesize :: [Int] 
 samplesize = [100,1000,10000,100000]
 
-
--- benches :: [Benchmark DefaultParamMeaning]
--- benches =
--- --  [ (mkBenchmark ("benchmarks/"++name++"/ubiprof/Makefile") [] strangeVariant)
--- --  | name <- [ "bzip-1.0.3"
--- --            , "perl-5.8.7"]]  ++ 
---   [ (mkBenchmark ("benchmarks/"++name++"/"++varname++"/Makefile") [] variant) 
---      { progname = Just name }
---     -- All benchmarks support the basic variants, but grep/gzip also support pebil/pin:
---     | (name,coreVariants) <- [ --("gzip-1.6",    moreVariants)
---                            --  , ("grep-2.18",   moreVariants)
---                            --  , ("h264ref-9.3", baseVariants)
---                                ("bzip-1.0.3",  baseVariants)
---                              , ("perl-5.8.7",  baseVariants)
---                             -- , ("raxml",       baseVariants)
---                              , ("hmmer",       baseVariants)
---                              , ("sjeng",       baseVariants)
---                              , ("lbm",         baseVariants)
-
---                              ]
---     -- Here are the Ubiprof benches
---     , (varname,variant) <- [ (v, setVariant v) | v <- coreVariants ] ++
---                            [ ("ubiprof", Or [ sampling 
---                                              , backoff  
---                                              ]) ]
---     ]
---   where baseVariants = ["gprof", "unprofiled" ]
---         moreVariants = baseVariants ++ ["pebil", "pin", "oprofile"]
---         setVariant str = (And [Set (Variant str) (CompileParam "")])
-
 benchmark_names = ["bzip-1.0.3", "perl-5.8.7", "hmmer", "sjeng", "lbm"]
 
 benches :: [Benchmark DefaultParamMeaning]
@@ -114,30 +84,32 @@ benches =
   where
     base  = ["gprof", "unprofiled" ]
     base_variants = [(nom, setVariant nom) | nom <- base]
-    setVariant str = (And [Set (Variant str) (CompileParam "")])
+    
+    setVariant str = And [Set (Variant str) (CompileParam "")
+                          , Set NoMeaning (CompileEnv "CC" "gcc")
+                          , Set NoMeaning (CompileEnv "OPTLEVEL" "-O2")  
+                          ]
 
 
-    ubiprof_variants = [ ("ubiprof", Or [ sampling 
-                                        , backoff  
-                                        ]) ]
+    ubiprof_variants = [ ("ubiprof", backoff)]
+                       --Or [ sampling 
+                       --   , backoff  
+                       --   ]) ]
     
 
---strangeVariant = Or [And [ Set (Variant ("MicroBench")) (RuntimeEnv "PROFILER_TYPE" "FIXED_BACKOFF")
---                   , Set NoMeaning (RuntimeEnv "SAMPLE_SIZE" (show 100000))]
---                   ]
-    
+-- sampling = Or [And [ Set (Variant (compiler ++ "_" ++ optlevel ++ "_Sampling_"++show s_size++"_"++show epoch)) (RuntimeEnv "PROFILER_TYPE" "SAMPLING")
+--                    , Set NoMeaning (RuntimeEnv "SAMPLE_SIZE" (show s_size))
+--                    , Set NoMeaning (RuntimeEnv "EPOCH_PERIOD" (show epoch))
+--                    , Set NoMeaning (CompileEnv "CC"  compiler)
+--                    , Set NoMeaning (CompileEnv "OPTLEVEL"  optlevel) 
+--                    ]
+--               | s_size <- samplesize
+--               , epoch <- epochs
+--               , compiler <- ["gcc", "icc"]
+--               , optlevel <- ["-O1", "-O2", "-O3" ]
+--               ]
 
-sampling = Or [And [ Set (Variant (compiler ++ "_" ++ optlevel ++ "_Sampling_"++show s_size++"_"++show epoch)) (RuntimeEnv "PROFILER_TYPE" "SAMPLING")
-                   , Set NoMeaning (RuntimeEnv "SAMPLE_SIZE" (show s_size))
-                   , Set NoMeaning (RuntimeEnv "EPOCH_PERIOD" (show epoch))
-                   , Set NoMeaning (CompileEnv "CC"  compiler)
-                   , Set NoMeaning (CompileEnv "OPTLEVEL"  optlevel) 
-                   ]
-              | s_size <- samplesize
-              , epoch <- epochs
-              , compiler <- ["gcc", "icc"]
-              , optlevel <- ["-O1", "-O2", "-O3" ]
-              ]
+
 
 backoff  = Or [And [ Set (Variant (compiler ++ "_" ++ optlevel ++ "_Backoff_"++show s_size)) (RuntimeEnv "PROFILER_TYPE" "FIXED_BACKOFF")
                    , Set NoMeaning (RuntimeEnv "SAMPLE_SIZE" (show s_size))
@@ -145,9 +117,22 @@ backoff  = Or [And [ Set (Variant (compiler ++ "_" ++ optlevel ++ "_Backoff_"++s
                    , Set NoMeaning (CompileEnv "OPTLEVEL" optlevel)  
                    ]
               | s_size <- samplesize
-              , compiler <- ["gcc", "icc"]
-              , optlevel <- ["-O1", "-O2", "-O3" ]
+              , compiler <- ["gcc"]
+              , optlevel <- ["-O2"]
               ] 
+
+
+
+
+-- backoff  = Or [And [ Set (Variant (compiler ++ "_" ++ optlevel ++ "_Backoff_"++show s_size)) (RuntimeEnv "PROFILER_TYPE" "FIXED_BACKOFF")
+--                    , Set NoMeaning (RuntimeEnv "SAMPLE_SIZE" (show s_size))
+--                    , Set NoMeaning (CompileEnv "CC" compiler)
+--                    , Set NoMeaning (CompileEnv "OPTLEVEL" optlevel)  
+--                    ]
+--               | s_size <- samplesize
+--               , compiler <- ["gcc", "icc"]
+--               , optlevel <- ["-O1", "-O2", "-O3" ]
+--               ] 
 
 
 
