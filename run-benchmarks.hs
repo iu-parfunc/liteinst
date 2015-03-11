@@ -111,12 +111,13 @@ benches =
 
 
 
+backoff_params = [x * 10^6 | x <- [1..10]] 
 backoff  = Or [And [ Set (Variant (compiler ++ "_" ++ optlevel ++ "_Backoff_"++show s_size)) (RuntimeEnv "PROFILER_TYPE" "FIXED_BACKOFF")
                    , Set NoMeaning (RuntimeEnv "SAMPLE_SIZE" (show s_size))
                    , Set NoMeaning (CompileEnv "CC" compiler)
                    , Set NoMeaning (CompileEnv "OPTLEVEL" optlevel)  
                    ]
-              | s_size <- samplesize
+              | s_size <- backoff_params -- samplesize
               , compiler <- ["gcc"]
               , optlevel <- ["-O2"]
               ] 
