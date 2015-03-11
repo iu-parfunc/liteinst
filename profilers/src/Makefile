@@ -43,7 +43,7 @@ libubiprof.so: libubiprof.a
 	$(CC) $(LIBS) -shared -Wl,-soname,libubiprof.so -o libubiprof.so $(OBJ) $(INST_OBJ) $(DEPS) -lc
 
 noprof.so: noprof.a 
-	if [ -d libubiprof.so]; then rm -f libubiprof.so; fi	
+	if [ -d libubiprof.so ]; then rm -f libubiprof.so; fi	
 	$(CC) $(LIBS) -shared -Wl,-soname,libubiprof.so -o libubiprof.so $(OBJ) $(INST_OBJ_NO_PROF) $(DEPS) -lc
 	
 libubiprof.a: build distorm

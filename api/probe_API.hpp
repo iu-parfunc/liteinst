@@ -13,11 +13,44 @@
 /// ProbeId type
 typedef uint16_t ProbeId;
 
+/**
+ *  Common data structure where profilers can store thread local profiling statistics.
+ *  func_stats structure holds profiler specific profiling statistics for each function.
+ */
+typedef struct TLStatistics {
+  uint64_t thread_local_overhead; // Profiling overhead incurred by this thread
+  uint64_t thread_local_count;    // Number of samples captured by this thread
+  uint64_t prolog_overhead;       // Current entered function's instrumentation prolog overhead.
+  void* func_stats;
+} TLStatistics;
+
+// Additional bookkeeping information for probe overhead histograms for benchmarking purposes
+#ifdef PROBE_HIST_ON
+
+#define PROBE_HIST_MAX_VALUE 100000 // Number up to which the histograms are explicitly binned. After that it's MAX_VALUE+ bin.
+#define BIN_SIZE 10               // Maximum number of bins for each probe timing histogram bins
+#define PROLOG 1
+#define EPILOG 0
+
+typedef struct ProbeStatistics {
+  uint64_t* epilog_timings; // Histogram of individual epilog instrumentation timings
+  uint64_t* prolog_timings; // Histogram of individual prolog instrumentation timings
+  uint64_t* probe_timings; // Histogram of probe timings (epilog + prolog)
+} ProbeStatistics;
+
+extern ProbeStatistics* g_probe_stats; 
+extern uint64_t* g_epilog_timings; 
+extern uint64_t* g_prolog_timings; 
+extern uint64_t* g_probe_timings; 
+extern int g_num_bins;
+
+#endif
+
+
 /// Instrumentation function format
 /** Instrumentation function should accept one argument for probe identifier.
  */
-typedef void (*InstrumentationFunc)(uint16_t);
-
+typedef TLStatistics* (*InstrumentationFunc)(uint16_t);
 
 class Instrumentor {
 
