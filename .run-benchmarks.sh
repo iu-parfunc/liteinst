@@ -1,7 +1,5 @@
 #!/bin/bash
 
-git submodule update --init --recursive 
-
 # Script used by Jenkins to run benchmarks.
 
 echo "Run benchmarks script starting, located at: $0"
@@ -19,6 +17,7 @@ fi
 cd $rootdir
 echo "Switched to working-copy directory: "`pwd`
 
+git submodule update --init --recursive 
 
 # ----------------------------------------
 # Step (0): Hack-o-rama [2014.08.02]:
