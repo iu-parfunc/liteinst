@@ -21,6 +21,7 @@ typedef struct TLStatistics {
   uint64_t thread_local_overhead; // Profiling overhead incurred by this thread
   uint64_t thread_local_count;    // Number of samples captured by this thread
   uint64_t prolog_overhead;       // Current entered function's instrumentation prolog overhead.
+  bool deactivated;               
   void* func_stats;
 } TLStatistics;
 
@@ -45,7 +46,6 @@ extern uint64_t* g_probe_timings;
 extern int g_num_bins;
 
 #endif
-
 
 /// Instrumentation function format
 /** Instrumentation function should accept one argument for probe identifier.

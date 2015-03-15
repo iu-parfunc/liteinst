@@ -135,5 +135,6 @@ class Profiler {
 extern Profiler* PROFILER_INSTANCE; ///< Global Profiler instance handle
 extern void* g_ubiprof_stats; ///< Global handle for accessing profiler statistics. Need to be cast
                               ///< profiler specific type before accessing.
+extern uint64_t g_deactivation_count;
 
 #endif /* _UBIPROF_HPP_ */

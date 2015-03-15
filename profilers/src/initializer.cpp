@@ -13,12 +13,15 @@
 /* Global to hold the profiler type */
 int profiler_type = 0;
 
+uint64_t g_deactivation_count;
+
 struct timespec g_begints;
 struct timespec g_endts;
 struct timespec g_diff;
 
 extern void print_probe_info();
 
+__attribute__((no_instrument_function))
 struct timespec *timeSpecDiff(struct timespec *ts1, struct timespec *ts2) {
   static struct timespec ts;
   g_diff.tv_sec = ts1->tv_sec - ts2->tv_sec;
@@ -44,6 +47,7 @@ void __attribute__ ((noinline)) emptyFunc(uint64_t* a, uint64_t* b) {
 
 }
 
+__attribute__((no_instrument_function))
 void calibrateTicks() {
   struct timespec begints, endts, diff;
   uint64_t begin = 0, end = 0;
@@ -110,6 +114,8 @@ void getFinalOverhead() {
   double calculated_overheads = probe_overhead + jump_overhead;
 
   fprintf(stderr, "\n\n\n\n");
+  fprintf(stderr, "\n[ubiprof] DEACTIVATIONS : %lu\n", g_deactivation_count);
+  fprintf(stderr, "\n");
   fprintf(stderr, "[ubiprof] APPLICATION_CPU_TIME(s): %lf\n", main_thread_cpu_time);
   fprintf(stderr, "[ubiprof] MONITOR_THREAD_CPU_TIME(s): %lf\n", probe_thread_cpu_time);
   fprintf(stderr, "[ubiprof] PROCESS_CPU_TIME(s): %lf\n", process_cpu_time);
@@ -123,8 +129,10 @@ void getFinalOverhead() {
 
 }
 
-__attribute__((constructor))
+__attribute__((constructor, no_instrument_function))
   void initProfiler() {
+
+    g_deactivation_count = 0;
 
     clock_gettime(CLOCK_MONOTONIC, &g_begints);
 

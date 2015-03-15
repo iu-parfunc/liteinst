@@ -1,4 +1,5 @@
 
+CFLAGS=-DPROBE_HIST_ON
 ARGS= -g -Wall
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 

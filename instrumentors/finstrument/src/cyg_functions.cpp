@@ -408,6 +408,8 @@ void print_probe_info() {
 }
 
 #ifdef PROBE_HIST_ON
+char* md = getenv("MONITOR_DEAC");
+
 void update_overhead_histograms(TLStatistics* ts, uint64_t overhead, int type) {
   int bin;
   if (overhead > PROBE_HIST_MAX_VALUE) {
@@ -431,6 +433,7 @@ void update_overhead_histograms(TLStatistics* ts, uint64_t overhead, int type) {
 }
 #endif
 
+
 void __cyg_profile_func_enter(void* func, void* caller) {
 
   ticks start = getticks();
@@ -447,7 +450,18 @@ void __cyg_profile_func_enter(void* func, void* caller) {
     ts->prolog_overhead = prolog_overhead;
 
 #ifdef PROBE_HIST_ON
-    update_overhead_histograms(ts, prolog_overhead, PROLOG); 
+    if (!ts->deactivated) {
+      if (md == NULL) {
+        // fprintf(stderr, "Updating REGULAR flow\n");
+        update_overhead_histograms(ts, prolog_overhead, PROLOG); 
+      }
+    } else {
+      if (md != NULL) {
+        fprintf(stderr, "Updating DEACTIVATION flow\n");
+        update_overhead_histograms(ts, prolog_overhead, PROLOG); 
+      }
+      ts->deactivated = false;
+    }
 #endif
 
     return;
@@ -462,9 +476,11 @@ void __cyg_profile_func_enter(void* func, void* caller) {
     uint64_t prolog_overhead = (end - start);
     ts->thread_local_overhead += prolog_overhead;
 
+    /*
 #ifdef PROBE_HIST_ON
     update_overhead_histograms(ts, prolog_overhead, PROLOG); 
 #endif
+*/
 
     return;
   }
@@ -489,9 +505,11 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   uint64_t prolog_overhead = (end - start);
   ts->prolog_overhead = prolog_overhead;
 
+  /*
 #ifdef PROBE_HIST_ON
     update_overhead_histograms(ts, prolog_overhead, PROLOG); 
 #endif
+*/
 
   // fprintf(stderr, "\n[cyg_enter] Function address : %p\n", ((uint8_t*)func));
   // fprintf(stderr, "[cyg_enter] Call address : %p\n", ((uint8_t*)addr - 5));
@@ -524,7 +542,18 @@ void __cyg_profile_func_exit(void* func, void* caller) {
     ts->thread_local_overhead += epilog_overhead;
 
 #ifdef PROBE_HIST_ON
-    update_overhead_histograms(ts, epilog_overhead, EPILOG); 
+    if (!ts->deactivated) {
+      if (md == NULL) {
+        // fprintf(stderr, "Updating REGULAR flow\n");
+        update_overhead_histograms(ts, epilog_overhead, EPILOG); 
+      }
+    } else {
+      if (md != NULL) {
+        fprintf(stderr, "Updating DEACTIVATION flow\n");
+        update_overhead_histograms(ts, epilog_overhead, EPILOG); 
+      }
+      ts->deactivated = false;
+    }
 #endif
 
     return;
@@ -544,9 +573,11 @@ void __cyg_profile_func_exit(void* func, void* caller) {
     uint64_t epilog_overhead = (end - start);
     ts->thread_local_overhead += epilog_overhead;
 
+    /*
 #ifdef PROBE_HIST_ON
     update_overhead_histograms(ts, epilog_overhead, EPILOG); 
 #endif
+*/
 
     return;
   }
@@ -570,9 +601,11 @@ void __cyg_profile_func_exit(void* func, void* caller) {
   ticks epilog_overhead = (end - start);
   ts->thread_local_overhead += epilog_overhead;
 
+  /*
 #ifdef PROBE_HIST_ON
     update_overhead_histograms(ts, epilog_overhead, EPILOG); 
 #endif
+*/
 
   /*
   // Experimental parameter patching code

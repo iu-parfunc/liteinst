@@ -98,7 +98,9 @@ TLStatistics* backoffEpilogFunction(uint16_t func_id) {
   if (global_count >= fb_sample_size) {
     // fprintf(stderr, "Deactivating function : %d\n", func_id);
     if (__sync_bool_compare_and_swap(&(g_stats[func_id].lock), 0 , 1)) {
+      g_deactivation_count++;
       PROFILER_INSTANCE->deactivateFunction(&func_id);
+      tl_stat->deactivated = true;
       __sync_bool_compare_and_swap(&(g_stats[func_id].lock), 1 , 0);
     }
   }

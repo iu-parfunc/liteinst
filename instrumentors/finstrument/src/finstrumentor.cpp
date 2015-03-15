@@ -334,7 +334,7 @@ void dumpProbeOverheadStatistics() {
     }
   }
 
-  fprintf(fp, "\n>>");
+  fprintf(fp, "\n>>\n");
 
 }
 #endif
