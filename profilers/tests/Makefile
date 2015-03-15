@@ -66,8 +66,8 @@ runso_cpp: $(OBJ) inst
 	cd ../src;make clean;make install
 #	$(CPP) -shared -Wl,-soname,libinst.so -o libinst.so ../src/cyg_functions.o ../src/finstrumentor.o ../../../deps/distorm/distorm3.a -lc
 	$(CPP) -L../../build -lubiprof -lrt cpp_test.o -o tests.exe
-#	LD_LIBRARY_PATH=../../build:$(LD_LIBRARY_PATH) ./tests.exe
-	LD_PRELOAD=/u/budkahaw/Builds/ubiprof/build/noprof/libubiprof.so ./tests.exe
+	LD_LIBRARY_PATH=../../build:$(LD_LIBRARY_PATH) ./tests.exe
+	# LD_PRELOAD=/u/budkahaw/Builds/ubiprof/build/noprof/libubiprof.so ./tests.exe
 
 runso_noprof_c: $(OBJ) inst
 	cd ../src;make clean;make install

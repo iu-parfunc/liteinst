@@ -7,7 +7,7 @@ ifeq ($(COMPILE_ARGS),)
 endif
 
 default:
-	./make_source.sh ${COMPILE_ARGS}
+	# ./make_source.sh ${COMPILE_ARGS}
 	cp ../../../build/libubiprof.so .
 	$(CC) $(CFLAGS)  40_deactivate.cpp $(LDFLAGS) -o 40_deactivate.exe
 

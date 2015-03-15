@@ -15,6 +15,7 @@ static __inline__ unsigned long long getticks(void)
     return x;
 }
 
+__attribute__ ((no_instrument_function))
 struct timespec *timeSpecDiff(struct timespec *ts1, struct timespec *ts2)
 {
   static struct timespec ts;
