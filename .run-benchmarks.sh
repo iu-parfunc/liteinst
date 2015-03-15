@@ -17,6 +17,7 @@ fi
 cd $rootdir
 echo "Switched to working-copy directory: "`pwd`
 
+git submodule update --init --recursive 
 
 # ----------------------------------------
 # Step (0): Hack-o-rama [2014.08.02]:
