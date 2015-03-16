@@ -484,11 +484,13 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 
   // Experimental parameter patching code
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
+  // uint64_t funcAddr = *((uint64_t*) func);
 
   TLStatistics* ts;
   if ((uint64_t) func < 0x400200) {
     // fprintf(stderr, "\n[cyg_enter] Low function address  : %lu\n", ((uint64_t)func));
-    ts = prologFunction((uint16_t)func);
+    // ts = prologFunction((uint16_t)func);
+    ts = prologFunction((uint64_t)func);
 
   #ifdef PROBE_CPU_TIME
     struct timespec ts1;
@@ -615,11 +617,13 @@ void __cyg_profile_func_exit(void* func, void* caller) {
   #endif
 
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
+  // uint64_t funcAddr = *((uint64_t*) func);
 
   TLStatistics* ts;
   if ((uint64_t) func < 0x400200) {
     // fprintf(stderr, "\n[cyg_exit] Low function address  : %lu\n", ((uint64_t)func));
-    ts = epilogFunction((uint16_t)func);
+    // ts = epilogFunction((uint16_t)func);
+    ts = epilogFunction((uint64_t)func);
 
   #ifdef PROBE_CPU_TIME
     struct timespec ts1;
