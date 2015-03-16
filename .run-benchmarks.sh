@@ -34,7 +34,7 @@ fi
 # ----------------------------------------
 
 # -- MORE HACKS
-cd nbody
+cd benchmarks/nbody
 make -f Makefile_common gen-data
 cd .. 
 
