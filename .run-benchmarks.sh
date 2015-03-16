@@ -36,7 +36,7 @@ fi
 # -- MORE HACKS
 cd benchmarks/nbody/ubiprof
 make gen-data
-cd .. 
+cd $rootdir
 
 # (1) Piggy-back on teh standard regression tests to do the build:
 ./.jenkins_script.sh
