@@ -34,8 +34,8 @@ fi
 # ----------------------------------------
 
 # -- MORE HACKS
-cd benchmarks/nbody
-make -f Makefile_common gen-data
+cd benchmarks/nbody/ubiprof
+make gen-data
 cd .. 
 
 # (1) Piggy-back on teh standard regression tests to do the build:
