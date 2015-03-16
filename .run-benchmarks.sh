@@ -33,6 +33,11 @@ if ! [ "$USE_FIXED_LIBS_HACK" == "" ]; then
 fi
 # ----------------------------------------
 
+# -- MORE HACKS
+cd nbody
+make -f Makefile_common gen-data
+cd .. 
+
 # (1) Piggy-back on teh standard regression tests to do the build:
 ./.jenkins_script.sh
 
