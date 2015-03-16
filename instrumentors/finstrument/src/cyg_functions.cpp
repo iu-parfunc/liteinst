@@ -15,6 +15,8 @@
 // How many instructions to allocate on stack.
 #define MAX_INSTRUCTIONS 32
 
+extern uint64_t g_TicksPerNanoSec;
+
 static uint8_t mov_encodings[20] = {MOV_REG_8, MOV_REG_16, MOV_MEM_8, MOV_MEM_16,
   MOV_IMM_8_RAX, MOV_IMM_8_RCX, MOV_IMM_8_RDX, MOV_IMM_8_RBX,
   MOV_IMM_8_RSP, MOV_IMM_8_RBP, MOV_IMM_8_RSI, MOV_IMM_8_RDI,
@@ -433,10 +435,53 @@ void update_overhead_histograms(TLStatistics* ts, uint64_t overhead, int type) {
 }
 #endif
 
+#ifdef PROBE_TRUE_EMPTY_ON
+
+void update_empty_overheads(uint64_t overhead, int type) {
+  int bin;
+  if (overhead > PROBE_HIST_MAX_VALUE) {
+    bin = g_num_bins - 1;
+  } else {
+    bin = overhead / BIN_SIZE;
+  }
+
+  if (type) {
+    g_prolog_timings[bin]++; 
+  } else {
+    g_epilog_timings[bin]++;
+  }
+}
+
+#endif
 
 void __cyg_profile_func_enter(void* func, void* caller) {
 
-  ticks start = getticks();
+#ifdef PROBE_TRUE_EMPTY_ON
+  #ifdef PROBE_CPU_TIME
+    struct timespec ts0;
+    struct timespec ts1;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts0);
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts1);
+
+    ticks start = (ticks)((ts0.tv_sec * 1000000000LL + ts0.tv_nsec) * g_TicksPerNanoSec);
+    ticks end = (ticks)((ts1.tv_sec * 1000000000LL + ts1.tv_nsec) * g_TicksPerNanoSec);
+  #else
+    ticks start = getticks();
+    ticks end = getticks();
+  #endif
+
+  update_empty_overheads(end - start, PROLOG); 
+  return;
+#else 
+  #ifdef PROBE_CPU_TIME
+    struct timespec ts0;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts0);
+    ticks start = (ticks)((ts0.tv_sec * 1000000000LL + ts0.tv_nsec) * g_TicksPerNanoSec);
+  #else
+    ticks start = getticks();
+  #endif
+
+
   // Experimental parameter patching code
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
 
@@ -444,7 +489,15 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   if ((uint64_t) func < 0x400200) {
     // fprintf(stderr, "\n[cyg_enter] Low function address  : %lu\n", ((uint64_t)func));
     ts = prologFunction((uint16_t)func);
+
+  #ifdef PROBE_CPU_TIME
+    struct timespec ts1;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts1);
+    ticks end= (ticks)((ts1.tv_sec * 1000000000LL + ts1.tv_nsec) * g_TicksPerNanoSec);
+  #else 
     ticks end = getticks();
+  #endif
+
     uint64_t prolog_overhead = (end - start);
     ts->thread_local_overhead += prolog_overhead;
     ts->prolog_overhead = prolog_overhead;
@@ -472,15 +525,20 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 
   if (addr < func) {
     // fprintf(stderr, "Function start is great than the cyg_enter return address.. Function address: %p Call address : %p \n", func, addr);
+  #ifdef PROBE_CPU_TIME
+    struct timespec ts1;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts1);
+    ticks end= (ticks)((ts1.tv_sec * 1000000000LL + ts1.tv_nsec) * g_TicksPerNanoSec);
+  #else 
     ticks end = getticks();
+  #endif
+
     uint64_t prolog_overhead = (end - start);
     ts->thread_local_overhead += prolog_overhead;
 
-    /*
-#ifdef PROBE_HIST_ON
+  #ifdef PROBE_HIST_ON
     update_overhead_histograms(ts, prolog_overhead, PROLOG); 
-#endif
-*/
+  #endif
 
     return;
   }
@@ -526,22 +584,55 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   prologFunction(func_id);
   */
 
+#endif
 }
 
 void __cyg_profile_func_exit(void* func, void* caller) {
 
-  ticks start = getticks();
+#ifdef PROBE_TRUE_EMPTY_ON
+  #ifdef PROBE_CPU_TIME
+    struct timespec ts0;
+    struct timespec ts1;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts0);
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts1);
+
+    ticks start = (ticks)((ts0.tv_sec * 1000000000LL + ts0.tv_nsec) * g_TicksPerNanoSec);
+    ticks end = (ticks)((ts1.tv_sec * 1000000000LL + ts1.tv_nsec) * g_TicksPerNanoSec);
+  #else
+    ticks start = getticks();
+    ticks end = getticks();
+  #endif
+
+  update_empty_overheads(end - start, EPILOG); 
+  return;
+#else 
+  #ifdef PROBE_CPU_TIME
+    struct timespec ts0;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts0);
+    ticks start = (ticks)((ts0.tv_sec * 1000000000LL + ts0.tv_nsec) * g_TicksPerNanoSec);
+  #else
+    ticks start = getticks();
+  #endif
+
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
 
   TLStatistics* ts;
   if ((uint64_t) func < 0x400200) {
     // fprintf(stderr, "\n[cyg_exit] Low function address  : %lu\n", ((uint64_t)func));
     ts = epilogFunction((uint16_t)func);
+
+  #ifdef PROBE_CPU_TIME
+    struct timespec ts1;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts1);
+    ticks end= (ticks)((ts1.tv_sec * 1000000000LL + ts1.tv_nsec) * g_TicksPerNanoSec);
+  #else 
     ticks end = getticks();
+  #endif
+
     uint64_t epilog_overhead = (end - start);
     ts->thread_local_overhead += epilog_overhead;
 
-#ifdef PROBE_HIST_ON
+  #ifdef PROBE_HIST_ON
     if (!ts->deactivated) {
       if (md == NULL) {
         // fprintf(stderr, "Updating REGULAR flow\n");
@@ -554,7 +645,7 @@ void __cyg_profile_func_exit(void* func, void* caller) {
       }
       ts->deactivated = false;
     }
-#endif
+  #endif
 
     return;
   }
@@ -569,15 +660,20 @@ void __cyg_profile_func_exit(void* func, void* caller) {
 
   if (addr < func) {
     // fprintf(stderr, "Function start is great than the cyg_exit return address.. Function address: %p Call address : %p \n", func, addr);
+  #ifdef PROBE_CPU_TIME
+    struct timespec ts1;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts1);
+    ticks end= (ticks)((ts1.tv_sec * 1000000000LL + ts1.tv_nsec) * g_TicksPerNanoSec);
+  #else 
     ticks end = getticks();
+  #endif
+
     uint64_t epilog_overhead = (end - start);
     ts->thread_local_overhead += epilog_overhead;
 
-    /*
-#ifdef PROBE_HIST_ON
+  #ifdef PROBE_HIST_ON
     update_overhead_histograms(ts, epilog_overhead, EPILOG); 
-#endif
-*/
+  #endif
 
     return;
   }
@@ -648,6 +744,8 @@ void __cyg_profile_func_exit(void* func, void* caller) {
   // Delegates to actual profiler code
   epilogFunction(func_id);
   */
+
+#endif
 
 }
 

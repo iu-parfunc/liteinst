@@ -1,11 +1,13 @@
 
-CFLAGS=-DPROBE_HIST_ON
+# CFLAGS=-DPROBE_TRUE_EMPTY_ON -DPROBE_CPU_TIME
+# CFLAGS=-DPROBE_HIST_ON -DPROBE_CPU_TIME
 ARGS= -g -Wall
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 
 # COMP = icc
 CC = icc $(ARGS)
 CPP = icpc -std=c++11 $(ARGS)
+#CPP = cpp 
 # COMP = gcc
 # CC = gcc $(ARGS)
 # CPP = g++ -std=c++0x $(ARGS)
@@ -27,14 +29,15 @@ build: $(OBJ)
 distorm: 
 	cd ../../../deps/distorm/make/linux;make clean;make CC=$(COMP)
 
+#.cpp.cpp:
+#	  $(CPP) $@ $<
+#.c.c:
+#	  $(CC)  $@ $<
+
 .cpp.o:
-	  $(CPP) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
+	$(CPP) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
 .c.o:
-	  $(CC) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
+	$(CC) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
 
 clean:
 	$(RM) -f $(OBJ) 
-
-
-
-

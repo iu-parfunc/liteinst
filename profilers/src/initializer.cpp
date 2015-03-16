@@ -1,9 +1,12 @@
 
 #include "profiler.hpp"
 #include "fprofiler.hpp"
+#include <papi.h>
 
+#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "sprofiler.hpp"
 
 #define FIXED_BACKOFF 0
@@ -14,12 +17,24 @@
 int profiler_type = 0;
 
 uint64_t g_deactivation_count;
+uint64_t g_cache_miss_overhead_upper_bound = 0;
+uint64_t g_init_overhead;
 
 struct timespec g_begints;
 struct timespec g_endts;
 struct timespec g_diff;
 
 extern void print_probe_info();
+
+#ifdef __cplusplus
+extern "C"
+{
+  void __cyg_profile_func_enter(void *this_fn, void *call_site)
+    __attribute__((no_instrument_function));
+  void __cyg_profile_func_exit(void *this_fn, void *call_site)
+    __attribute__((no_instrument_function));
+}
+#endif
 
 __attribute__((no_instrument_function))
 struct timespec *timeSpecDiff(struct timespec *ts1, struct timespec *ts2) {
@@ -44,6 +59,128 @@ double getSecondsFromTS(timespec* ts) {
 }
 
 void __attribute__ ((noinline)) emptyFunc(uint64_t* a, uint64_t* b) {
+
+}
+
+__attribute__((no_instrument_function))
+void calibrate_cache_effects() {
+
+  // Allocate 2 L3 cache sized memory chunks
+  // for i..3
+  //   Access one of it element by element
+  //   PAPI_start();
+  //   _cyg_enter(&calibrate_cache_effects, 0)
+  //   _cyge_exit(&calibrate_cahce_effects, 0)
+  //   PAPI_end();
+  // get the median of L3 misses values
+  // Acesss on chunk element by element
+  // start = getticks()
+  // Acess second chunk element by element
+  // end = getticks()
+  // cache_perturbation_overhead = L3_misses * ((end - start) / L3 cache wordsize)
+  // delete memory chunks
+  
+  int cache_lines = 0;
+  if (sysconf(_SC_LEVEL3_CACHE_LINESIZE) != 0) {
+    cache_lines = sysconf(_SC_LEVEL3_CACHE_SIZE) / sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
+  } else {
+    cache_lines = sysconf(_SC_LEVEL3_CACHE_SIZE) / 8; 
+  }
+
+  double *a, *b;
+  a = (double*) malloc(sizeof(double) * cache_lines);
+  b = (double*) malloc(sizeof(double) * cache_lines);
+  
+  // Initialize PAPI
+  int retval;
+  int eventSet = PAPI_NULL;
+  long long values[] = {0, 0, 0};
+  PAPI_event_info_t evinfo;
+  PAPI_mh_level_t *L;
+
+  const int eventlist[] = {PAPI_L3_TCM}; // L3 cache misses
+  if ((retval = PAPI_library_init(PAPI_VER_CURRENT)) != PAPI_VER_CURRENT) {
+    fprintf(stderr, "[Ubiprof] ERROR 1 calibrating for cache effects..\n");
+    return;
+  }
+
+  if ((retval = PAPI_create_eventset(&eventSet)) != PAPI_OK) {
+    fprintf(stderr, "[Ubiprof] ERROR 2 calibrating for cache effects..\n");
+    return;
+  }
+
+  if (PAPI_add_event(eventSet, eventlist[0]) != PAPI_OK) {
+    fprintf(stderr, "[Ubiprof] ERROR 3 calibrating for cache effects..\n");
+    return;
+  }
+
+  for (int i=0; i<3; i++) {
+    // Trash the cache
+    double sum = 0;
+    for (int j=0; j<cache_lines; j++) {
+      sum += a[j];
+    }
+
+    if ((retval = PAPI_start(eventSet)) != PAPI_OK) {
+      fprintf(stderr, "[Ubiprof] ERROR 4 calibrating for cache effects..\n");
+      return;
+    }
+
+    __cyg_profile_func_enter((void*)&calibrate_cache_effects, 0); // We don't use the second param at the moment
+    __cyg_profile_func_exit((void*)&calibrate_cache_effects, 0); // We don't use the second param at the moment
+
+    if ((retval = PAPI_read(eventSet, &values[i])) != PAPI_OK) {
+      fprintf(stderr, "[Ubiprof] ERROR 5 calibrating for cache effects..\n");
+      return;
+    }
+
+    if ((retval = PAPI_reset(eventSet)) != PAPI_OK) { 
+      fprintf(stderr, "[Ubiprof] ERROR 6 calibrating for cache effects..\n");
+      return;
+    } 
+  }
+
+  long long cache_misses = values[0]; // get the median
+
+  srand(time(NULL));
+
+  // Find approximately how much time it takes to load a cache line from the memory
+  ticks fetch_overhead = 0;
+  for (int i=0; i<3; i++) {
+    // Trash the cache
+    double sum = 0;
+    for (int j=0; j<cache_lines; j++) {
+      sum += a[j];
+    }
+
+    for (int j=0; j<cache_lines; j++) {
+      int index = rand() % cache_lines; // Trying to thwart the prefetcher here
+      ticks start = getticks();
+      sum += b[index]; 
+      ticks end = getticks();
+      ticks current = end - start;
+
+      if (current > fetch_overhead) {
+        fetch_overhead = current;
+      }
+    }
+  }
+
+  if ((retval = PAPI_stop(eventSet, NULL)) != PAPI_OK) {
+    fprintf(stderr, "[Ubiprof] ERROR 7 calibrating for cache effects..\n");
+  }
+
+  if ((retval = PAPI_remove_event(eventSet, eventlist[0])) != PAPI_OK) {
+    fprintf(stderr, "[Ubiprof] ERROR 8 calibrating for cache effects..\n");
+  }
+
+  if ((retval = PAPI_destroy_eventset(&eventSet)) != PAPI_OK) {
+    fprintf(stderr, "[Ubiprof] ERROR 9 calibrating for cache effects..\n");
+  }
+
+  g_cache_miss_overhead_upper_bound = cache_misses * fetch_overhead;
+  fprintf(stderr, "[Ubiprof] Cache perturbation overhead of instrumentation : %lld\n", 
+      g_cache_miss_overhead_upper_bound);
 
 }
 
@@ -73,9 +210,12 @@ void calibrateTicks() {
 void getFinalOverhead() {
 
   uint64_t call_overhead = g_probe_count * g_call_overhead;
+  uint64_t cache_perturbation_overhead = g_probe_count * g_cache_miss_overhead_upper_bound;
 
+  double init_overhead = getSecondsFromTicks(g_init_overhead);
   double probe_overhead = getSecondsFromTicks(g_probe_overheads);
   double jump_overhead = getSecondsFromTicks(call_overhead);
+  double cache_overhead = getSecondsFromTicks(cache_perturbation_overhead);
 
   clockid_t cid;
   struct timespec p_ts, main_ts, monitor_ts;
@@ -111,7 +251,7 @@ void getFinalOverhead() {
   double process_cpu_time = getSecondsFromTS(&p_ts);
 
   double process_overhead_delta = process_cpu_time - main_thread_cpu_time - probe_thread_cpu_time;  
-  double calculated_overheads = probe_overhead + jump_overhead;
+  double calculated_overheads = probe_overhead + jump_overhead + init_overhead + cache_overhead;
 
   fprintf(stderr, "\n\n\n\n");
   fprintf(stderr, "\n[ubiprof] DEACTIVATIONS : %lu\n", g_deactivation_count);
@@ -121,16 +261,20 @@ void getFinalOverhead() {
   fprintf(stderr, "[ubiprof] PROCESS_CPU_TIME(s): %lf\n", process_cpu_time);
   // fprintf(stderr, "[ubiprof] PROCESS_OVERHEAD_DELTA: %lf\n", process_overhead_delta);
 
+  fprintf(stderr, "[ubiprof] INIT_OVERHEAD: %lf\n", init_overhead);
+  fprintf(stderr, "[ubiprof] CACHE_PERTURBATION_OVERHEAD: %lf\n", cache_overhead);
   fprintf(stderr, "[ubiprof] PROBE_OVERHEAD: %lf\n", probe_overhead);
   fprintf(stderr, "[ubiprof] JUMP_OVERHEAD: %lf\n", jump_overhead);
   fprintf(stderr, "[ubiprof] CUMULATIVE_OVERHEAD: %lf\n", calculated_overheads);
   fprintf(stderr, "[ubiprof] REAL_EXEC_TIME: %lf\n", main_thread_cpu_time - calculated_overheads);
-  fprintf(stderr, "[ubiprof] EXEC_TIME: %lf\n", main_thread_cpu_time - probe_overhead);
+  // fprintf(stderr, "[ubiprof] EXEC_TIME: %lf\n", main_thread_cpu_time - probe_overhead);
 
 }
 
 __attribute__((constructor, no_instrument_function))
   void initProfiler() {
+
+    ticks start = getticks();
 
     g_deactivation_count = 0;
 
@@ -161,7 +305,14 @@ __attribute__((constructor, no_instrument_function))
     // Init the suitable profiler depending on enviornment variable
     Profiler::getInstance(profiler_type);
 
+    // Calibrate for cache effects
+    calibrate_cache_effects();
+
     fprintf(stderr, "[Ubiprof] Done intializing the profiler..\n\n");
+
+    ticks end = getticks();
+
+    g_init_overhead = end - start;
 
   }
 

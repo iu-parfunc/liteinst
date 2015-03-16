@@ -186,6 +186,7 @@ void* samplingProbeMonitor(void* param) {
     }
 
     uint64_t call_overhead = global_count * g_call_overhead;
+    uint64_t cache_perturbation_overhead = global_count * g_cache_miss_overhead_upper_bound;
     // fprintf(stderr, "Call overhead : %lu\n", call_overhead);
 
     struct timespec ts;
@@ -199,7 +200,8 @@ void* samplingProbeMonitor(void* param) {
 
     // fprintf(stderr, "Initial total overhead : %lu Thread overhead : %lu Probe thread Overhead : %lu\n", 
     //     g_total_overhead, thread_overheads, probe_thread_overhead);
-    g_total_overhead = thread_overheads + probe_thread_overhead + call_overhead;
+    g_total_overhead = thread_overheads + probe_thread_overhead + call_overhead + 
+                       cache_perturbation_overhead + g_init_overhead;
 
     struct timespec ts1;
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts1);
@@ -219,7 +221,7 @@ void* samplingProbeMonitor(void* param) {
     //     g_total_process_time);
     // fprintf(stderr, "Global overhead delta : %lu Global process delta : %lu \n", overhead_delta,
     //     process_time_delta);
-    // fprintf(stderr, "Overhead : %lu\n", overhead_of_last_epoch);
+    fprintf(stderr, "Overhead : %lu\n", overhead_of_last_epoch);
 
     if (overhead_of_last_epoch != 0 && overhead_of_last_epoch >  sp_target_overhead) {
       uint64_t new_sample_size = ((double)sp_target_overhead / overhead_of_last_epoch) * sp_sample_size; 

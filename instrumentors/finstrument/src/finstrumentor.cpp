@@ -30,6 +30,15 @@ uint64_t* g_probe_timings;
 int g_num_bins;
 #endif
 
+#ifdef PROBE_TRUE_EMPTY_ON
+ProbeStatistics* g_probe_stats; 
+uint64_t* g_epilog_timings; 
+uint64_t* g_prolog_timings; 
+uint64_t* g_probe_timings; 
+int g_num_bins;
+#endif
+
+
 Finstrumentor::Finstrumentor(InstrumentationFunc prolog, InstrumentationFunc epilog) {
   this->prologFunc = prolog; 
   this->epilogFunc = epilog; 
@@ -53,6 +62,17 @@ void Finstrumentor::initialize() {
   this->probe_info = new probe_map; 
 
 #ifdef PROBE_HIST_ON
+  g_probe_stats = new ProbeStatistics; 
+  g_num_bins = PROBE_HIST_MAX_VALUE / BIN_SIZE + 1; // +1 for MAX_VALUE+ bin
+  g_probe_stats->prolog_timings = new uint64_t[g_num_bins](); // C++ value initializtion
+  g_probe_stats->epilog_timings = new uint64_t[g_num_bins]();
+  g_probe_stats->probe_timings = new uint64_t[g_num_bins]();
+  g_prolog_timings = g_probe_stats->prolog_timings;
+  g_epilog_timings = g_probe_stats->epilog_timings;
+  g_probe_timings = g_probe_stats->probe_timings;
+#endif
+
+#ifdef PROBE_TRUE_EMPTY_ON
   g_probe_stats = new ProbeStatistics; 
   g_num_bins = PROBE_HIST_MAX_VALUE / BIN_SIZE + 1; // +1 for MAX_VALUE+ bin
   g_probe_stats->prolog_timings = new uint64_t[g_num_bins](); // C++ value initializtion
@@ -339,10 +359,52 @@ void dumpProbeOverheadStatistics() {
 }
 #endif
 
+#ifdef PROBE_TRUE_EMPTY_ON
+void dumpProbeOverheadStatistics() {
+
+  FILE* fp = fopen("overhead.out", "a");
+
+  // prolog timings
+  for (int i=0; i < g_num_bins; i++) {
+    fprintf(fp, "%lu", g_prolog_timings[i]); 
+    if (i < (g_num_bins-1)) {
+      fprintf(fp, ",");
+    }
+  }
+
+  fprintf(fp, "\n");
+
+  // epilog timings
+  for (int i=0; i < g_num_bins; i++) {
+    fprintf(fp, "%lu", g_epilog_timings[i]); 
+    if (i < (g_num_bins-1)) {
+      fprintf(fp, ",");
+    }
+  }
+
+  fprintf(fp, "\n");
+
+  // total probe timings
+  for (int i=0; i < g_num_bins; i++) {
+    fprintf(fp, "%lu", g_probe_timings[i]); 
+    if (i < (g_num_bins-1)) {
+      fprintf(fp, ",");
+    }
+  }
+
+  fprintf(fp, "\n>>\n");
+
+}
+#endif
+
 Finstrumentor::~Finstrumentor() {
   fprintf(stderr, "[finstrumentor] NUM_ACCESSED_PROBE_SITES: %lu\n", ((Finstrumentor*) INSTRUMENTOR_INSTANCE)->probe_info->size()); 
 
 #ifdef PROBE_HIST_ON 
+  dumpProbeOverheadStatistics();
+#endif
+
+#ifdef PROBE_TRUE_EMPTY_ON
   dumpProbeOverheadStatistics();
 #endif
 

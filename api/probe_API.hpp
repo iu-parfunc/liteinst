@@ -47,6 +47,27 @@ extern int g_num_bins;
 
 #endif
 
+#ifdef PROBE_TRUE_EMPTY_ON
+
+#define PROBE_HIST_MAX_VALUE 100000 // Number up to which the histograms are explicitly binned. After that it's MAX_VALUE+ bin.
+#define BIN_SIZE 10               // Maximum number of bins for each probe timing histogram bins
+#define PROLOG 1
+#define EPILOG 0
+
+typedef struct ProbeStatistics {
+  uint64_t* epilog_timings; // Histogram of individual epilog instrumentation timings
+  uint64_t* prolog_timings; // Histogram of individual prolog instrumentation timings
+  uint64_t* probe_timings; // Histogram of probe timings (epilog + prolog)
+} ProbeStatistics;
+
+extern ProbeStatistics* g_probe_stats; 
+extern uint64_t* g_epilog_timings; 
+extern uint64_t* g_prolog_timings; 
+extern uint64_t* g_probe_timings; 
+extern int g_num_bins;
+
+#endif
+
 /// Instrumentation function format
 /** Instrumentation function should accept one argument for probe identifier.
  */
