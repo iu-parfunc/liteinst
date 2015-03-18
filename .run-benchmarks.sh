@@ -33,8 +33,12 @@ if ! [ "$USE_FIXED_LIBS_HACK" == "" ]; then
 fi
 # ----------------------------------------
 
-# -- MORE HACKS
+# -- MORE HACKS AND THESE ARE VERY UGLY!
 cd benchmarks/nbody/ubiprof
+make gen-data
+cd $rootdir
+
+cd benchmarks/hull/ubiprof
 make gen-data
 cd $rootdir
 
