@@ -65,7 +65,7 @@ inline void init_probe_info(uint64_t func_addr, uint8_t* probe_addr) {
 
 void __cyg_profile_func_enter(void* func, void* caller) {
 
-  fprintf(stderr, "At function entry..\n");
+  // fprintf(stderr, "At function entry..\n");
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
   uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
   init_probe_info((uint64_t)func, (uint8_t*)addr);
@@ -73,7 +73,7 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 
 void __cyg_profile_func_exit(void* func, void* caller) {
 
-  fprintf(stderr, "At function exit..\n");
+  // fprintf(stderr, "At function exit..\n");
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
   uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
   init_probe_info((uint64_t)func, (uint8_t*)addr);
