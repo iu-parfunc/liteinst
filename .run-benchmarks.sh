@@ -42,6 +42,10 @@ cd benchmarks/hull/ubiprof
 make gen-data
 cd $rootdir
 
+cd benchmarks/blackscholes/src
+make gen-data
+cd $rootdir
+
 # (1) Piggy-back on teh standard regression tests to do the build:
 ./.jenkins_script.sh
 
