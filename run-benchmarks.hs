@@ -67,7 +67,7 @@ epochs = [100,250,500,750,1000,2500,5000]
 samplesize :: [Int] 
 samplesize = [100,1000,10000,100000]
 
-benchmark_names = ["blackscholes", "hull", "nbody","bzip-1.0.3", "perl-5.8.7", "hmmer", "sjeng", "lbm"]
+benchmark_names = ["fluid", "blackscholes", "hull", "nbody","bzip-1.0.3", "perl-5.8.7", "hmmer", "sjeng", "lbm"]
 
 benches :: [Benchmark DefaultParamMeaning]
 benches =
