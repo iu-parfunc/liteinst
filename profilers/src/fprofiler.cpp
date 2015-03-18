@@ -91,8 +91,8 @@ TLStatistics* backoffEpilogFunction(uint16_t func_id) {
 
   tl_stat->thread_local_count++;
   for (int i=0; i < thread_count; i++) {
-    // global_count += ((TLSBackoffProfilerStat*) tls_stats[i]-> func_stats)[func_id].count;
-    global_count += tl_stats[i]->thread_local_count;
+    global_count += ((TLSBackoffProfilerStat*) tls_stats[i]-> func_stats)[func_id].count;
+    // global_count += tl_stats[i]->thread_local_count;
   }
 
   if (global_count >= fb_sample_size) {

@@ -44,7 +44,7 @@ libubiprof.so: libubiprof.a
 
 noprof.so: noprof.a 
 	if [ -d libubiprof.so ]; then rm -f libubiprof.so; fi	
-	$(CC) $(LIBS) -shared -Wl,-soname,libubiprof.so -o libubiprof.so $(OBJ) $(INST_OBJ_NO_PROF) $(DEPS) -lc -lpapi
+	$(CC) $(LIBS) -shared -Wl,-soname,libubiprof.so -o libubiprof.so $(INST_OBJ_NO_PROF) $(DEPS) -lc -lpapi
 
 # TODO: Include lpapi.a in the static library
 libubiprof.a: build distorm

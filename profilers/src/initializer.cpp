@@ -80,6 +80,7 @@ void calibrate_cache_effects() {
   // cache_perturbation_overhead = L3_misses * ((end - start) / L3 cache wordsize)
   // delete memory chunks
   
+  fprintf(stderr, "[Ubiprof] INSIDE calibrate_cache_effects..\n");
   int cache_lines = 0;
   if (sysconf(_SC_LEVEL3_CACHE_LINESIZE) != 0) {
     cache_lines = sysconf(_SC_LEVEL3_CACHE_SIZE) / sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
@@ -87,9 +88,12 @@ void calibrate_cache_effects() {
     cache_lines = sysconf(_SC_LEVEL3_CACHE_SIZE) / 8; 
   }
 
+  fprintf(stderr, "[Ubiprof] Number of cache lines : %d..\n", cache_lines);
+
+  double FUDGE = 1;
   double *a, *b;
-  a = (double*) malloc(sizeof(double) * cache_lines);
-  b = (double*) malloc(sizeof(double) * cache_lines);
+  a = (double*) malloc((int)(sizeof(double) * cache_lines * FUDGE));
+  b = (double*) malloc((int)(sizeof(double) * cache_lines * FUDGE));
   
   // Initialize PAPI
   int retval;
@@ -114,17 +118,29 @@ void calibrate_cache_effects() {
     return;
   }
 
+  if ((retval = PAPI_start(eventSet)) != PAPI_OK) {
+    fprintf(stderr, "[Ubiprof] ERROR 4 calibrating for cache effects..\n");
+    return;
+  }
+
   for (int i=0; i<3; i++) {
     // Trash the cache
     double sum = 0;
-    for (int j=0; j<cache_lines; j++) {
+    for (int j=0; j<cache_lines*FUDGE; j++) {
       sum += a[j];
     }
 
-    if ((retval = PAPI_start(eventSet)) != PAPI_OK) {
-      fprintf(stderr, "[Ubiprof] ERROR 4 calibrating for cache effects..\n");
+    // int sz = 30 * 1000 * 1000;
+    // double* data = (double*) malloc(sz * sizeof(double));
+
+    if ((retval = PAPI_reset(eventSet)) != PAPI_OK) { 
+      fprintf(stderr, "[Ubiprof] ERROR 6 calibrating for cache effects..\n");
       return;
     }
+
+    //    int j;
+    //    for(j=0; j<sz; j+=1000) data[j] = data[j] + j*100;
+    //    printf("  do_misses: initialized 30M doubles\n");
 
     __cyg_profile_func_enter((void*)&calibrate_cache_effects, 0); // We don't use the second param at the moment
     __cyg_profile_func_exit((void*)&calibrate_cache_effects, 0); // We don't use the second param at the moment
@@ -135,35 +151,9 @@ void calibrate_cache_effects() {
     }
 
     if ((retval = PAPI_reset(eventSet)) != PAPI_OK) { 
-      fprintf(stderr, "[Ubiprof] ERROR 6 calibrating for cache effects..\n");
+      fprintf(stderr, "[Ubiprof] ERROR 100 calibrating for cache effects..\n");
       return;
     } 
-  }
-
-  long long cache_misses = values[0]; // get the median
-
-  srand(time(NULL));
-
-  // Find approximately how much time it takes to load a cache line from the memory
-  ticks fetch_overhead = 0;
-  for (int i=0; i<3; i++) {
-    // Trash the cache
-    double sum = 0;
-    for (int j=0; j<cache_lines; j++) {
-      sum += a[j];
-    }
-
-    for (int j=0; j<cache_lines; j++) {
-      int index = rand() % cache_lines; // Trying to thwart the prefetcher here
-      ticks start = getticks();
-      sum += b[index]; 
-      ticks end = getticks();
-      ticks current = end - start;
-
-      if (current > fetch_overhead) {
-        fetch_overhead = current;
-      }
-    }
   }
 
   if ((retval = PAPI_stop(eventSet, NULL)) != PAPI_OK) {
@@ -178,6 +168,43 @@ void calibrate_cache_effects() {
     fprintf(stderr, "[Ubiprof] ERROR 9 calibrating for cache effects..\n");
   }
 
+  fprintf(stderr, "[Ubiprof] cache_misses[0] : %lld cache_misses[1] : %lld cache_misses[2] : %lld\n",
+          values[0], values[1], values[2]);
+  
+  long long cache_misses = 0; 
+  for (int j=0; j<3; j++) {
+    if (cache_misses < values[j]) {
+      cache_misses = values[j];
+    }
+  }
+
+  srand(time(NULL));
+
+  // Find approximately how much time it takes to load a cache line from the memory
+  ticks fetch_overhead = 1000000000;
+  for (int i=0; i<3; i++) {
+    // Trash the cache
+    double sum = 0;
+    for (int j=0; j<cache_lines*FUDGE; j++) {
+      sum += a[j];
+    }
+
+    for (int j=0; j<cache_lines*FUDGE; j++) {
+      int index = rand() % (int)(cache_lines  * FUDGE); // Trying to thwart the prefetcher here
+      ticks start = getticks();
+      sum += b[index]; 
+      ticks end = getticks();
+      ticks current = end - start;
+
+      if (current < fetch_overhead) {
+        fetch_overhead = current;
+      }
+    }
+  }
+
+  // fetch_overhead = 12000;
+
+  fprintf(stderr, "[Ubiprof] cache misses %lld fetch overhead %lld\n", cache_misses, fetch_overhead);
   g_cache_miss_overhead_upper_bound = cache_misses * fetch_overhead;
   fprintf(stderr, "[Ubiprof] Cache perturbation overhead of instrumentation : %lld\n", 
       g_cache_miss_overhead_upper_bound);
