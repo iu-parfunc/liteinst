@@ -91,11 +91,11 @@ TLStatistics* backoffEpilogFunction(uint16_t func_id) {
 
   tl_stat->thread_local_count++;
   for (int i=0; i < thread_count; i++) {
-    global_count += ((TLSBackoffProfilerStat*) tls_stats[i]-> func_stats)[func_id].count;
-    // global_count += tl_stats[i]->thread_local_count;
+    // global_count += ((TLSBackoffProfilerStat*) tls_stats[i]-> func_stats)[func_id].count;
+    global_count += tl_stats[i]->thread_local_count;
   }
 
-  if (global_count >= fb_sample_size) {
+  if ((global_count/2) >= fb_sample_size) { // Since we get prolog + epilog count here
     // fprintf(stderr, "Deactivating function : %d\n", func_id);
     if (__sync_bool_compare_and_swap(&(g_stats[func_id].lock), 0 , 1)) {
       g_deactivation_count++;
