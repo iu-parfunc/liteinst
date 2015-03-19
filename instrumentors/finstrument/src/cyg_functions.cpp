@@ -341,12 +341,22 @@ inline uint16_t get_func_id(uint64_t func_addr) {
 
 }
 
+bool has_probe_info(uint64_t func_addr) {
+
+  Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
+  if (ins->probe_info->find(func_addr) == ins->probe_info->end()) {
+    return false;
+  } else {
+    return true;
+  }
+}
+
 // TODO: Make this thread safe
 inline void init_probe_info(uint64_t func_addr, uint8_t* probe_addr) {
 
   // fprintf(stderr, "Function address at init probe : %p\n", func_addr);
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
-
+  // CAS lock here
   // fprintf(stderr, "probe_info address at init probe : %p\n", ins->probe_info);
   if(ins->probe_info->find(func_addr) == ins->probe_info->end()) {
     std::list<FinsProbeInfo*>* probe_list = new std::list<FinsProbeInfo*>;
@@ -552,12 +562,12 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   }
 
   uint8_t* edi_set_addr = patch_first_parameter(addr, (uint64_t*) func, func_id);
+  if (edi_set_addr == 0) { // This could happen when the compiler insert non sensical function address value
+    return; // Ideally deactivate this probe
+    // abort();
+  }
 
   init_probe_info((uint64_t)func, (uint8_t*)addr);
-
-  if (edi_set_addr == 0) {
-    abort();
-  }
 
   ts = prologFunction(func_id);
   ticks end = getticks();
@@ -688,12 +698,17 @@ void __cyg_profile_func_exit(void* func, void* caller) {
     return;
   }
 
+  // For some reason (mostly compiler scrweing things up at prolog) the prolog has not been properly initialized. 
+  if (!has_probe_info((uint64_t)func)) {
+    return;
+  }
+
   uint8_t* edi_set_addr = patch_first_parameter(addr, (uint64_t*) func, func_id);
 
   init_probe_info((uint64_t)func, (uint8_t*)addr);
 
   if (edi_set_addr == 0) {
-    abort();
+    return; // Ideally deactive this probe 
   }
 
   ts = epilogFunction(func_id);
