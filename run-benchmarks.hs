@@ -61,11 +61,6 @@ main = do
 
         }
 
-epochs :: [Int] 
-epochs = [100,250,500,750,1000,2500,5000]
-
-samplesize :: [Int] 
-samplesize = [100,1000,10000,100000]
 
 benchmark_names = ["fluid", "blackscholes", "hull", "nbody","bzip-1.0.3", "perl-5.8.7", "hmmer", "sjeng", "lbm"]
 
@@ -96,18 +91,23 @@ benches =
                        --   , backoff  
                        --   ]) ]
     
+epochs :: [Int] 
+epochs = [100,250,500,750,1000]
 
--- sampling = Or [And [ Set (Variant (compiler ++ "_" ++ optlevel ++ "_Sampling_"++show s_size++"_"++show epoch)) (RuntimeEnv "PROFILER_TYPE" "SAMPLING")
---                    , Set NoMeaning (RuntimeEnv "SAMPLE_SIZE" (show s_size))
---                    , Set NoMeaning (RuntimeEnv "EPOCH_PERIOD" (show epoch))
---                    , Set NoMeaning (CompileEnv "CC"  compiler)
---                    , Set NoMeaning (CompileEnv "OPTLEVEL"  optlevel) 
---                    ]
---               | s_size <- samplesize
---               , epoch <- epochs
---               , compiler <- ["gcc", "icc"]
---               , optlevel <- ["-O1", "-O2", "-O3" ]
---               ]
+samplesize :: [Int] 
+samplesize = [100,1000,10000,100000]
+
+sampling = Or [And [ Set (Variant (compiler ++ "_" ++ optlevel ++ "_Sampling_"++show s_size++"_"++show epoch)) (RuntimeEnv "PROFILER_TYPE" "SAMPLING")
+                   , Set NoMeaning (RuntimeEnv "SAMPLE_SIZE" (show s_size))
+                   , Set NoMeaning (RuntimeEnv "EPOCH_PERIOD" (show epoch))
+                   , Set NoMeaning (CompileEnv "CC"  compiler)
+                   , Set NoMeaning (CompileEnv "OPTLEVEL"  optlevel) 
+                   ]
+              | s_size <- samplesize
+              , epoch <- epochs
+              , compiler <- ["gcc"] -- , "icc"]
+              , optlevel <- ["-O2","-O3"] -- ["-O1", "-O2", "-O3" ]
+              ]
 
 
 
