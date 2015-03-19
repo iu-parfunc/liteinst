@@ -3,6 +3,8 @@
 set -x
 set -e
 
+module add intel 
+
 make clean
 make all
 

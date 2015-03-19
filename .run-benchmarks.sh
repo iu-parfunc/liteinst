@@ -16,7 +16,7 @@ fi
 
 # check where we are and add module 
 #if [ $(HOSTNAME) != swarm ]; then
-module add intel 
+#module add intel 
 #fi
  
 
