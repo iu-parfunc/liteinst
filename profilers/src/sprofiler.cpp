@@ -23,10 +23,12 @@ uint64_t g_last_epoch_random = 0; // Random added to last epoch period
 uint64_t g_TicksPerNanoSec = 0; // Calibrated ticks per nano second
 uint64_t g_call_overhead = 0; // Call overhead calibrated value
 
+#ifdef OVERHEAD_TIME_SERIES
 uint64_t time_step = 0; // Current time step in epoch time series
 
 // List to hold the time series data
 list<string>* overhead_time_series;
+#endif
 
 // All thread local statistics data
 static __thread TLStatistics** tl_stats;
@@ -176,7 +178,6 @@ TLStatistics* samplingEpilogFunction(uint16_t func_id) {
 // Probe monitor
 void* samplingProbeMonitor(void* param) {
 
-  time_step++;
   SamplingProfilerStat* g_stats = (SamplingProfilerStat*) g_ubiprof_stats;
 
   while(true) {
@@ -230,13 +231,17 @@ void* samplingProbeMonitor(void* param) {
     //     process_time_delta);
     fprintf(stderr, "Overhead : %lu\n", overhead_of_last_epoch);
 
-    // Add the thing to list
+#ifdef OVERHEAD_TIME_SERIES
+
+    time_step++;
+
     char buf[50];
     int r = snprintf(buf, 50, "%lu,%lu\n", time_step, overhead_of_last_epoch);
     if (r > 0) {
       string s = buf;
       overhead_time_series->push_back(s);
     }
+#endif
 
     if (overhead_of_last_epoch != 0 && overhead_of_last_epoch >  sp_target_overhead) {
       uint64_t new_sample_size = ((double)sp_target_overhead / overhead_of_last_epoch) * sp_sample_size; 
@@ -288,7 +293,10 @@ void SamplingProfiler::initialize() {
 
   Profiler::initInstrumentor(samplingPrologFunction, samplingEpilogFunction);
 
+#if OVERHEAD_TIME_SERIES
   overhead_time_series = new list<string>();
+#endif
+
   int func_count = ins->getFunctionCount();
   statistics = new SamplingProfilerStat[func_count](); // C++ value initialization. Similar to calloc
 
@@ -420,6 +428,7 @@ void SamplingProfiler::dumpStatistics() {
 
   fclose(fp);
 
+#ifdef OVERHEAD_TIME_SERIES
   fp = fopen("overhead.out", "a");
 
   for (list<string>:: iterator it = overhead_time_series->begin(); it != overhead_time_series->end(); ++it) {
@@ -429,6 +438,7 @@ void SamplingProfiler::dumpStatistics() {
   fprintf(fp, ">>>>\n");
 
   fclose(fp);
+#endif
 
 }
 
