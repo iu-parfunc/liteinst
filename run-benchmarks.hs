@@ -92,7 +92,7 @@ benches =
                        --   ]) ]
     
 epochs :: [Int] 
-epochs = [100,250,500,750,1000]
+epochs = [10,100,250,500,750,1000]
 
 samplesize :: [Int] 
 samplesize = [100,1000,10000,100000]
