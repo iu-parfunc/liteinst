@@ -15,9 +15,9 @@ then echo ".run-benchmarks, cannot proceed because rootdir ($rootdir) does not e
 fi 
 
 # check where we are and add module 
-if [ $(HOSTNAME) != swarm ]; then
-    module add intel 
-fi
+#if [ $(HOSTNAME) != swarm ]; then
+module add intel 
+#fi
  
 
 
