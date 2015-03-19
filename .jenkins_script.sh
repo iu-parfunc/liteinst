@@ -3,6 +3,10 @@
 set -x
 set -e
 
+if [ $(HOSTNAME) = swarm ]; then 
+ PATH=$PATH:/opt/modules/Modules/3.2.10/bin
+fi 
+
 module add intel 
 
 make clean
