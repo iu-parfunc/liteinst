@@ -14,6 +14,13 @@ then echo ".run-benchmarks, cannot proceed because rootdir ($rootdir) does not e
      exit 1 
 fi 
 
+# check where we are and add module 
+#if [ $(HOSTNAME) != swarm ]; then
+#module add intel 
+#fi
+ 
+
+
 cd $rootdir
 echo "Switched to working-copy directory: "`pwd`
 

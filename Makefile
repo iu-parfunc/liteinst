@@ -72,6 +72,9 @@ lib:
 	# (cd ./zcatoggle/src; make install; make docs)
 	# (cd ./dynaprof/src; make install)
 
+#OVERRIDING ANY DECISION ABOUT CID AND SEC (WE HAD A LOT OF OUT OF QUOTA TROUBLE!) 
+CID=905767673358.apps.googleusercontent.com
+SEC=2a2H57dBggubW1_rqglC7jtK
 
 # Run the benchmarks
 bench: run-benchmarks.exe
