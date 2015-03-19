@@ -282,6 +282,13 @@ string Finstrumentor::getFunctionName(uint16_t func_id) {
   }
 }
 
+/*
+void printMap(FuncIDMappings* func_id_mappings) {
+ for (std::map<uint16_t,FunctionInfo*>::iterator it=func_id_mappings->begin(); it!=func_id_mappings->end(); ++it)
+      std::cout << it->first << " => " << it->second->func_name << '\n'; 
+}
+*/
+
 void Finstrumentor::readFunctionInfo() {
 
   fprintf(stderr, "Initializing mappings data structure..\n");
@@ -313,6 +320,7 @@ void Finstrumentor::readFunctionInfo() {
       func_addr_mappings->insert(make_pair(func_info->func_addr, func_info));
       func_id_mappings->insert(make_pair(func_info->func_id, func_info));
     }
+    // printMap(func_id_mappings);
     fp.close();
   }
 

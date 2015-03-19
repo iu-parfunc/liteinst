@@ -6,6 +6,9 @@
 #include <time.h>
 #include <sys/time.h>
 #include <stdlib.h>
+#include <string>
+#include <string.h>
+#include <list>
 
 using namespace std;
 
@@ -20,7 +23,10 @@ uint64_t g_last_epoch_random = 0; // Random added to last epoch period
 uint64_t g_TicksPerNanoSec = 0; // Calibrated ticks per nano second
 uint64_t g_call_overhead = 0; // Call overhead calibrated value
 
+uint64_t time_step = 0; // Current time step in epoch time series
 
+// List to hold the time series data
+list<string>* overhead_time_series;
 
 // All thread local statistics data
 static __thread TLStatistics** tl_stats;
@@ -170,6 +176,7 @@ TLStatistics* samplingEpilogFunction(uint16_t func_id) {
 // Probe monitor
 void* samplingProbeMonitor(void* param) {
 
+  time_step++;
   SamplingProfilerStat* g_stats = (SamplingProfilerStat*) g_ubiprof_stats;
 
   while(true) {
@@ -223,6 +230,14 @@ void* samplingProbeMonitor(void* param) {
     //     process_time_delta);
     fprintf(stderr, "Overhead : %lu\n", overhead_of_last_epoch);
 
+    // Add the thing to list
+    char buf[50];
+    int r = snprintf(buf, 50, "%lu,%lu\n", time_step, overhead_of_last_epoch);
+    if (r > 0) {
+      string s = buf;
+      overhead_time_series->push_back(s);
+    }
+
     if (overhead_of_last_epoch != 0 && overhead_of_last_epoch >  sp_target_overhead) {
       uint64_t new_sample_size = ((double)sp_target_overhead / overhead_of_last_epoch) * sp_sample_size; 
 
@@ -273,6 +288,7 @@ void SamplingProfiler::initialize() {
 
   Profiler::initInstrumentor(samplingPrologFunction, samplingEpilogFunction);
 
+  overhead_time_series = new list<string>();
   int func_count = ins->getFunctionCount();
   statistics = new SamplingProfilerStat[func_count](); // C++ value initialization. Similar to calloc
 
@@ -363,7 +379,16 @@ TLStatistics** SamplingProfiler::getThreadStatistics() {
   return tls_stats;
 }
 
+/*
+void printM(FuncIDMappings* func_id_mappings) {
+ for (std::map<uint16_t,FunctionInfo*>::iterator it=func_id_mappings->begin(); it!=func_id_mappings->end(); ++it)
+      std::cout << it->first << " => " << it->second->func_name << '\n'; 
+}
+*/
+
 void SamplingProfiler::dumpStatistics() {
+
+  fprintf(stderr, "ENTERING dumpstatistics ..\n");
 
   FILE* fp = fopen("prof.out", "a");
 
@@ -382,8 +407,9 @@ void SamplingProfiler::dumpStatistics() {
     }
 
     total_count += statistics[i].count;
-
+    
     if (statistics[i].count != 0) {
+      // fprintf(stderr, "%d => %s\n", i , ins->getFunctionName(i).c_str()); 
       fprintf(fp, "Function Name: %s Count %lu Deactivation Count : %d Avg time (cycles) : %lu\n", 
           ins->getFunctionName(i).c_str(),  statistics[i].count, 
           statistics[i].deactivation_count, statistics[i].total_time / statistics[i].count); 
@@ -391,6 +417,16 @@ void SamplingProfiler::dumpStatistics() {
   }
 
   fprintf(stderr, "\n[Sampling Profiler] NUMBER_OF_FUNCTION_CALLS: %lu\n", total_count);
+
+  fclose(fp);
+
+  fp = fopen("overhead.out", "a");
+
+  for (list<string>:: iterator it = overhead_time_series->begin(); it != overhead_time_series->end(); ++it) {
+    fprintf(fp, "%s\n", (*it).c_str());
+  }
+
+  fprintf(fp, ">>>>\n");
 
   fclose(fp);
 
