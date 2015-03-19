@@ -5,9 +5,12 @@ set -e
 
 if [ $HOSTNAME = swarm ]; then 
  PATH=$PATH:/opt/modules/Modules/3.2.10/bin
+ modulecmd bash add intel 
+else 
+ module add intel 
 fi 
 
-module add intel 
+
 
 make clean
 make all
