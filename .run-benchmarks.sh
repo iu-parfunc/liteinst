@@ -48,6 +48,8 @@ else
 fi 
 
 
+echo $LD_LIBRARY_PATH 
+
 # -- MORE HACKS AND THESE ARE VERY UGLY!
 # cd benchmarks/nbody/ubiprof
 # make gen-data
