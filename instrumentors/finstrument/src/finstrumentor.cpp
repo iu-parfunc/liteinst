@@ -370,7 +370,7 @@ void dumpProbeOverheadStatistics() {
 #ifdef PROBE_TRUE_EMPTY_ON
 void dumpProbeOverheadStatistics() {
 
-  FILE* fp = fopen("overhead.out", "a");
+  FILE* fp = fopen("histogram.out", "a");
 
   // prolog timings
   for (int i=0; i < g_num_bins; i++) {
