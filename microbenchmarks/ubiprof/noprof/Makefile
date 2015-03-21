@@ -1,5 +1,5 @@
 # CC = icc
-CFLAGS=-DINDIVIDUAL
+# CFLAGS=-DINDIVIDUAL
 CC = gcc
 CFLAGS = -O2
 CPU = 2
@@ -8,9 +8,15 @@ ifeq ($(N),)
     N=100000
 endif
 
-all: noprof.exe 
+all: noprof.exe
 	make run
-# main_vt.exe
+
+ex: example.exe
+	taskset -c $(CPU) ./example.exe ${N}
+
+example.exe: example.c
+	# $(CC) $(CFLAGS) -Wl,--no-as-needed -finstrument-functions -fno-optimize-sibling-calls example.c -o example.exe
+	$(CC) $(CFLAGS) example.c -o example.exe
 
 noprof.exe: noprof.c
 	$(CC) $(CFLAGS) -Wl,--no-as-needed -finstrument-functions -fno-optimize-sibling-calls -L/u/crest-team/working_copies/onlineProfiling/build/noprof -lubiprof -lrt noprof.c -o nprof.exe
