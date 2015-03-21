@@ -1,6 +1,8 @@
 
 #include <stdio.h>
 #include <inttypes.h>
+#include <assert.h>
+#include <stdlib.h>
 
 #define ticks uint64_t
 
@@ -22,35 +24,48 @@ void bar() {
 
 }
 
-int main() {
+int main(int argc, char** argv) {
 
   // call them once to deactivate instrumentation
   foo(434, 24); 
   bar();
 
   long long N = 1000000000; 
+  N = atoi(argv[1]);
   int i;
   long long foo_total = 0;
   long long bar_total = 0;
 
   // To warm up stuff
+  /*
   for (i = 0; i < N; i++) {
     foo(234, 454);
     bar();
   }
+  */
 
 // #ifdef INDIVIDUAL
+  ticks start = 0, end = 0;
   for (i = 0; i < N; i++) {
-    ticks start = getticks();
+    start = getticks();
     foo(234, 454);
-    ticks end = getticks();
+    end = getticks();
+
+    if (end < start) {
+        printf("start : %lld  end : %lld\n");
+    }
+    assert(end > start);
     foo_total += (end - start);
   } 
 
   for (i = 0; i < N; i++) {
-    ticks start = getticks();
+    start = getticks();
     bar();
-    ticks end = getticks();
+    end = getticks();
+    if (end < start) {
+        printf("start : %lld  end : %lld\n");
+    }
+    assert(end > start);
     bar_total += (end - start);
   } 
 
@@ -60,13 +75,13 @@ int main() {
 // #endif
 
 // #ifdef AGGREGATE 
-  ticks start = getticks();
+  start = getticks();
   for (i = 0; i < N; i++) {
     foo(234, 454);
   } 
-  ticks end = getticks();
+  end = getticks();
   foo_total = 0;
-  foo_total += (end - start);
+  foo_total = (end - start);
 
   start = getticks();
   for (i = 0; i < N; i++) {
@@ -74,7 +89,7 @@ int main() {
   } 
   end = getticks();
   bar_total = 0;
-  bar_total += (end - start);
+  bar_total = (end - start);
 
   fprintf(stdout, "[Loop] foo overhead : %lld\n", (foo_total/ N));
   fprintf(stdout, "[Loop] bar overhead : %lld\n", (bar_total/ N));

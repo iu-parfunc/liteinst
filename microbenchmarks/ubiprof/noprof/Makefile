@@ -4,6 +4,10 @@ CC = gcc
 CFLAGS = -O2
 CPU = 2
 
+ifeq ($(N),)
+    N=100000
+endif
+
 all: noprof.exe 
 	make run
 # main_vt.exe
@@ -13,7 +17,7 @@ noprof.exe: noprof.c
 	(readelf -s nprof.exe |grep FUNC | awk -F '[[:space:]]+' '{print $$3 "," $$9}' > functions.txt)
 
 run: noprof.exe
-	LD_LIBRARY_PATH=../../../build/noprof:$(LD_LIBRARY_PATH) taskset -c $(CPU) ./nprof.exe
+	LD_LIBRARY_PATH=../../../build/noprof:$(LD_LIBRARY_PATH) taskset -c $(CPU) ./nprof.exe ${N}
 
 clean:
 	rm -f *.exe *.o *.z *.otf *.thumb *.uctl *.def *.events
