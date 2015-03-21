@@ -40,15 +40,15 @@ if ! [ "$USE_FIXED_LIBS_HACK" == "" ]; then
 fi
 # ----------------------------------------
 if [ $HOSTNAME = swarm ]; then 
- export PATH=/opt/intel/parallel_studio_xe/composer_xe_2015.1.133/bin/intel64:/opt/intel/parallel_studio_xe/composer_xe_2015.1.133/bin/intel64_mic:/opt/intel/parallel_studio_xe/composer_xe_2015.1.133/debugger/gui/intel64:$PATH
-   
- export LD_LIBRARY_PATH=/opt/intel/parallel_studio_xe/composer_xe_2015.1.133/tbb/lib/intel64:/opt/intel/parallel_studio_xe/composer_xe_2015.1.133/mkl/lib/intel64:/opt/intel/parallel_studio_xe/composer_xe_2015.1.133/compiler/lib/intel64:/opt/intel/parallel_studio_xe/composer_xe_2015.1.133/ipp/lib/intel64:$LD_LIBRARY_PATH
-else 
- module add intel 
+echo "WE ARE ON SWARM"
+source /etc/profile.d/modules-local.sh
 fi 
+
+module add intel 
 
 
 echo $LD_LIBRARY_PATH 
+echo $PATH
 
 # -- MORE HACKS AND THESE ARE VERY UGLY!
 # cd benchmarks/nbody/ubiprof
