@@ -40,6 +40,7 @@ if ! [ "$USE_FIXED_LIBS_HACK" == "" ]; then
 fi
 # ----------------------------------------
 if [ $HOSTNAME = swarm ]; then 
+echo "WE ARE ON SWARM"
 source /etc/profile.d/modules-local.sh
 fi 
 
