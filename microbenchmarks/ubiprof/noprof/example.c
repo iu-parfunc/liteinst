@@ -3,16 +3,14 @@
 #include <inttypes.h>
 #include <assert.h>
 #include <stdlib.h>
-#include "cycle.h"
 
-#define ticks uint64_t
+typedef unsigned long long ticks;
 
-__attribute__ ((no_instrument_function))
-static __inline__ unsigned long long getticks_1(void)
-{
-    unsigned long long int x;
-    __asm__ volatile (".byte 0x0f, 0x31" : "=A" (x));
-    return x;
+__attribute__((no_instrument_function))
+static __inline__ ticks getticks(void) {
+  unsigned a, d; 
+  asm volatile("rdtsc" : "=a" (a), "=d" (d)); 
+  return ((ticks)a) | (((ticks)d) << 32); 
 }
 
 __attribute__ ((noinline))
@@ -22,7 +20,7 @@ void bar() {
 
 int main(int argc, char** argv) {
 
-  long long N = 1000000000; 
+  long long N = 1000000; 
   N = atoi(argv[1]);
   int i;
   long long bar_total = 0;
@@ -41,7 +39,7 @@ int main(int argc, char** argv) {
     bar();
     end = getticks();
     if (end < start) {
-        printf("start : %lu  end : %lu diff : %lld\n", start, end , ((long long int)end - start));
+        printf("start : %llu  end : %llu diff : %lld\n", start, end , ((long long int)end - start));
     }
     assert(end > start);
     bar_total += (end - start);
@@ -57,12 +55,14 @@ int main(int argc, char** argv) {
   end = getticks();
 
   if (end < start) {
-    printf("start : %lu  end : %lu diff : %lld\n", start, end, ((long long int)end - start));
+    printf("start : %llu  end : %llu diff : %lld\n", start, end, ((long long int)end - start));
   }
   assert(end > start);
 
   bar_total = (end - start);
 
   fprintf(stdout, "[Loop] bar overhead : %lf\n", ((double)bar_total/ N));
+
+  return 0;
 
 }
