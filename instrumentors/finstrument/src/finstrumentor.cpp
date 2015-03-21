@@ -274,6 +274,15 @@ uint64_t Finstrumentor::getFunctionAddress(uint16_t func_id) {
   }
 }
 
+uint64_t* Finstrumentor::getLock(uint64_t func_addr) {
+  if (func_addr_mappings->find(func_addr) != func_addr_mappings->end()) {
+    return &(func_addr_mappings->find(func_addr)->second->lock);
+    // return func_addr_mappings->find(func_addr)->second->func_id;
+  } else {
+   return NULL;
+  } 
+}
+
 string Finstrumentor::getFunctionName(uint16_t func_id) {
   if (func_id_mappings->find(func_id) != func_id_mappings->end()) {
     return func_id_mappings->find(func_id)->second->func_name;
@@ -313,6 +322,7 @@ void Finstrumentor::readFunctionInfo() {
       func_info->func_addr = (uint64_t) strtoul(tokens[0].c_str(), NULL, 16);
       func_info->func_name = tokens[1];
       func_info->func_id = func_count++;
+      func_info->lock = 0;
 
       // fprintf(stderr, "[Finstrumentor] Got line  %s\n", line.c_str());
       // fprintf(stderr, "[Finstrumentor] Addr : %lx Func name : %s\n", func_info->func_addr, func_info->func_name.c_str());

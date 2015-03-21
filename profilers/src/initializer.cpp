@@ -20,6 +20,8 @@ uint64_t g_deactivation_count;
 uint64_t g_cache_miss_overhead_upper_bound = 0;
 uint64_t g_init_overhead;
 
+bool g_ubiprof_initialized = false;
+
 struct timespec g_begints;
 struct timespec g_endts;
 struct timespec g_diff;
@@ -338,6 +340,8 @@ __attribute__((constructor, no_instrument_function))
     fprintf(stderr, "[Ubiprof] Done intializing the profiler..\n\n");
 
     ticks end = getticks();
+
+    g_ubiprof_initialized = true;
 
     g_init_overhead = end - start;
 

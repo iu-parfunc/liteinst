@@ -52,6 +52,7 @@ typedef struct FunctionInfo {
   uint16_t func_id;
   uint64_t func_addr;
   std::string func_name;
+  uint64_t lock;
 } FunctionInfo;
 
 typedef std::map<uint64_t, FunctionInfo*> FuncAddrMappings;
@@ -89,6 +90,7 @@ class Finstrumentor : public Instrumentor {
     int deactivateProbeByName(void* id, int type);
     uint16_t getFunctionId(uint64_t addr);
     uint64_t getFunctionAddress(uint16_t id);
+    uint64_t* getLock(uint64_t addr);
     std::string getFunctionName(uint16_t id);
     virtual ~Finstrumentor();
 

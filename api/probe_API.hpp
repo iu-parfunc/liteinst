@@ -68,6 +68,8 @@ extern int g_num_bins;
 
 #endif
 
+extern bool g_ubiprof_initialized;
+
 /// Instrumentation function format
 /** Instrumentation function should accept one argument for probe identifier.
  */

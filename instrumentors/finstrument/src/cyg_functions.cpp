@@ -354,51 +354,62 @@ bool has_probe_info(uint64_t func_addr) {
 // TODO: Make this thread safe
 inline void init_probe_info(uint64_t func_addr, uint8_t* probe_addr) {
 
+
   // fprintf(stderr, "Function address at init probe : %p\n", func_addr);
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
-  // CAS lock here
-  // fprintf(stderr, "probe_info address at init probe : %p\n", ins->probe_info);
-  if(ins->probe_info->find(func_addr) == ins->probe_info->end()) {
-    std::list<FinsProbeInfo*>* probe_list = new std::list<FinsProbeInfo*>;
-    // fprintf(stderr, "Probe list address for func id %d : %p\n", func_addr, probe_list);
-    FinsProbeInfo* probeInfo = new FinsProbeInfo;
-    probeInfo->probeStartAddr = (probe_addr-8);
-    // probeInfo->activeSequence = (uint64_t)(probe_addr - 8); // Should be return address - 8
-    probeInfo->isActive = 1;
 
-    uint64_t sequence = *((uint64_t*)(probe_addr-8));
-    uint64_t mask = 0x0000000000FFFFFF;
-    uint64_t deactiveSequence = (uint64_t) (sequence & mask); 
-    mask = 0x0000441F0F000000; // Mask with a 5 byte NOP
+  uint64_t* lock = ins->getLock(func_addr);
+  if (lock != NULL) {
+    if (__sync_bool_compare_and_swap(lock, 0 , 1)) {
+      // fprintf(stderr, "probe_info address at init probe : %p\n", ins->probe_info);
+      if(ins->probe_info->find(func_addr) == ins->probe_info->end()) {
+        std::list<FinsProbeInfo*>* probe_list = new std::list<FinsProbeInfo*>;
+        // fprintf(stderr, "Probe list address for func id %d : %p\n", func_addr, probe_list);
+        FinsProbeInfo* probeInfo = new FinsProbeInfo;
+        probeInfo->probeStartAddr = (probe_addr-8);
+        // probeInfo->activeSequence = (uint64_t)(probe_addr - 8); // Should be return address - 8
+        probeInfo->isActive = 1;
 
-    probeInfo->activeSequence = sequence;
-    probeInfo->deactiveSequence = deactiveSequence | mask;
+        uint64_t sequence = *((uint64_t*)(probe_addr-8));
+        uint64_t mask = 0x0000000000FFFFFF;
+        uint64_t deactiveSequence = (uint64_t) (sequence & mask); 
+        mask = 0x0000441F0F000000; // Mask with a 5 byte NOP
 
-    probe_list->push_back(probeInfo);
-    // fprintf(stderr, "Adding probe %p for function %p\n", probe_addr, (uint64_t*) func_addr);
-    ins->probe_info->insert(make_pair(func_addr, probe_list));
-  } else {
-    std::list<FinsProbeInfo*>* probe_list = ins->probe_info->find(func_addr)->second;
-    for(std::list<FinsProbeInfo*>::iterator iter = probe_list->begin(); iter != probe_list->end(); iter++) {
-      FinsProbeInfo* probeInfo= *iter;
-      if (probeInfo->probeStartAddr == (probe_addr-8)) {
-        return; // Probe already initialized. Nothing to do.
+        probeInfo->activeSequence = sequence;
+        probeInfo->deactiveSequence = deactiveSequence | mask;
+
+        probe_list->push_back(probeInfo);
+        // fprintf(stderr, "Adding probe %p for function %p\n", probe_addr, (uint64_t*) func_addr);
+        ins->probe_info->insert(make_pair(func_addr, probe_list));
+      } else {
+        std::list<FinsProbeInfo*>* probe_list = ins->probe_info->find(func_addr)->second;
+        for(std::list<FinsProbeInfo*>::iterator iter = probe_list->begin(); iter != probe_list->end(); iter++) {
+          FinsProbeInfo* probeInfo= *iter;
+          if (probeInfo->probeStartAddr == (probe_addr-8)) {
+            __sync_bool_compare_and_swap(lock, 1 , 0);
+            return; // Probe already initialized. Nothing to do.
+          }
+        }
+
+        FinsProbeInfo* probeInfo= new FinsProbeInfo;
+        probeInfo->probeStartAddr = (probe_addr - 8);
+        probeInfo->isActive = 1;
+
+        uint64_t sequence = *((uint64_t*)(probe_addr-8));
+        uint64_t mask = 0x0000000000FFFFFF; // Little endianness
+        uint64_t deactiveSequence = (uint64_t) (sequence & mask); 
+        mask = 0x0000441F0F000000;
+
+        probeInfo->activeSequence = sequence;
+        probeInfo->deactiveSequence = deactiveSequence | mask;
+
+        probe_list->push_back(probeInfo);
       }
+      __sync_bool_compare_and_swap(lock, 1 , 0);
+    } else { // We failed. Wait until the other thread finish and just return
+      while (*lock); // Busy wait until the other thread finishes
+      return;
     }
-
-    FinsProbeInfo* probeInfo= new FinsProbeInfo;
-    probeInfo->probeStartAddr = (probe_addr - 8);
-    probeInfo->isActive = 1;
-
-    uint64_t sequence = *((uint64_t*)(probe_addr-8));
-    uint64_t mask = 0x0000000000FFFFFF; // Little endianness
-    uint64_t deactiveSequence = (uint64_t) (sequence & mask); 
-    mask = 0x0000441F0F000000;
-
-    probeInfo->activeSequence = sequence;
-    probeInfo->deactiveSequence = deactiveSequence | mask;
-
-    probe_list->push_back(probeInfo);
   }
 }
 
@@ -533,6 +544,10 @@ void __cyg_profile_func_enter(void* func, void* caller) {
     // abort();
   }
 
+  if (!g_ubiprof_initialized) {
+    return;
+  }
+
   uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
 
   if (addr < func) {
@@ -563,6 +578,8 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 
   uint8_t* edi_set_addr = patch_first_parameter(addr, (uint64_t*) func, func_id);
   if (edi_set_addr == 0) { // This could happen when the compiler insert non sensical function address value
+    fprintf(stderr, "[Finstrumentor] Parameter patching failed at address : %p function : %p function id : %lu\n", 
+        addr, func, func_id);
     return; // Ideally deactivate this probe
     // abort();
   }
@@ -661,6 +678,10 @@ void __cyg_profile_func_exit(void* func, void* caller) {
     }
   #endif
 
+    return;
+  }
+
+  if (!g_ubiprof_initialized) {
     return;
   }
 

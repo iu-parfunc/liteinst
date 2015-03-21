@@ -7,6 +7,7 @@
 
 __attribute__((constructor, no_instrument_function))
 void init_no_prof() {
+  fprintf(stderr, "[Finstrumentor] Using libubiprof no profile version..\n");
   if(!INSTRUMENTOR_INSTANCE) {
     INSTRUMENTOR_INSTANCE = new Finstrumentor(NULL, NULL);
     ((Finstrumentor*)INSTRUMENTOR_INSTANCE)->initialize();
