@@ -19,7 +19,7 @@ example.exe: example.c
 	$(CC) $(CFLAGS) example.c -o example.exe
 
 noprof.exe: noprof.c
-	$(CC) $(CFLAGS) -finstrument-functions -fno-optimize-sibling-calls -L/u/crest-team/working_copies/onlineProfiling/build/noprof -lubiprof noprof.c -o nprof.exe
+	$(CC) $(CFLAGS) -finstrument-functions -fno-optimize-sibling-calls -L../../../build/noprof -lubiprof noprof.c -o nprof.exe
 	(readelf -s nprof.exe |grep FUNC | awk -F '[[:space:]]+' '{print $$3 "," $$9}' > functions.txt)
 
 run: noprof.exe
