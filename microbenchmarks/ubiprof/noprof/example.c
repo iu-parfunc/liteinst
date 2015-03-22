@@ -21,7 +21,7 @@ static __inline__ ticks getstart(void) {
              "mov %%edx, %0\n\t"
              "mov %%eax, %1\n\t": "=r" (cycles_high), "=r" (cycles_low)::
              "%rax", "%rbx", "%rcx", "%rdx");
-  return ((ticks)cycles_high) | (((ticks)cycles_low) << 32); 
+  return ((ticks)cycles_high << 32) | (((ticks)cycles_low)); 
 }
 
 static __inline__ ticks getend(void) {
@@ -31,7 +31,7 @@ static __inline__ ticks getend(void) {
           "mov %%eax, %1\n\t"
            "CPUID\n\t": "=r" (cycles_high), "=r" (cycles_low)::
            "%rax", "%rbx", "%rcx", "%rdx");
-  return ((ticks)cycles_high) | (((ticks)cycles_low) << 32); 
+  return ((ticks)cycles_high << 32) | (((ticks)cycles_low)); 
 }
 
 __attribute__ ((noinline))
