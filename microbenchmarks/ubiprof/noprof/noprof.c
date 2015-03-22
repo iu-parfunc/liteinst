@@ -3,6 +3,7 @@
 #include <inttypes.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <limits.h>
 
 typedef unsigned long long ticks;
 
@@ -44,6 +45,7 @@ int main(int argc, char** argv) {
   */
 
 // #ifdef INDIVIDUAL
+  // ticks min = ULLONG_MAX, max=0;
   ticks start = 0, end = 0;
   for (i = 0; i < N; i++) {
     start = getticks();

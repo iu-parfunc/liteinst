@@ -1,7 +1,7 @@
 # CC = icc
 # CFLAGS=-DINDIVIDUAL
 CC = gcc
-CFLAGS = -O2
+CFLAGS = -O0
 CPU = 2
 
 ifeq ($(N),)
