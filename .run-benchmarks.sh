@@ -39,12 +39,13 @@ if ! [ "$USE_FIXED_LIBS_HACK" == "" ]; then
   cd $rootdir/
 fi
 # ----------------------------------------
-if [ $HOSTNAME = swarm ]; then 
-echo "WE ARE ON SWARM"
-source /etc/profile.d/modules-local.sh
-fi 
 
-module add intel 
+# if [ $HOSTNAME = swarm ]; then 
+# echo "WE ARE ON SWARM"
+# source /etc/profile.d/modules-local.sh
+# fi 
+
+# module add intel 
 
 
 echo $LD_LIBRARY_PATH 
