@@ -86,10 +86,7 @@ benches =
                           ]
 
 
-    ubiprof_variants = --[ ("ubiprof", backoff)]
-                       Or [ sampling 
-                          , backoff  
-                          ]) ]
+    ubiprof_variants = [("ubiprof", backoff),("sampling",sampling)]
     
 epochs :: [Int] 
 epochs = [10,100,250,500,750,1000]
