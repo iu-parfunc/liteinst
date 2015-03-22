@@ -4,14 +4,13 @@
 #include <assert.h>
 #include <stdlib.h>
 
-#define ticks uint64_t
+typedef unsigned long long ticks;
 
-__attribute__ ((no_instrument_function))
-static __inline__ unsigned long long getticks(void)
-{
-    unsigned long long int x;
-    __asm__ volatile (".byte 0x0f, 0x31" : "=A" (x));
-    return x;
+__attribute__((no_instrument_function))
+static __inline__ ticks getticks(void) {
+  unsigned a, d; 
+  asm volatile("rdtsc" : "=a" (a), "=d" (d)); 
+  return ((ticks)a) | (((ticks)d) << 32); 
 }
 
 __attribute__ ((noinline))
@@ -30,11 +29,11 @@ int main(int argc, char** argv) {
   foo(434, 24); 
   bar();
 
-  long long N = 1000000000; 
+  uint64_t N = 1000000000; 
   N = atoi(argv[1]);
   int i;
-  long long foo_total = 0;
-  long long bar_total = 0;
+  int64_t foo_total = 0;
+  int64_t bar_total = 0;
 
   // To warm up stuff
   /*
@@ -52,7 +51,7 @@ int main(int argc, char** argv) {
     end = getticks();
 
     if (end < start) {
-        printf("start : %lld  end : %lld\n");
+        printf("start : %llu  end : %llu", start, end);
     }
     assert(end > start);
     foo_total += (end - start);
@@ -63,15 +62,15 @@ int main(int argc, char** argv) {
     bar();
     end = getticks();
     if (end < start) {
-        printf("start : %lld  end : %lld\n");
+        printf("start : %llu  end : %llu\n", start, end);
     }
     assert(end > start);
     bar_total += (end - start);
   } 
 
-  fprintf(stdout, "Total invocations : %lld\n", N);
-  fprintf(stdout, "[regular] foo overhead : %lld\n", (foo_total/ N));
-  fprintf(stdout, "[regular] bar overhead : %lld\n", (bar_total/ N));
+  fprintf(stdout, "Total invocations : %lu\n", N);
+  fprintf(stdout, "[regular] foo overhead : %ld\n", (foo_total/ N));
+  fprintf(stdout, "[regular] bar overhead : %ld\n", (bar_total/ N));
 // #endif
 
 // #ifdef AGGREGATE 
@@ -91,8 +90,8 @@ int main(int argc, char** argv) {
   bar_total = 0;
   bar_total = (end - start);
 
-  fprintf(stdout, "[Loop] foo overhead : %lld\n", (foo_total/ N));
-  fprintf(stdout, "[Loop] bar overhead : %lld\n", (bar_total/ N));
+  fprintf(stdout, "[Loop] foo overhead : %ld\n", (foo_total/ N));
+  fprintf(stdout, "[Loop] bar overhead : %ld\n", (bar_total/ N));
 // #endif
 
 }
