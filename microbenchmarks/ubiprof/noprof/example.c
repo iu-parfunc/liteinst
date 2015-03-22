@@ -35,8 +35,11 @@ static __inline__ ticks getend(void) {
 }
 
 __attribute__ ((noinline))
-void bar() {
-
+void bar(int x) {
+  int i = 0, sum = 0;
+  for (i = 0; i < x; i++) {
+    sum += i;
+  }
 }
 
 int main(int argc, char** argv) {
@@ -45,6 +48,15 @@ int main(int argc, char** argv) {
   N = atoi(argv[1]);
   int i;
   long long bar_total = 0;
+  int num_bins = 100000/10;
+  long long histogram[num_bins];
+  long long min = 0;
+  long long max = 0;
+  long long sum = 0;
+
+  for (i = 0; i < num_bins; i++) {
+    histogram[i] = 0;
+  }
 
   // To warm up stuff
   /*
@@ -57,7 +69,7 @@ int main(int argc, char** argv) {
 
   for (i = 0; i < N; i++) {
     start = getstart();
-    bar();
+    bar(100);
     end = getend();
     /*
     if (end < start) {
@@ -65,15 +77,26 @@ int main(int argc, char** argv) {
     }
     assert(end > start);
     */
-    bar_total += (end - start);
+    long long elapsed = ((long long) end - start);
+    bar_total += elapsed; 
+    if (max < elapsed) {
+      max = elapsed;
+    }
+
+    if (min > elapsed) {
+      min = elapsed;
+    }
+
+    histogram[elapsed/10]++;
   } 
 
   fprintf(stdout, "Total invocations : %lld\n", N);
   fprintf(stdout, "[regular] bar overhead : %lf\n", ((double)bar_total/ N));
+  fprintf(stdout, "[regular] Min : %lld Max : %lld\n", min, max);
 
   start = getstart();
   for (i = 0; i < N; i++) {
-    bar();
+    bar(100);
   } 
   end = getend();
 
@@ -84,9 +107,16 @@ int main(int argc, char** argv) {
   assert(end > start);
   */
 
-  bar_total = (end - start);
+  bar_total = ((long long) end - start);
 
   fprintf(stdout, "[Loop] bar overhead : %lf\n", ((double)bar_total/ N));
+
+  fprintf(stdout, "[regular] Histogram \n");
+  for (i = 0; i < num_bins; i++) {
+    if (histogram[i] > 0) {
+      fprintf(stdout, "%d : %lld\n", i * 10, histogram[i]);
+    }
+  }
 
   return 0;
 
