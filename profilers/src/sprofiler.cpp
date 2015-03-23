@@ -229,7 +229,7 @@ void* samplingProbeMonitor(void* param) {
     //     g_total_process_time);
     // fprintf(stderr, "Global overhead delta : %lu Global process delta : %lu \n", overhead_delta,
     //     process_time_delta);
-    fprintf(stderr, "Overhead : %lu\n", overhead_of_last_epoch);
+    // fprintf(stderr, "Overhead : %lu\n", overhead_of_last_epoch);
 
 #ifdef OVERHEAD_TIME_SERIES
 
