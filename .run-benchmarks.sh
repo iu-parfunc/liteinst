@@ -14,13 +14,6 @@ then echo ".run-benchmarks, cannot proceed because rootdir ($rootdir) does not e
      exit 1 
 fi 
 
-# check where we are and add module 
-#if [ $(HOSTNAME) != swarm ]; then
-#module add intel 
-#fi
- 
-
-
 cd $rootdir
 echo "Switched to working-copy directory: "`pwd`
 
@@ -39,16 +32,32 @@ if ! [ "$USE_FIXED_LIBS_HACK" == "" ]; then
   cd $rootdir/
 fi
 # ----------------------------------------
+# PERFORM VARIOUS HACKS DEPENDING ON WHERE WE ARE 
+case $HOSTNAME in 
+    cutter ) 
+	echo "Add papi paths" 
+	export CPATH=$CPATH:/opt/papi/5.4.1/include
+	export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/papi/5.4.1/lib
+	;;
+    swarm ) 
+	source /etc/profile.d/modules-local.sh
+	;;
+    
+    *)
+	echo "NO SPECIAL HACKS FOR THIS MACHINE" 
 
-# if [ $HOSTNAME = swarm ]; then 
-# echo "WE ARE ON SWARM"
-# source /etc/profile.d/modules-local.sh
-# fi 
-
-# module add intel 
-
-
+# after hacks.. add intel libs 
+module add intel 
+		
+echo "*** CHECK IF THESE PATHS ARE SANE ***" 
+echo "***"
+echo "CPATH:"
+echo $CPATH
+echo "***"
+echo "LD_LIBRARY_PATH"
 echo $LD_LIBRARY_PATH 
+echo "***"
+echo "PATH" 
 echo $PATH
 
 # -- MORE HACKS AND THESE ARE VERY UGLY!
