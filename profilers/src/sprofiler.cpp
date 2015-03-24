@@ -169,7 +169,7 @@ void* samplingProbeMonitor(void* param) {
     //     g_total_process_time);
     // fprintf(stderr, "Global overhead delta : %lu Global process delta : %lu \n", overhead_delta,
     //     process_time_delta);
-    fprintf(stderr, "Overhead : %lu\n", overhead_of_last_epoch);
+    // fprintf(stderr, "Overhead : %lu\n", overhead_of_last_epoch);
 
     if (g_strategy == PROPOTIONAL) {
       if (overhead_of_last_epoch != 0 && overhead_of_last_epoch >  sp_target_overhead) {
@@ -216,8 +216,9 @@ void* samplingProbeMonitor(void* param) {
         }
       }
 
-      if (overhead_of_last_epoch != 0 && overhead_of_last_epoch <  0.75 * sp_target_overhead) {
-	double new_target_overhead = overhead_of_last_epoch + (0.75 * (double) sp_target_overhead - overhead_of_last_epoch) / 2;
+      double fudge_factor = 1;
+      if (overhead_of_last_epoch != 0 && overhead_of_last_epoch <  fudge_factor * sp_target_overhead) {
+	double new_target_overhead = overhead_of_last_epoch + (fudge_factor * (double) sp_target_overhead - overhead_of_last_epoch) / 2;
         uint64_t new_sample_size = ((double)new_target_overhead / overhead_of_last_epoch) * sp_sample_size; 
 
         // Here we don't set the sample size to more than its initial setting to prevent overshooting.
