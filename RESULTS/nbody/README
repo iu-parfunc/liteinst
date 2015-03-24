@@ -1,0 +1,15 @@
+
+About NBODY: 
+benchmark run on file with 10000000 data points 
+Barnes-Hut
+
+Benchmark results
+
+fixed_backoff_march24.ubiprof: 
+  had 2 failures (fixed with one retry) 
+  
+  >Command terminated by signal 11
+  >backoff_4000000, 2.06, 24.01, 0.76
+
+  >Command terminated by signal 11
+  >backoff_8000000, 2.79, 37.47, 0.73

@@ -300,6 +300,7 @@ void getFinalOverhead() {
 
 }
 
+#ifndef NO_INIT
 __attribute__((constructor, no_instrument_function))
   void initProfiler() {
 
@@ -348,7 +349,9 @@ __attribute__((constructor, no_instrument_function))
     g_init_overhead = end - start;
 
   }
+#endif
 
+#ifndef NO_INIT
 __attribute__((destructor))
   void destroyProfiler() {
 
@@ -363,3 +366,4 @@ __attribute__((destructor))
     fprintf(stderr, "\n[ubiprof] UBIPROF_ELAPSED_TIME : %lf\n", getSecondsFromTS(&g_diff));
 
   } 
+#endif

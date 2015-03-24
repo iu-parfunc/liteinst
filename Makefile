@@ -76,8 +76,8 @@ lib:
 #CID=905767673358.apps.googleusercontent.com
 #SEC=2a2H57dBggubW1_rqglC7jtK
 
-CID=925399326325-6dir7re3ik7686p6v3kkfkf1kj0ec7ck.apps.googleusercontent.com
-SEC=MQ72ZWDde_1e1ihI5YE9YlEi
+#CID=925399326325-6dir7re3ik7686p6v3kkfkf1kj0ec7ck.apps.googleusercontent.com
+#SEC=MQ72ZWDde_1e1ihI5YE9YlEi
 
 # new CID/SEC pair (probably not entirely activated atm)
 #CID=326662702048-pv5d76crt1jge1lbaof8ebchcqguhon0.apps.googleusercontent.com

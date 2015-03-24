@@ -1,5 +1,6 @@
 
 # CFLAGS += -DOVERHEAD_TIME_SERIES 
+# CFLAGS += -DNO_INIT 
 ARGS= -g -Wall
 LIBS = -lpthread
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
@@ -74,7 +75,7 @@ install:
 	cp libubiprof.a $(INSTALL)/noprof
 
 distorm: 
-	cd ../../deps/distorm/make/linux;make clean;make CC=$(CCC)
+	cd ../../deps/distorm/make/linux;make clean;make CC=$(CCC) CFLAGS='-fPIC -c -Wall $(CFLAGS)' 
 
 .cpp.o:
 	  $(CPP) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<

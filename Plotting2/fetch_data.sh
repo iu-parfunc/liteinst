@@ -12,17 +12,19 @@
 #
 # =================================================================
 
-TABLE=
-TABLEID=1DJJM9SI_N8En4-M6mSB67tSerL_laFJ3Dw1evNMW
+TABLE=Dynaprof_Benchmarks2
+#TABLEID=14G7T1MlkeQ1fqUej9ee9io1EhWlBDAnkjYmdAH42
+#1DJJM9SI_N8En4-M6mSB67tSerL_laFJ3Dw1evNMW
 
 # Git depth lower bound for fetched data:
-if [ "$MINGITDEPTH" == "" ]; then
+#if [ "$MINGITDEPTH" == "" ]; then
 #  MINGITDEPTH=140
   MINGITDEPTH=79
-fi
+#fi
 
+GITDEPTH=788
 
-host=
+host=xmen
 
 HSBFF=hsbencher-fusion-fetch
 
@@ -33,10 +35,10 @@ SEC=2a2H57dBggubW1_rqglC7jtK
 
 
 BENCHES=$*
-if [ "$BENCHES" == "" ]; then
-    echo "Error: no benchmarks selected to fetch.  $0 needs one or more command arguments."
-    exit 1
-fi
+# if [ "$BENCHES" == "" ]; then
+#     echo "Error: no benchmarks selected to fetch.  $0 needs one or more command arguments."
+#     exit 1
+# fi
 
 # [2015.01.29] Not sure if fusion tables supports enough SQL to grab the latest row
 # only within each group defined by group-by:
@@ -45,6 +47,22 @@ fi
 
 # MAX(GIT_DEPTH) as latest_git_depth
 #     GROUP BY PROGNAME,VARIANT,ARGS \
+
+
+function fixed_backoff() { 
+    QUERY="SELECT PROGNAME,VARIANT,ARGS,THREADS,MINTIME,MEDIANTIME,MAXTIME,GIT_DEPTH \
+	   FROM FT WHERE \
+             MEDIANTIME > 0 
+           "
+    # Note, I temporarily turned these off to fetch data that was mis-uploaded:
+    QUERY+="and HOSTNAME LIKE '%$host%'"
+    QUERY+="and GIT_DEPTH = $GITDEPTH"
+    
+    $HSBFF --id=$CID --secret=$SEC --table=$TABLE --query="$QUERY" --raw > $DEST/fixed_backoff.csv
+    echo "Successfully wrote file: $DEST/$bench.csv"
+
+}
+
 
 function go() {
     bench=$1
@@ -79,7 +97,10 @@ function go() {
 set -xe
 mkdir -p $DEST
 
-for bench in $BENCHES; do
-    go $bench
-done 
+fixed_backoff
+
+
+# for bench in $BENCHES; do
+#     go $bench
+# done 
 
