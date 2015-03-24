@@ -24,7 +24,7 @@ ifeq ($(JENKINS_GHC),)
   JENKINS_GHC=7.8.2
 endif
 
-TRIALS=3
+TRIALS=6
 # TRIALS=1
 TOP=$(shell pwd)
 
