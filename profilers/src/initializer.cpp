@@ -1,7 +1,7 @@
 
 #include "profiler.hpp"
 #include "fprofiler.hpp"
-#include <papi.h>
+#include <papi.h> 
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -338,6 +338,8 @@ __attribute__((constructor, no_instrument_function))
     calibrate_cache_effects();
 
     fprintf(stderr, "[Ubiprof] Done intializing the profiler..\n\n");
+    fprintf(stderr, "[Ubiprof] Calibrated parameter values per probe\n Indirect Jump Cost : %lu  Cache miss cost : %lu\n",
+                        2*g_call_overhead, g_cache_miss_overhead_upper_bound);
 
     ticks end = getticks();
 
