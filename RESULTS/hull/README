@@ -1,0 +1,15 @@
+QuickHull benchmark 
+
+  datafile contains 10000000 points 
+
+
+
+  ubiprof segfaults: 
+  >Command terminated by signal 11
+  >backoff_5000000, 1.03, 11.26, 0.20
+  >Command terminated by signal 11
+  >backoff_8000000, 0.31, 0.15, 0.09
+  >Command terminated by signal 11
+  >backoff_8000000, 1.24, 15.70, 0.20
+  >Command terminated by signal 11
+  >backoff_8000000, 1.79, 22.10, 0.32
