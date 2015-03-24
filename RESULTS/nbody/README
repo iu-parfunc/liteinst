@@ -1,4 +1,8 @@
 
+About NBODY: 
+benchmark run on file with 10000000 data points 
+Barnes-Hut
+
 Benchmark results
 
 fixed_backoff_march24.ubiprof: 
