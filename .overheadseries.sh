@@ -33,7 +33,7 @@ function run_it {
     mv $BENCHROOT/$BENCH/instrumented/prof.out $DATADIR/prof-$HOSTNAME-$BENCH-$ROUND-$TARGOH.out
 }
 
-run_it_par { 
+function run_it_par { 
     BENCH=$1
     EXECDIR=$2
     ROUND=$3
@@ -74,25 +74,25 @@ for target in 3 5 10 ; do
 #blackscholes 
     build_it blackscholes ; 
     for round in 1 2 3 ; do 
-	run_it blackscholes src $round $target
+	run_it_par blackscholes src $round $target
     done 
 
 #fluid 
     build_it fluid ; 
     for round in 1 2 3 ; do 
-	run_it fluid src $round $target	
+	run_it_par fluid src $round $target	
     done 
 
 #hull 
     build_it hull ; 
     for round in 1 2 3 ; do 
-	run_it hull quickHull $round $target
+	run_it_par hull quickHull $round $target
     done 
 
 #nbody 
     build_it nbody ; 
     for round in 1 2 3 ; do 
-	run_it nbody BarnesHut $round $target
+	run_it_par nbody BarnesHut $round $target
     done 
 
 done
