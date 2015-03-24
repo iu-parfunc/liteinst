@@ -45,6 +45,7 @@ case $HOSTNAME in
     
     *)
 	echo "NO SPECIAL HACKS FOR THIS MACHINE" 
+esac
 
 # after hacks.. add intel libs 
 module add intel 
