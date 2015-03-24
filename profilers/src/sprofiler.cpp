@@ -22,6 +22,7 @@ uint64_t g_total_process_time = 0; // Total process time until last epoch sample
 uint64_t g_last_epoch_random = 0; // Random added to last epoch period
 uint64_t g_TicksPerNanoSec = 0; // Calibrated ticks per nano second
 uint64_t g_call_overhead = 0; // Call overhead calibrated value
+uint16_t g_strategy = SLOW_RAMP_UP; // Overhead control strategy to use
 
 #ifdef OVERHEAD_TIME_SERIES
 uint64_t g_time_step = 0; // Current time step in epoch time series
@@ -168,33 +169,69 @@ void* samplingProbeMonitor(void* param) {
     //     g_total_process_time);
     // fprintf(stderr, "Global overhead delta : %lu Global process delta : %lu \n", overhead_delta,
     //     process_time_delta);
-    // fprintf(stderr, "Overhead : %lu\n", overhead_of_last_epoch);
+    fprintf(stderr, "Overhead : %lu\n", overhead_of_last_epoch);
 
-    if (overhead_of_last_epoch != 0 && overhead_of_last_epoch >  sp_target_overhead) {
-      uint64_t new_sample_size = ((double)sp_target_overhead / overhead_of_last_epoch) * sp_sample_size; 
+    if (g_strategy == PROPOTIONAL) {
+      if (overhead_of_last_epoch != 0 && overhead_of_last_epoch >  sp_target_overhead) {
+        uint64_t new_sample_size = ((double)sp_target_overhead / overhead_of_last_epoch) * sp_sample_size; 
 
-      if (new_sample_size > 0) {
-        sp_sample_size = new_sample_size;
-      } else {
-        // Entirely skip probe activation for this sample due to small sample size
-        // Too much overhead to control via reducing the sample size
+        if (new_sample_size > 0) {
+          sp_sample_size = new_sample_size;
+        } else {
+          // Entirely skip probe activation for this sample due to small sample size
+          // Too much overhead to control via reducing the sample size
 #ifdef OVERHEAD_TIME_SERIES
-        g_skipped_epochs++;
-        record_overhead_histogram(overhead_of_last_epoch, -1); // -1 signifies no new samples taken in this epoch
+          g_skipped_epochs++;
+          record_overhead_histogram(overhead_of_last_epoch, -1); // -1 signifies no new samples taken in this epoch
 #endif
-        goto sleep;
+          goto sleep;
+        }
       }
-    }
 
-    if (overhead_of_last_epoch != 0 && overhead_of_last_epoch <  0.75 * sp_target_overhead) {
-      uint64_t new_sample_size = ((double)sp_target_overhead / overhead_of_last_epoch) * sp_sample_size; 
+      if (overhead_of_last_epoch != 0 && overhead_of_last_epoch <  0.75 * sp_target_overhead) {
+        uint64_t new_sample_size = ((double)sp_target_overhead / overhead_of_last_epoch) * sp_sample_size; 
 
-      // Here we don't set the sample size to more than its initial setting to prevent overshooting.
-      // TODO: Revisit this
-      if (new_sample_size < sp_initial_sample_size) {
-        sp_sample_size = new_sample_size;
-      } else {
-        sp_sample_size = sp_initial_sample_size;
+        // Here we don't set the sample size to more than its initial setting to prevent overshooting.
+        // TODO: Revisit this
+        if (new_sample_size < sp_initial_sample_size) {
+          sp_sample_size = new_sample_size;
+        } else {
+          sp_sample_size = sp_initial_sample_size;
+        }
+      }
+    } else if (g_strategy == SLOW_RAMP_UP) {
+      if (overhead_of_last_epoch != 0 && overhead_of_last_epoch >  sp_target_overhead) {
+        uint64_t new_sample_size = ((double)sp_target_overhead / overhead_of_last_epoch) * sp_sample_size; 
+
+        if (new_sample_size > 0) {
+          sp_sample_size = new_sample_size;
+        } else {
+          // Entirely skip probe activation for this sample due to small sample size
+          // Too much overhead to control via reducing the sample size
+#ifdef OVERHEAD_TIME_SERIES
+          g_skipped_epochs++;
+          record_overhead_histogram(overhead_of_last_epoch, -1); // -1 signifies no new samples taken in this epoch
+#endif
+          goto sleep;
+        }
+      }
+
+      if (overhead_of_last_epoch != 0 && overhead_of_last_epoch <  0.75 * sp_target_overhead) {
+	double new_target_overhead = overhead_of_last_epoch + (0.75 * (double) sp_target_overhead - overhead_of_last_epoch) / 2;
+        uint64_t new_sample_size = ((double)new_target_overhead / overhead_of_last_epoch) * sp_sample_size; 
+
+        // Here we don't set the sample size to more than its initial setting to prevent overshooting.
+        // TODO: Revisit this
+        /*
+        if (new_sample_size < sp_initial_sample_size) {
+          sp_sample_size = new_sample_size;
+        } else {
+          sp_sample_size = sp_initial_sample_size;
+        }
+       */
+       if (new_sample_size > sp_sample_size) {
+         sp_sample_size = new_sample_size; 
+       }
       }
     }
     
@@ -284,8 +321,25 @@ void SamplingProfiler::initialize() {
     sp_target_overhead = target_overhead;
   }
 
+  char* adaptive_strategy_str = getenv("ADAPTIVE_STRATEGY");
+  if (adaptive_strategy_str != NULL) {
+    if (!strcmp(adaptive_strategy_str, "SLOW_RAMP_UP")) {
+	g_strategy = SLOW_RAMP_UP;
+    } else {
+        g_strategy = PROPOTIONAL;
+    } 
+  } 
+
   fprintf(stderr, "[Sampling Profiler] **** Parameters : Sample size => %lu Epoch period => %lu Target overhead => %lu \n", 
       sp_sample_size, sp_epoch_period, sp_target_overhead); 
+
+  switch(g_strategy) {
+    case SLOW_RAMP_UP:
+      fprintf(stderr, "[Sampling Profiler] Adaptive Strategy : SLOW_RAMP_UP\n");
+      break;
+    default:
+      fprintf(stderr, "[Sampling Profiler] Adaptive Strategy : PROPOTIONAL\n");
+  }
 
   spawnMonitor();
 
