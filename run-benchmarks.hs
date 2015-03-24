@@ -108,7 +108,7 @@ sampling = Or [And [ Set (Variant (compiler ++ "_" ++ optlevel ++ "_Sampling_"++
 
 
 
-backoff_params = [x * 10^6 | x <- [1..10]] 
+backoff_params = [x * 10^6 | x <- [1,10,20,30,40,50,60,70,80,90,100]] 
 backoff  = Or [And [ Set (Variant (compiler ++ "_" ++ optlevel ++ "_Backoff_"++show s_size)) (RuntimeEnv "PROFILER_TYPE" "FIXED_BACKOFF")
                    , Set NoMeaning (RuntimeEnv "SAMPLE_SIZE" (show s_size))
                    , Set NoMeaning (CompileEnv "CC" compiler)
