@@ -24,7 +24,8 @@ uint64_t g_TicksPerNanoSec = 0; // Calibrated ticks per nano second
 uint64_t g_call_overhead = 0; // Call overhead calibrated value
 
 #ifdef OVERHEAD_TIME_SERIES
-uint64_t time_step = 0; // Current time step in epoch time series
+uint64_t g_time_step = 0; // Current time step in epoch time series
+uint64_t g_skipped_epochs = 0; // Number skpped epochs
 
 // List to hold the time series data
 list<string>* overhead_time_series;
@@ -98,6 +99,21 @@ TLStatistics* samplingEpilogFunction(uint16_t func_id) {
 
 }
 
+#ifdef OVERHEAD_TIME_SERIES
+void record_overhead_histogram(uint64_t overhead, int64_t sample_size) {
+
+    g_time_step++;
+
+    char buf[50];
+    int r = snprintf(buf, 50, "%lu,%lu,%ld\n", g_time_step, overhead, sample_size);
+    if (r > 0) {
+      string s = buf;
+      overhead_time_series->push_back(s);
+    }
+
+}
+#endif
+
 // Probe monitor
 void* samplingProbeMonitor(void* param) {
 
@@ -154,18 +170,6 @@ void* samplingProbeMonitor(void* param) {
     //     process_time_delta);
     // fprintf(stderr, "Overhead : %lu\n", overhead_of_last_epoch);
 
-#ifdef OVERHEAD_TIME_SERIES
-
-    time_step++;
-
-    char buf[50];
-    int r = snprintf(buf, 50, "%lu,%lu\n", time_step, overhead_of_last_epoch);
-    if (r > 0) {
-      string s = buf;
-      overhead_time_series->push_back(s);
-    }
-#endif
-
     if (overhead_of_last_epoch != 0 && overhead_of_last_epoch >  sp_target_overhead) {
       uint64_t new_sample_size = ((double)sp_target_overhead / overhead_of_last_epoch) * sp_sample_size; 
 
@@ -174,6 +178,10 @@ void* samplingProbeMonitor(void* param) {
       } else {
         // Entirely skip probe activation for this sample due to small sample size
         // Too much overhead to control via reducing the sample size
+#ifdef OVERHEAD_TIME_SERIES
+        g_skipped_epochs++;
+        record_overhead_histogram(overhead_of_last_epoch, -1); // -1 signifies no new samples taken in this epoch
+#endif
         goto sleep;
       }
     }
@@ -189,6 +197,10 @@ void* samplingProbeMonitor(void* param) {
         sp_sample_size = sp_initial_sample_size;
       }
     }
+    
+#ifdef OVERHEAD_TIME_SERIES
+    record_overhead_histogram(overhead_of_last_epoch, sp_sample_size);
+#endif
 
     // fprintf(stderr, "New sample size : %lu\n", sp_sample_size);
       
@@ -351,6 +363,9 @@ void SamplingProfiler::dumpStatistics() {
   }
 
   fprintf(fp, ">>>>\n");
+
+  fprintf(stderr, "[Sampling Profiler] SKIPPED_EPOCHS: %lu\n", g_skipped_epochs);
+  fprintf(stderr, "[Sampling Profiler] TOTAL_EPOCHS: %lu\n", g_time_step);
 
   fclose(fp);
 #endif
