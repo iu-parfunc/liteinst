@@ -64,7 +64,7 @@ void calibrate_cache_effects() {
     cache_lines = sysconf(_SC_LEVEL3_CACHE_SIZE) / 8; 
   }
 
-  fprintf(stderr, "Number of cache lines : %d..\n", cache_lines);
+  fprintf(stdout, "Number of cache lines : %d..\n", cache_lines);
 
   double FUDGE = 1;
   double *a, *b;
@@ -80,22 +80,22 @@ void calibrate_cache_effects() {
 
   const int eventlist[] = {PAPI_L3_TCM}; // L3 cache misses
   if ((retval = PAPI_library_init(PAPI_VER_CURRENT)) != PAPI_VER_CURRENT) {
-    fprintf(stderr, "[Ubiprof] ERROR 1 calibrating for cache effects..\n");
+    fprintf(stdout, "[Ubiprof] ERROR 1 calibrating for cache effects..\n");
     return;
   }
 
   if ((retval = PAPI_create_eventset(&eventSet)) != PAPI_OK) {
-    fprintf(stderr, "[Ubiprof] ERROR 2 calibrating for cache effects..\n");
+    fprintf(stdout, "[Ubiprof] ERROR 2 calibrating for cache effects..\n");
     return;
   }
 
   if (PAPI_add_event(eventSet, eventlist[0]) != PAPI_OK) {
-    fprintf(stderr, "[Ubiprof] ERROR 3 calibrating for cache effects..\n");
+    fprintf(stdout, "[Ubiprof] ERROR 3 calibrating for cache effects..\n");
     return;
   }
 
   if ((retval = PAPI_start(eventSet)) != PAPI_OK) {
-    fprintf(stderr, "[Ubiprof] ERROR 4 calibrating for cache effects..\n");
+    fprintf(stdout, "[Ubiprof] ERROR 4 calibrating for cache effects..\n");
     return;
   }
 
@@ -107,7 +107,7 @@ void calibrate_cache_effects() {
     }
 
     if ((retval = PAPI_reset(eventSet)) != PAPI_OK) { 
-      fprintf(stderr, "[Ubiprof] ERROR 6 calibrating for cache effects..\n");
+      fprintf(stdout, "[Ubiprof] ERROR 6 calibrating for cache effects..\n");
       return;
     }
 
@@ -115,29 +115,29 @@ void calibrate_cache_effects() {
     __cyg_profile_func_exit((void*)&calibrate_cache_effects, 0); // We don't use the second param at the moment
 
     if ((retval = PAPI_read(eventSet, &values[i])) != PAPI_OK) {
-      fprintf(stderr, "[Ubiprof] ERROR 5 calibrating for cache effects..\n");
+      fprintf(stdout, "[Ubiprof] ERROR 5 calibrating for cache effects..\n");
       return;
     }
 
     if ((retval = PAPI_reset(eventSet)) != PAPI_OK) { 
-      fprintf(stderr, "[Ubiprof] ERROR 100 calibrating for cache effects..\n");
+      fprintf(stdout, "[Ubiprof] ERROR 100 calibrating for cache effects..\n");
       return;
     } 
   }
 
   if ((retval = PAPI_stop(eventSet, NULL)) != PAPI_OK) {
-    fprintf(stderr, "[Ubiprof] ERROR 7 calibrating for cache effects..\n");
+    fprintf(stdout, "[Ubiprof] ERROR 7 calibrating for cache effects..\n");
   }
 
   if ((retval = PAPI_remove_event(eventSet, eventlist[0])) != PAPI_OK) {
-    fprintf(stderr, "[Ubiprof] ERROR 8 calibrating for cache effects..\n");
+    fprintf(stdout, "[Ubiprof] ERROR 8 calibrating for cache effects..\n");
   }
 
   if ((retval = PAPI_destroy_eventset(&eventSet)) != PAPI_OK) {
-    fprintf(stderr, "[Ubiprof] ERROR 9 calibrating for cache effects..\n");
+    fprintf(stdout, "[Ubiprof] ERROR 9 calibrating for cache effects..\n");
   }
 
-  fprintf(stderr, "[Ubiprof] cache_misses[0] : %lld cache_misses[1] : %lld cache_misses[2] : %lld\n",
+  fprintf(stdout, "[Ubiprof] cache_misses[0] : %lld cache_misses[1] : %lld cache_misses[2] : %lld\n",
           values[0], values[1], values[2]);
   
   long long cache_misses = 0; 
@@ -150,7 +150,7 @@ void calibrate_cache_effects() {
   srand(time(NULL));
 
   // Find approximately how much time it takes to load a cache line from the memory
-  ticks fetch_overhead = ULLONG_MAX;
+  ticks fetch_overhead = 0;
   for (i=0; i<3; i++) {
     // Trash the cache
     double sum = 0;
@@ -162,8 +162,8 @@ void calibrate_cache_effects() {
       int index = rand() % (int)(cache_lines  * FUDGE); // Trying to thwart the prefetcher here
 
       // Warmup CPUID
-      getstart();
-      getend();
+      // getstart();
+      // getend();
       // End warmup
       
       ticks start = getstart();
@@ -171,14 +171,16 @@ void calibrate_cache_effects() {
       ticks end = getend();
       ticks current = end - start;
 
-      if (current < fetch_overhead) {
+      fprintf(stdout, "Current elapsed time : %lld\n", current);
+
+      if (fetch_overhead < current) {
         fetch_overhead = current;
       }
     }
   }
 
-  fprintf(stderr, "[Ubiprof] cache misses %lld fetch overhead %lld\n", cache_misses, fetch_overhead);
-  fprintf(stderr, "[Ubiprof] Cache perturbation overhead of instrumentation : %lld\n", 
+  fprintf(stdout, "[Ubiprof] cache misses %lld fetch overhead %lld\n", cache_misses, fetch_overhead);
+  fprintf(stdout, "[Ubiprof] Cache perturbation overhead of instrumentation : %lld\n", 
       cache_misses * fetch_overhead);
 
 }
