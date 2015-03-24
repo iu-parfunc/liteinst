@@ -202,7 +202,7 @@ void* samplingProbeMonitor(void* param) {
     record_overhead_histogram(overhead_of_last_epoch, sp_sample_size);
 #endif
 
-    fprintf(stderr, "New sample size : %lu\n", sp_sample_size);
+    // fprintf(stderr, "New sample size : %lu\n", sp_sample_size);
       
     for(int i = 0; i < func_count; i++) {
       if (!g_stats[i].is_active) {
