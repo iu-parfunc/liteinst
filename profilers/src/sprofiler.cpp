@@ -379,7 +379,7 @@ void printM(FuncIDMappings* func_id_mappings) {
 
 void SamplingProfiler::dumpStatistics() {
 
-  fprintf(stderr, "ENTERING dumpstatistics ..\n");
+  fprintf(stderr, "[Sampling Profier] Flushing statistics to disk..\n");
 
   FILE* fp = fopen("prof.out", "a");
 
