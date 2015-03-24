@@ -6,6 +6,9 @@
 #include <map>
 #include "profiler.hpp"
 
+#define SLOW_RAMP_UP 0
+#define PROPOTIONAL 1
+
 /* Stack entry */
 
 typedef struct InvocationData {

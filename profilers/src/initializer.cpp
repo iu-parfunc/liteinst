@@ -82,7 +82,7 @@ void calibrate_cache_effects() {
   // cache_perturbation_overhead = L3_misses * ((end - start) / L3 cache wordsize)
   // delete memory chunks
   
-  fprintf(stderr, "[Ubiprof] INSIDE calibrate_cache_effects..\n");
+  // fprintf(stderr, "[Ubiprof] INSIDE calibrate_cache_effects..\n");
   int cache_lines = 0;
   if (sysconf(_SC_LEVEL3_CACHE_LINESIZE) != 0) {
     cache_lines = sysconf(_SC_LEVEL3_CACHE_SIZE) / sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
