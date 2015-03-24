@@ -62,7 +62,7 @@ main = do
         }
 
 
-benchmark_names = ["fluid", "blackscholes", "hull", "nbody","bzip-1.0.3", "perl-5.8.7", "hmmer", "sjeng", "lbm"]
+benchmark_names = ["h264ref-9.3","fluid", "blackscholes", "hull", "nbody","bzip-1.0.3", "perl-5.8.7", "hmmer", "sjeng", "lbm"]
 
 benches :: [Benchmark DefaultParamMeaning]
 benches =
@@ -103,7 +103,7 @@ sampling = Or [And [ Set (Variant (compiler ++ "_" ++ optlevel ++ "_Sampling_"++
               | s_size <- samplesize
               , epoch <- epochs
               , compiler <- ["gcc"] -- , "icc"]
-              , optlevel <- ["-O2","-O3"] -- ["-O1", "-O2", "-O3" ]
+              , optlevel <- ["-O2"] -- ["-O1", "-O2", "-O3" ]
               ]
 
 
