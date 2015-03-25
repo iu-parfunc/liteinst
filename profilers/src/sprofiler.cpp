@@ -101,12 +101,12 @@ TLStatistics* samplingEpilogFunction(uint16_t func_id) {
 }
 
 #ifdef OVERHEAD_TIME_SERIES
-void record_overhead_histogram(uint64_t overhead, int64_t sample_size) {
+void record_overhead_histogram(double overhead, int64_t sample_size) {
 
     g_time_step++;
 
     char buf[50];
-    int r = snprintf(buf, 50, "%lu,%lu,%ld\n", g_time_step, overhead, sample_size);
+    int r = snprintf(buf, 50, "%lu,%.2lf,%ld\n", g_time_step, overhead, sample_size);
     if (r > 0) {
       string s = buf;
       overhead_time_series->push_back(s);
@@ -163,7 +163,7 @@ void* samplingProbeMonitor(void* param) {
     uint64_t process_time_delta = g_total_process_time - tmp_total_process_time;
 
     // uint64_t overhead_of_last_epoch = ((double)overhead_delta / process_time_delta) * 100;
-    uint64_t overhead_of_last_epoch = ((double)g_total_overhead / g_total_process_time) * 100;
+    double overhead_of_last_epoch = ((double)g_total_overhead / g_total_process_time) * 100;
     // fprintf(stderr, "Per function call overhead (cycles) : %lu\n", g_call_overhead);
     // fprintf(stderr, "Global overhead (cycles) : %lu Global process time : %lu \n", g_total_overhead,
     //     g_total_process_time);
@@ -218,7 +218,7 @@ void* samplingProbeMonitor(void* param) {
 
       double fudge_factor = 1;
       if (overhead_of_last_epoch != 0 && overhead_of_last_epoch <  fudge_factor * sp_target_overhead) {
-	double new_target_overhead = overhead_of_last_epoch + (fudge_factor * (double) sp_target_overhead - overhead_of_last_epoch) / 2;
+	      double new_target_overhead = overhead_of_last_epoch + (fudge_factor * (double) sp_target_overhead - overhead_of_last_epoch) / 2;
         uint64_t new_sample_size = ((double)new_target_overhead / overhead_of_last_epoch) * sp_sample_size; 
 
         // Here we don't set the sample size to more than its initial setting to prevent overshooting.
