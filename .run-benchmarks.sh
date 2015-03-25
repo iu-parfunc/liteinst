@@ -17,9 +17,11 @@ fi
 cd $rootdir
 echo "Switched to working-copy directory: "`pwd`
 
+set -x
 which -a git
 git --version
 git submodule update --init --recursive 
+set +x
 
 # ----------------------------------------
 # Step (0): Hack-o-rama [2014.08.02]:
@@ -37,7 +39,7 @@ fi
 # PERFORM VARIOUS HACKS DEPENDING ON WHERE WE ARE 
 case $HOSTNAME in 
     cutter* ) 
-	echo "Add papi paths" 
+	echo "Add papi paths for cutter" 
 	export CPATH=$CPATH:/opt/papi/5.4.1/include
 	export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/papi/5.4.1/lib
 	export LIBRARY_PATH=$LIBRARY_PATH:/opt/papi/5.4.1/lib
