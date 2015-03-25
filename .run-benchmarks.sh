@@ -40,6 +40,7 @@ case $HOSTNAME in
 	echo "Add papi paths" 
 	export CPATH=$CPATH:/opt/papi/5.4.1/include
 	export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/papi/5.4.1/lib
+	export LIBRARY_PATH=$LIBRARY_PATH:/opt/papi/5.4.1/lib
 	;;
     swarm ) 
 	source /etc/profile.d/modules-local.sh
@@ -59,6 +60,9 @@ echo $CPATH
 echo "***"
 echo "LD_LIBRARY_PATH"
 echo $LD_LIBRARY_PATH 
+echo "***"
+echo "LIBRARY_PATH"
+echo $LIBRARY_PATH 
 echo "***"
 echo "PATH" 
 echo $PATH
