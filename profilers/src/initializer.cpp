@@ -282,6 +282,22 @@ void getFinalOverhead() {
   double process_overhead_delta = process_cpu_time - main_thread_cpu_time - probe_thread_cpu_time;  
   double calculated_overheads = probe_overhead + jump_overhead + init_overhead + cache_overhead;
 
+#ifdef OVERHEAD_TIME_SERIES
+  FILE* fp = fopen("statistics.out", "a");
+  fprintf(fp, "DEACTIVATIONS : %lu\n", g_deactivation_count);
+  fprintf(fp, "APPLICATION_CPU_TIME(s): %lf\n", main_thread_cpu_time);
+  fprintf(fp, "MONITOR_THREAD_CPU_TIME(s): %lf\n", probe_thread_cpu_time);
+  fprintf(fp, "PROCESS_CPU_TIME(s): %lf\n", process_cpu_time);
+  fprintf(fp, "INIT_OVERHEAD: %lf\n", init_overhead);
+  fprintf(fp, "CACHE_PERTURBATION_OVERHEAD: %lf\n", cache_overhead);
+  fprintf(fp, "PROBE_OVERHEAD: %lf\n", probe_overhead);
+  fprintf(fp, "JUMP_OVERHEAD: %lf\n", jump_overhead);
+  fprintf(fp, "CUMULATIVE_OVERHEAD: %lf\n", calculated_overheads);
+  fprintf(fp, "REAL_EXEC_TIME: %lf\n", main_thread_cpu_time - calculated_overheads);
+  fclose(fp);
+#endif
+
+
   fprintf(stderr, "\n\n\n\n");
   fprintf(stderr, "\n[ubiprof] DEACTIVATIONS : %lu\n", g_deactivation_count);
   fprintf(stderr, "\n");
@@ -296,6 +312,7 @@ void getFinalOverhead() {
   fprintf(stderr, "[ubiprof] JUMP_OVERHEAD: %lf\n", jump_overhead);
   fprintf(stderr, "[ubiprof] CUMULATIVE_OVERHEAD: %lf\n", calculated_overheads);
   fprintf(stderr, "[ubiprof] REAL_EXEC_TIME: %lf\n", main_thread_cpu_time - calculated_overheads);
+
   // fprintf(stderr, "[ubiprof] EXEC_TIME: %lf\n", main_thread_cpu_time - probe_overhead);
 
 }

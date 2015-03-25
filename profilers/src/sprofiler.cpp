@@ -418,11 +418,14 @@ void SamplingProfiler::dumpStatistics() {
   }
 
   fprintf(fp, ">>>>\n");
-
-  fprintf(stderr, "[Sampling Profiler] SKIPPED_EPOCHS: %lu\n", g_skipped_epochs);
-  fprintf(stderr, "[Sampling Profiler] TOTAL_EPOCHS: %lu\n", g_time_step);
-
   fclose(fp);
+
+  fp = fopen("statistics.out", "a");
+  fprintf(stderr, "\nNUMBER_OF_FUNCTION_CALLS: %lu\n", total_count);
+  fprintf(fp, "SKIPPED_EPOCHS: %lu\n", g_skipped_epochs);
+  fprintf(fp, "TOTAL_EPOCHS: %lu\n", g_time_step);
+  fclose(fp);
+
 #endif
 
 }

@@ -31,6 +31,7 @@ function run_it {
     # that use a different directory structure (My bad idea) 
     mv $BENCHROOT/$BENCH/instrumented/overhead.out $DATADIR/$HOSTNAME-$BENCH-$ROUND-$TARGOH.out
     mv $BENCHROOT/$BENCH/instrumented/prof.out $DATADIR/prof-$HOSTNAME-$BENCH-$ROUND-$TARGOH.out
+    mv $BENCHROOT/$BENCH/instrumented/statistics.out $DATADIR/stat-$HOSTNAME-$BENCH-$ROUND-$TARGOH.out
 }
 
 function run_it_par { 
@@ -47,6 +48,7 @@ function run_it_par {
     done 
     mv $BENCHROOT/$BENCH/$EXECDIR/overhead.out $DATADIR/$HOSTNAME-$BENCH-$ROUND-$TARGOH.out
     mv $BENCHROOT/$BENCH/$EXECDIR/prof.out $DATADIR/prof-$HOSTNAME-$BENCH-$ROUND-$TARGOH.out
+    mv $BENCHROOT/$BENCH/$EXECDIR/statistics.out $DATADIR/stat-$HOSTNAME-$BENCH-$ROUND-$TARGOH.out
 }
 
 
