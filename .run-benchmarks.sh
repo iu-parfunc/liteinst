@@ -17,6 +17,8 @@ fi
 cd $rootdir
 echo "Switched to working-copy directory: "`pwd`
 
+which -a git
+git --version
 git submodule update --init --recursive 
 
 # ----------------------------------------
