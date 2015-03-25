@@ -34,7 +34,7 @@ fi
 # ----------------------------------------
 # PERFORM VARIOUS HACKS DEPENDING ON WHERE WE ARE 
 case $HOSTNAME in 
-    cutter ) 
+    cutter* ) 
 	echo "Add papi paths" 
 	export CPATH=$CPATH:/opt/papi/5.4.1/include
 	export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/papi/5.4.1/lib
