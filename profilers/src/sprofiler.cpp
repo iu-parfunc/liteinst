@@ -33,13 +33,13 @@ list<string>* overhead_time_series;
 #endif
 
 // All thread local statistics data
-static __thread TLStatistics** tl_stats;
+static __thread TLStatistics** thread_local_stat_table;
 
 // Thread local statistics data for current thread
-static __thread TLStatistics* tl_stat;
+static __thread TLStatistics* thread_local_stats;
 
 // Thread local statistics table of current thread 
-static __thread TLSSamplingProfilerStat* tl_func_stats;
+static __thread TLSSamplingProfilerStat* thread_local_func_stats;
 
 // Instrumentation Functions
 TLStatistics* samplingPrologFunction(uint16_t func_id) {
@@ -49,19 +49,19 @@ TLStatistics* samplingPrologFunction(uint16_t func_id) {
   if (!allocated) {
     allocated = true;
     // C++ value initilization.. Similar to calloc
-    tl_func_stats = new TLSSamplingProfilerStat[INSTRUMENTOR_INSTANCE->getFunctionCount()]();
-    tl_stat = new TLStatistics;
-    tl_stat->func_stats = tl_func_stats;
-    tl_stat->thread_local_overhead = 0;
-    tl_stat->thread_local_count = 0;
+    thread_local_func_stats = new TLSSamplingProfilerStat[INSTRUMENTOR_INSTANCE->getFunctionCount()]();
+    thread_local_stats = new TLStatistics;
+    thread_local_stats->func_stats = thread_local_func_stats;
+    thread_local_stats->thread_local_overhead = 0;
+    thread_local_stats->thread_local_count = 0;
 
-    ((SamplingProfiler*)PROFILER_INSTANCE)->registerThreadStatistics(tl_stat);
-    tl_stats = ((SamplingProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
+    ((SamplingProfiler*)PROFILER_INSTANCE)->registerThreadStatistics(thread_local_stats);
+    thread_local_stat_table = ((SamplingProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
   }
 
-  tl_func_stats[func_id].start_timestamp = getticks();
-  tl_stat->thread_local_count++;
-  return tl_stat;
+  thread_local_func_stats[func_id].start_timestamp = getticks();
+  thread_local_stats->thread_local_count++;
+  return thread_local_stats;
 
 }
 
@@ -75,16 +75,16 @@ TLStatistics* samplingEpilogFunction(uint16_t func_id) {
 
   // We do this at epilog itself to get an accurate count than a periodically accumilated count by the probe monitor thread
   uint64_t global_count = 0;
-  tl_func_stats[func_id].count++;
+  thread_local_func_stats[func_id].count++;
 
   for (int i=0; i < thread_count; i++) {
-    global_count += ((TLSSamplingProfilerStat*) tl_stats[i]->func_stats)[func_id].count; 
+    global_count += ((TLSSamplingProfilerStat*) thread_local_stat_table[i]->func_stats)[func_id].count; 
   }
 
   uint64_t new_count = global_count - g_stats[func_id].count_at_last_activation; 
 
-  ticks elapsed = epilog_start - tl_func_stats[func_id].start_timestamp ;
-  tl_func_stats[func_id].total_time += elapsed;
+  ticks elapsed = epilog_start - thread_local_func_stats[func_id].start_timestamp ;
+  thread_local_func_stats[func_id].total_time += elapsed;
   if (new_count >= g_stats[func_id].sample_size) {
     if (__sync_bool_compare_and_swap(&(g_stats[func_id].lock), 0 , 1)) {
       PROFILER_INSTANCE->deactivateFunction(&func_id);
@@ -95,8 +95,8 @@ TLStatistics* samplingEpilogFunction(uint16_t func_id) {
     }
   }
 
-  tl_stat->thread_local_count++;
-  return tl_stat;
+  thread_local_stats->thread_local_count++;
+  return thread_local_stats;
 
 }
 
@@ -352,13 +352,17 @@ void SamplingProfiler::spawnMonitor() {
 
 }
 
+uint64_t g_thread_lock = 0;
 void SamplingProfiler::registerThreadStatistics(TLStatistics* stats) {
+  // while(__sync_bool_compare_and_swap(&g_thread_lock, 0 , 1)); // Acquire lock
 
   if (thread_counter+ 1 < 64) {
     tls_stats[thread_counter++] = stats;
   } else {
     fprintf(stderr, "[Sampling Profiler] Max thread count exceeded. This thread will not be profiled..\n");
   }
+
+  // __sync_bool_compare_and_swap(&g_thread_lock, 1 , 0); // Release lock
 
 }
 
@@ -390,11 +394,13 @@ void SamplingProfiler::dumpStatistics() {
   for(int i=0; i < func_count; i++) {
     statistics[i].count = 0;
     statistics[i].total_time = 0;
+    statistics[i].deactivation_count = 0;
 
     for(int j=0; j < thread_counter; j++) {
       TLSSamplingProfilerStat* tls_func_stat = (TLSSamplingProfilerStat*) tls_stats[j]->func_stats;
       statistics[i].count += tls_func_stat[i].count;
       statistics[i].total_time += tls_func_stat[i].total_time;
+      statistics[i].deactivation_count += tls_func_stat[i].deactivation_count;
     }
 
     total_count += statistics[i].count;

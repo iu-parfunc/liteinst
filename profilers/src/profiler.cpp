@@ -60,13 +60,13 @@ int Profiler::activateFunctionByName(void* id) {
 
 
 int Profiler::deactivateFunction(void* id) {
-
+  g_deactivation_count++;
   return ins->deactivateProbe(id, FUNC);
 
 }
 
 int Profiler::deactivateFunctionByName(void* id) {
-
+  g_deactivation_count++;
   return ins->deactivateProbeByName(id, FUNC);
 
 }

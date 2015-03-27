@@ -16,7 +16,7 @@
 /* Global to hold the profiler type */
 int profiler_type = 0;
 
-uint64_t g_deactivation_count;
+volatile uint64_t g_deactivation_count;
 uint64_t g_cache_miss_overhead_upper_bound = 0;
 uint64_t g_init_overhead;
 
