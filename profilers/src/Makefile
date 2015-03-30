@@ -18,7 +18,7 @@ OPTS =
 
 DEPS = ../../deps/distorm/distorm3.a
 
-CODE = fprofiler.cpp sprofiler.cpp adaptive_profiler.cpp eprofiler.cpp profiler.cpp initializer.cpp globals.cpp 
+CODE = fprofiler.cpp sprofiler.cpp adaptive_profiler.cpp eprofiler.cpp profiler.cpp initializer.cpp globals.cpp overhead_series.cpp
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 

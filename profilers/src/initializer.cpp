@@ -261,7 +261,7 @@ void getFinalOverhead() {
   if (g_monitor_thread != NULL) {
     c = pthread_getcpuclockid(g_monitor_thread, &cid);
     if (c != 0) {
-      fprintf(stderr, "Error obtaining main thread cpu time ..\n");
+      fprintf(stderr, "Error obtaining monitor thread cpu time ..\n");
     }
     if (clock_gettime(cid, &monitor_ts) == -1) {
       fprintf(stderr, "Error obtaining monitor thread cpu time ..\n");
@@ -283,6 +283,8 @@ void getFinalOverhead() {
   double process_overhead_delta = process_cpu_time - main_thread_cpu_time - probe_thread_cpu_time;  
   double calculated_overheads = probe_overhead + jump_overhead + init_overhead + cache_overhead;
 
+  double overhead_at_final_epoch = ((double)g_total_overhead / g_total_process_time) * 100;
+
 #ifdef OVERHEAD_TIME_SERIES
   FILE* fp = fopen("statistics.out", "a");
   fprintf(fp, "DEACTIVATIONS : %lu\n", g_deactivation_count);
@@ -295,9 +297,9 @@ void getFinalOverhead() {
   fprintf(fp, "JUMP_OVERHEAD: %lf\n", jump_overhead);
   fprintf(fp, "CUMULATIVE_OVERHEAD: %lf\n", calculated_overheads);
   fprintf(fp, "REAL_EXEC_TIME: %lf\n", main_thread_cpu_time - calculated_overheads);
+  fprintf(fp, "FINAL_CALCULATED_OVERHEAD: %.2lf\n", overhead_at_final_epoch);
   fclose(fp);
 #endif
-
 
   fprintf(stderr, "\n\n\n\n");
   fprintf(stderr, "\n[ubiprof] DEACTIVATIONS : %lu\n", g_deactivation_count);
@@ -307,12 +309,13 @@ void getFinalOverhead() {
   fprintf(stderr, "[ubiprof] PROCESS_CPU_TIME(s): %lf\n", process_cpu_time);
   // fprintf(stderr, "[ubiprof] PROCESS_OVERHEAD_DELTA: %lf\n", process_overhead_delta);
 
-  fprintf(stderr, "[ubiprof] INIT_OVERHEAD: %lf\n", init_overhead);
-  fprintf(stderr, "[ubiprof] CACHE_PERTURBATION_OVERHEAD: %lf\n", cache_overhead);
-  fprintf(stderr, "[ubiprof] PROBE_OVERHEAD: %lf\n", probe_overhead);
-  fprintf(stderr, "[ubiprof] JUMP_OVERHEAD: %lf\n", jump_overhead);
-  fprintf(stderr, "[ubiprof] CUMULATIVE_OVERHEAD: %lf\n", calculated_overheads);
-  fprintf(stderr, "[ubiprof] REAL_EXEC_TIME: %lf\n", main_thread_cpu_time - calculated_overheads);
+  fprintf(stderr, "[ubiprof] INIT_OVERHEAD(S): %lf\n", init_overhead);
+  fprintf(stderr, "[ubiprof] CACHE_PERTURBATION_OVERHEAD(s): %lf\n", cache_overhead);
+  fprintf(stderr, "[ubiprof] PROBE_OVERHEAD(s): %lf\n", probe_overhead);
+  fprintf(stderr, "[ubiprof] JUMP_OVERHEAD(s): %lf\n", jump_overhead);
+  fprintf(stderr, "[ubiprof] CUMULATIVE_OVERHEAD(s): %lf\n", calculated_overheads);
+  fprintf(stderr, "[ubiprof] REAL_EXEC_TIME(s): %lf\n", main_thread_cpu_time - calculated_overheads);
+  fprintf(stderr, "[Ubiprof] FINAL_CALCULATED_OVERHEAD(%): %.2lf\n", overhead_at_final_epoch);
 
   // fprintf(stderr, "[ubiprof] EXEC_TIME: %lf\n", main_thread_cpu_time - probe_overhead);
 
@@ -376,14 +379,20 @@ __attribute__((constructor, no_instrument_function))
 __attribute__((destructor))
   void destroyProfiler() {
 
+    getFinalOverhead();
+
+    // Tell probe monitor thread to shurdown 
+    g_shutting_down_flag = TERMINATE_REQUESTED;
+    while (g_shutting_down_flag != TERMINATED) {
+      sleep(sp_epoch_period); // Sleep for a while until probe monitor thread terminates
+    }
+
+    clock_gettime(CLOCK_MONOTONIC, &g_endts);
+    timeSpecDiff(&g_endts, &g_begints);
+
     fprintf(stderr, "\n[Ubiprof] Destroying the profiler..\n");
     delete Profiler::getInstance(profiler_type);
 
-    clock_gettime(CLOCK_MONOTONIC, &g_endts);
-
-    timeSpecDiff(&g_endts, &g_begints);
-
-    getFinalOverhead();
     fprintf(stderr, "\n[ubiprof] UBIPROF_ELAPSED_TIME : %lf\n", getSecondsFromTS(&g_diff));
 
   } 

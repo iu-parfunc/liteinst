@@ -578,7 +578,7 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 
   uint8_t* edi_set_addr = patch_first_parameter(addr, (uint64_t*) func, func_id);
   if (edi_set_addr == 0) { // This could happen when the compiler insert non sensical function address value
-    fprintf(stderr, "[Finstrumentor] Parameter patching failed at address : %p function : %p function id : %lu\n", 
+    fprintf(stderr, "[Finstrumentor] Parameter patching failed at address : %p function : %p function id : %d\n", 
         addr, func, func_id);
     return; // Ideally deactivate this probe
     // abort();
