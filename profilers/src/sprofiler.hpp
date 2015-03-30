@@ -6,16 +6,6 @@
 #include <map>
 #include "profiler.hpp"
 
-#define SLOW_RAMP_UP 0
-#define PROPOTIONAL 1
-
-/* Stack entry */
-
-typedef struct InvocationData {
-  ticks timestamp;
-  uint16_t func_id;
-} InvocationData;
-
 /* Statistics related data structures */
 typedef struct SamplingProfilerStat {
   uint16_t func_id;

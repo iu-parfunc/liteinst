@@ -4,6 +4,7 @@
 
 #include "../../api/ubiprof.hpp"
 #include "../../common/include/cycle.h"
+#include "globals.hpp"
 
 /**
  *  Profilers needing to run a monitor (e.g: a background thread) for bookkeeping tasks etc.
@@ -17,6 +18,17 @@ class Monitorable {
 
 };
 
+/* Stack entry */
+
+typedef struct InvocationData {
+  ticks timestamp;
+  uint16_t func_id;
+  uint64_t prolog_leaf_count;
+  uint64_t epilog_leaf_count;
+  uint64_t leaf_count;
+} InvocationData;
+
+
 /*
 typedef struct TLStatistics {
   uint64_t thread_local_overhead; // Profiling overhead incurred by this thread
@@ -25,11 +37,5 @@ typedef struct TLStatistics {
 } TLStatistics;
 */
 
-// Temporary exports to make overhead statistics visible to finalizer
-extern pthread_t g_monitor_thread;
-extern uint64_t g_call_overhead; 
-extern uint64_t g_TicksPerNanoSec; 
-extern uint64_t g_probe_overheads;
-extern uint64_t g_probe_count;
 
 #endif /* _PROFILER_HPP_ */

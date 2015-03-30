@@ -10,4 +10,5 @@
 #define BACKOFF 0
 #define SAMPLING 1
 #define EMPTY 2
+#define ADAPTIVE 3
 

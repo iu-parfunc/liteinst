@@ -12,6 +12,7 @@
 #define FIXED_BACKOFF 0
 #define SAMPLING 1
 #define EMPTY 2
+#define ADAPTIVE 3
 
 /* Global to hold the profiler type */
 int profiler_type = 0;
@@ -340,13 +341,16 @@ __attribute__((constructor, no_instrument_function))
       } else if (!strcmp(profiler_type_str, "EMPTY")) {
         fprintf(stderr, "[Ubiprof] Intializing the SamplingProfiler..\n");
         profiler_type = EMPTY;
+      } else if (!strcmp(profiler_type_str, "ADAPTIVE")) {
+        fprintf(stderr, "[Ubiprof] Intializing the SamplingProfiler..\n");
+        profiler_type = ADAPTIVE;
       } else {
         fprintf(stderr, "[Ubiprof] Intializing the SamplingProfiler..\n");
-        profiler_type = SAMPLING;
+        profiler_type = ADAPTIVE;
       }
     } else {
       fprintf(stderr, "[Ubiprof] Intializing the SamplingProfiler..\n");
-      profiler_type = SAMPLING;
+      profiler_type = ADAPTIVE;
     }
 
     // Init the suitable profiler depending on enviornment variable

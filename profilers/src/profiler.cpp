@@ -4,6 +4,7 @@
 #include "fprofiler.hpp"
 #include "sprofiler.hpp"
 #include "eprofiler.hpp"
+#include "adaptive_profiler.hpp"
 
 #define FINSTRUMENT 0
 
@@ -28,6 +29,9 @@ Profiler* Profiler::getInstance(int type) {
       PROFILER_INSTANCE->initialize();
     } else if (type == EMPTY) {
       PROFILER_INSTANCE = new EmptyProfiler();
+      PROFILER_INSTANCE->initialize();
+    } else if (type == ADAPTIVE) {
+      PROFILER_INSTANCE = new AdaptiveProfiler();
       PROFILER_INSTANCE->initialize();
     }
   }
