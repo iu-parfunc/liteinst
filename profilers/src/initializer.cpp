@@ -336,23 +336,23 @@ __attribute__((constructor, no_instrument_function))
     char* profiler_type_str = getenv("PROFILER_TYPE");
     if (profiler_type_str != NULL) {
       if (!strcmp(profiler_type_str, "FIXED_BACKOFF")) {
-        fprintf(stderr, "[Ubiprof] Intializing the BackoffProfiler..\n");
+        fprintf(stderr, "[Ubiprof] Intializing the Backoff Profiler..\n");
         profiler_type = FIXED_BACKOFF;
       } else if (!strcmp(profiler_type_str, "SAMPLING")) {
-        fprintf(stderr, "[Ubiprof] Intializing the SamplingProfiler..\n");
+        fprintf(stderr, "[Ubiprof] Intializing the Sampling Profiler..\n");
         profiler_type = SAMPLING;
       } else if (!strcmp(profiler_type_str, "EMPTY")) {
-        fprintf(stderr, "[Ubiprof] Intializing the SamplingProfiler..\n");
+        fprintf(stderr, "[Ubiprof] Intializing the Empty Profiler..\n");
         profiler_type = EMPTY;
       } else if (!strcmp(profiler_type_str, "ADAPTIVE")) {
-        fprintf(stderr, "[Ubiprof] Intializing the SamplingProfiler..\n");
+        fprintf(stderr, "[Ubiprof] Intializing the Sampling Profiler..\n");
         profiler_type = ADAPTIVE;
       } else {
-        fprintf(stderr, "[Ubiprof] Intializing the SamplingProfiler..\n");
+        fprintf(stderr, "[Ubiprof] Intializing the Adaptive Profiler..\n");
         profiler_type = ADAPTIVE;
       }
     } else {
-      fprintf(stderr, "[Ubiprof] Intializing the SamplingProfiler..\n");
+      fprintf(stderr, "[Ubiprof] Intializing the Adaptive Profiler..\n");
       profiler_type = ADAPTIVE;
     }
 
