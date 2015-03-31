@@ -297,8 +297,9 @@ void getFinalOverhead() {
   fprintf(fp, "PROBE_OVERHEAD: %lf\n", probe_overhead);
   fprintf(fp, "JUMP_OVERHEAD: %lf\n", jump_overhead);
   fprintf(fp, "CUMULATIVE_OVERHEAD: %lf\n", calculated_overheads);
-  fprintf(fp, "REAL_EXEC_TIME: %lf\n", main_thread_cpu_time - calculated_overheads);
-  fprintf(fp, "FINAL_CALCULATED_OVERHEAD: %.2lf\n", overhead_at_final_epoch);
+  fprintf(fp, "REAL_EXEC_TIME: %lf\n\n", main_thread_cpu_time - calculated_overheads);
+  fprintf(fp, "TARGET_OVERHEAD(%): %.2lf\n", sp_target_overhead);
+  fprintf(fp, "RUNTIME_OVERHEAD(%): %.2lf\n", overhead_at_final_epoch);
   fclose(fp);
 #endif
 
@@ -316,7 +317,8 @@ void getFinalOverhead() {
   fprintf(stderr, "[ubiprof] JUMP_OVERHEAD(s): %lf\n", jump_overhead);
   fprintf(stderr, "[ubiprof] CUMULATIVE_OVERHEAD(s): %lf\n", calculated_overheads);
   fprintf(stderr, "[ubiprof] REAL_EXEC_TIME(s): %lf\n", main_thread_cpu_time - calculated_overheads);
-  fprintf(stderr, "[Ubiprof] FINAL_CALCULATED_OVERHEAD(%): %.2lf\n", overhead_at_final_epoch);
+  fprintf(stderr, "[ubiprof] TARGET_OVERHEAD(%): %.2lf\n", sp_target_overhead);
+  fprintf(stderr, "[ubiprof] RUNTIME_OVERHEAD(%): %.2lf\n", overhead_at_final_epoch);
 
   // fprintf(stderr, "[ubiprof] EXEC_TIME: %lf\n", main_thread_cpu_time - probe_overhead);
 
