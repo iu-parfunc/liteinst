@@ -385,6 +385,7 @@ __attribute__((destructor))
     g_shutting_down_flag = TERMINATE_REQUESTED;
     while (g_shutting_down_flag != TERMINATED) {
       sleep(sp_epoch_period); // Sleep for a while until probe monitor thread terminates
+      break;
     }
 
     clock_gettime(CLOCK_MONOTONIC, &g_endts);
