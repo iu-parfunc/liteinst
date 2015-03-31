@@ -8,6 +8,7 @@
 #include <string.h>
 #include <time.h>
 #include "sprofiler.hpp"
+#include "globals.hpp"
 
 #define FIXED_BACKOFF 0
 #define SAMPLING 1
@@ -15,7 +16,7 @@
 #define ADAPTIVE 3
 
 /* Global to hold the profiler type */
-int profiler_type = 0;
+int g_profiler_type = 0;
 
 volatile uint64_t g_deactivation_count;
 uint64_t g_cache_miss_overhead_upper_bound = 0;
@@ -337,27 +338,27 @@ __attribute__((constructor, no_instrument_function))
     if (profiler_type_str != NULL) {
       if (!strcmp(profiler_type_str, "FIXED_BACKOFF")) {
         fprintf(stderr, "[Ubiprof] Intializing the Backoff Profiler..\n");
-        profiler_type = FIXED_BACKOFF;
+        g_profiler_type = FIXED_BACKOFF;
       } else if (!strcmp(profiler_type_str, "SAMPLING")) {
         fprintf(stderr, "[Ubiprof] Intializing the Sampling Profiler..\n");
-        profiler_type = SAMPLING;
+        g_profiler_type = SAMPLING;
       } else if (!strcmp(profiler_type_str, "EMPTY")) {
         fprintf(stderr, "[Ubiprof] Intializing the Empty Profiler..\n");
-        profiler_type = EMPTY;
+        g_profiler_type = EMPTY;
       } else if (!strcmp(profiler_type_str, "ADAPTIVE")) {
         fprintf(stderr, "[Ubiprof] Intializing the Sampling Profiler..\n");
-        profiler_type = ADAPTIVE;
+        g_profiler_type = ADAPTIVE;
       } else {
         fprintf(stderr, "[Ubiprof] Intializing the Adaptive Profiler..\n");
-        profiler_type = ADAPTIVE;
+        g_profiler_type = ADAPTIVE;
       }
     } else {
       fprintf(stderr, "[Ubiprof] Intializing the Adaptive Profiler..\n");
-      profiler_type = ADAPTIVE;
+      g_profiler_type = ADAPTIVE;
     }
 
     // Init the suitable profiler depending on enviornment variable
-    Profiler::getInstance(profiler_type);
+    Profiler::getInstance(g_profiler_type);
 
     // Calibrate for cache effects
     calibrate_cache_effects();
@@ -382,17 +383,19 @@ __attribute__((destructor))
     getFinalOverhead();
 
     // Tell probe monitor thread to shurdown 
-    g_shutting_down_flag = TERMINATE_REQUESTED;
-    while (g_shutting_down_flag != TERMINATED) {
-      sleep(sp_epoch_period); // Sleep for a while until probe monitor thread terminates
-      break;
+    if (g_profiler_type == ADAPTIVE) {
+      g_shutting_down_flag = TERMINATE_REQUESTED;
+      while (g_shutting_down_flag != TERMINATED) {
+        sleep(sp_epoch_period); // Sleep for a while until probe monitor thread terminates
+        break;
+      }
     }
 
     clock_gettime(CLOCK_MONOTONIC, &g_endts);
     timeSpecDiff(&g_endts, &g_begints);
 
     fprintf(stderr, "\n[Ubiprof] Destroying the profiler..\n");
-    delete Profiler::getInstance(profiler_type);
+    delete Profiler::getInstance(g_profiler_type);
 
     fprintf(stderr, "\n[ubiprof] UBIPROF_ELAPSED_TIME : %lf\n", getSecondsFromTS(&g_diff));
 

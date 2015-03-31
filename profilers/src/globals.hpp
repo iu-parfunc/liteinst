@@ -16,6 +16,8 @@
 #define TERMINATE_REQUESTED 1
 #define TERMINATED 2
 
+extern int g_profiler_type;
+
 // Sampling and Adaptive profiler specific
 // Temporary exports to make overhead statistics visible to finalizer
 extern pthread_t g_monitor_thread;
