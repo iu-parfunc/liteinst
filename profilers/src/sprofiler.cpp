@@ -147,7 +147,8 @@ void* samplingProbeMonitor(void* param) {
     //     g_total_process_time);
     // fprintf(stderr, "Global overhead delta : %lu Global process delta : %lu \n", overhead_delta,
     //     process_time_delta);
-    // fprintf(stderr, "Overhead : %lu\n", overhead_of_last_epoch);
+    //
+    fprintf(stderr, "Overhead : %.2lf\n", overhead_of_last_epoch);
 
     if (g_strategy == PROPOTIONAL) {
       if (overhead_of_last_epoch != 0 && overhead_of_last_epoch >  sp_target_overhead) {
