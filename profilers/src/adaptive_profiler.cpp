@@ -243,6 +243,9 @@ void* adaptiveProbeMonitor(void* param) {
     uint64_t overhead_delta = g_total_overhead - tmp_total_overhead;
     uint64_t process_time_delta = g_total_process_time - tmp_total_process_time;
 
+    // fprintf(stderr, "Total overhead : %lu Total process tiem : %lu Thread overhead : %lu Probe thread Overhead : %lu\n", 
+    //        g_total_overhead, g_total_process_time, thread_overheads, probe_thread_overhead); 
+
     // uint64_t overhead_of_last_epoch = ((double)overhead_delta / process_time_delta) * 100;
     double overhead_of_last_epoch = ((double)g_total_overhead / g_total_process_time) * 100;
     // fprintf(stderr, "Per function call overhead (cycles) : %lu\n", g_call_overhead);
@@ -252,7 +255,7 @@ void* adaptiveProbeMonitor(void* param) {
     //     process_time_delta);
 
     // *** Turn this on for runtime overhead logging **
-    fprintf(stderr, "Overhead : %.2lf\n", overhead_of_last_epoch);
+    // fprintf(stderr, "Overhead : %.2lf\n", overhead_of_last_epoch);
 
     if (g_strategy == PROPOTIONAL) {
       if (overhead_of_last_epoch != 0 && overhead_of_last_epoch >  sp_target_overhead) {

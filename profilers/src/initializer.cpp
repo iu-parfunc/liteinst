@@ -326,13 +326,20 @@ void getFinalOverhead() {
 __attribute__((constructor, no_instrument_function))
   void initProfiler() {
 
-    ticks start = getticks();
+    // ticks start = getticks();
+
+    calibrateTicks();
+
+    struct timespec begin_ts;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &begin_ts);
+    uint64_t nanoSecs = begin_ts.tv_sec * 1000000000LL + begin_ts.tv_nsec;
+
+    uint64_t start = nanoSecs * g_TicksPerNanoSec;  
 
     g_deactivation_count = 0;
 
     clock_gettime(CLOCK_MONOTONIC, &g_begints);
 
-    calibrateTicks();
 
     char* profiler_type_str = getenv("PROFILER_TYPE");
     if (profiler_type_str != NULL) {
@@ -367,9 +374,15 @@ __attribute__((constructor, no_instrument_function))
     fprintf(stderr, "[Ubiprof] Calibrated parameter values per probe\n Indirect Jump Cost : %lu  Cache miss cost : %lu\n",
                         2*g_call_overhead, g_cache_miss_overhead_upper_bound);
 
-    ticks end = getticks();
+    // ticks end = getticks();
 
     g_ubiprof_initialized = true;
+
+    struct timespec end_ts;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end_ts);
+    nanoSecs = end_ts.tv_sec * 1000000000LL + end_ts.tv_nsec;
+
+    uint64_t end = nanoSecs * g_TicksPerNanoSec;  
 
     g_init_overhead = end - start;
 
@@ -380,14 +393,16 @@ __attribute__((constructor, no_instrument_function))
 __attribute__((destructor))
   void destroyProfiler() {
 
-    getFinalOverhead();
 
     // Tell probe monitor thread to shurdown 
     if (g_profiler_type == ADAPTIVE) {
       g_shutting_down_flag = TERMINATE_REQUESTED;
+      // int retries = 0;
       while (g_shutting_down_flag != TERMINATED) {
-        sleep(sp_epoch_period); // Sleep for a while until probe monitor thread terminates
-        break;
+	// sleep(10);
+        // fprintf(stderr, "Trying to finish..\n");
+        // sleep(sp_epoch_period); // Sleep for a while until probe monitor thread terminates
+        // break;
       }
     }
 
@@ -396,6 +411,8 @@ __attribute__((destructor))
 
     fprintf(stderr, "\n[Ubiprof] Destroying the profiler..\n");
     delete Profiler::getInstance(g_profiler_type);
+
+    getFinalOverhead();
 
     fprintf(stderr, "\n[ubiprof] UBIPROF_ELAPSED_TIME : %lf\n", getSecondsFromTS(&g_diff));
 
