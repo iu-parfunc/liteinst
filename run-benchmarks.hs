@@ -56,6 +56,11 @@ main = do
                        customTagHarvesterDouble "REAL_EXEC_TIME"          `mappend`
                        customTagHarvesterDouble "EXEC_TIME"               `mappend`
                        customTagHarvesterInt    "PROBE_COUNT"             `mappend`
+                       customTagHarvesterInt    "NUMBER_OF_FUNCTION_CALLS" `mappend`
+                       customTagHarvesterInt    "NUM_ACCESSED_PRODE_SITES" `mappend`
+                       customTagHarvesterInt    "DEACTIVATIONS"            `mappend`
+                       customTagHarverterDouble "TARGET_OVERHEAD"          `mappend`
+                       customTagHarvesterDouble "RUNTIME_OVERHEAD"         `mappend`
                        harvesters conf             
        
 
