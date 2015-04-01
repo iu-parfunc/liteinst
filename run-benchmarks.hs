@@ -59,7 +59,7 @@ main = do
                        customTagHarvesterInt    "NUMBER_OF_FUNCTION_CALLS" `mappend`
                        customTagHarvesterInt    "NUM_ACCESSED_PRODE_SITES" `mappend`
                        customTagHarvesterInt    "DEACTIVATIONS"            `mappend`
-                       customTagHarverterDouble "TARGET_OVERHEAD"          `mappend`
+                       customTagHarvesterDouble "TARGET_OVERHEAD"          `mappend`
                        customTagHarvesterDouble "RUNTIME_OVERHEAD"         `mappend`
                        harvesters conf             
        
