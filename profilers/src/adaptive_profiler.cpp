@@ -243,7 +243,7 @@ void* adaptiveProbeMonitor(void* param) {
     uint64_t overhead_delta = g_total_overhead - tmp_total_overhead;
     uint64_t process_time_delta = g_total_process_time - tmp_total_process_time;
 
-    // fprintf(stderr, "Total overhead : %lu Total process tiem : %lu Thread overhead : %lu Probe thread Overhead : %lu\n", 
+    // fprintf(stderr, "Total overhead : %lu Total process time : %lu Thread overhead : %lu Probe thread Overhead : %lu\n", 
     //        g_total_overhead, g_total_process_time, thread_overheads, probe_thread_overhead); 
 
     // uint64_t overhead_of_last_epoch = ((double)overhead_delta / process_time_delta) * 100;
@@ -290,6 +290,16 @@ void* adaptiveProbeMonitor(void* param) {
     record_overhead_histogram(overhead_of_last_epoch, sp_epoch_period);
 #endif
 
+      for(int i = 0; i < func_count; i++) {
+        if (!global_stats[i].active) {
+          global_stats[i].sample_size = sp_sample_size;
+          PROFILER_INSTANCE->activateFunction(&i);
+          global_stats[i].active = true;
+        } else { // TODO: Reset all function sample sizes
+          __sync_bool_compare_and_swap(&global_stats[i].sample_size, global_stats[i].sample_size, sp_sample_size); // Atomically set the value
+        }
+      }
+
     } else if (g_strategy == SLOW_RAMP_UP) {
       if (overhead_of_last_epoch != 0 && overhead_of_last_epoch >  sp_target_overhead) {
         uint64_t new_sample_size = ((double)sp_target_overhead / overhead_of_last_epoch) * sp_sample_size; 
@@ -330,9 +340,22 @@ void* adaptiveProbeMonitor(void* param) {
     record_overhead_histogram(overhead_of_last_epoch, sp_epoch_period);
 #endif
 
+      for(int i = 0; i < func_count; i++) {
+        if (!global_stats[i].active) {
+          global_stats[i].sample_size = sp_sample_size;
+          PROFILER_INSTANCE->activateFunction(&i);
+          global_stats[i].active = true;
+        } else { // TODO: Reset all function sample sizes
+          __sync_bool_compare_and_swap(&global_stats[i].sample_size, global_stats[i].sample_size, sp_sample_size); // Atomically set the value
+        }
+      }
+
     } else if (g_strategy == EPOCH_CONTROL) {
       if (overhead_of_last_epoch != 0 && overhead_of_last_epoch >  sp_target_overhead) {
-        uint64_t new_epoch_period = ((double)sp_target_overhead / overhead_of_last_epoch) * sp_epoch_period; 
+     //   fprintf(stderr, "[ubiprof] Overhead : %.2lf Target overhead : %.2lf Epoch period : %.2lf\n", 
+     //       overhead_of_last_epoch, sp_target_overhead, sp_epoch_period);
+        double new_epoch_period = ((double) overhead_of_last_epoch /sp_target_overhead) * sp_epoch_period; 
+     //   fprintf(stderr, "[ubiprof] New epoch period : %.2lf\n", new_epoch_period);
 
         if (new_epoch_period > 0) {
           sp_epoch_period = new_epoch_period;
@@ -350,11 +373,25 @@ void* adaptiveProbeMonitor(void* param) {
       double fudge_factor = 1;
       if (overhead_of_last_epoch != 0 && overhead_of_last_epoch <  fudge_factor * sp_target_overhead) {
 	      double new_target_overhead = overhead_of_last_epoch + (fudge_factor * (double) sp_target_overhead - overhead_of_last_epoch) / 2;
-        uint64_t new_epoch_period = ((double)new_target_overhead / overhead_of_last_epoch) * sp_epoch_period; 
+      //  fprintf(stderr, "[ubiprof] Overhead : %.2lf New Target Overhead : %.2lf Epoch period : %.2lf\n", 
+      //      overhead_of_last_epoch, new_target_overhead, sp_epoch_period);
+        double new_epoch_period =  ((double) overhead_of_last_epoch /new_target_overhead) * sp_epoch_period; 
+      //  fprintf(stderr, "[ubiprof] New epoch period : %.2lf\n", new_epoch_period);
 
-       if (new_epoch_period > sp_epoch_period) {
+       if (new_epoch_period < sp_epoch_period) {
          sp_epoch_period = new_epoch_period; 
        }
+      }
+
+      // fprintf(stderr, "[ubiprof] Epoch Size : %lu\n", sp_epoch_period);
+
+      // Reactivate all the deactivated methods
+      for(int i = 0; i < func_count; i++) {
+        if (!global_stats[i].active) {
+          global_stats[i].sample_size = sp_sample_size; // Sample size doesn't change
+          PROFILER_INSTANCE->activateFunction(&i);
+          global_stats[i].active = true;
+        }      
       }
 
 #ifdef OVERHEAD_TIME_SERIES
@@ -365,23 +402,16 @@ void* adaptiveProbeMonitor(void* param) {
 
     // fprintf(stderr, "New sample size : %lu\n", sp_sample_size);
       
-    for(int i = 0; i < func_count; i++) {
-      if (!global_stats[i].active) {
-        global_stats[i].sample_size = sp_sample_size;
-        PROFILER_INSTANCE->activateFunction(&i);
-        global_stats[i].active = true;
-      } else { // TODO: Reset all function sample sizes
-        __sync_bool_compare_and_swap(&global_stats[i].sample_size, global_stats[i].sample_size, sp_sample_size); // Atomically set the value
-      }
-    }
 
 sleep:
-    uint64_t nanos = sp_epoch_period * 1000000; 
-    uint64_t secs = nanos / 1000000000;
-    uint64_t nsecs = nanos % 1000000000;
-    ts.tv_sec = secs;
-    ts.tv_nsec = nsecs;
-    nanosleep(&ts, NULL);
+    if (sp_epoch_period != 0) {
+      uint64_t nanos = sp_epoch_period * 1000000; 
+      uint64_t secs = nanos / 1000000000;
+      uint64_t nsecs = nanos % 1000000000;
+      ts.tv_sec = secs;
+      ts.tv_nsec = nsecs;
+      nanosleep(&ts, NULL);
+    }
 
   }
 }

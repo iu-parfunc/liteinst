@@ -16,8 +16,8 @@ using namespace std;
 /* Globals for this profiler */
 extern uint64_t sp_initial_sample_size;
 extern uint64_t sp_sample_size;
-extern uint64_t sp_epoch_period;
-extern uint64_t sp_target_overhead;
+extern double sp_epoch_period;
+extern double sp_target_overhead;
 extern uint64_t g_total_overhead; // Overhead incurred due to profiling
 extern uint64_t g_total_process_time; // Total process time until last epoch sample
 extern uint64_t g_last_epoch_random; // Random added to last epoch period

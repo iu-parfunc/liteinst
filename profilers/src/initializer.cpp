@@ -298,8 +298,8 @@ void getFinalOverhead() {
   fprintf(fp, "JUMP_OVERHEAD: %lf\n", jump_overhead);
   fprintf(fp, "CUMULATIVE_OVERHEAD: %lf\n", calculated_overheads);
   fprintf(fp, "REAL_EXEC_TIME: %lf\n\n", main_thread_cpu_time - calculated_overheads);
-  fprintf(fp, "TARGET_OVERHEAD(%): %.2lf\n", sp_target_overhead);
-  fprintf(fp, "RUNTIME_OVERHEAD(%): %.2lf\n", overhead_at_final_epoch);
+  fprintf(fp, "TARGET_OVERHEAD: %.2lf\n", (double) sp_target_overhead);
+  fprintf(fp, "RUNTIME_OVERHEAD: %.2lf\n", overhead_at_final_epoch);
   fclose(fp);
 #endif
 
@@ -317,8 +317,8 @@ void getFinalOverhead() {
   fprintf(stderr, "[ubiprof] JUMP_OVERHEAD(s): %lf\n", jump_overhead);
   fprintf(stderr, "[ubiprof] CUMULATIVE_OVERHEAD(s): %lf\n", calculated_overheads);
   fprintf(stderr, "[ubiprof] REAL_EXEC_TIME(s): %lf\n", main_thread_cpu_time - calculated_overheads);
-  fprintf(stderr, "[ubiprof] TARGET_OVERHEAD(%): %.2lf\n", sp_target_overhead);
-  fprintf(stderr, "[ubiprof] RUNTIME_OVERHEAD(%): %.2lf\n", overhead_at_final_epoch);
+  fprintf(stderr, "[ubiprof] TARGET_OVERHEAD: %.2lf\n", (double) sp_target_overhead);
+  fprintf(stderr, "[ubiprof] RUNTIME_OVERHEAD: %.2lf\n", overhead_at_final_epoch);
 
   // fprintf(stderr, "[ubiprof] EXEC_TIME: %lf\n", main_thread_cpu_time - probe_overhead);
 
@@ -399,8 +399,15 @@ __attribute__((destructor))
     // Tell probe monitor thread to shurdown 
     if (g_profiler_type == ADAPTIVE) {
       g_shutting_down_flag = TERMINATE_REQUESTED;
-      // int retries = 0;
-      while (g_shutting_down_flag != TERMINATED) {
+      int retries = 0;
+      while (g_shutting_down_flag != TERMINATED && retries++ < 2) {
+        struct timespec ts;
+        uint64_t nanos = 10 * 1000000;  // Sleep 10 milli seconds
+        uint64_t secs = nanos / 1000000000;
+        uint64_t nsecs = nanos % 1000000000;
+        ts.tv_sec = secs;
+        ts.tv_nsec = nsecs;
+        nanosleep(&ts, NULL);
 	// sleep(10);
         // fprintf(stderr, "Trying to finish..\n");
         // sleep(sp_epoch_period); // Sleep for a while until probe monitor thread terminates
