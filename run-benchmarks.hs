@@ -56,6 +56,11 @@ main = do
                        customTagHarvesterDouble "REAL_EXEC_TIME"          `mappend`
                        customTagHarvesterDouble "EXEC_TIME"               `mappend`
                        customTagHarvesterInt    "PROBE_COUNT"             `mappend`
+                       customTagHarvesterInt    "NUMBER_OF_FUNCTION_CALLS" `mappend`
+                       customTagHarvesterInt    "NUM_ACCESSED_PRODE_SITES" `mappend`
+                       customTagHarvesterInt    "DEACTIVATIONS"            `mappend`
+                       customTagHarvesterDouble "TARGET_OVERHEAD"          `mappend`
+                       customTagHarvesterDouble "RUNTIME_OVERHEAD"         `mappend`
                        harvesters conf             
        
 
@@ -72,7 +77,7 @@ benches =
     , (var_name, variant) <- base_variants] ++
 
   [ (mkBenchmark ("benchmarks/"++name++"/"++var_name++"/Makefile") [] variant)
-    { progname = Just name }
+    { progname = Just name } 
     | name <- benchmark_names
     , (var_name, variant) <- ubiprof_variants] 
 
@@ -86,8 +91,18 @@ benches =
                           ]
 
 
-    ubiprof_variants = [("ubiprof", backoff),("noprof",backoff)] 
+    ubiprof_variants = [("ubiprof",adaptive),("ubiprof", backoff),("noprof",backoff)] 
 
+    adaptive = Or [And [ Set (Variant ("Adaptive_epoch_control_" ++ targetOH)) (RuntimeEnv "PROFILER_TYPE" "ADAPTIVE")
+                       , Set NoMeaning (RuntimeEnv "ADAPTIVE_STRATEGY" "EPOCH_CONTROL")
+                       , Set NoMeaning (RuntimeEnv "TARGET_OVERHEAD" (show targ))
+                       , Set NoMeaning (CompileEnv "CC" "gcc")
+                       , Set NoMeaning (CompileEnv "OPTLEVEL" "-O2")
+                       ]
+                       | targ <- [3,5,10]
+                   ]
+                                        
+    
 -- This is misguided
 --                       ,("sampling",sampling)]
     
