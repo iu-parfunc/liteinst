@@ -226,8 +226,10 @@ void* samplingProbeMonitor(void* param) {
         g_stats[i].sample_size = sp_sample_size;
         PROFILER_INSTANCE->activateFunction(&i);
         g_stats[i].is_active = true;
+      } else {
+        __sync_bool_compare_and_swap(&g_stats[i].sample_size, g_stats[i].sample_size, sp_sample_size); // Atomically set the value
       }
-    }
+    } 
 
 sleep:
     uint64_t nanos = sp_epoch_period * 1000000; 

@@ -370,7 +370,9 @@ void* adaptiveProbeMonitor(void* param) {
         global_stats[i].sample_size = sp_sample_size;
         PROFILER_INSTANCE->activateFunction(&i);
         global_stats[i].active = true;
-      } // TODO: Reset all function sample sizes
+      } else { // TODO: Reset all function sample sizes
+        __sync_bool_compare_and_swap(&global_stats[i].sample_size, global_stats[i].sample_size, sp_sample_size); // Atomically set the value
+      }
     }
 
 sleep:
