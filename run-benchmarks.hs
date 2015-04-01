@@ -98,7 +98,8 @@ benches =
                        , Set NoMeaning (RuntimeEnv "TARGET_OVERHEAD" (show targ))
                        , Set NoMeaning (CompileEnv "CC" "gcc")
                        , Set NoMeaning (CompileEnv "OPTLEVEL" "-O2")
-                       | targ <- [3,5,10]]
+                       ]
+                       | targ <- [3,5,10]
                    ]
                                         
     
