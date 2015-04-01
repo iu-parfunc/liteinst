@@ -61,6 +61,8 @@ main = do
                        customTagHarvesterInt    "DEACTIVATIONS"            `mappend`
                        customTagHarvesterDouble "TARGET_OVERHEAD"          `mappend`
                        customTagHarvesterDouble "RUNTIME_OVERHEAD"         `mappend`
+                       customTagHarvesterDouble "USER_TIME"                `mappend`
+                       customTagHarvesterDouble "SYS_TIME"                 `mappend`
                        harvesters conf             
        
 
