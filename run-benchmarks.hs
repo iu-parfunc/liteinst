@@ -93,7 +93,7 @@ benches =
 
     ubiprof_variants = [("ubiprof",adaptive),("ubiprof", backoff),("noprof",backoff)] 
 
-    adaptive = Or [And [ Set (Variant ("Adaptive_epoch_control_" ++ targetOH)) (RuntimeEnv "PROFILER_TYPE" "ADAPTIVE")
+    adaptive = Or [And [ Set (Variant ("Adaptive_epoch_control_" ++ (show targ))) (RuntimeEnv "PROFILER_TYPE" "ADAPTIVE")
                        , Set NoMeaning (RuntimeEnv "ADAPTIVE_STRATEGY" "EPOCH_CONTROL")
                        , Set NoMeaning (RuntimeEnv "TARGET_OVERHEAD" (show targ))
                        , Set NoMeaning (CompileEnv "CC" "gcc")
