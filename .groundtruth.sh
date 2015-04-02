@@ -50,6 +50,7 @@ fi
 
 function build_it { 
     export EXCLUDED_FUNCTIONS_LIST='-finstrument-functions-exclude-function-list=$EXCLUDED_LIST'
+    echo $EXCLUDED_FUNCTIONS_LIST
     BENCH=$1
     echo "BUILDING:"$BENCH
     
