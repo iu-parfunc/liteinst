@@ -50,7 +50,7 @@ fi
 
 function build_it { 
     INSTR="-finstrument-functions-exclude-function-list="
-    export EXCLUDED_FUNCTIONS_LIST=$INSTR$EXCLUDED_LIST[@]
+    export EXCLUDED_FUNCTIONS_LIST=$INSTR$EXCLUDED_LIST
     echo $EXCLUDED_FUNCTIONS_LIST
     BENCH=$1
     echo "BUILDING:"$BENCH
@@ -98,23 +98,23 @@ for benchmark in h264ref-9.3 hmmer lbm perl-5.8.7 sjeng bzip-1.03; do
     echo "processing bench:"$benchmark
     
     case $benchmark in 
-	h264ref-9.2 )
+	h264ref-9.3 )
 	    set_profiled_func H264_FUNCS "DE_NADA"
 	    ;;
 	hmmer )
-	    set_profiled_func HMMER_FUNCS "DE NADA"
+	    set_profiled_func HMMER_FUNCS "DE_NADA"
 	    ;; 
 	lbm )
-	    set_profiled_func LBM_FUNCS "DE NADA"
+	    set_profiled_func LBM_FUNCS "DE_NADA"
 	    ;;
 	perl-5.8.7 )
-	    set_profiled_func PERL_FUNCS "DE NADA"
+	    set_profiled_func PERL_FUNCS "DE_NADA"
 	    ;;
 	sjeng ) 
-	    set_profiled_func SJENG_FUNCS "DE NADA"
+	    set_profiled_func SJENG_FUNCS "DE_NADA"
 	    ;;
 	bzip-1.03 ) 
-	    set_profiled_func BZIP_FUNCS "DE NADA" 
+	    set_profiled_func BZIP_FUNCS "DE_NADA" 
 	    ;;
 	esac
     
