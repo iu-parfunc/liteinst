@@ -7,32 +7,21 @@
 #include <string>
 #include <string.h>
 #include <list>
+#include <limits.h>
 
 #include "sprofiler.hpp"
 #include "overhead_series.hpp"
 
 using namespace std;
 
-/* Globals for this profiler */
-extern uint64_t sp_initial_sample_size;
-extern uint64_t sp_sample_size;
-extern double sp_epoch_period;
-extern double sp_target_overhead;
-extern uint64_t g_total_overhead; // Overhead incurred due to profiling
-extern uint64_t g_total_process_time; // Total process time until last epoch sample
-extern uint64_t g_last_epoch_random; // Random added to last epoch period
-extern uint64_t g_TicksPerNanoSec; // Calibrated ticks per nano second
-extern uint64_t g_call_overhead; // Call overhead calibrated value
-extern uint16_t g_strategy; // Overhead control strategy to use
+// All thread statistics data thread local reference
+static __thread TLStatistics** all_thread_stats;
 
-// All thread local statistics data
-static __thread TLStatistics** thread_local_stat_table;
+// Thread statistics data for current thread
+static __thread TLStatistics* current_thread_stats;
 
-// Thread local statistics data for current thread
-static __thread TLStatistics* thread_local_stats;
-
-// Thread local statistics table of current thread 
-static __thread TLSSamplingProfilerStat* thread_local_func_stats;
+// Function statistics table for current thread 
+static __thread TLSSamplingProfilerStat* current_thread_func_stats_table;
 
 // Instrumentation Functions
 TLStatistics* samplingPrologFunction(uint16_t func_id) {
@@ -41,20 +30,51 @@ TLStatistics* samplingPrologFunction(uint16_t func_id) {
 
   if (!allocated) {
     allocated = true;
+    uint32_t function_count = INSTRUMENTOR_INSTANCE->getFunctionCount(); 
     // C++ value initilization.. Similar to calloc
-    thread_local_func_stats = new TLSSamplingProfilerStat[INSTRUMENTOR_INSTANCE->getFunctionCount()]();
-    thread_local_stats = new TLStatistics;
-    thread_local_stats->func_stats = thread_local_func_stats;
-    thread_local_stats->thread_local_overhead = 0;
-    thread_local_stats->thread_local_count = 0;
+    current_thread_func_stats_table = new TLSSamplingProfilerStat[function_count]();
+    current_thread_stats = new TLStatistics;
+    current_thread_stats->func_stats = current_thread_func_stats_table;
+    current_thread_stats->thread_local_overhead = 0;
+    current_thread_stats->thread_local_count = 0;
 
-    ((SamplingProfiler*)PROFILER_INSTANCE)->registerThreadStatistics(thread_local_stats);
-    thread_local_stat_table = ((SamplingProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
+    for (int i=0; i < function_count; i++) {
+      current_thread_func_stats_table[i].is_leaf = true;
+      current_thread_func_stats_table[i].stack_depth = 0;
+    }
+
+    ((SamplingProfiler*)PROFILER_INSTANCE)->registerThreadStatistics(current_thread_stats);
+    all_thread_stats = ((SamplingProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
   }
 
-  thread_local_func_stats[func_id].start_timestamp = getticks();
-  thread_local_stats->thread_local_count++;
-  return thread_local_stats;
+  SamplingProfilerStat* global_func_stats = &((SamplingProfilerStat*) g_ubiprof_stats)[func_id];
+  TLSSamplingProfilerStat* local_func_stats = &current_thread_func_stats_table[func_id];
+
+  uint32_t stack_depth = local_func_stats->stack_depth;
+  if (local_func_stats->stack_depth > 0 && 
+      local_func_stats->invocation_stack[stack_depth-1].timestamp < global_func_stats->latest_activation_time) {
+    local_func_stats->stack_depth = 0;
+    local_func_stats->ignore_count = 0;
+  } 
+
+  // Limit stack depth of each per each function stack
+  if (stack_depth < 20) {
+    local_func_stats->invocation_stack[stack_depth].func_id = func_id;
+    local_func_stats->invocation_stack[stack_depth].prolog_leaf_count = prolog_leaf_counter;
+    local_func_stats->invocation_stack[stack_depth].epilog_leaf_count = epilog_leaf_counter;
+    local_func_stats->invocation_stack[stack_depth].timestamp = getticks();
+    local_func_stats->stack_depth++;
+  } else {
+    local_func_stats->ignore_count++; // Ignores this sample since stack limit exceeded
+  }
+
+  if (!global_func_stats->active) {
+    local_func_stats->stack_depth = 0;
+    local_func_stats->ignore_count = 0;
+  }
+
+  current_thread_stats->thread_local_count++;
+  return current_thread_stats;
 
 }
 
@@ -62,34 +82,91 @@ TLStatistics* samplingEpilogFunction(uint16_t func_id) {
 
   ticks epilog_start = getticks();
 
-  SamplingProfilerStat* g_stats = (SamplingProfilerStat*) g_ubiprof_stats;
+  SamplingProfilerStat* global_func_stats = &((SamplingProfilerStat*) g_ubiprof_stats)[func_id];
+  TLSSamplingProfilerStat* local_func_stats = &current_thread_func_stats_table[func_id];
 
   int thread_count = ((SamplingProfiler*)PROFILER_INSTANCE)->getThreadCount(); 
+  uint32_t stack_depth = local_func_stats->stack_depth;
+
+  if (local_func_stats->stack_depth == 0) {
+    return current_thread_stats;
+  }
+
+  InvocationData i_data = local_func_stats->invocation_stack[stack_depth-1];
+  if (i_data.timestamp < global_func_stats->latest_activation_time) {
+    local_func_stats->stack_depth = 0;
+    local_func_stats->ignore_count = 0;
+    return current_thread_stats;
+  }
+
+  if (stack_depth >= 20 && local_func_stats->ignore_count > 0) {
+    local_func_stats->ignore_count--;
+    local_func_stats->limited_count++;
+    local_func_stats->count++;
+
+    current_thread_stats->thread_local_count++;
+    return current_thread_stats;
+  }
+
+  uint64_t prolog_leaf_count_diff = prolog_leaf_counter - i_data.prolog_leaf_count;
+  uint64_t epilog_leaf_count_diff = epilog_leaf_counter - i_data.epilog_leaf_count;
+
+  uint64_t leaf_count_diff = 0;
+  if (prolog_leaf_count_diff > 0) {
+    leaf_count_diff += prolog_leaf_count_diff;
+  }
+
+  if (epilog_leaf_count_diff > 0) {
+    leaf_count_diff += epilog_leaf_count_diff;
+  }
+
+  epilog_leaf_counter++;
+
+  if (leaf_count_diff > 0) {
+    local_func_stats->is_leaf = false;
+  }
+
+  local_func_stats->count++;
 
   // We do this at epilog itself to get an accurate count than a periodically accumilated count by the probe monitor thread
   uint64_t global_count = 0;
-  thread_local_func_stats[func_id].count++;
 
   for (int i=0; i < thread_count; i++) {
-    global_count += ((TLSSamplingProfilerStat*) thread_local_stat_table[i]->func_stats)[func_id].count; 
+    global_count += ((TLSSamplingProfilerStat*) all_thread_stats[i]->func_stats)[func_id].count; 
   }
 
-  uint64_t new_count = global_count - g_stats[func_id].count_at_last_activation; 
+  uint64_t new_count = global_count - global_func_stats->count_at_last_activation; 
 
-  ticks elapsed = epilog_start - thread_local_func_stats[func_id].start_timestamp ;
-  thread_local_func_stats[func_id].total_time += elapsed;
-  if (new_count >= g_stats[func_id].sample_size) {
-    if (__sync_bool_compare_and_swap(&(g_stats[func_id].lock), 0 , 1)) {
+  ticks elapsed = epilog_start - i_data.timestamp ;
+
+  if (elapsed < local_func_stats->min_time || local_func_stats->min_time == 0) {
+    local_func_stats->min_time = elapsed;
+  }
+
+  if (elapsed > local_func_stats->max_time) {
+    local_func_stats->max_time = elapsed;
+  }
+
+  local_func_stats->total_time += elapsed;
+  if (new_count >= global_func_stats->sample_size) {
+    if (__sync_bool_compare_and_swap(&(global_func_stats->lock), 0 , 1)) {
       PROFILER_INSTANCE->deactivateFunction(&func_id);
-      g_stats[func_id].count_at_last_activation = global_count;
-      g_stats[func_id].deactivation_count++;
-      g_stats[func_id].is_active = false;
-      __sync_bool_compare_and_swap(&(g_stats[func_id].lock), 1 , 0);
+      global_func_stats->deactivation_count++; // Store in thread local structure and we sum all TL stuff when flushing results
+      global_func_stats->count_at_last_activation = global_count;
+      global_func_stats->active = false;
+      __sync_bool_compare_and_swap(&(global_func_stats->lock), 1 , 0);
     }
   }
 
-  thread_local_stats->thread_local_count++;
-  return thread_local_stats;
+  if (!global_func_stats->active) {
+    local_func_stats->stack_depth = 0;
+    local_func_stats->ignore_count = 0;
+  } else {
+    local_func_stats->stack_depth--;
+  }
+
+  current_thread_stats->thread_local_count++;
+  return current_thread_stats;
 
 }
 
@@ -97,141 +174,20 @@ TLStatistics* samplingEpilogFunction(uint16_t func_id) {
 void* samplingProbeMonitor(void* param) {
 
   SamplingProfilerStat* g_stats = (SamplingProfilerStat*) g_ubiprof_stats;
+  int func_count = INSTRUMENTOR_INSTANCE->getFunctionCount();
 
+  struct timespec ts;
   while(true) {
-    int func_count = INSTRUMENTOR_INSTANCE->getFunctionCount();
-    int thread_count = ((SamplingProfiler*)PROFILER_INSTANCE)->getThreadCount(); 
-
-    TLStatistics** tls_stat = ((SamplingProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
-
-    uint64_t thread_overheads = 0;
-    uint64_t global_count = 0;
-    for (int i=0; i < thread_count; i++) {
-      thread_overheads += tls_stat[i]->thread_local_overhead; 
-      global_count += tls_stat[i]->thread_local_count;
-    }
-
-    uint64_t call_overhead = global_count * g_call_overhead;
-    uint64_t cache_perturbation_overhead = global_count * g_cache_miss_overhead_upper_bound;
-    // fprintf(stderr, "Call overhead : %lu\n", call_overhead);
-
-    struct timespec ts;
-    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts);
-    uint64_t nanoSecs = ts.tv_sec * 1000000000LL + ts.tv_nsec;
-
-    uint64_t probe_thread_overhead = nanoSecs * g_TicksPerNanoSec;  
-
-    uint64_t tmp_total_overhead  = g_total_overhead;
-    uint64_t tmp_total_process_time = g_total_process_time;
-
-    // fprintf(stderr, "Initial total overhead : %lu Thread overhead : %lu Probe thread Overhead : %lu\n", 
-    //     g_total_overhead, thread_overheads, probe_thread_overhead);
-    g_total_overhead = thread_overheads + probe_thread_overhead + call_overhead + 
-                       cache_perturbation_overhead + g_init_overhead;
-
-    struct timespec ts1;
-    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts1);
-    nanoSecs = ts1.tv_sec * 1000000000LL + ts1.tv_nsec;
-
-    g_total_process_time = nanoSecs * g_TicksPerNanoSec;
-    g_total_process_time -= g_total_overhead;
-    // g_total_process_time -= thread_overheads;
-
-    uint64_t overhead_delta = g_total_overhead - tmp_total_overhead;
-    uint64_t process_time_delta = g_total_process_time - tmp_total_process_time;
-
-    // uint64_t overhead_of_last_epoch = ((double)overhead_delta / process_time_delta) * 100;
-    double overhead_of_last_epoch = ((double)g_total_overhead / g_total_process_time) * 100;
-    // fprintf(stderr, "Per function call overhead (cycles) : %lu\n", g_call_overhead);
-    // fprintf(stderr, "Global overhead (cycles) : %lu Global process time : %lu \n", g_total_overhead,
-    //     g_total_process_time);
-    // fprintf(stderr, "Global overhead delta : %lu Global process delta : %lu \n", overhead_delta,
-    //     process_time_delta);
-    //
-    fprintf(stderr, "Overhead : %.2lf\n", overhead_of_last_epoch);
-
-    if (g_strategy == PROPOTIONAL) {
-      if (overhead_of_last_epoch != 0 && overhead_of_last_epoch >  sp_target_overhead) {
-        uint64_t new_sample_size = ((double)sp_target_overhead / overhead_of_last_epoch) * sp_sample_size; 
-
-        if (new_sample_size > 0) {
-          sp_sample_size = new_sample_size;
-        } else {
-          // Entirely skip probe activation for this sample due to small sample size
-          // Too much overhead to control via reducing the sample size
-#ifdef OVERHEAD_TIME_SERIES
-          g_skipped_epochs++;
-          record_overhead_histogram(overhead_of_last_epoch, -1); // -1 signifies no new samples taken in this epoch
-#endif
-          goto sleep;
-        }
-      }
-
-      if (overhead_of_last_epoch != 0 && overhead_of_last_epoch <  0.75 * sp_target_overhead) {
-        uint64_t new_sample_size = ((double)sp_target_overhead / overhead_of_last_epoch) * sp_sample_size; 
-
-        // Here we don't set the sample size to more than its initial setting to prevent overshooting.
-        // TODO: Revisit this
-        if (new_sample_size < sp_initial_sample_size) {
-          sp_sample_size = new_sample_size;
-        } else {
-          sp_sample_size = sp_initial_sample_size;
-        }
-      }
-    } else if (g_strategy == SLOW_RAMP_UP) {
-      if (overhead_of_last_epoch != 0 && overhead_of_last_epoch >  sp_target_overhead) {
-        uint64_t new_sample_size = ((double)sp_target_overhead / overhead_of_last_epoch) * sp_sample_size; 
-
-        if (new_sample_size > 0) {
-          sp_sample_size = new_sample_size;
-        } else {
-          // Entirely skip probe activation for this sample due to small sample size
-          // Too much overhead to control via reducing the sample size
-#ifdef OVERHEAD_TIME_SERIES
-          g_skipped_epochs++;
-          record_overhead_histogram(overhead_of_last_epoch, -1); // -1 signifies no new samples taken in this epoch
-#endif
-          goto sleep;
-        }
-      }
-
-      double fudge_factor = 1;
-      if (overhead_of_last_epoch != 0 && overhead_of_last_epoch <  fudge_factor * sp_target_overhead) {
-	      double new_target_overhead = overhead_of_last_epoch + (fudge_factor * (double) sp_target_overhead - overhead_of_last_epoch) / 2;
-        uint64_t new_sample_size = ((double)new_target_overhead / overhead_of_last_epoch) * sp_sample_size; 
-
-        // Here we don't set the sample size to more than its initial setting to prevent overshooting.
-        // TODO: Revisit this
-        /*
-        if (new_sample_size < sp_initial_sample_size) {
-          sp_sample_size = new_sample_size;
-        } else {
-          sp_sample_size = sp_initial_sample_size;
-        }
-       */
-       if (new_sample_size > sp_sample_size) {
-         sp_sample_size = new_sample_size; 
-       }
-      }
-    }
-    
-#ifdef OVERHEAD_TIME_SERIES
-    record_overhead_histogram(overhead_of_last_epoch, sp_sample_size);
-#endif
-
-    // fprintf(stderr, "New sample size : %lu\n", sp_sample_size);
-      
     for(int i = 0; i < func_count; i++) {
-      if (!g_stats[i].is_active) {
+      if (!g_stats[i].active) {
         g_stats[i].sample_size = sp_sample_size;
         PROFILER_INSTANCE->activateFunction(&i);
-        g_stats[i].is_active = true;
+        g_stats[i].active = true;
       } else {
         __sync_bool_compare_and_swap(&g_stats[i].sample_size, g_stats[i].sample_size, sp_sample_size); // Atomically set the value
       }
     } 
 
-sleep:
     uint64_t nanos = sp_epoch_period * 1000000; 
     uint64_t secs = nanos / 1000000000;
     uint64_t nsecs = nanos % 1000000000;
@@ -275,7 +231,7 @@ void SamplingProfiler::initialize() {
   }
 
   for (int i=0; i < func_count; i++) {
-    statistics[i].is_active = true;
+    statistics[i].active = true;
     statistics[i].sample_size = sp_sample_size;
   }
 
@@ -303,25 +259,8 @@ void SamplingProfiler::initialize() {
     sp_target_overhead = target_overhead;
   }
 
-  char* adaptive_strategy_str = getenv("ADAPTIVE_STRATEGY");
-  if (adaptive_strategy_str != NULL) {
-    if (!strcmp(adaptive_strategy_str, "SLOW_RAMP_UP")) {
-	g_strategy = SLOW_RAMP_UP;
-    } else {
-        g_strategy = PROPOTIONAL;
-    } 
-  } 
-
-  fprintf(stderr, "[Sampling Profiler] **** Parameters : Sample size => %lu Epoch period => %lf Target overhead => %lf \n", 
+  fprintf(stderr, "[Sampling Profiler] **** Parameters : Sample size => %lu Epoch period => %.2lf Target overhead => %.2lf \n", 
       sp_sample_size, sp_epoch_period, sp_target_overhead); 
-
-  switch(g_strategy) {
-    case SLOW_RAMP_UP:
-      fprintf(stderr, "[Sampling Profiler] Adaptive Strategy : SLOW_RAMP_UP\n");
-      break;
-    default:
-      fprintf(stderr, "[Sampling Profiler] Adaptive Strategy : PROPOTIONAL\n");
-  }
 
   spawnMonitor();
 
@@ -371,24 +310,45 @@ void SamplingProfiler::dumpStatistics() {
   int func_count = ins->getFunctionCount();
   fprintf(stderr, "[finstrumentor] Total function count : %d\n", func_count);
   fprintf(stderr, "[Sampling Profiler] Thread count : %d\n", thread_counter);
+  fprintf(fp, "Function,Count,Min_time,Max_time,Avg_time,Deactivation_count,Leaf?\n");
   for(int i=0; i < func_count; i++) {
     statistics[i].count = 0;
     statistics[i].total_time = 0;
-    statistics[i].deactivation_count = 0;
+    statistics[i].is_leaf = true;
+    // statistics[i].deactivation_count = 0;
+    statistics[i].limited_count = 0;
 
+    ticks cur_min = ULLONG_MAX, cur_max = 0;
     for(int j=0; j < thread_counter; j++) {
       TLSSamplingProfilerStat* tls_func_stat = (TLSSamplingProfilerStat*) tls_stats[j]->func_stats;
       statistics[i].count += tls_func_stat[i].count;
       statistics[i].total_time += tls_func_stat[i].total_time;
-      statistics[i].deactivation_count += tls_func_stat[i].deactivation_count;
+      statistics[i].limited_count += tls_func_stat[i].limited_count;
+      // statistics[i].deactivation_count += tls_func_stat[i].deactivation_count;
+
+      if (cur_min > tls_func_stat[i].min_time) {
+        cur_min = tls_func_stat[i].min_time;
+      }
+
+      if (cur_max < tls_func_stat[i].max_time) {
+        cur_max = tls_func_stat[i].max_time;
+      }
+
+      if (!tls_func_stat[i].is_leaf) {
+        statistics[i].is_leaf = false;
+      }
     }
 
     total_count += statistics[i].count;
+    statistics[i].min_time = cur_min;
+    statistics[i].max_time = cur_max;
     
     if (statistics[i].count != 0) {
-      fprintf(fp, "Function Name: %s Count %lu Deactivation Count : %d Avg time (cycles) : %lu\n", 
-          ins->getFunctionName(i).c_str(),  statistics[i].count, 
-          statistics[i].deactivation_count, statistics[i].total_time / statistics[i].count); 
+      fprintf(fp, "%s,%lu,%lu,%lu,%ld,%d,%d\n",  
+          ins->getFunctionName(i).c_str(),  statistics[i].count,
+          statistics[i].min_time, statistics[i].max_time, 
+          statistics[i].total_time / (statistics[i].count - statistics[i].limited_count), 
+          statistics[i].deactivation_count, statistics[i].is_leaf); 
     }
   }
 

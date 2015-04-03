@@ -14,33 +14,14 @@
 
 using namespace std;
 
-/* Globals for this profiler */
-/*
-extern uint64_t sp_initial_sample_size;
-extern uint64_t sp_sample_size;
-extern uint64_t sp_epoch_period;
-extern uint64_t sp_target_overhead;
-extern uint64_t g_total_overhead; // Overhead incurred due to profiling
-extern uint64_t g_total_process_time; // Total process time until last epoch sample
-extern uint64_t g_last_epoch_random; // Random added to last epoch period
-extern uint64_t g_TicksPerNanoSec; // Calibrated ticks per nano second
-extern uint64_t g_call_overhead; // Call overhead calibrated value
-extern uint16_t g_strategy; // Overhead control strategy to use
-*/
+// All thread statistics data thread local reference
+static __thread TLStatistics** all_thread_stats;
 
+// Thread statistics data for current thread
+static __thread TLStatistics* current_thread_stats;
 
-// All thread local statistics data
-static __thread TLStatistics** thread_local_stat_table;
-
-// Thread local statistics data for current thread
-static __thread TLStatistics* thread_local_stats;
-
-// Thread local statistics table of current thread 
-static __thread TLSAdaptiveProfilerStat* thread_local_func_stats;
-
-// Leaf count tracking 
-uint64_t prolog_leaf_counter = 0;
-uint64_t epilog_leaf_counter = 0;
+// Function statistics table for current thread 
+static __thread TLSAdaptiveProfilerStat* current_thread_func_stats_table;
 
 // Instrumentation Functions
 TLStatistics* adaptivePrologFunction(uint16_t func_id) {
@@ -51,49 +32,49 @@ TLStatistics* adaptivePrologFunction(uint16_t func_id) {
     allocated = true;
     uint32_t function_count = INSTRUMENTOR_INSTANCE->getFunctionCount();
     // C++ value initilization.. Similar to calloc
-    thread_local_func_stats = new TLSAdaptiveProfilerStat[function_count]();
-    thread_local_stats = new TLStatistics;
-    thread_local_stats->func_stats = thread_local_func_stats;
-    thread_local_stats->thread_local_overhead = 0;
-    thread_local_stats->thread_local_count = 0;
+    current_thread_func_stats_table = new TLSAdaptiveProfilerStat[function_count]();
+    current_thread_stats = new TLStatistics;
+    current_thread_stats->func_stats = current_thread_func_stats_table;
+    current_thread_stats->thread_local_overhead = 0;
+    current_thread_stats->thread_local_count = 0;
 
     for (int i=0; i < function_count; i++) {
-      thread_local_func_stats[i].is_leaf = true;
-      thread_local_func_stats[i].stack_depth = 0;
+      current_thread_func_stats_table[i].is_leaf = true;
+      current_thread_func_stats_table[i].stack_depth = 0;
     }
 
-    ((AdaptiveProfiler*)PROFILER_INSTANCE)->registerThreadStatistics(thread_local_stats);
-    thread_local_stat_table = ((AdaptiveProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
+    ((AdaptiveProfiler*)PROFILER_INSTANCE)->registerThreadStatistics(current_thread_stats);
+    all_thread_stats = ((AdaptiveProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
   }
 
-  AdaptiveProfilerStat* global_stats = &((AdaptiveProfilerStat*) g_ubiprof_stats)[func_id];
-  TLSAdaptiveProfilerStat* func_stats = &thread_local_func_stats[func_id];
+  AdaptiveProfilerStat* global_func_stats = &((AdaptiveProfilerStat*) g_ubiprof_stats)[func_id];
+  TLSAdaptiveProfilerStat* local_func_stats = &current_thread_func_stats_table[func_id];
 
-  uint32_t stack_depth = func_stats->stack_depth;
-  if (func_stats->stack_depth > 0 && 
-      func_stats->invocation_stack[stack_depth-1].timestamp < global_stats->latest_activation_time) {
-    func_stats->stack_depth = 0;
-    func_stats->ignore_count = 0;
+  uint32_t stack_depth = local_func_stats->stack_depth;
+  if (local_func_stats->stack_depth > 0 && 
+      local_func_stats->invocation_stack[stack_depth-1].timestamp < global_func_stats->latest_activation_time) {
+    local_func_stats->stack_depth = 0;
+    local_func_stats->ignore_count = 0;
   } 
 
   // Limit stack depth of each per each function stack
   if (stack_depth < 20) {
-    func_stats->invocation_stack[stack_depth].func_id = func_id;
-    func_stats->invocation_stack[stack_depth].prolog_leaf_count = prolog_leaf_counter;
-    func_stats->invocation_stack[stack_depth].epilog_leaf_count = epilog_leaf_counter;
-    func_stats->invocation_stack[stack_depth].timestamp = getticks();
-    func_stats->stack_depth++;
+    local_func_stats->invocation_stack[stack_depth].func_id = func_id;
+    local_func_stats->invocation_stack[stack_depth].prolog_leaf_count = prolog_leaf_counter;
+    local_func_stats->invocation_stack[stack_depth].epilog_leaf_count = epilog_leaf_counter;
+    local_func_stats->invocation_stack[stack_depth].timestamp = getticks();
+    local_func_stats->stack_depth++;
   } else {
-    func_stats->ignore_count++; // Ignores this sample since stack limit exceeded
+    local_func_stats->ignore_count++; // Ignores this sample since stack limit exceeded
   }
 
-  if (!global_stats->active) {
-    func_stats->stack_depth = 0;
-    func_stats->ignore_count = 0;
+  if (!global_func_stats->active) {
+    local_func_stats->stack_depth = 0;
+    local_func_stats->ignore_count = 0;
   }
 
-  thread_local_stats->thread_local_count++;
-  return thread_local_stats;
+  current_thread_stats->thread_local_count++;
+  return current_thread_stats;
 
 }
 
@@ -101,30 +82,30 @@ TLStatistics* adaptiveEpilogFunction(uint16_t func_id) {
 
   ticks epilog_start = getticks();
 
-  AdaptiveProfilerStat* global_stats = &((AdaptiveProfilerStat*) g_ubiprof_stats)[func_id];
-  TLSAdaptiveProfilerStat* func_stats = &thread_local_func_stats[func_id];
+  AdaptiveProfilerStat* global_func_stats = &((AdaptiveProfilerStat*) g_ubiprof_stats)[func_id];
+  TLSAdaptiveProfilerStat* local_func_stats = &current_thread_func_stats_table[func_id];
 
   int thread_count = ((AdaptiveProfiler*)PROFILER_INSTANCE)->getThreadCount(); 
-  uint32_t stack_depth = func_stats->stack_depth;
+  uint32_t stack_depth = local_func_stats->stack_depth;
 
-  if (func_stats->stack_depth == 0) {
-    return thread_local_stats;
+  if (local_func_stats->stack_depth == 0) {
+    return current_thread_stats;
   }
 
-  InvocationData i_data = func_stats->invocation_stack[stack_depth-1];
-  if (i_data.timestamp < global_stats->latest_activation_time) {
-    func_stats->stack_depth = 0;
-    func_stats->ignore_count = 0;
-    return thread_local_stats;
+  InvocationData i_data = local_func_stats->invocation_stack[stack_depth-1];
+  if (i_data.timestamp < global_func_stats->latest_activation_time) {
+    local_func_stats->stack_depth = 0;
+    local_func_stats->ignore_count = 0;
+    return current_thread_stats;
   }
 
-  if (stack_depth >= 20 && func_stats->ignore_count > 0) {
-    func_stats->ignore_count--;
-    func_stats->limited_count++;
-    func_stats->count++;
+  if (stack_depth >= 20 && local_func_stats->ignore_count > 0) {
+    local_func_stats->ignore_count--;
+    local_func_stats->limited_count++;
+    local_func_stats->count++;
 
-    thread_local_stats->thread_local_count++;
-    return thread_local_stats;
+    current_thread_stats->thread_local_count++;
+    return current_thread_stats;
   }
 
   uint64_t prolog_leaf_count_diff = prolog_leaf_counter - i_data.prolog_leaf_count;
@@ -142,50 +123,50 @@ TLStatistics* adaptiveEpilogFunction(uint16_t func_id) {
   epilog_leaf_counter++;
 
   if (leaf_count_diff > 0) {
-    func_stats->is_leaf = false;
+    local_func_stats->is_leaf = false;
   }
 
-  func_stats->count++;
+  local_func_stats->count++;
 
   // We do this at epilog itself to get an accurate count than a periodically accumilated count by the probe monitor thread
   uint64_t global_count = 0;
 
   for (int i=0; i < thread_count; i++) {
-    global_count += ((TLSAdaptiveProfilerStat*) thread_local_stat_table[i]->func_stats)[func_id].count; 
+    global_count += ((TLSAdaptiveProfilerStat*) all_thread_stats[i]->func_stats)[func_id].count; 
   }
 
-  uint64_t new_count = global_count - global_stats->count_at_last_activation; 
+  uint64_t new_count = global_count - global_func_stats->count_at_last_activation; 
 
   ticks elapsed = epilog_start - i_data.timestamp ;
 
-  if (elapsed < func_stats->min_time || func_stats->min_time == 0) {
-    func_stats->min_time = elapsed;
+  if (elapsed < local_func_stats->min_time || local_func_stats->min_time == 0) {
+    local_func_stats->min_time = elapsed;
   }
 
-  if (elapsed > func_stats->max_time) {
-    func_stats->max_time = elapsed;
+  if (elapsed > local_func_stats->max_time) {
+    local_func_stats->max_time = elapsed;
   }
 
-  func_stats->total_time += elapsed;
-  if (new_count >= global_stats->sample_size) {
-    if (__sync_bool_compare_and_swap(&(global_stats->lock), 0 , 1)) {
+  local_func_stats->total_time += elapsed;
+  if (new_count >= global_func_stats->sample_size) {
+    if (__sync_bool_compare_and_swap(&(global_func_stats->lock), 0 , 1)) {
       PROFILER_INSTANCE->deactivateFunction(&func_id);
-      global_stats->deactivation_count++; // Store in thread local structure and we sum all TL stuff when flushing results
-      global_stats->count_at_last_activation = global_count;
-      global_stats->active = false;
-      __sync_bool_compare_and_swap(&(global_stats->lock), 1 , 0);
+      global_func_stats->deactivation_count++; // Store in thread local structure and we sum all TL stuff when flushing results
+      global_func_stats->count_at_last_activation = global_count;
+      global_func_stats->active = false;
+      __sync_bool_compare_and_swap(&(global_func_stats->lock), 1 , 0);
     }
   }
 
-  if (!global_stats->active) {
-    func_stats->stack_depth = 0;
-    func_stats->ignore_count = 0;
+  if (!global_func_stats->active) {
+    local_func_stats->stack_depth = 0;
+    local_func_stats->ignore_count = 0;
   } else {
-    func_stats->stack_depth--;
+    local_func_stats->stack_depth--;
   }
 
-  thread_local_stats->thread_local_count++;
-  return thread_local_stats;
+  current_thread_stats->thread_local_count++;
+  return current_thread_stats;
 
 }
 
@@ -488,7 +469,7 @@ void AdaptiveProfiler::initialize() {
     } 
   } 
 
-  fprintf(stderr, "[Adaptive Profiler] **** Parameters : Sample size => %lu Epoch period => %lf Target overhead => %lf \n", 
+  fprintf(stderr, "[Adaptive Profiler] **** Parameters : Sample size => %lu Epoch period => %.2lf Target overhead => %.2lf \n", 
       sp_sample_size, sp_epoch_period, sp_target_overhead); 
 
   switch(g_strategy) {
@@ -551,7 +532,7 @@ void AdaptiveProfiler::dumpStatistics() {
   int func_count = ins->getFunctionCount();
   fprintf(stderr, "[finstrumentor] Total function count : %d\n", func_count);
   fprintf(stderr, "[Adaptive Profiler] Thread count : %d\n", thread_counter);
-  fprintf(fp, "Function,Count,Min_time,Max_time,Avg_time,Deactivation_count,Leaf?");
+  fprintf(fp, "Function,Count,Min_time,Max_time,Avg_time,Deactivation_count,Leaf?\n");
   for(int i=0; i < func_count; i++) {
     statistics[i].count = 0;
     statistics[i].total_time = 0;
