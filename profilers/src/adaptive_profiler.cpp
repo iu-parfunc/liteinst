@@ -488,7 +488,7 @@ void AdaptiveProfiler::initialize() {
     } 
   } 
 
-  fprintf(stderr, "[Adaptive Profiler] **** Parameters : Sample size => %lu Epoch period => %lu Target overhead => %lu \n", 
+  fprintf(stderr, "[Adaptive Profiler] **** Parameters : Sample size => %lu Epoch period => %lf Target overhead => %lf \n", 
       sp_sample_size, sp_epoch_period, sp_target_overhead); 
 
   switch(g_strategy) {
