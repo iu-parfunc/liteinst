@@ -49,7 +49,7 @@ TLStatistics* adaptivePrologFunction(uint16_t func_id) {
 
   if (!allocated) {
     allocated = true;
-    uint32_t function_count = INSTRUMENTOR_INSTANCE->getFunctionCount();
+    long function_count = INSTRUMENTOR_INSTANCE->getFunctionCount();
     // C++ value initilization.. Similar to calloc
     thread_local_func_stats = new TLSAdaptiveProfilerStat[function_count]();
     thread_local_stats = new TLStatistics;
@@ -169,6 +169,7 @@ TLStatistics* adaptiveEpilogFunction(uint16_t func_id) {
   func_stats->total_time += elapsed;
   if (new_count >= global_stats->sample_size) {
     if (__sync_bool_compare_and_swap(&(global_stats->lock), 0 , 1)) {
+      // fprintf(stderr, "[DEBUG] Deactivating function : %lu\n", func_id);
       PROFILER_INSTANCE->deactivateFunction(&func_id);
       global_stats->deactivation_count++; // Store in thread local structure and we sum all TL stuff when flushing results
       global_stats->count_at_last_activation = global_count;
@@ -238,7 +239,12 @@ void* adaptiveProbeMonitor(void* param) {
     nanoSecs = ts1.tv_sec * 1000000000LL + ts1.tv_nsec;
 
     g_total_process_time = nanoSecs * g_TicksPerNanoSec;
-    g_total_process_time -= g_total_overhead;
+    
+    if (g_total_process_time > g_total_overhead) {
+      g_total_process_time -= g_total_overhead;
+    } else {
+      fprintf(stderr, "[DEBUG] Boo \n");
+    }
 
     uint64_t overhead_delta = g_total_overhead - tmp_total_overhead;
     uint64_t process_time_delta = g_total_process_time - tmp_total_process_time;
@@ -255,7 +261,7 @@ void* adaptiveProbeMonitor(void* param) {
     //     process_time_delta);
 
     // *** Turn this on for runtime overhead logging **
-    // fprintf(stderr, "Overhead : %.2lf\n", overhead_of_last_epoch);
+    // fprintf(stderr, "Overhead : %lf\n", overhead_of_last_epoch);
 
     if (g_strategy == PROPOTIONAL) {
       if (overhead_of_last_epoch != 0 && overhead_of_last_epoch >  sp_target_overhead) {
@@ -425,8 +431,11 @@ void AdaptiveProfiler::initialize() {
   overhead_time_series = new list<string>();
 #endif
 
-  int func_count = ins->getFunctionCount();
-  statistics = new AdaptiveProfilerStat[func_count](); // C++ value initialization. Similar to calloc
+  long func_count = ins->getFunctionCount();
+  fprintf(stderr, "[DEBUG] Adaptive Profiler function count : %ld\n", func_count);
+  // func_count++; // Hack to add calibrate_cache_effect
+  // statistics = new AdaptiveProfilerStat[func_count](); // C++ value initialization. Similar to calloc
+  statistics = (AdaptiveProfilerStat*) calloc(func_count, sizeof(AdaptiveProfilerStat)); 
 
   // Leaking the reference to the global variable so that 
   // instrumentaion functions can access it without going through object reference
@@ -475,6 +484,7 @@ void AdaptiveProfiler::initialize() {
     }
   } else {
     sp_target_overhead = target_overhead;
+    fprintf(stderr, "[DEBUG] Overhead : %.2lf Default Overhead : %.2lf\n", sp_target_overhead, target_overhead);
   }
 
   char* adaptive_strategy_str = getenv("ADAPTIVE_STRATEGY");
@@ -488,7 +498,7 @@ void AdaptiveProfiler::initialize() {
     } 
   } 
 
-  fprintf(stderr, "[Adaptive Profiler] **** Parameters : Sample size => %lu Epoch period => %lu Target overhead => %lu \n", 
+  fprintf(stderr, "[Adaptive Profiler] **** Parameters : Sample size => %lu Epoch period (ms) => %.2lf Target overhead => %.2lf\n", 
       sp_sample_size, sp_epoch_period, sp_target_overhead); 
 
   switch(g_strategy) {
@@ -503,7 +513,7 @@ void AdaptiveProfiler::initialize() {
 
   }
 
-  spawnMonitor();
+  // spawnMonitor();
 
 }
 
@@ -628,7 +638,8 @@ AdaptiveProfiler::~AdaptiveProfiler() {
     g_probe_count += tls_stat[i]->thread_local_count;
   }
   Profiler::cleanupInstrumentor();
-  delete (AdaptiveProfilerStat*)g_ubiprof_stats;
+  free((AdaptiveProfilerStat*)g_ubiprof_stats);
+  // delete (AdaptiveProfilerStat*)g_ubiprof_stats;
 
   for (int i = 0; i < 64; i++) {
     delete tls_stats[i];

@@ -298,6 +298,22 @@ void printMap(FuncIDMappings* func_id_mappings) {
 }
 */
 
+void Finstrumentor::addFunction(uint64_t addr, char* name) {
+  FunctionInfo* func_info = new FunctionInfo;
+  // func_addr = (uint64_t) std::stol(tokens[0], &sz);
+  func_info->func_addr = addr;
+  func_info->func_name = string(name);
+  func_info->func_id = func_count-1;
+  func_info->lock = 0;
+
+  func_addr_mappings->insert(make_pair(func_info->func_addr, func_info));
+  func_id_mappings->insert(make_pair(func_info->func_id, func_info));
+
+  fprintf(stderr, "[DEBUG] Before count : %ld\n", func_count);
+  // func_count++;
+  fprintf(stderr, "[DEBUG] After count : %ld\n", func_count);
+}
+
 void Finstrumentor::readFunctionInfo() {
 
   fprintf(stderr, "Initializing mappings data structure..\n");
@@ -330,6 +346,7 @@ void Finstrumentor::readFunctionInfo() {
       func_addr_mappings->insert(make_pair(func_info->func_addr, func_info));
       func_id_mappings->insert(make_pair(func_info->func_id, func_info));
     }
+    func_count++; // Hack to include calibrate_cache_effects
     // printMap(func_id_mappings);
     fp.close();
   }

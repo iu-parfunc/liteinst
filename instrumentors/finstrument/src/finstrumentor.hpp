@@ -91,6 +91,7 @@ class Finstrumentor : public Instrumentor {
     uint16_t getFunctionId(uint64_t addr);
     uint64_t getFunctionAddress(uint16_t id);
     uint64_t* getLock(uint64_t addr);
+    void addFunction(uint64_t addr, char* name);
     std::string getFunctionName(uint16_t id);
     virtual ~Finstrumentor();
 

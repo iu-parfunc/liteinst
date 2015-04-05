@@ -227,6 +227,28 @@ static __inline__ ticks getticks(void)
      return ((ticks)a) | (((ticks)d) << 32); 
 }
 
+__attribute__((no_instrument_function))
+static __inline__ ticks getstart(void) {
+  unsigned cycles_high = 0, cycles_low = 0; 
+    asm volatile ("CPUID\n\t"
+                  "RDTSC\n\t"
+                  "mov %%edx, %0\n\t"
+                  "mov %%eax, %1\n\t": "=r" (cycles_high), "=r" (cycles_low)::
+                    "%rax", "%rbx", "%rcx", "%rdx");
+  return ((ticks)cycles_high << 32) | (((ticks)cycles_low)); 
+}
+
+__attribute__((no_instrument_function))
+static __inline__ ticks getend(void) {
+  unsigned cycles_high = 0, cycles_low = 0; 
+  asm volatile("RDTSCP\n\t"
+               "mov %%edx, %0\n\t"
+               "mov %%eax, %1\n\t"
+               "CPUID\n\t": "=r" (cycles_high), "=r" (cycles_low)::
+                 "%rax", "%rbx", "%rcx", "%rdx");
+  return ((ticks)cycles_high << 32) | (((ticks)cycles_low)); 
+}
+
 INLINE_ELAPSED(__inline__)
 
 #define HAVE_TICK_COUNTER
