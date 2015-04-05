@@ -146,10 +146,12 @@ void calibrate_cache_effects() {
   // Get warm cache results
   ticks elapsed[rounds];
   for (int i=0; i<rounds; i++) {
-    ticks start = getstart();
+    // ticks start = getstart();
+    ticks start = getticks();
     __cyg_profile_func_enter((void*)&calibrate_cache_effects, (void*)-1); 
     __cyg_profile_func_exit((void*)&calibrate_cache_effects, (void*)-1); 
-    ticks end = getend();
+    // ticks end = getend();
+    ticks end = getticks();
     elapsed[i] = (end - start);
   }
 
@@ -165,10 +167,12 @@ void calibrate_cache_effects() {
     }
 
     // fprintf(stderr, "[DEBUG] Hey we are here...\n");
-    ticks start = getstart();
+    // ticks start = getstart();
+    ticks start = getticks();
     __cyg_profile_func_enter((void*)&calibrate_cache_effects, (void*)-1); 
     __cyg_profile_func_exit((void*)&calibrate_cache_effects, (void*)-1); 
-    ticks end = getend();
+    // ticks end = getend();
+    ticks end = getticks();
 
     elapsed[i] = (end - start);
 
@@ -191,7 +195,7 @@ void calibrate_cache_effects() {
   fprintf(stderr, "[Ubiprof] Cache perturbation overhead : %lu\n", 
           g_cache_miss_overhead_upper_bound);
 
-  free(a);
+  ree(a);
 
 }
 
