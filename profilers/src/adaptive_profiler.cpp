@@ -148,7 +148,9 @@ TLStatistics* adaptiveEpilogFunction(uint16_t func_id) {
   }
 
   local_func_stats->total_time += elapsed;
-  if (new_count >= global_func_stats->sample_size) {
+  // There is a chance this condition might be satistified during the calibrations at init time
+  // Skip deactivating if that's the case
+  if (new_count >= global_func_stats->sample_size && g_ubiprof_initialized) {  
     if (__sync_bool_compare_and_swap(&(global_func_stats->lock), 0 , 1)) {
       PROFILER_INSTANCE->deactivateFunction(&func_id);
       global_func_stats->deactivation_count++; // Store in thread local structure and we sum all TL stuff when flushing results
