@@ -241,7 +241,7 @@ void* adaptiveProbeMonitor(void* param) {
     //     process_time_delta);
 
     // *** Turn this on for runtime overhead logging **
-    // fprintf(stderr, "Overhead : %lf\n", overhead_of_last_epoch);
+    // fprintf(stderr, "Overhead : %lf\n", overhead_at_last_epoch);
 
     if (g_strategy == PROPOTIONAL) {
       if (overhead_at_last_epoch != 0 && overhead_at_last_epoch >  sp_target_overhead) {
@@ -493,7 +493,7 @@ void AdaptiveProfiler::initialize() {
 
   }
 
-  // spawnMonitor();
+  spawnMonitor();
 
 }
 
