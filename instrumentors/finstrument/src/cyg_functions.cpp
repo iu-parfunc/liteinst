@@ -507,6 +507,22 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
   // uint64_t funcAddr = *((uint64_t*) func);
 
+  // If the Ubiprof library has not yet been properly initialized return.
+  // But caller parameter being -1 signals a special explicit invocation
+  // of the instrumentation which is done for calibration purposes at 
+  // the library init time. If that's the case we atually want to continue
+  // executing.
+  int64_t flag = (int64_t) caller;
+  if (!g_ubiprof_initialized && flag != -1) {
+    // fprintf(stderr, "Returning from func addr : %p\n", func);
+    return;
+  }
+
+  // Explicitly set the function id for calibrate_cache_effects
+  if (flag == -1) {
+    func = (void*) (ins->getFunctionCount() - 1);
+  }
+
   TLStatistics* ts;
   if ((uint64_t) func < 0x400200) {
     // fprintf(stderr, "\n[cyg_enter] Low function address  : %lu\n", ((uint64_t)func));
@@ -544,16 +560,7 @@ void __cyg_profile_func_enter(void* func, void* caller) {
     // abort();
   }
 
-  // If the Ubiprof library has not yet been properly initialized return.
-  // But caller parameter being -1 signals a special explicit invocation
-  // of the instrumentation which is done for calibration purposes at 
-  // the library init time. If that's the case we atually want to continue
-  // executing.
-  int64_t flag = (int64_t) caller;
-  if (!g_ubiprof_initialized && flag != -1) {
-    // fprintf(stderr, "Returning from func addr : %p\n", func);
-    return;
-  }
+
 
   uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
 
@@ -663,6 +670,22 @@ void __cyg_profile_func_exit(void* func, void* caller) {
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
   // uint64_t funcAddr = *((uint64_t*) func);
 
+  // If the Ubiprof library has not yet been properly initialized return.
+  // But caller parameter being -1 signals a special explicit invocation
+  // of the instrumentation which is done for calibration purposes at 
+  // the library init time. If that's the case we atually want to continue
+  // executing.
+  int64_t flag = (int64_t) caller;
+  if (!g_ubiprof_initialized && flag != -1) {
+    // fprintf(stderr, "Returning from func addr : %p\n", func);
+    return;
+  }
+
+  // Explicitly set the function id for calibrate_cache_effects
+  if (flag == -1) {
+    func = (void*) (ins->getFunctionCount() - 1);
+  }
+
   TLStatistics* ts;
   if ((uint64_t) func < 0x400200) {
     // fprintf(stderr, "\n[cyg_exit] Low function address  : %lu\n", ((uint64_t)func));
@@ -698,16 +721,6 @@ void __cyg_profile_func_exit(void* func, void* caller) {
     return;
   }
 
-  // If the Ubiprof library has not yet been properly initialized return.
-  // But caller parameter being -1 signals a special explicit invocation
-  // of the instrumentation which is done for calibration purposes at 
-  // the library init time. If that's the case we atually want to continue
-  // executing.
-  int64_t flag = (int64_t) caller;
-  if (!g_ubiprof_initialized && flag != -1) {
-    // fprintf(stderr, "Returning from func addr : %p\n", func);
-    return;
-  }
 
   /*
   if((uint64_t) func == 0x00000000004a2af0) {
