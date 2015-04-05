@@ -195,7 +195,7 @@ void calibrate_cache_effects() {
   fprintf(stderr, "[Ubiprof] Cache perturbation overhead : %lu\n", 
           g_cache_miss_overhead_upper_bound);
 
-  ree(a);
+  free(a);
 
 }
 
