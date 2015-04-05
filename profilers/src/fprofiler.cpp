@@ -2,6 +2,7 @@
 #include <cstdio>
 #include "fprofiler.hpp"
 #include <stdlib.h>
+#include <limits.h>
 
 using namespace std;
 
@@ -9,105 +10,126 @@ using namespace std;
 uint64_t fb_sample_size;
 
 // All thread local statistics data
-static __thread TLStatistics** tl_stats;
+static __thread TLStatistics** all_thread_stats;
 
 // Thread local statistics data for current thread
-static __thread TLStatistics* tl_stat;
+static __thread TLStatistics* current_thread_stats;
 
 // Thread local statistics table
-__thread static TLSBackoffProfilerStat* sampling_thread_stats;
-__thread static int thread_id;
+static __thread TLSBackoffProfilerStat* current_thread_func_stats_table;
 
 // Instrumentation Functions
 TLStatistics* backoffPrologFunction(uint16_t func_id) {
 
   // ticks prolog_start = getticks();
-  __thread static bool allocated;
+  static __thread bool allocated;
 
   if (!allocated) {
     allocated = true;
+    uint32_t function_count = INSTRUMENTOR_INSTANCE->getFunctionCount();
     // C++ value initilization.. Similar to calloc
-    sampling_thread_stats = new TLSBackoffProfilerStat[INSTRUMENTOR_INSTANCE->getFunctionCount()](); 
-    tl_stat = new TLStatistics;
-    tl_stat->func_stats = sampling_thread_stats;
-    tl_stat->thread_local_overhead = 0;
-    tl_stat->thread_local_count = 0;
+    current_thread_func_stats_table = new TLSBackoffProfilerStat[INSTRUMENTOR_INSTANCE->getFunctionCount()](); 
+    current_thread_stats = new TLStatistics;
+    current_thread_stats->func_stats = current_thread_func_stats_table;
+    current_thread_stats->thread_local_overhead = 0;
+    current_thread_stats->thread_local_count = 0;
 
-    ((BackoffProfiler*)PROFILER_INSTANCE)->registerThreadStatistics(tl_stat);
-    tl_stats = ((BackoffProfiler*) PROFILER_INSTANCE)->getThreadStatistics();
+    for (int i=0; i < function_count; i++) {
+      current_thread_func_stats_table[i].is_leaf = true;
+      current_thread_func_stats_table[i].stack_depth = 0;
+    }
+
+    ((BackoffProfiler*)PROFILER_INSTANCE)->registerThreadStatistics(current_thread_stats);
+    all_thread_stats = ((BackoffProfiler*) PROFILER_INSTANCE)->getThreadStatistics();
   }
 
-  sampling_thread_stats[func_id].start_timestamp = getticks();
-  // tl_stat->thread_local_overhead += (sampling_thread_stats[func_id].start_timestamp - prolog_start);
-  tl_stat->thread_local_count++;
+  BackoffProfilerStat* global_func_stats = &((BackoffProfilerStat*) g_ubiprof_stats)[func_id];
+  TLSBackoffProfilerStat* local_func_stats = &current_thread_func_stats_table[func_id];
 
-  return tl_stat;
+  uint32_t stack_depth = local_func_stats->stack_depth;
 
-  /*
-  BackoffProfilerStat* g_stats = (BackoffProfilerStat*) g_ubiprof_stats;
-  g_stats[func_id].count = 1;
-  */
-
-  /*
-  if(g_stats->find(func_id) == g_stats->end()) {
-    BackoffProfilerStat* stat = new BackoffProfilerStat;
-    stat->func_id = func_id;
-    stat->count = 1;
-    stat->lock = 0;
-    g_stats->insert(make_pair(func_id, stat));
-  } 
-  */
-
-  /*
-  if (sampling_thread_stats->find(func_id) == sampling_thread_stats->end()) {
-    TLSBackoffProfilerStat* stat = new TLSBackoffProfilerStat;
-    stat->func_id = func_id;
-    stat->count = 1;
-    stat->total_time = 0;
-    sampling_thread_stats->insert(make_pair(func_id, stat));
-    stat->start_timestamp = getticks();
+  // Limit stack depth of each per each function stack
+  if (stack_depth < 20) {
+    local_func_stats->invocation_stack[stack_depth].func_id = func_id;
+    local_func_stats->invocation_stack[stack_depth].prolog_leaf_count = prolog_leaf_counter;
+    local_func_stats->invocation_stack[stack_depth].epilog_leaf_count = epilog_leaf_counter;
+    local_func_stats->invocation_stack[stack_depth].timestamp = getticks();
+    local_func_stats->stack_depth++;
   } else {
-    TLSBackoffProfilerStat* stat = sampling_thread_stats->find(func_id)->second;
-    stat->start_timestamp = getticks();
+    local_func_stats->ignore_count++; // Ignores this sample since stack limit exceeded
   }
-  */
+
+  current_thread_stats->thread_local_count++;
+  return current_thread_stats;
 
 }
 
 TLStatistics* backoffEpilogFunction(uint16_t func_id) {
   
   ticks epilog_start = getticks();
-  ticks elapsed = epilog_start - sampling_thread_stats[func_id].start_timestamp;
-  sampling_thread_stats[func_id].total_time += elapsed;
 
-  BackoffProfilerStat* g_stats = (BackoffProfilerStat*) g_ubiprof_stats;
+  BackoffProfilerStat* global_func_stats = &((BackoffProfilerStat*) g_ubiprof_stats)[func_id];
+  TLSBackoffProfilerStat* local_func_stats = &current_thread_func_stats_table[func_id];
 
-  int thread_count = ((BackoffProfiler*)PROFILER_INSTANCE)->getThreadCount();
-  TLStatistics** tls_stats = ((BackoffProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
+  int thread_count = ((BackoffProfiler*)PROFILER_INSTANCE)->getThreadCount(); 
+  uint32_t stack_depth = local_func_stats->stack_depth;
+
+  if (stack_depth == 0) {
+    return current_thread_stats;
+  }
+
+  if (stack_depth >= 20 && local_func_stats->ignore_count > 0) {
+    local_func_stats->ignore_count--;
+    local_func_stats->limited_count++;
+    local_func_stats->count++;
+
+    current_thread_stats->thread_local_count++;
+    return current_thread_stats;
+  }
+
+  InvocationData i_data = local_func_stats->invocation_stack[stack_depth-1];
+
+  uint64_t prolog_leaf_count_diff = prolog_leaf_counter - i_data.prolog_leaf_count;
+  uint64_t epilog_leaf_count_diff = epilog_leaf_counter - i_data.epilog_leaf_count;
+
+  uint64_t leaf_count_diff = 0;
+  if (prolog_leaf_count_diff > 0) {
+    leaf_count_diff += prolog_leaf_count_diff;
+  }
+
+  if (epilog_leaf_count_diff > 0) {
+    leaf_count_diff += epilog_leaf_count_diff;
+  }
+
+  epilog_leaf_counter++;
+
+  if (leaf_count_diff > 0) {
+    local_func_stats->is_leaf = false;
+  }
+
+  local_func_stats->count++;
 
   uint64_t global_count = 0;
-  // TLSBackoffProfilerStat* stat = sampling_thread_stats->find(func_id)->second;
-  sampling_thread_stats[func_id].count++;
 
-  tl_stat->thread_local_count++;
+  current_thread_stats->thread_local_count++;
   for (int i=0; i < thread_count; i++) {
     // global_count += ((TLSBackoffProfilerStat*) tls_stats[i]-> func_stats)[func_id].count;
-    global_count += tl_stats[i]->thread_local_count;
+    global_count += all_thread_stats[i]->thread_local_count;
   }
 
   if ((global_count/2) >= fb_sample_size) { // Since we get prolog + epilog count here
-    // fprintf(stderr, "Deactivating function : %d\n", func_id);
-    if (__sync_bool_compare_and_swap(&(g_stats[func_id].lock), 0 , 1)) {
-      g_deactivation_count++;
+    if (__sync_bool_compare_and_swap(&(global_func_stats->lock), 0 , 1)) {
       PROFILER_INSTANCE->deactivateFunction(&func_id);
-      tl_stat->deactivated = true;
-      __sync_bool_compare_and_swap(&(g_stats[func_id].lock), 1 , 0);
+      g_deactivation_count++;
+      global_func_stats->deactivation_count++; 
+      current_thread_stats->deactivated = true;
+      __sync_bool_compare_and_swap(&(global_func_stats->lock), 1 , 0);
     }
   }
+  
+  local_func_stats->stack_depth--;
 
-  // ticks epilog_end = getticks();
-  // tl_stat->thread_local_overhead += (epilog_end - epilog_start);
-  return tl_stat;
+  return current_thread_stats;
 
 }
 
@@ -115,7 +137,6 @@ TLStatistics* backoffEpilogFunction(uint16_t func_id) {
 void BackoffProfiler::initialize() {
 
   Profiler::initInstrumentor(backoffPrologFunction, backoffEpilogFunction);
-  // statistics = new BackoffProfilerStats;
   statistics = new BackoffProfilerStat[ins->getFunctionCount()](); // C++ value initilization.. Similar to calloc
 
   // Leaking the reference to the global variable so that 
@@ -167,26 +188,47 @@ void BackoffProfiler::dumpStatistics() {
   int func_count = ins->getFunctionCount();
   fprintf(stderr, "\nTotal function count : %d\n", func_count);
   fprintf(stderr, "Thread count : %d\n", thread_counter);
+  fprintf(fp, "Function,Count,Min_time,Max_time,Avg_time,Deactivation_count,Leaf?\n");
   for(int i = 0; i < func_count; i++) {
     statistics[i].count = 0;
     statistics[i].total_time = 0;
+    statistics[i].is_leaf = true;
+    statistics[i].limited_count = 0;
 
-    for (int j = 0; j < thread_counter; j++) {
+    ticks cur_min = ULLONG_MAX, cur_max = 0;
+    for(int j=0; j < thread_counter; j++) {
       TLSBackoffProfilerStat* tls_func_stat = (TLSBackoffProfilerStat*) tls_stats[j]->func_stats;
       statistics[i].count += tls_func_stat[i].count;
       statistics[i].total_time += tls_func_stat[i].total_time;
+      statistics[i].limited_count += tls_func_stat[i].limited_count;
+
+      if (cur_min > tls_func_stat[i].min_time) {
+        cur_min = tls_func_stat[i].min_time;
+      }
+
+      if (cur_max < tls_func_stat[i].max_time) {
+        cur_max = tls_func_stat[i].max_time;
+      }
+
+      if (!tls_func_stat[i].is_leaf) {
+        statistics[i].is_leaf = false;
+      }
     }
 
     total_count += statistics[i].count;
-
+    statistics[i].min_time = cur_min;
+    statistics[i].max_time = cur_max;
+    
     if (statistics[i].count != 0) {
-      fprintf(fp, "Function name : %s Count %lu Avg time (cycles) : %lu\n", 
-          ins->getFunctionName(i).c_str(), statistics[i].count, statistics[i].total_time / statistics[i].count);
+      fprintf(fp, "%s,%lu,%lu,%lu,%ld,%d,%d\n",  
+          ins->getFunctionName(i).c_str(),  statistics[i].count,
+          statistics[i].min_time, statistics[i].max_time, 
+          statistics[i].total_time / (statistics[i].count - statistics[i].limited_count), 
+          statistics[i].deactivation_count, statistics[i].is_leaf); 
     }
   }
 
-  // fprintf(fp, "\n CALLED_FUNCTIONS : %lu\n", total_count);
-  fprintf(stderr, "\n CALLED_FUNCTIONS: %lu\n", total_count);
+  fprintf(stderr, "\n NUMBER_OF_FUNCTION_CALLS: %lu\n", total_count);
 
   fclose(fp);
 

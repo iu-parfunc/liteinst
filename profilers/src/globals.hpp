@@ -38,4 +38,8 @@ extern uint64_t g_thread_lock;
 extern uint64_t g_shutting_down_flag; // Flag to indicate the application is terminating. 
                                       // Used to alert probe monitor thread to terminate safely
 
+// Leaf node tracking
+extern uint64_t prolog_leaf_counter;
+extern uint64_t epilog_leaf_counter;
+
 #endif /* _GLOBALS_HPP_ */

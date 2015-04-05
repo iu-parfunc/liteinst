@@ -16,6 +16,84 @@ SJENG_FUNCS='printf,memset,puts,__isoc99_sscanf,exit,__assert_fail,putchar,strnc
 #This script collects groundtruth data for
 #specific functions
 
+#Heavy hitter information (from Swarm)
+#HULL: 
+# _ZN7_vect2dIdE5crossES0_ Count 54951512 Avg time (cycles) : 126131434
+# _Z7triArea8_point2dIdES0_ Count 54951514 Avg time (cycles) : 9382
+# _ZN7_vect2dIdEC2Edd Count 109903028 Avg time (cycles) : 237
+# _ZN8_point2dIdEmiES0_ Count 109903028 Avg time (cycles) : 2098
+# _ZN7benchIO7isSpaceEc Count 369998027 Avg time (cycles) : 166
+
+#BLACKSCHOLES:
+# main Count 1 Avg time (cycles) : 47286391274
+# _Z9bs_threadPv Count 8 Avg time (cycles) : 39360429908
+# _Z19BlkSchlsEqEuroNoDivff Count 100000000 Avg time (cycles) : 2450
+# _Z4CNDFf Count 200000000 Avg time (cycles) : 327
+
+#BZIP
+# mainGtU Count 328060278 Avg time (cycles) : 85
+# bsW Count 79379955 Avg time (cycles) : 71
+# mainSimpleSort Count 9986077 Avg time (cycles) : 6643
+# add_pair_to_block Count 7247208 Avg time (cycles) : 96
+# mmed3 Count 6966489 Avg time (cycles) : 71
+
+#FLUID
+# _ZN4Vec3mIERKS_ Count 268966388 Avg time (cycles) : 142
+# _ZN4Vec3pLERKS_ Count 563014876 Avg time (cycles) : 155
+# _ZNK4Vec3mlEf Count 1419720564 Avg time (cycles) : 1127
+# _ZNK4Vec311GetLengthSqEv Count 3442875319 Avg time (cycles) : 159
+# _ZNK4Vec3miERKS_ Count 3711841709 Avg time (cycles) : 1101
+# _ZN4Vec3C2Efff Count 5206450909 Avg time (cycles) : 201
+
+#H264
+# PutPel_14 Count 11187200 Avg time (cycles) : 71
+# SATD Count 32619882 Avg time (cycles) : 232
+# UMVPelY_14 Count 51037136 Avg time (cycles) : 73
+# UMVLine16Y_11 Count 66437600 Avg time (cycles) : 103
+# FastLine16Y_11 Count 269932720 Avg time (cycles) : 64
+# FastPelY_14 Count 543503824 Avg time (cycles) : 73
+
+#HMMER
+# Gaussrandom Count 541551 Avg time (cycles) : 486
+# sre_malloc Count 1000061 Avg time (cycles) : 247
+# FChoose Count 277243628 Avg time (cycles) : 295
+# SymbolIndex Count 277243628 Avg time (cycles) : 239
+# toupper@GLIBC_2.2.5 Count 277243642 Avg time (cycles) : 65
+# sre_random Count 277975300 Avg time (cycles) : 85
+
+#LBM 
+# LBM_initializeGrid Count 2 Avg time (cycles) : 247744886
+# LBM_initializeSpecialCell Count 2 Avg time (cycles) : 27789607
+# LBM_loadObstacleFile Count 2 Avg time (cycles) : 60961630
+# LBM_showGridStatistics Count 48 Avg time (cycles) : 124882607
+# LBM_performStreamCollide Count 3000 Avg time (cycles) : 287415030
+# LBM_swapGrids Count 3000 Avg time (cycles) : 377
+
+#NBODY
+# _Z7forceToP8particleP9gTr Count 193245024 Avg time (cycles) : 24100
+# _ZN7_vect3dIdEmlEd Count 207404980 Avg time (cycles) : 1894
+# _ZN7_vect3dIdEplES0_ Count 233952072 Avg time (cycles) : 1898
+# _ZN7_vect3dIdE3dotES0_ Count 554347948 Avg time (cycles) : 166
+# _ZN8_point3dIdEmiES0_ Count 565347948 Avg time (cycles) : 1976
+# _ZN7_vect3dIdEC1Eddd Count 1035252092 Avg time (cycles) : 210
+
+#PERL
+# Perl_sv_grow Count 278596803 Avg time (cycles) : 264
+# Perl_sv_clear Count 282771095 Avg time (cycles) : 412
+# Perl_sv_upgrade Count 282896404 Avg time (cycles) : 249
+# S_regtry Count 289733260 Avg time (cycles) : 878
+# Perl_sv_free Count 350561497 Avg time (cycles) : 497
+# S_regmatch Count 522266916 Avg time (cycles) : 194
+
+#SJENG
+# remove_one Count 8008480 Avg time (cycles) : 240
+# make Count 8104038 Avg time (cycles) : 129
+# unmake Count 8104038 Avg time (cycles) : 124
+# add_move Count 10534138 Avg time (cycles) : 78
+# push_king Count 13045696 Avg time (cycles) : 92
+# Pawn Count 16566013 Avg time (cycles) : 92
+# push_slidE Count 19136185 Avg time (cycles) : 196
+
 # after set_profiled_func this holds the excludelist
 EXCLUDED_LIST='' 
 

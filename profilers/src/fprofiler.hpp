@@ -10,15 +10,27 @@ typedef struct BackoffProfilerStat {
   uint16_t func_id;
   uint64_t count;
   ticks total_time;
+  ticks min_time;
+  ticks max_time;
+  uint32_t deactivation_count;
+  bool is_leaf;
   uint64_t lock;
+  uint64_t limited_count;
 } BackoffProfilerStat; 
 
 typedef struct TLSBackoffProfilerStat {
   uint16_t func_id;
   uint64_t count;
   ticks total_time;
+  ticks min_time;
+  ticks max_time;
+  bool is_leaf;
 
   ticks start_timestamp;
+  uint32_t stack_depth;
+  uint64_t limited_count;
+  uint64_t ignore_count;
+  InvocationData invocation_stack[20];
 } TLSBackoffProfilerStat; 
 
 /*

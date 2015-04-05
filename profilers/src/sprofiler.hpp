@@ -11,11 +11,16 @@ typedef struct SamplingProfilerStat {
   uint16_t func_id;
   uint64_t count;
   uint64_t count_at_last_activation;
-  bool is_active;
+  uint64_t latest_activation_time;
+  bool active;
   uint32_t deactivation_count;
   ticks total_time;
+  ticks min_time;
+  ticks max_time;
+  bool is_leaf;
   uint64_t lock;
   uint64_t sample_size; // Function specific sample size
+  uint64_t limited_count;
 } SamplingProfilerStat; 
 
 typedef struct TLSSamplingProfilerStat {
@@ -24,6 +29,9 @@ typedef struct TLSSamplingProfilerStat {
   uint64_t count_at_last_activation;
   uint32_t deactivation_count;
   ticks total_time;
+  ticks min_time;
+  ticks max_time;
+  bool is_leaf;
 
   // Accounting data
   bool is_active;

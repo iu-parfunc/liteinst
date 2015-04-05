@@ -17,3 +17,8 @@ uint64_t g_call_overhead = 0; // Call overhead calibrated value
 uint16_t g_strategy = EPOCH_CONTROL; // Overhead control strategy to use
 uint64_t g_thread_lock = 0;
 uint64_t g_shutting_down_flag = 0;
+
+// Leaf node tracking
+uint64_t prolog_leaf_counter = 0;
+uint64_t epilog_leaf_counter = 0;
+
