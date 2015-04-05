@@ -158,6 +158,18 @@ class Instrumentor {
      */
     virtual std::string getFunctionName(uint16_t id) = 0;
 
+    /// Explicitly adds function to the instrumentor meta data.
+    /// Currently this is needed to load information about 
+    /// shared library functions. Name is a char* instead of
+    /// std::string since this may be called within c within
+    /// application boostrap code.
+    /**
+     * \param addr function address
+     * \param name function name
+     */
+    virtual void addFunction(uint64_t addr, char* name) = 0;
+
+
     /// Returns the total number of functions being profiled
     long getFunctionCount() { return func_count; }
 

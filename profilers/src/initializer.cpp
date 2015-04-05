@@ -66,8 +66,138 @@ void __attribute__ ((noinline)) emptyFunc(uint64_t* a, uint64_t* b) {
 
 }
 
+uint64_t get_average_time(ticks* elapsed, int size) {
+
+  int BIN_SIZE = 100;
+  int HIST_SIZE = 21; // 21 bins of 100 cycles width. 2000+ to a single bin
+  int histogram[HIST_SIZE];
+  for (int i=0; i<HIST_SIZE; i++) {
+    histogram[i] = 0;
+  }
+
+  for (int i=0; i<size; i++) {
+    if (elapsed[i] > 2100) {
+      histogram[HIST_SIZE-1]++;
+    } else {
+      histogram[elapsed[i]/BIN_SIZE]++;
+    }
+  }
+
+  int max_bin = 0;
+  for (int i=0; i<HIST_SIZE; i++) {
+    if (histogram[i] > histogram[max_bin]) {
+        max_bin = i;
+    }
+  }
+
+  uint64_t sum = 0;
+  for (int i=0; i<size; i++) {
+    if (elapsed[i] > 2100 && max_bin == HIST_SIZE -1) {
+      sum += elapsed[i];
+    } else if (elapsed[i]/BIN_SIZE == max_bin) {
+      sum += elapsed[i];
+    }
+  }
+
+  return sum/histogram[max_bin];
+
+}
+
 __attribute__((no_instrument_function))
 void calibrate_cache_effects() {
+  size_t cache_size = sysconf(_SC_LEVEL3_CACHE_SIZE);
+  size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
+  long cache_lines = 0;
+  if (cache_line_size != 0) {
+    cache_lines = cache_size / cache_line_size; 
+  } else {
+    cache_lines = cache_size / 8; 
+  }
+
+  fprintf(stderr, "[Ubiprof] L3 Cache size (MB) : %lu\n", (uint64_t)((double) cache_size) / (1024 * 1024)); 
+  fprintf(stderr, "[Ubiprof] Number of cache lines : %lu..\n", cache_lines);
+
+  double FUDGE = 1;
+  char *a, *b;
+  a = (char*) malloc(sysconf(_SC_LEVEL3_CACHE_SIZE));
+  if (!a) {
+    fprintf(stderr, "[Ubiprof] ERROR : Faliure allocating memory in cache effect calibration.\n");
+    return;
+  }
+
+  // We need to add calibration method to instrumentor meta data since
+  // this method has not been actually instrumented using finstrument.
+  // Also we need to add this information explicitly for shared library
+  // functions since we don't explicitly handle finstrumented shared 
+  // libraries at the moment.
+  INSTRUMENTOR_INSTANCE->addFunction((uint64_t)&calibrate_cache_effects, "calibrate_cache_effects");;
+
+  // Warm the cache. Incidently we don't capture initial setup and patching
+  // overhead due to this. But it should be ok since it is one time and
+  // would not effect that much since it would get amortized in the long 
+  // run even if accounted for.
+  for (int i=0; i<19; i++) {
+    // Invoke instrumentation explicitly. We use the second param to signal that this is a special invocation 
+    __cyg_profile_func_enter((void*)&calibrate_cache_effects, (void*)-1); 
+    __cyg_profile_func_exit((void*)&calibrate_cache_effects, (void*)-1); 
+  }
+
+  int rounds = 100;
+  // Get warm cache results
+  ticks elapsed[rounds];
+  for (int i=0; i<rounds; i++) {
+    ticks start = getstart();
+    __cyg_profile_func_enter((void*)&calibrate_cache_effects, (void*)-1); 
+    __cyg_profile_func_exit((void*)&calibrate_cache_effects, (void*)-1); 
+    ticks end = getend();
+    elapsed[i] = (end - start);
+  }
+
+
+  uint64_t warm_cache_avg_time = get_average_time(elapsed, rounds);
+    
+  // Get cold cache results
+  for (int i=0; i<rounds; i++) {
+    // Trash the cache
+    uint64_t sum = 0;
+    for (int j=0; j<cache_lines; j+=cache_line_size) {
+      sum += a[j];
+    }
+
+    // fprintf(stderr, "[DEBUG] Hey we are here...\n");
+    ticks start = getstart();
+    __cyg_profile_func_enter((void*)&calibrate_cache_effects, (void*)-1); 
+    __cyg_profile_func_exit((void*)&calibrate_cache_effects, (void*)-1); 
+    ticks end = getend();
+
+    elapsed[i] = (end - start);
+
+  }
+
+  uint64_t cold_cache_avg_time = get_average_time(elapsed, rounds);
+  int64_t difference = cold_cache_avg_time - warm_cache_avg_time;
+
+  if (difference < 0) {
+    fprintf(stderr,"[Ubiprof] ERROR : Cache calibration returned invalid result." 
+            " No cache perturbation compensation will be carried out.\n");
+    g_cache_miss_overhead_upper_bound = 0;
+    return;
+  }
+
+  g_cache_miss_overhead_upper_bound = difference; 
+
+  fprintf(stderr, "[Ubiprof] Cold cache instrumentation cost : %lu "
+          "Warm cache instrumentation cost : %lu\n", cold_cache_avg_time, warm_cache_avg_time);
+  fprintf(stderr, "[Ubiprof] Cache perturbation overhead : %lu\n", 
+          g_cache_miss_overhead_upper_bound);
+
+  free(a);
+
+}
+
+/*
+__attribute__((no_instrument_function))
+void calibrate_cache_effects_1() {
 
   // Allocate 2 L3 cache sized memory chunks
   // for i..3
@@ -84,25 +214,37 @@ void calibrate_cache_effects() {
   // cache_perturbation_overhead = L3_misses * ((end - start) / L3 cache wordsize)
   // delete memory chunks
   
-  // fprintf(stderr, "[Ubiprof] INSIDE calibrate_cache_effects..\n");
-  int cache_lines = 0;
-  if (sysconf(_SC_LEVEL3_CACHE_LINESIZE) != 0) {
-    cache_lines = sysconf(_SC_LEVEL3_CACHE_SIZE) / sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
+  size_t cache_size = sysconf(_SC_LEVEL3_CACHE_SIZE);
+  size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
+  long cache_lines = 0;
+  if (cache_line_size != 0) {
+    cache_lines = cache_size / cache_line_size; 
   } else {
-    cache_lines = sysconf(_SC_LEVEL3_CACHE_SIZE) / 8; 
+    cache_lines = cache_size / 8; 
   }
 
-  fprintf(stderr, "[Ubiprof] Number of cache lines : %d..\n", cache_lines);
+  fprintf(stderr, "[Ubiprof] L3 Cache size (MB) : %lu\n", (uint64_t)((double) cache_size) / (1024 * 1024)); 
+  fprintf(stderr, "[Ubiprof] Number of cache lines : %lu..\n", cache_lines);
 
   double FUDGE = 1;
-  double *a, *b;
-  a = (double*) malloc((int)(sizeof(double) * cache_lines * FUDGE));
-  b = (double*) malloc((int)(sizeof(double) * cache_lines * FUDGE));
+  char *a, *b;
+  a = (char*) malloc(sysconf(_SC_LEVEL3_CACHE_SIZE));
+  if (!a) {
+    fprintf(stderr, "[Ubiprof] ERROR : Faliure allocating memory in cache effect calibration.\n");
+    return;
+  }
+  b = (char*) malloc(sysconf(_SC_LEVEL3_CACHE_SIZE));
   
   // Initialize PAPI
   int retval;
   int eventSet = PAPI_NULL;
-  long long values[] = {0, 0, 0};
+
+  int rounds=100;
+  long long values[rounds];
+  for (int i=0; i<rounds; i++) {  
+    values[i] = 0;
+  }
+
   PAPI_event_info_t evinfo;
   PAPI_mh_level_t *L;
 
@@ -127,27 +269,24 @@ void calibrate_cache_effects() {
     return;
   }
 
-  for (int i=0; i<3; i++) {
+  for (int i=0; i<rounds; i++) {
     // Trash the cache
-    double sum = 0;
-    for (int j=0; j<cache_lines*FUDGE; j++) {
+    uint64_t sum = 0;
+    for (int j=0; j<cache_lines; j+=cache_line_size) {
       sum += a[j];
     }
-
-    // int sz = 30 * 1000 * 1000;
-    // double* data = (double*) malloc(sz * sizeof(double));
 
     if ((retval = PAPI_reset(eventSet)) != PAPI_OK) { 
       fprintf(stderr, "[Ubiprof] ERROR 6 calibrating for cache effects..\n");
       return;
     }
 
-    //    int j;
-    //    for(j=0; j<sz; j+=1000) data[j] = data[j] + j*100;
-    //    printf("  do_misses: initialized 30M doubles\n");
+    ticks start = getstart();
+    __cyg_profile_func_enter((void*)&calibrate_cache_effects, (void*)-1); 
+    __cyg_profile_func_exit((void*)&calibrate_cache_effects, (void*)-1); 
+    ticks end = getend();
 
-    __cyg_profile_func_enter((void*)&calibrate_cache_effects, 0); // We don't use the second param at the moment
-    __cyg_profile_func_exit((void*)&calibrate_cache_effects, 0); // We don't use the second param at the moment
+    elapsed[i] = (end - start);
 
     if ((retval = PAPI_read(eventSet, &values[i])) != PAPI_OK) {
       fprintf(stderr, "[Ubiprof] ERROR 5 calibrating for cache effects..\n");
@@ -174,9 +313,10 @@ void calibrate_cache_effects() {
 
   fprintf(stderr, "[Ubiprof] cache_misses[0] : %lld cache_misses[1] : %lld cache_misses[2] : %lld\n",
           values[0], values[1], values[2]);
-  
-  long long cache_misses = 0; 
-  for (int j=0; j<3; j++) {
+
+  uint64_t cache_misses = 0; 
+  for (int j=0; j<rounds; j++) {
+    fprintf(stderr, "[DEBUG-MISSES] Cache misses %d : %lu\n", j, values[j]);
     if (cache_misses < values[j]) {
       cache_misses = values[j];
     }
@@ -185,35 +325,40 @@ void calibrate_cache_effects() {
   srand(time(NULL));
 
   // Find approximately how much time it takes to load a cache line from the memory
-  ticks fetch_overhead = 1000000000;
-  for (int i=0; i<3; i++) {
+  ticks fetch_overhead = ULLONG_MAX;
+  for (int i=0; i<rounds; i++) {
     // Trash the cache
-    double sum = 0;
-    for (int j=0; j<cache_lines*FUDGE; j++) {
+    uint64_t sum = 0;
+    for (int j=0; j<cache_lines; j+=cache_line_size) {
       sum += a[j];
     }
 
-    for (int j=0; j<cache_lines*FUDGE; j++) {
-      int index = rand() % (int)(cache_lines  * FUDGE); // Trying to thwart the prefetcher here
-      ticks start = getticks();
-      sum += b[index]; 
-      ticks end = getticks();
-      ticks current = end - start;
+    int index = (rand() % cache_lines) * cache_line_size; // Load a randomly choosen cache line
+    // b[index] = 2;
+    ticks start = getticks();
+    sum += b[index]; 
+    ticks end = getticks();
+    ticks current = end - start;
 
-      if (current < fetch_overhead) {
-        fetch_overhead = current;
-      }
+    fprintf(stderr, "[DEBUG] Fetch overhead %d : %lu\n", i, current);
+    if (current < fetch_overhead) {
+      fetch_overhead = current;
     }
   }
+
+  free(a);
+  free(b);
 
   // fetch_overhead = 12000;
 
   fprintf(stderr, "[Ubiprof] cache misses %lld fetch overhead %lld\n", cache_misses, fetch_overhead);
   g_cache_miss_overhead_upper_bound = cache_misses * fetch_overhead;
+  // g_cache_miss_overhead_upper_bound = 12000;
   fprintf(stderr, "[Ubiprof] Cache perturbation overhead of instrumentation : %lld\n", 
       g_cache_miss_overhead_upper_bound);
 
 }
+*/
 
 __attribute__((no_instrument_function))
 void calibrateTicks() {

@@ -544,7 +544,14 @@ void __cyg_profile_func_enter(void* func, void* caller) {
     // abort();
   }
 
-  if (!g_ubiprof_initialized) {
+  // If the Ubiprof library has not yet been properly initialized return.
+  // But caller parameter being -1 signals a special explicit invocation
+  // of the instrumentation which is done for calibration purposes at 
+  // the library init time. If that's the case we atually want to continue
+  // executing.
+  int64_t flag = (int64_t) caller;
+  if (!g_ubiprof_initialized && flag != -1) {
+    // fprintf(stderr, "Returning from func addr : %p\n", func);
     return;
   }
 
@@ -572,9 +579,19 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 
   uint16_t func_id = get_func_id((uint64_t)func);
   // If the function id mappings are not properly initialized fail gracefully
-  if (!func_id) { 
+  if (!func_id && flag != -1) { 
+    fprintf(stderr, "Returning from func addr : %p\n", func);
     return;
   }
+
+  // Dirty hack to get around seg faults when accessing the STL meta data map at
+  // initialization time
+  /*
+  if (flag == -1) {
+    func_id = ins->getFunctionCount();
+    func_id++;
+  }
+  */
 
   uint8_t* edi_set_addr = patch_first_parameter(addr, (uint64_t*) func, func_id);
   if (edi_set_addr == 0) { // This could happen when the compiler insert non sensical function address value
@@ -681,7 +698,14 @@ void __cyg_profile_func_exit(void* func, void* caller) {
     return;
   }
 
-  if (!g_ubiprof_initialized) {
+  // If the Ubiprof library has not yet been properly initialized return.
+  // But caller parameter being -1 signals a special explicit invocation
+  // of the instrumentation which is done for calibration purposes at 
+  // the library init time. If that's the case we atually want to continue
+  // executing.
+  int64_t flag = (int64_t) caller;
+  if (!g_ubiprof_initialized && flag != -1) {
+    // fprintf(stderr, "Returning from func addr : %p\n", func);
     return;
   }
 
@@ -715,9 +739,19 @@ void __cyg_profile_func_exit(void* func, void* caller) {
 
   uint16_t func_id = get_func_id((uint64_t)func);
   // If the function id mappings are not properly initialized fail gracefully
-  if (!func_id) {
+  if (!func_id && flag != -1) { 
+    fprintf(stderr, "Returning from func addr : %p\n", func);
     return;
   }
+
+  // Dirty hack to get around seg faults when accessing the STL meta data map at
+  // initialization time
+  /*
+  if (flag == -1) {
+    func_id = ins->getFunctionCount();
+    func_id++;
+  }
+  */
 
   // For some reason (mostly compiler scrweing things up at prolog) the prolog has not been properly initialized. 
   if (!has_probe_info((uint64_t)func)) {
