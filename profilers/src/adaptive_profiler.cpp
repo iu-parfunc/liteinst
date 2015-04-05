@@ -227,8 +227,8 @@ void* adaptiveProbeMonitor(void* param) {
     // fprintf(stderr, "Total overhead : %lu Total process time : %lu Thread overhead : %lu Probe thread Overhead : %lu\n", 
     //        g_total_overhead, g_total_process_time, thread_overheads, probe_thread_overhead); 
 
-    // uint64_t overhead_of_last_epoch = ((double)overhead_delta / process_time_delta) * 100;
-    double overhead_of_last_epoch = ((double)g_total_overhead / g_total_process_time) * 100;
+    // uint64_t overhead_at_last_epoch = ((double)overhead_delta / process_time_delta) * 100;
+    double overhead_at_last_epoch = ((double)g_total_overhead / g_total_process_time) * 100;
     // fprintf(stderr, "Per function call overhead (cycles) : %lu\n", g_call_overhead);
     // fprintf(stderr, "Global overhead (cycles) : %lu Global process time : %lu \n", g_total_overhead,
     //     g_total_process_time);
@@ -236,11 +236,11 @@ void* adaptiveProbeMonitor(void* param) {
     //     process_time_delta);
 
     // *** Turn this on for runtime overhead logging **
-    // fprintf(stderr, "Overhead : %.2lf\n", overhead_of_last_epoch);
+    // fprintf(stderr, "Overhead : %.2lf\n", overhead_at_last_epoch);
 
     if (g_strategy == PROPOTIONAL) {
-      if (overhead_of_last_epoch != 0 && overhead_of_last_epoch >  sp_target_overhead) {
-        uint64_t new_sample_size = ((double)sp_target_overhead / overhead_of_last_epoch) * sp_sample_size; 
+      if (overhead_at_last_epoch != 0 && overhead_at_last_epoch >  sp_target_overhead) {
+        uint64_t new_sample_size = ((double)sp_target_overhead / overhead_at_last_epoch) * sp_sample_size; 
 
         if (new_sample_size > 0) {
           sp_sample_size = new_sample_size;
@@ -249,14 +249,14 @@ void* adaptiveProbeMonitor(void* param) {
           // Too much overhead to control via reducing the sample size
 #ifdef OVERHEAD_TIME_SERIES
           g_skipped_epochs++;
-          record_overhead_histogram(overhead_of_last_epoch, -1); // -1 signifies no new samples taken in this epoch
+          record_overhead_histogram(overhead_at_last_epoch, -1); // -1 signifies no new samples taken in this epoch
 #endif
           goto sleep;
         }
       }
 
-      if (overhead_of_last_epoch != 0 && overhead_of_last_epoch <  0.75 * sp_target_overhead) {
-        uint64_t new_sample_size = ((double)sp_target_overhead / overhead_of_last_epoch) * sp_sample_size; 
+      if (overhead_at_last_epoch != 0 && overhead_at_last_epoch <  0.75 * sp_target_overhead) {
+        uint64_t new_sample_size = ((double)sp_target_overhead / overhead_at_last_epoch) * sp_sample_size; 
 
         // Here we don't set the sample size to more than its initial setting to prevent overshooting.
         // TODO: Revisit this
@@ -268,7 +268,7 @@ void* adaptiveProbeMonitor(void* param) {
       }
 
 #ifdef OVERHEAD_TIME_SERIES
-    record_overhead_histogram(overhead_of_last_epoch, sp_epoch_period);
+    record_overhead_histogram(overhead_at_last_epoch, sp_epoch_period);
 #endif
 
       for(int i = 0; i < func_count; i++) {
@@ -282,8 +282,8 @@ void* adaptiveProbeMonitor(void* param) {
       }
 
     } else if (g_strategy == SLOW_RAMP_UP) {
-      if (overhead_of_last_epoch != 0 && overhead_of_last_epoch >  sp_target_overhead) {
-        uint64_t new_sample_size = ((double)sp_target_overhead / overhead_of_last_epoch) * sp_sample_size; 
+      if (overhead_at_last_epoch != 0 && overhead_at_last_epoch >  sp_target_overhead) {
+        uint64_t new_sample_size = ((double)sp_target_overhead / overhead_at_last_epoch) * sp_sample_size; 
 
         if (new_sample_size > 0) {
           sp_sample_size = new_sample_size;
@@ -292,16 +292,16 @@ void* adaptiveProbeMonitor(void* param) {
           // Too much overhead to control via reducing the sample size
 #ifdef OVERHEAD_TIME_SERIES
           g_skipped_epochs++;
-          record_overhead_histogram(overhead_of_last_epoch, -1); // -1 signifies no new samples taken in this epoch
+          record_overhead_histogram(overhead_at_last_epoch, -1); // -1 signifies no new samples taken in this epoch
 #endif
           goto sleep;
         }
       }
 
       double fudge_factor = 1;
-      if (overhead_of_last_epoch != 0 && overhead_of_last_epoch <  fudge_factor * sp_target_overhead) {
-	      double new_target_overhead = overhead_of_last_epoch + (fudge_factor * (double) sp_target_overhead - overhead_of_last_epoch) / 2;
-        uint64_t new_sample_size = ((double)new_target_overhead / overhead_of_last_epoch) * sp_sample_size; 
+      if (overhead_at_last_epoch != 0 && overhead_at_last_epoch <  fudge_factor * sp_target_overhead) {
+	      double new_target_overhead = overhead_at_last_epoch + (fudge_factor * (double) sp_target_overhead - overhead_at_last_epoch) / 2;
+        uint64_t new_sample_size = ((double)new_target_overhead / overhead_at_last_epoch) * sp_sample_size; 
 
         // Here we don't set the sample size to more than its initial setting to prevent overshooting.
         // TODO: Revisit this
@@ -318,7 +318,7 @@ void* adaptiveProbeMonitor(void* param) {
       }
 
 #ifdef OVERHEAD_TIME_SERIES
-    record_overhead_histogram(overhead_of_last_epoch, sp_epoch_period);
+    record_overhead_histogram(overhead_at_last_epoch, sp_epoch_period);
 #endif
 
       for(int i = 0; i < func_count; i++) {
@@ -332,10 +332,10 @@ void* adaptiveProbeMonitor(void* param) {
       }
 
     } else if (g_strategy == EPOCH_CONTROL) {
-      if (overhead_of_last_epoch != 0 && overhead_of_last_epoch >  sp_target_overhead) {
+      if (overhead_at_last_epoch != 0 && overhead_at_last_epoch >  sp_target_overhead) {
      //   fprintf(stderr, "[ubiprof] Overhead : %.2lf Target overhead : %.2lf Epoch period : %.2lf\n", 
-     //       overhead_of_last_epoch, sp_target_overhead, sp_epoch_period);
-        double new_epoch_period = ((double) overhead_of_last_epoch /sp_target_overhead) * sp_epoch_period; 
+     //       overhead_at_last_epoch, sp_target_overhead, sp_epoch_period);
+        double new_epoch_period = ((double) overhead_at_last_epoch /sp_target_overhead) * sp_epoch_period; 
      //   fprintf(stderr, "[ubiprof] New epoch period : %.2lf\n", new_epoch_period);
 
         if (new_epoch_period > 0) {
@@ -345,18 +345,18 @@ void* adaptiveProbeMonitor(void* param) {
           // Too much overhead to control via reducing the sample size
 #ifdef OVERHEAD_TIME_SERIES
           g_skipped_epochs++;
-          record_overhead_histogram(overhead_of_last_epoch, -1); // -1 signifies no new samples taken in this epoch
+          record_overhead_histogram(overhead_at_last_epoch, -1); // -1 signifies no new samples taken in this epoch
 #endif
           goto sleep;
         }
       }
 
       double fudge_factor = 1;
-      if (overhead_of_last_epoch != 0 && overhead_of_last_epoch <  fudge_factor * sp_target_overhead) {
-	      double new_target_overhead = overhead_of_last_epoch + (fudge_factor * (double) sp_target_overhead - overhead_of_last_epoch) / 2;
+      if (overhead_at_last_epoch != 0 && overhead_at_last_epoch <  fudge_factor * sp_target_overhead) {
+	      double new_target_overhead = overhead_at_last_epoch + (fudge_factor * (double) sp_target_overhead - overhead_at_last_epoch) / 2;
       //  fprintf(stderr, "[ubiprof] Overhead : %.2lf New Target Overhead : %.2lf Epoch period : %.2lf\n", 
-      //      overhead_of_last_epoch, new_target_overhead, sp_epoch_period);
-        double new_epoch_period =  ((double) overhead_of_last_epoch /new_target_overhead) * sp_epoch_period; 
+      //      overhead_at_last_epoch, new_target_overhead, sp_epoch_period);
+        double new_epoch_period =  ((double) overhead_at_last_epoch /new_target_overhead) * sp_epoch_period; 
       //  fprintf(stderr, "[ubiprof] New epoch period : %.2lf\n", new_epoch_period);
 
        if (new_epoch_period < sp_epoch_period) {
@@ -376,7 +376,7 @@ void* adaptiveProbeMonitor(void* param) {
       }
 
 #ifdef OVERHEAD_TIME_SERIES
-    record_overhead_histogram(overhead_of_last_epoch, sp_epoch_period);
+    record_overhead_histogram(overhead_at_last_epoch, sp_epoch_period);
 #endif
 
     }
