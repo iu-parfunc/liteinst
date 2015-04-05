@@ -260,7 +260,7 @@ inline uint8_t* patch_first_parameter(uint64_t* call_return_addr, uint64_t* star
   // Address where EDI/RDI is set last before the call
   uint8_t* edi_set_addr = 0;
 
-  _DInst result[offset];
+  _DInst result[2*offset];
   unsigned int instructions_count = 0;
 
   _DecodedInst inst;
@@ -275,6 +275,11 @@ inline uint8_t* patch_first_parameter(uint64_t* call_return_addr, uint64_t* star
   uint64_t ptr_size = 0;
   uint64_t edi_offset = 0;
   uint8_t intermediate_reg = 0;
+
+  if (instructions_count > offset) {
+    fprintf(stderr, "[DEBUG] Instructions decoded : %lu Offset : %lu\n", instructions_count, offset);
+    return 0 ;
+  }
 
   bool edi_setter_found = false;
   for (int i = instructions_count - 1; i >= 0; i--) {
