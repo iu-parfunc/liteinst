@@ -75,7 +75,8 @@ lib:
 #OVERRIDING ANY DECISION ABOUT CID AND SEC (WE HAD A LOT OF OUT OF QUOTA TROUBLE!) 
 #CID=925399326325-6dir7re3ik7686p6v3kkfkf1kj0ec7ck.apps.googleusercontent.com
 #SEC=MQ72ZWDde_1e1ihI5YE9YlEi
-
+CID=925399326325-6dir7re3ik7686p6v3kkfkf1kj0ec7ck.apps.googleusercontent.com
+SEC=MQ72ZWDde_1e1ihI5YE9YlEi
 
 # Run the benchmarks
 bench: run-benchmarks.exe
