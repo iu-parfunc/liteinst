@@ -4,6 +4,7 @@
 #include "dynamicarray.h"
 
 #include <stdlib.h>
+#include <math.h>
 
 #include <cstdio>
 #include <vector>
@@ -27,6 +28,19 @@ ProbeStatistics* g_probe_stats;
 uint64_t* g_epilog_timings; 
 uint64_t* g_prolog_timings; 
 uint64_t* g_probe_timings; 
+
+uint64_t g_epilog_count = 0;
+double g_epilog_mean = 0;
+double g_epilog_variance = 0;
+
+uint64_t g_prolog_count = 0;
+double g_prolog_mean = 0;
+double g_prolog_variance = 0;
+
+uint64_t g_total_probe_count = 0;
+double g_probe_mean = 0;
+double g_probe_variance = 0;
+
 int g_num_bins;
 #endif
 
@@ -359,7 +373,15 @@ void Finstrumentor::readFunctionInfo() {
 #ifdef PROBE_HIST_ON 
 void dumpProbeOverheadStatistics() {
 
-  FILE* fp = fopen("overhead.out", "a");
+  FILE* fp = fopen("probe_overhead.out", "a");
+
+  fprintf(fp, "\n>>>>>\n");
+  fprintf(fp, "PROLOG_MEAN: %.2lf\n", g_prolog_mean);
+  fprintf(fp, "PROLOG_STD: %.2lf\n", sqrt(g_prolog_variance / g_prolog_count));
+  fprintf(fp, "EPILOG_MEAN: %.2lf\n", g_epilog_mean);
+  fprintf(fp, "EPILOG_STD: %.2lf\n", sqrt(g_epilog_variance / g_epilog_count));
+  fprintf(fp, "PROBE_MEAN: %.2lf\n", g_probe_mean);
+  fprintf(fp, "PROBE_STD: %.2lf\n", sqrt(g_probe_variance / g_total_probe_count));
 
   // prolog timings
   for (int i=0; i < g_num_bins; i++) {

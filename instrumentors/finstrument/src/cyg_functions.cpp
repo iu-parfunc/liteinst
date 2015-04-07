@@ -277,7 +277,7 @@ inline uint8_t* patch_first_parameter(uint64_t* call_return_addr, uint64_t* star
   uint8_t intermediate_reg = 0;
 
   if (instructions_count > offset) {
-    fprintf(stderr, "[DEBUG] Instructions decoded : %lu Offset : %lu\n", instructions_count, offset);
+    fprintf(stderr, "[DEBUG] Instructions decoded : %d Offset : %lu\n", instructions_count, offset);
     return 0 ;
   }
 
@@ -438,6 +438,7 @@ void print_probe_info() {
 #ifdef PROBE_HIST_ON
 char* md = getenv("MONITOR_DEAC");
 
+// Note : Calculations within this method is not thread safe
 void update_overhead_histograms(TLStatistics* ts, uint64_t overhead, int type) {
   int bin;
   if (overhead > PROBE_HIST_MAX_VALUE) {
@@ -448,8 +449,24 @@ void update_overhead_histograms(TLStatistics* ts, uint64_t overhead, int type) {
 
   if (type) {
     g_prolog_timings[bin]++; 
+    // Online calculation of mean and standara deviation
+    // if (overhead < 1000000) { // Trying skip context switches
+      g_prolog_count++;
+      double delta = overhead - g_prolog_mean;
+      g_prolog_mean = g_prolog_mean + delta/g_prolog_count;
+      g_prolog_variance = g_prolog_variance + delta * (overhead - g_prolog_mean);
+    // }
   } else {
     g_epilog_timings[bin]++;
+
+    // Online calculation of mean and standara deviation
+    // if (overhead < 1000000) { // Trying skip context switches
+      g_epilog_count++;
+      double delta = overhead - g_epilog_mean;
+      g_epilog_mean = g_epilog_mean + delta/g_epilog_count;
+      g_epilog_variance = g_epilog_variance + delta * (overhead - g_epilog_mean);
+    // }
+
     uint64_t total_probe_overhead = ts->prolog_overhead + overhead;
     if (total_probe_overhead > PROBE_HIST_MAX_VALUE) {
       bin = g_num_bins - 1;
@@ -457,6 +474,14 @@ void update_overhead_histograms(TLStatistics* ts, uint64_t overhead, int type) {
       bin = total_probe_overhead / BIN_SIZE;
     }
     g_probe_timings[bin]++;
+
+    // Online calculation of mean and standara deviation
+    // if (total_probe_overhead < 1000000) { // Trying skip context switches
+      g_total_probe_count++;
+      delta = total_probe_overhead - g_probe_mean;
+      g_probe_mean = g_probe_mean + delta/g_total_probe_count;
+      g_probe_variance = g_probe_variance + delta * (total_probe_overhead - g_probe_mean);
+    // }
   }
 }
 #endif
@@ -547,6 +572,8 @@ void __cyg_profile_func_enter(void* func, void* caller) {
     ts->prolog_overhead = prolog_overhead;
 
 #ifdef PROBE_HIST_ON
+    update_overhead_histograms(ts, prolog_overhead, PROLOG); 
+    /*
     if (!ts->deactivated) {
       if (md == NULL) {
         // fprintf(stderr, "Updating REGULAR flow\n");
@@ -559,6 +586,7 @@ void __cyg_profile_func_enter(void* func, void* caller) {
       }
       ts->deactivated = false;
     }
+    */
 #endif
 
     return;
@@ -621,11 +649,9 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   uint64_t prolog_overhead = (end - start);
   ts->prolog_overhead = prolog_overhead;
 
-  /*
 #ifdef PROBE_HIST_ON
     update_overhead_histograms(ts, prolog_overhead, PROLOG); 
 #endif
-*/
 
   // fprintf(stderr, "\n[cyg_enter] Function address : %p\n", ((uint8_t*)func));
   // fprintf(stderr, "[cyg_enter] Call address : %p\n", ((uint8_t*)addr - 5));
@@ -709,6 +735,8 @@ void __cyg_profile_func_exit(void* func, void* caller) {
     ts->thread_local_overhead += epilog_overhead;
 
   #ifdef PROBE_HIST_ON
+    update_overhead_histograms(ts, epilog_overhead, EPILOG); 
+    /*
     if (!ts->deactivated) {
       if (md == NULL) {
         // fprintf(stderr, "Updating REGULAR flow\n");
@@ -721,6 +749,7 @@ void __cyg_profile_func_exit(void* func, void* caller) {
       }
       ts->deactivated = false;
     }
+    */
   #endif
 
     return;
@@ -789,11 +818,9 @@ void __cyg_profile_func_exit(void* func, void* caller) {
   ticks epilog_overhead = (end - start);
   ts->thread_local_overhead += epilog_overhead;
 
-  /*
 #ifdef PROBE_HIST_ON
     update_overhead_histograms(ts, epilog_overhead, EPILOG); 
 #endif
-*/
 
   /*
   // Experimental parameter patching code

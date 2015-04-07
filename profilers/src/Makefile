@@ -42,11 +42,11 @@ INSTALL = ../../build
 .PHONY: all build install
 
 libubiprof.so: libubiprof.a 
-	$(CC) $(LIBS) -shared -Wl,-soname,libubiprof.so -o libubiprof.so $(OBJ) $(INST_OBJ) $(DEPS) -lc -lpapi -lrt
+	$(CC) $(LIBS) -shared -Wl,-soname,libubiprof.so -o libubiprof.so $(OBJ) $(INST_OBJ) $(DEPS) -lc -lpapi -lrt -lm
 
 noprof.so: noprof.a 
 	if [ -d libubiprof.so ]; then rm -f libubiprof.so; fi	
-	$(CC) $(LIBS) -shared -Wl,-soname,libubiprof.so -o libubiprof.so $(INST_OBJ_NO_PROF) $(DEPS) -lc -lpapi -lrt
+	$(CC) $(LIBS) -shared -Wl,-soname,libubiprof.so -o libubiprof.so $(INST_OBJ_NO_PROF) $(DEPS) -lc -lpapi -lrt -lm
 
 # TODO: Include lpapi.a in the static library
 libubiprof.a: build distorm

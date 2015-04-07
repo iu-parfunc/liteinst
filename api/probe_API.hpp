@@ -43,6 +43,19 @@ extern ProbeStatistics* g_probe_stats;
 extern uint64_t* g_epilog_timings; 
 extern uint64_t* g_prolog_timings; 
 extern uint64_t* g_probe_timings; 
+
+extern uint64_t g_epilog_count;
+extern double g_epilog_mean;
+extern double g_epilog_variance; 
+
+extern uint64_t g_prolog_count;
+extern double g_prolog_mean;
+extern double g_prolog_variance;
+
+extern uint64_t g_total_probe_count;
+extern double g_probe_mean;
+extern double g_probe_variance;
+
 extern int g_num_bins;
 
 #endif
