@@ -151,6 +151,8 @@ make lib   # CFLAGS='-DOVERHEAD_TIME_SERIES'
 BENCHROOT=benchmarks 
 DATADIR=groundtruth
 
+export CC=gcc
+
 if [ ! -d $DATADIR ] ; then 
     mkdir $DATADIR
 fi 
