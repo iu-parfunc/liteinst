@@ -166,7 +166,7 @@ function build_it {
     BENCH=$1
     echo "BUILDING:"$BENCH
     
-    (cd $BENCHROOT/$BENCH/ubiprof; make build)        
+    (cd $BENCHROOT/$BENCH/ubiprof;EXCLUDED_FUNCTION_LIST=$INSTR$EXCLUDED_LIST make build)        
 }
 
 function run_it { 
