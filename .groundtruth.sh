@@ -80,7 +80,7 @@ HMMER_INSTR_FUNCS='Gaussrandom, sre_malloc, FCHoose, SymbolIndex, toupper, sre_r
 # LBM_showGridStatistics Count 48 Avg time (cycles) : 124882607
 # LBM_performStreamCollide Count 3000 Avg time (cycles) : 287415030
 # LBM_swapGrids Count 3000 Avg time (cycles) : 377
-LBM_INSTR_FUNCS='LBM_initializeGrid, LBM_initializeSpecialCell, LBM_loadObstacleFile, LBM_showGridStatistics, LBM_performStreamCollide, LBM_swapGrids'
+LBM_INSTR_FUNCS='LBM_initializeGrid LBM_initializeSpecialCell LBM_loadObstacleFile LBM_showGridStatistics LBM_performStreamCollide LBM_swapGrids'
 
 #NBODY
 # _Z7forceToP8particleP9gTr Count 193245024 Avg time (cycles) : 24100
