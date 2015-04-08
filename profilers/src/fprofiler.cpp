@@ -117,6 +117,18 @@ TLStatistics* backoffEpilogFunction(uint16_t func_id) {
     global_count += all_thread_stats[i]->thread_local_count;
   }
 
+  ticks elapsed = epilog_start - i_data.timestamp ;
+
+  if (elapsed < local_func_stats->min_time || local_func_stats->min_time == 0) {
+    local_func_stats->min_time = elapsed;
+  }
+
+  if (elapsed > local_func_stats->max_time) {
+    local_func_stats->max_time = elapsed;
+  }
+
+  local_func_stats->total_time += elapsed;
+
   if ((global_count/2) >= fb_sample_size) { // Since we get prolog + epilog count here
     if (__sync_bool_compare_and_swap(&(global_func_stats->lock), 0 , 1)) {
       PROFILER_INSTANCE->deactivateFunction(&func_id);
