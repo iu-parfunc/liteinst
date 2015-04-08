@@ -28,7 +28,7 @@ SJENG_FUNCS='printf,memset,puts,__isoc99_sscanf,exit,__assert_fail,putchar,strnc
 #_vect2d<double>::_vect2d(double, double
 #_point2d<double>::operator-(_point2d<double>)
 #benchIO::isSpace(char)
-HULL_INSTR_FUNCS='cross, triArea,_vect2d,_point2d<double>::operator-(_point2d<double>), isSpace'
+HULL_INSTR_FUNCS='cross, triArea, _vect2d, _point2d<double>::operator-(_point2d<double>), isSpace'
 
 #BLACKSCHOLES:
 # main Count 1 Avg time (cycles) : 47286391274
@@ -161,6 +161,7 @@ fi
 function build_it { 
 #          -finstrument-functions-exclude-function-list
     INSTR="-finstrument-functions-exclude-function-list="
+    echo "CONSTRUCTING EXCLUDE LIST"
     export EXCLUDED_FUNCTION_LIST=$INSTR$EXCLUDED_LIST
     echo $EXCLUDED_FUNCTION_LIST
     BENCH=$1
