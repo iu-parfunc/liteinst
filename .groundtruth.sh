@@ -157,6 +157,7 @@ fi
 
 
 function build_it { 
+#          -finstrument-functions-exclude-function-list
     INSTR="-finstrument-functions-exclude-function-list="
     export EXCLUDED_FUNCTION_LIST=$INSTR$EXCLUDED_LIST
     echo $EXCLUDED_FUNCTION_LIST
@@ -225,13 +226,13 @@ target=5
 # 	done 
 #     done
 
-    for func in $LBM_INSTR_FUNCS ; do 
-	set_profiled_func LBM_FUNCS $func
-	build_it lbm ;
-	for round in 1 2 3 ; do 
-	    run_it lbm $round $target $func       
-	done 
-    done 
+    # for func in $LBM_INSTR_FUNCS ; do 
+    # 	set_profiled_func LBM_FUNCS $func
+    # 	build_it lbm ;
+    # 	for round in 1 2 3 ; do 
+    # 	    run_it lbm $round $target $func       
+    # 	done 
+    # done 
 
 #     for func in $PERL_INSTR_FUNCS ; do 
 # 	set_profiled_func PERL_FUNCS $func
@@ -249,13 +250,13 @@ target=5
 # 	done 
 #     done
 	
-#     for func in $BZIP_INSTR_FUNCS ; do 
-# 	set_profiled_func BZIP_FUNCS $func
-# 	build_it bzip-1.0.3 ;
-# 	for round in 1 2 3 ; do 
-# 	    run_it bzip-1.0.3 $round $target $func       
-# 	done 
-#     done
+     for func in $BZIP_INSTR_FUNCS ; do 
+ 	set_profiled_func BZIP_FUNCS $func
+ 	build_it bzip-1.0.3 ;
+ 	for round in 1 2 3 ; do 
+ 	    run_it bzip-1.0.3 $round $target $func       
+ 	done 
+     done
 
 
 #     #Those parallel benchmarks need special attention! 
