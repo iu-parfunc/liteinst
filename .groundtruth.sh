@@ -120,8 +120,12 @@ EXCLUDED_LIST=''
 function set_profiled_func {
    name=$1[@]
    a=("${!name}")
-
+   
+   echo "CONSTRUCTING EXCLUDED FUNCTION LIST" 
+   echo "EXCLUDING="$2
+   
    EXCLUDED_LIST=$(echo ${a[@]}  | sed "s@$2@@")
+   echo "EXCLUDED_LIST="$EXCLUDED_LIST
 } 
 
 
@@ -161,7 +165,8 @@ fi
 function build_it { 
 #          -finstrument-functions-exclude-function-list
     INSTR="-finstrument-functions-exclude-function-list="
-    echo "CONSTRUCTING EXCLUDE LIST"
+    echo "EXPORTING EXCLUDE LIST"
+    
     export EXCLUDED_FUNCTION_LIST=$INSTR$EXCLUDED_LIST
     echo $EXCLUDED_FUNCTION_LIST
     BENCH=$1
