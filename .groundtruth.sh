@@ -43,7 +43,7 @@ BLACKSCHOLES_INSTR_FUNCS='main, bs_thread, BlkSchlsEqEuroNoDiv, CNDF'
 # mainSimpleSort Count 9986077 Avg time (cycles) : 6643
 # add_pair_to_block Count 7247208 Avg time (cycles) : 96
 # mmed3 Count 6966489 Avg time (cycles) : 71
-BZIP_INSTR_FUNCS='mainGtU, bsW, mainSimpleSort, add_pair_to_block, mmed3'
+BZIP_INSTR_FUNCS='mainGtU bsW mainSimpleSort add_pair_to_block mmed3'
 
 #FLUID
 # _ZN4Vec3mIERKS_ Count 268966388 Avg time (cycles) : 142
