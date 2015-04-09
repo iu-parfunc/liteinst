@@ -114,12 +114,20 @@ void calibrate_cache_effects() {
     cache_lines = cache_size / 8; 
   }
 
+  size_t num_cpus = sysconf(_SC_NPROCESSORS_ONLN);
+
   fprintf(stderr, "[Ubiprof] L3 Cache size (MB) : %lu\n", (uint64_t)((double) cache_size) / (1024 * 1024)); 
-  fprintf(stderr, "[Ubiprof] Number of cache lines : %lu..\n", cache_lines);
+  fprintf(stderr, "[Ubiprof] Number of cache lines : %lu\n", cache_lines);
+  fprintf(stderr, "[Ubiprof] Number of processors : %lu\n", num_cpus);
 
   double FUDGE = 1;
+  size_t alloc_size = sysconf(_SC_LEVEL3_CACHE_SIZE) * (num_cpus + 1) * 2;
+
+  fprintf(stderr, "[DEBUG] Cache mult : %lu\n", (num_cpus + 1) * 2);
+
+  long num_cache_lines = alloc_size / cache_line_size;
   char *a, *b;
-  a = (char*) malloc(sysconf(_SC_LEVEL3_CACHE_SIZE));
+  a = (char*) malloc(alloc_size); // Allocates two times the caches just to be sure
   if (!a) {
     fprintf(stderr, "[Ubiprof] ERROR : Faliure allocating memory in cache effect calibration.\n");
     return;
@@ -162,7 +170,7 @@ void calibrate_cache_effects() {
   for (int i=0; i<rounds; i++) {
     // Trash the cache
     uint64_t sum = 0;
-    for (int j=0; j<cache_lines; j+=cache_line_size) {
+    for (int j=0; j<num_cache_lines; j+=cache_line_size) {
       sum += a[j];
     }
 
