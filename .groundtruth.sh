@@ -65,7 +65,7 @@ FLUID_INSTR_FUNCS='"Vec3::operator-=(Vec3 const&)" "Vec3::operator+=(Vec3 const&
 # UMVLine16Y_11 Count 66437600 Avg time (cycles) : 103
 # FastLine16Y_11 Count 269932720 Avg time (cycles) : 64
 # FastPelY_14 Count 543503824 Avg time (cycles) : 73
-H264_INSTR_FUNCS='PutPel_14 SATD UMVPelY UMVLine16Y_11 FastLine16Y_11 FastPelY_14'
+H264_INSTR_FUNCS='PutPel_14 SATD UMVPelY_14 UMVLine16Y_11 FastLine16Y_11 FastPelY_14'
 
 #HMMER
 # Gaussrandom Count 541551 Avg time (cycles) : 486
@@ -127,7 +127,7 @@ function set_profiled_func {
    echo "CONSTRUCTING EXCLUDED FUNCTION LIST" 
    echo "EXCLUDING="$2
    
-   EXCLUDED_LIST=$(echo ${a[@]}  | sed "s@$2@@")
+   EXCLUDED_LIST=$(echo ${a[@]}  | sed "s@$2@@g")
    echo "EXCLUDED_LIST="$EXCLUDED_LIST
 } 
 
