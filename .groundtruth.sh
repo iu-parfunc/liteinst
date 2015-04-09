@@ -92,7 +92,7 @@ LBM_INSTR_FUNCS='LBM_initializeGrid LBM_initializeSpecialCell LBM_loadObstacleFi
 # _ZN7_vect3dIdE3dotES0_ Count 554347948 Avg time (cycles) : 166
 # _ZN8_point3dIdEmiES0_ Count 565347948 Avg time (cycles) : 1976
 # _ZN7_vect3dIdEC1Eddd Count 1035252092 Avg time (cycles) : 210
-NBODY_INSTR_FUNCS='forceTo, _vect3d<double>::operator*(double), _vect3d<double>::operator+(_vect3d<double>, dot, _point3d<double>::operator-(_point3d<double>), _vect3d<double>::_vect3d(double, double, double)'
+NBODY_INSTR_FUNCS='"forceTo" "_vect3d<double>::operator*(double)" "_vect3d<double>::operator+(_vect3d<double>)" "dot" "_point3d<double>::operator-(_point3d<double>)" "_vect3d<double>::_vect3d(double, double, double)"'
 
 
 #PERL
