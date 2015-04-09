@@ -181,23 +181,21 @@ function build_it {
 function run_it { 
     BENCH=$1
     ROUND=$2 
-    TARGOH=$3 
     FUNC=$4
 
     (cd $BENCHROOT/$BENCH/ubiprof; make run) 
     # will not work for the parallel benches!! 
     # that use a different directory structure (My bad idea) 
     #mv $BENCHROOT/$BENCH/instrumented/overhead.out $DATADIR/$HOSTNAME-$BENCH-$ROUND-$TARGOH.out
-    mv $BENCHROOT/$BENCH/instrumented/prof.out $DATADIR/prof-$HOSTNAME-$BENCH-$ROUND-$TARGOH-$FUNC.out
-    mv $BENCHROOT/$BENCH/instrumented/statistics.out $DATADIR/stat-$HOSTNAME-$BENCH-$ROUND-$TARGOH-$FUNC.out
+    mv $BENCHROOT/$BENCH/instrumented/prof.out $DATADIR/prof-$HOSTNAME-$BENCH-$ROUND-$FUNC.out
+    mv $BENCHROOT/$BENCH/instrumented/statistics.out $DATADIR/stat-$HOSTNAME-$BENCH-$ROUND-$FUNC.out
 }
 
 function run_it_par { 
     BENCH=$1
     EXECDIR=$2
     ROUND=$3
-    TARGOH=$4
-    FUNC=$5
+    FUNC=$4
     for retry in 1 2 3 4 5; do 
 	(cd $BENCHROOT/$BENCH/ubiprof; make run)
 	if [ $? = 0 ] ; then break 
@@ -206,8 +204,8 @@ function run_it_par {
 	fi 
     done 
     #mv $BENCHROOT/$BENCH/$EXECDIR/overhead.out $DATADIR/$HOSTNAME-$BENCH-$ROUND-$TARGOH.out
-    mv $BENCHROOT/$BENCH/$EXECDIR/prof.out $DATADIR/prof-$HOSTNAME-$BENCH-$ROUND-$TARGOH-$FUNC.out
-    mv $BENCHROOT/$BENCH/$EXECDIR/statistics.out $DATADIR/stat-$HOSTNAME-$BENCH-$ROUND-$TARGOH-$FUNC.out
+    mv $BENCHROOT/$BENCH/$EXECDIR/prof.out $DATADIR/prof-$HOSTNAME-$BENCH-$ROUND-$FUNC.out
+    mv $BENCHROOT/$BENCH/$EXECDIR/statistics.out $DATADIR/stat-$HOSTNAME-$BENCH-$ROUND-$FUNC.out
 }
 
 
@@ -217,94 +215,92 @@ export PROFILER_TYPE=FIXED_BACKOFF
 export SAMPLE_SIZE=200000000000
 
 
-target=5
 
-for target in 3 5 10; do
 
-    for func in $H264_INSTR_FUNCS ; do 
-	set_profiled_func H264_FUNCS $func
-	build_it h264ref-9.3 ;
-	for round in 1 2 3 ; do 
-	    run_it h264ref-9.3 $round $target $func    
-	done 
-    done
-
-    for func in $HMMER_INSTR_FUNCS ; do 
-	set_profiled_func HMMER_FUNCS $func
-	build_it hmmer ;
-	for round in 1 2 3 ; do 
-	    run_it hmmer $round $target $func       
-	done 
-    done
-
-    for func in $LBM_INSTR_FUNCS ; do 
-     	set_profiled_func LBM_FUNCS $func
-     	build_it lbm ;
-     	for round in 1 2 3 ; do 
-     	    run_it lbm $round $target $func       
-     	done 
+for func in $H264_INSTR_FUNCS ; do 
+    set_profiled_func H264_FUNCS $func
+    build_it h264ref-9.3 ;
+    for round in 1 2 3 ; do 
+	run_it h264ref-9.3 $round $func    
     done 
+done
 
-    for func in $PERL_INSTR_FUNCS ; do 
-	set_profiled_func PERL_FUNCS $func
-	build_it perl-5.8.7 ;
-	for round in 1 2 3 ; do 
-	    run_it perl-5.8.7 $round $target $func       
-	done 
+for func in $HMMER_INSTR_FUNCS ; do 
+    set_profiled_func HMMER_FUNCS $func
+    build_it hmmer ;
+    for round in 1 2 3 ; do 
+	run_it hmmer $round $func       
     done 
+done
 
-    for func in $SJENG_INSTR_FUNCS ; do
-	set_profiled_func SJENG_FUNCS $func
-	build_it sjeng ;
-	for round in 1 2 3 ; do 
-	    run_it sjeng $round $target $func       
-	done 
-    done
-	
-     for func in $BZIP_INSTR_FUNCS ; do 
- 	set_profiled_func BZIP_FUNCS $func
- 	build_it bzip-1.0.3 ;
- 	for round in 1 2 3 ; do 
- 	    run_it bzip-1.0.3 $round $target $func       
- 	done 
-     done
+for func in $LBM_INSTR_FUNCS ; do 
+    set_profiled_func LBM_FUNCS $func
+    build_it lbm ;
+    for round in 1 2 3 ; do 
+     	run_it lbm $round $func       
+    done 
+done 
+
+for func in $PERL_INSTR_FUNCS ; do 
+    set_profiled_func PERL_FUNCS $func
+    build_it perl-5.8.7 ;
+    for round in 1 2 3 ; do 
+	run_it perl-5.8.7 $round $func       
+    done 
+done 
+
+for func in $SJENG_INSTR_FUNCS ; do
+    set_profiled_func SJENG_FUNCS $func
+    build_it sjeng ;
+    for round in 1 2 3 ; do 
+	run_it sjeng $round $func       
+    done 
+done
+
+for func in $BZIP_INSTR_FUNCS ; do 
+    set_profiled_func BZIP_FUNCS $func
+    build_it bzip-1.0.3 ;
+    for round in 1 2 3 ; do 
+ 	run_it bzip-1.0.3 $round $func       
+    done 
+done
 
 
     #Those parallel benchmarks need special attention! 
 
     #blackscholes 
-    for func in $BLACKSCHOLES_INSTR_FUNCS ; do 
-	set_profiled_func BLACKSCHOLES_FUNCS $func
-	build_it blackscholes ; 
-	for round in 1 2 3 ; do 
-	    run_it_par blackscholes src $round $target $func    
-	done 
+for func in $BLACKSCHOLES_INSTR_FUNCS ; do 
+    set_profiled_func BLACKSCHOLES_FUNCS $func
+    build_it blackscholes ; 
+    for round in 1 2 3 ; do 
+	run_it_par blackscholes src $round $func    
     done 
+done 
 
     #fluid
-    for func in $FLUID_INSTR_FUNCS ; do 
-	set_profiled_func FLUID_FUNCS $func
-	build_it fluid ; 
-	for round in 1 2 3 ; do 
-	    run_it_par fluid src $round $target $func    	
-	done 
+for func in $FLUID_INSTR_FUNCS ; do 
+    set_profiled_func FLUID_FUNCS $func
+    build_it fluid ; 
+    for round in 1 2 3 ; do 
+	run_it_par fluid src $round $func    	
     done 
+done 
 
     #hull
-    for func in $HULL_INSTR_FUNCS ; do
-	set_profiled_func HULL_FUNCS $func
-	build_it hull ; 
-	for round in 1 2 3 ; do 
-	    run_it_par hull quickHull $round $target $func    
-	done 
-    done
-
-    #nbody 
-    for func in $NBODY_INSTR_FUNCS ; do 
-	set_profiled_func NBODY_FUNCS $func 
-	build_it nbody ; 
-	for round in 1 2 3 ; do 
-	    run_it_par nbody BarnesHut $round $target $func    
-	done 
+for func in $HULL_INSTR_FUNCS ; do
+    set_profiled_func HULL_FUNCS $func
+    build_it hull ; 
+    for round in 1 2 3 ; do 
+	run_it_par hull quickHull $round $func    
     done 
 done
+
+    #nbody 
+for func in $NBODY_INSTR_FUNCS ; do 
+    set_profiled_func NBODY_FUNCS $func 
+    build_it nbody ; 
+    for round in 1 2 3 ; do 
+	run_it_par nbody BarnesHut $round $func    
+    done 
+done 
+
