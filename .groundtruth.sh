@@ -29,14 +29,14 @@ SJENG_FUNCS='printf,memset,puts,__isoc99_sscanf,exit,__assert_fail,putchar,strnc
 #_vect2d<double>::_vect2d(double, double
 #_point2d<double>::operator-(_point2d<double>)
 #benchIO::isSpace(char)
-HULL_INSTR_FUNCS='cross, triArea, _vect2d, _point2d<double>::operator-(_point2d<double>), isSpace'
+HULL_INSTR_FUNCS='cross triArea _vect2d _point2d<double>::operator-(_point2d<double>) isSpace'
 
 #BLACKSCHOLES:
 # main Count 1 Avg time (cycles) : 47286391274
 # _Z9bs_threadPv Count 8 Avg time (cycles) : 39360429908
 # _Z19BlkSchlsEqEuroNoDivff Count 100000000 Avg time (cycles) : 2450
 # _Z4CNDFf Count 200000000 Avg time (cycles) : 327
-BLACKSCHOLES_INSTR_FUNCS='main, bs_thread, BlkSchlsEqEuroNoDiv, CNDF' 
+BLACKSCHOLES_INSTR_FUNCS='main bs_thread BlkSchlsEqEuroNoDiv CNDF' 
 
 #BZIP
 # mainGtU Count 328060278 Avg time (cycles) : 85
@@ -44,7 +44,7 @@ BLACKSCHOLES_INSTR_FUNCS='main, bs_thread, BlkSchlsEqEuroNoDiv, CNDF'
 # mainSimpleSort Count 9986077 Avg time (cycles) : 6643
 # add_pair_to_block Count 7247208 Avg time (cycles) : 96
 # mmed3 Count 6966489 Avg time (cycles) : 71
-BZIP_INSTR_FUNCS='mainGtU, bsW, mainSimpleSort, add_pair_to_block, mmed3,'
+BZIP_INSTR_FUNCS='mainGtU bsW mainSimpleSort add_pair_to_block mmed3'
 
 #FLUID
 # _ZN4Vec3mIERKS_ Count 268966388 Avg time (cycles) : 142
@@ -53,7 +53,9 @@ BZIP_INSTR_FUNCS='mainGtU, bsW, mainSimpleSort, add_pair_to_block, mmed3,'
 # _ZNK4Vec311GetLengthSqEv Count 3442875319 Avg time (cycles) : 159
 # _ZNK4Vec3miERKS_ Count 3711841709 Avg time (cycles) : 1101
 # _ZN4Vec3C2Efff Count 5206450909 Avg time (cycles) : 201
-FLUID_INSTR_FUNCS='Vec3::operator-=(Vec3 const&), Vec3::operator+=(Vec3 const&),Vec3::operator*(float) const, GetLengthSq, Vec3::operator-(Vec3 const&), Vec3::Vec3(float, float, float)' 
+
+# THIS IS MESSED UP! 
+FLUID_INSTR_FUNCS='"Vec3::operator-=(Vec3 const&)" "Vec3::operator+=(Vec3 const&)" "Vec3::operator*(float)" "const GetLengthSq" "Vec3::operator-(Vec3 const&)" "Vec3::Vec3(float, float, float)"' 
 # Are we interested in these functions!?? 
 
 #H264
@@ -63,7 +65,7 @@ FLUID_INSTR_FUNCS='Vec3::operator-=(Vec3 const&), Vec3::operator+=(Vec3 const&),
 # UMVLine16Y_11 Count 66437600 Avg time (cycles) : 103
 # FastLine16Y_11 Count 269932720 Avg time (cycles) : 64
 # FastPelY_14 Count 543503824 Avg time (cycles) : 73
-H264_INSTR_FUNCS='PutPel_14, SATD, UMVPelY, UMVLine16Y_11, FastLine16Y_11, FastPelY_14'
+H264_INSTR_FUNCS='PutPel_14 SATD UMVPelY UMVLine16Y_11 FastLine16Y_11 FastPelY_14'
 
 #HMMER
 # Gaussrandom Count 541551 Avg time (cycles) : 486
@@ -72,7 +74,7 @@ H264_INSTR_FUNCS='PutPel_14, SATD, UMVPelY, UMVLine16Y_11, FastLine16Y_11, FastP
 # SymbolIndex Count 277243628 Avg time (cycles) : 239
 # toupper@GLIBC_2.2.5 Count 277243642 Avg time (cycles) : 65
 # sre_random Count 277975300 Avg time (cycles) : 85
-HMMER_INSTR_FUNCS='Gaussrandom, sre_malloc, FCHoose, SymbolIndex, toupper, sre_random'
+HMMER_INSTR_FUNCS='Gaussrandom sre_malloc FCHoose SymbolIndex toupper sre_random'
 
 #LBM 
 # LBM_initializeGrid Count 2 Avg time (cycles) : 247744886
@@ -100,7 +102,7 @@ NBODY_INSTR_FUNCS='forceTo, _vect3d<double>::operator*(double), _vect3d<double>:
 # S_regtry Count 289733260 Avg time (cycles) : 878
 # Perl_sv_free Count 350561497 Avg time (cycles) : 497
 # S_regmatch Count 522266916 Avg time (cycles) : 194
-PERL_INSTR_FUNCS='Perl_sv_grow, Perl_sv_clear, Perl_sv_upgrade, S_regtry, Perl_sv_free, S_regmatch'
+PERL_INSTR_FUNCS='Perl_sv_grow Perl_sv_clear Perl_sv_upgrade S_regtry Perl_sv_free S_regmatch'
 
 #SJENG
 # remove_one Count 8008480 Avg time (cycles) : 240
