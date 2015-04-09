@@ -181,7 +181,7 @@ function build_it {
 function run_it { 
     BENCH=$1
     ROUND=$2 
-    FUNC=$4
+    FUNC=$3
 
     (cd $BENCHROOT/$BENCH/ubiprof; make run) 
     # will not work for the parallel benches!! 
@@ -210,12 +210,8 @@ function run_it_par {
 
 
 #ubiprof parameters 
-#export PROFILER_TYPE=SAMPLING 
 export PROFILER_TYPE=FIXED_BACKOFF
 export SAMPLE_SIZE=200000000000
-
-
-
 
 for func in $H264_INSTR_FUNCS ; do 
     set_profiled_func H264_FUNCS $func
