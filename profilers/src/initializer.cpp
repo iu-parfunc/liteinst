@@ -514,12 +514,15 @@ __attribute__((constructor, no_instrument_function))
       } else if (!strcmp(profiler_type_str, "ADAPTIVE")) {
         fprintf(stderr, "[Ubiprof] Intializing the Sampling Profiler..\n");
         g_profiler_type = ADAPTIVE;
+      } else if (!strcmp(profiler_type_str, "MINIMAL_ADAPTIVE")) {
+        fprintf(stderr, "[Ubiprof] Intializing the Minimal Adaptive Profiler..\n");
+        g_profiler_type = MINIMAL_ADAPTIVE;
       } else {
-        fprintf(stderr, "[Ubiprof] Intializing the Adaptive Profiler..\n");
+        fprintf(stderr, "154 [Ubiprof] Intializing the Adaptive Profiler..\n");
         g_profiler_type = ADAPTIVE;
       }
     } else {
-      fprintf(stderr, "[Ubiprof] Intializing the Adaptive Profiler..\n");
+      fprintf(stderr, "423 [Ubiprof] Intializing the Adaptive Profiler..\n");
       g_profiler_type = ADAPTIVE;
     }
 

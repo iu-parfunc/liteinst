@@ -62,7 +62,7 @@ class AdaptiveProfiler : public Profiler, public Monitorable {
 
     AdaptiveProfilerStat* statistics; 
 
-  private:
+  protected:
     TLStatistics** tls_stats;
     int thread_counter = 0; // Number of threads running
     uint64_t sample_size = 1000; // Size of one sample
@@ -70,5 +70,19 @@ class AdaptiveProfiler : public Profiler, public Monitorable {
     double target_overhead = 5; // Target profiling overhead cap
 
 };
+
+class MinimalAdaptiveProfiler : public AdaptiveProfiler {
+
+  public:
+    void initialize();
+    // void spawnMonitor();
+    void dumpStatistics();
+    // void registerThreadStatistics(TLStatistics* stats);
+    // int getThreadCount();
+    // TLStatistics** getThreadStatistics();
+    virtual ~MinimalAdaptiveProfiler();
+
+};
+
 
 #endif /* _ADAPTIVE_PROFILER_HPP_ */

@@ -11,4 +11,5 @@
 #define SAMPLING 1
 #define EMPTY 2
 #define ADAPTIVE 3
+#define MINIMAL_ADAPTIVE 4
 
