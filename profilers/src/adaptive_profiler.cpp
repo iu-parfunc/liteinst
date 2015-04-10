@@ -476,8 +476,10 @@ void AdaptiveProfiler::initialize() {
 	    g_strategy = SLOW_RAMP_UP;
     } else if (!strcmp(adaptive_strategy_str, "PROPOTIONAL")) {
       g_strategy = PROPOTIONAL;
-    } else {
+    } else if (!strcmp(adaptive_strategy_str, "EPOCH_CONTROL")) {
       g_strategy = EPOCH_CONTROL;
+    } else {
+      g_strategy = SLOW_RAMP_UP;
     } 
   } 
 
