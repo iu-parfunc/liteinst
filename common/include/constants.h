@@ -12,4 +12,6 @@
 #define EMPTY 2
 #define ADAPTIVE 3
 #define MINIMAL_ADAPTIVE 4
+#define MINIMAL_BACKOFF 5
+#define MINIMAL_SAMPLING 6
 
