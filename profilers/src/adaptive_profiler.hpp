@@ -75,11 +75,7 @@ class MinimalAdaptiveProfiler : public AdaptiveProfiler {
 
   public:
     void initialize();
-    // void spawnMonitor();
     void dumpStatistics();
-    // void registerThreadStatistics(TLStatistics* stats);
-    // int getThreadCount();
-    // TLStatistics** getThreadStatistics();
     virtual ~MinimalAdaptiveProfiler();
 
 };

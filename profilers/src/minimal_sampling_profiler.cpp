@@ -103,36 +103,6 @@ TLStatistics* minimalSamplingEpilogFunction(uint16_t func_id) {
 
 }
 
-/*
-// Probe monitor
-void* samplingProbeMonitor(void* param) {
-
-  SamplingProfilerStat* g_stats = (SamplingProfilerStat*) g_ubiprof_stats;
-  int func_count = INSTRUMENTOR_INSTANCE->getFunctionCount();
-
-  struct timespec ts;
-  while(true) {
-    for(int i = 0; i < func_count; i++) {
-      if (!g_stats[i].active) {
-        g_stats[i].sample_size = sp_sample_size;
-        PROFILER_INSTANCE->activateFunction(&i);
-        g_stats[i].active = true;
-      } else {
-        __sync_bool_compare_and_swap(&g_stats[i].sample_size, g_stats[i].sample_size, sp_sample_size); // Atomically set the value
-      }
-    } 
-
-    uint64_t nanos = sp_epoch_period * 1000000; 
-    uint64_t secs = nanos / 1000000000;
-    uint64_t nsecs = nanos % 1000000000;
-    ts.tv_sec = secs;
-    ts.tv_nsec = nsecs;
-    nanosleep(&ts, NULL);
-
-  }
-}
-*/
-
 // Profiler implementation 
 void MinimalSamplingProfiler::initialize() {
 
@@ -188,44 +158,6 @@ void MinimalSamplingProfiler::initialize() {
   spawnMonitor();
 
 }
-
-/*
-void SamplingProfiler::spawnMonitor() {
-
-  pthread_create(&g_monitor_thread, NULL, samplingProbeMonitor, (void*)NULL);
-
-}
-*/
-
-/*
-void SamplingProfiler::registerThreadStatistics(TLStatistics* stats) {
-  // while(__sync_bool_compare_and_swap(&g_thread_lock, 0 , 1)); // Acquire lock
-
-  if (thread_counter+ 1 < 64) {
-    tls_stats[thread_counter++] = stats;
-  } else {
-    fprintf(stderr, "[Sampling Profiler] Max thread count exceeded. This thread will not be profiled..\n");
-  }
-
-  // __sync_bool_compare_and_swap(&g_thread_lock, 1 , 0); // Release lock
-
-}
-
-int SamplingProfiler::getThreadCount() {
-  return thread_counter;
-}
-
-TLStatistics** SamplingProfiler::getThreadStatistics() {
-  return tls_stats;
-}
-*/
-
-/*
-void printM(FuncIDMappings* func_id_mappings) {
- for (std::map<uint16_t,FunctionInfo*>::iterator it=func_id_mappings->begin(); it!=func_id_mappings->end(); ++it)
-      std::cout << it->first << " => " << it->second->func_name << '\n'; 
-}
-*/
 
 void MinimalSamplingProfiler::dumpStatistics() {
 

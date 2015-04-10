@@ -21,7 +21,6 @@ static __thread TLSBackoffProfilerStat* current_thread_func_stats_table;
 // Instrumentation Functions
 TLStatistics* backoffPrologFunction(uint16_t func_id) {
 
-  // ticks prolog_start = getticks();
   static __thread bool allocated;
 
   if (!allocated) {

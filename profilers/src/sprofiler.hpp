@@ -65,7 +65,6 @@ class SamplingProfiler : public Profiler, public Monitorable {
     int thread_counter = 0; // Number of threads running
     uint64_t sample_size = 10000; // Size of one sample
     uint64_t epoch_period = 100; // Monitor thread sleep period between checks in milliseconds
-    // uint64_t target_overhead = 5; // Target profiling overhead cap
 
 };
 
@@ -73,23 +72,8 @@ class MinimalSamplingProfiler : public SamplingProfiler {
 
   public:
     void initialize();
-    // void spawnMonitor();
     void dumpStatistics();
-    // void registerThreadStatistics(TLStatistics* stats);
-    // int getThreadCount();
-    // TLStatistics** getThreadStatistics();
     virtual ~MinimalSamplingProfiler();
-
-    // SamplingProfilerStat* statistics; 
-
-    /*
-  private:
-    TLStatistics** tls_stats;
-    int thread_counter = 0; // Number of threads running
-    uint64_t sample_size = 10000; // Size of one sample
-    uint64_t epoch_period = 100; // Monitor thread sleep period between checks in milliseconds
-    uint64_t target_overhead = 5; // Target profiling overhead cap
-    */
 
 };
 

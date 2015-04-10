@@ -124,27 +124,6 @@ void MinimalBackoffProfiler::initialize() {
 
 }
 
-/*
-int BackoffProfiler::registerThreadStatistics(TLStatistics* stats) {
-
-  if (thread_counter + 1 < 64) {
-    tls_stats[thread_counter++] = stats;
-    return thread_counter;
-  } else {
-    fprintf(stderr, "[Backoff Profiler] Max thread count exceeded. This thread will not be profiled..\n");
-    return -1;
-  }
-}
-
-int BackoffProfiler::getThreadCount() {
-  return thread_counter;
-}
-
-TLStatistics** BackoffProfiler::getThreadStatistics() {
-  return tls_stats;
-}
-*/
-
 void MinimalBackoffProfiler::dumpStatistics() {
 
   FILE* fp = fopen("prof.out", "a");
