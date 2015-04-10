@@ -204,6 +204,13 @@ function build_it {
     (cd $BENCHROOT/$BENCH/ubiprof;EXCLUDED_FUNCTION_LIST=$INSTR$EXCLUDED_LIST make build)        
 }
 
+function build_it_regular { 
+    BENCH=$1
+    echo "BUILDING:"$BENCH
+    
+    (cd $BENCHROOT/$BENCH/ubiprof;make build)        
+}
+
 function run_it { 
     BENCH=$1
     ROUND=$2 
@@ -234,6 +241,8 @@ function run_it_par {
     mv $BENCHROOT/$BENCH/$EXECDIR/statistics.out $DATADIR/stat-$HOSTNAME-$BENCH-$ROUND-$FUNC.out
 }
 
+# ground truth runs
+# -------------------
 
 #ubiprof parameters 
 export PROFILER_TYPE=FIXED_BACKOFF
@@ -325,4 +334,135 @@ for func in $NBODY_INSTR_FUNCS ; do
 	run_it_par nbody BarnesHut $round $func    
     done 
 done 
+
+
+: << 'EOF'
+#adaptive runs
+# --------------
+
+function run_it_adaptive { 
+    BENCH=$1
+    ROUND=$2 
+    TARGOH=$3
+
+    (cd $BENCHROOT/$BENCH/ubiprof; make run) 
+    # will not work for the parallel benches!! 
+    # that use a different directory structure (My bad idea) 
+    #mv $BENCHROOT/$BENCH/instrumented/overhead.out $DATADIR/$HOSTNAME-$BENCH-$ROUND-$TARGOH.out
+    mv $BENCHROOT/$BENCH/instrumented/prof.out $DATADIR/adaptive-prof-$HOSTNAME-$BENCH-$ROUND-$TARGOH.out
+    mv $BENCHROOT/$BENCH/instrumented/statistics.out $DATADIR/adaptive-stat-$HOSTNAME-$BENCH-$ROUND-$TARGOH.out
+}
+
+function run_it_par_adaptive { 
+    BENCH=$1
+    EXECDIR=$2
+    ROUND=$3
+    TARGOH=$4
+    for retry in 1 2 3 4 5; do 
+	(cd $BENCHROOT/$BENCH/ubiprof; make run)
+	if [ $? = 0 ] ; then break 
+	else 
+	    (cd $BENCHROOT/$BENCH/$EXECDIR; rm overhead.out) 
+	fi 
+    done 
+    #mv $BENCHROOT/$BENCH/$EXECDIR/overhead.out $DATADIR/$HOSTNAME-$BENCH-$ROUND-$TARGOH.out
+    mv $BENCHROOT/$BENCH/$EXECDIR/prof.out $DATADIR/adaptive-prof-$HOSTNAME-$BENCH-$ROUND-$TARGOH.out
+    mv $BENCHROOT/$BENCH/$EXECDIR/statistics.out $DATADIR/adaptive-stat-$HOSTNAME-$BENCH-$ROUND-$TARGOH.out
+}
+
+#ubiprof parameters 
+export PROFILER_TYPE=MINIMAL_ADAPTIVE
+
+build_it_regular h264ref-9.3 ;
+for overhead in 3 5 10 ; do 
+    for round in 1 2 3 ; do 
+	run_it_adaptive h264ref-9.3 $round $overhead    
+    done 
+done
+
+EOF
+
+: << 'EOF'
+#sampling runs
+#--------------
+
+function run_it_sampling { 
+    BENCH=$1
+    ROUND=$2 
+
+    (cd $BENCHROOT/$BENCH/ubiprof; make run) 
+    # will not work for the parallel benches!! 
+    # that use a different directory structure (My bad idea) 
+    #mv $BENCHROOT/$BENCH/instrumented/overhead.out $DATADIR/$HOSTNAME-$BENCH-$ROUND.out
+    mv $BENCHROOT/$BENCH/instrumented/prof.out $DATADIR/sampling-prof-$HOSTNAME-$BENCH-$ROUND.out
+    mv $BENCHROOT/$BENCH/instrumented/statistics.out $DATADIR/sampling-stat-$HOSTNAME-$BENCH-$ROUND.out
+}
+
+function run_it_par_sampling { 
+    BENCH=$1
+    EXECDIR=$2
+    ROUND=$3
+    for retry in 1 2 3 4 5; do 
+	(cd $BENCHROOT/$BENCH/ubiprof; make run)
+	if [ $? = 0 ] ; then break 
+	else 
+	    (cd $BENCHROOT/$BENCH/$EXECDIR; rm overhead.out) 
+	fi 
+    done 
+    #mv $BENCHROOT/$BENCH/$EXECDIR/overhead.out $DATADIR/$HOSTNAME-$BENCH-$ROUND.out
+    mv $BENCHROOT/$BENCH/$EXECDIR/prof.out $DATADIR/sampling-prof-$HOSTNAME-$BENCH-$ROUND.out
+    mv $BENCHROOT/$BENCH/$EXECDIR/statistics.out $DATADIR/sampling-stat-$HOSTNAME-$BENCH-$ROUND.out
+}
+
+#ubiprof parameters 
+export PROFILER_TYPE=MINIMAL_SAMPLING
+
+build_it_regular h264ref-9.3 ;
+for round in 1 2 3 ; do 
+	run_it_sampling h264ref-9.3 $round 
+done 
+
+EOF
+
+: << 'EOF'
+#backoff runs
+#--------------
+
+function run_it_backoff { 
+    BENCH=$1
+    ROUND=$2 
+
+    (cd $BENCHROOT/$BENCH/ubiprof; make run) 
+    # will not work for the parallel benches!! 
+    # that use a different directory structure (My bad idea) 
+    #mv $BENCHROOT/$BENCH/instrumented/overhead.out $DATADIR/$HOSTNAME-$BENCH-$ROUND.out
+    mv $BENCHROOT/$BENCH/instrumented/prof.out $DATADIR/backoff-prof-$HOSTNAME-$BENCH-$ROUND.out
+    mv $BENCHROOT/$BENCH/instrumented/statistics.out $DATADIR/backoff-stat-$HOSTNAME-$BENCH-$ROUND.out
+}
+
+function run_it_par_sampling { 
+    BENCH=$1
+    EXECDIR=$2
+    ROUND=$3
+    for retry in 1 2 3 4 5; do 
+	(cd $BENCHROOT/$BENCH/ubiprof; make run)
+	if [ $? = 0 ] ; then break 
+	else 
+	    (cd $BENCHROOT/$BENCH/$EXECDIR; rm overhead.out) 
+	fi 
+    done 
+    #mv $BENCHROOT/$BENCH/$EXECDIR/overhead.out $DATADIR/$HOSTNAME-$BENCH-$ROUND.out
+    mv $BENCHROOT/$BENCH/$EXECDIR/prof.out $DATADIR/backoff-prof-$HOSTNAME-$BENCH-$ROUND.out
+    mv $BENCHROOT/$BENCH/$EXECDIR/statistics.out $DATADIR/backoff-stat-$HOSTNAME-$BENCH-$ROUND.out
+}
+
+#ubiprof parameters 
+export PROFILER_TYPE=MINIMAL_BACKOFF
+
+build_it_regular h264ref-9.3 ;
+for round in 1 2 3 ; do 
+	run_it_backoff h264ref-9.3 $round 
+done 
+
+EOF
 
