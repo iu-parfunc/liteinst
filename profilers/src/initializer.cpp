@@ -520,6 +520,9 @@ __attribute__((constructor, no_instrument_function))
       } else if (!strcmp(profiler_type_str, "MINIMAL_BACKOFF")) {
         fprintf(stderr, "[Ubiprof] Intializing the Minimal Backoff Profiler..\n");
         g_profiler_type = MINIMAL_BACKOFF;
+      } else if (!strcmp(profiler_type_str, "MINIMAL_SAMPLING")) {
+        fprintf(stderr, "[Ubiprof] Intializing the Minimal Sampling Profiler..\n");
+        g_profiler_type = MINIMAL_SAMPLING;
       } else {
         fprintf(stderr, "[Ubiprof] Intializing the Minimal Adaptive Profiler..\n");
         g_profiler_type = MINIMAL_ADAPTIVE;

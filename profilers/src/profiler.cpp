@@ -39,7 +39,11 @@ Profiler* Profiler::getInstance(int type) {
     } else if (type == MINIMAL_BACKOFF) {
       PROFILER_INSTANCE = new MinimalBackoffProfiler();
       PROFILER_INSTANCE->initialize();
+    } else if (type == MINIMAL_SAMPLING) {
+      PROFILER_INSTANCE = new MinimalSamplingProfiler();
+      PROFILER_INSTANCE->initialize();
     }
+
   }
 
   return PROFILER_INSTANCE;

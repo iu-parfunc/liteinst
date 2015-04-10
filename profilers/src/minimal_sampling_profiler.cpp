@@ -24,7 +24,7 @@ static __thread TLStatistics* current_thread_stats;
 static __thread TLSSamplingProfilerStat* current_thread_func_stats_table;
 
 // Instrumentation Functions
-TLStatistics* samplingPrologFunction(uint16_t func_id) {
+TLStatistics* minimalSamplingPrologFunction(uint16_t func_id) {
 
   static __thread bool allocated;
 
@@ -38,11 +38,6 @@ TLStatistics* samplingPrologFunction(uint16_t func_id) {
     current_thread_stats->thread_local_overhead = 0;
     current_thread_stats->thread_local_count = 0;
 
-    for (int i=0; i < function_count; i++) {
-      current_thread_func_stats_table[i].is_leaf = true;
-      current_thread_func_stats_table[i].stack_depth = 0;
-    }
-
     ((SamplingProfiler*)PROFILER_INSTANCE)->registerThreadStatistics(current_thread_stats);
     all_thread_stats = ((SamplingProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
   }
@@ -50,35 +45,15 @@ TLStatistics* samplingPrologFunction(uint16_t func_id) {
   SamplingProfilerStat* global_func_stats = &((SamplingProfilerStat*) g_ubiprof_stats)[func_id];
   TLSSamplingProfilerStat* local_func_stats = &current_thread_func_stats_table[func_id];
 
-  uint32_t stack_depth = local_func_stats->stack_depth;
-  if (local_func_stats->stack_depth > 0 && 
-      local_func_stats->invocation_stack[stack_depth-1].timestamp < global_func_stats->latest_activation_time) {
-    local_func_stats->stack_depth = 0;
-    local_func_stats->ignore_count = 0;
-  } 
-
-  // Limit stack depth of each per each function stack
-  if (stack_depth < 20) {
-    local_func_stats->invocation_stack[stack_depth].func_id = func_id;
-    local_func_stats->invocation_stack[stack_depth].prolog_leaf_count = prolog_leaf_counter;
-    local_func_stats->invocation_stack[stack_depth].epilog_leaf_count = epilog_leaf_counter;
-    local_func_stats->invocation_stack[stack_depth].timestamp = getticks();
-    local_func_stats->stack_depth++;
-  } else {
-    local_func_stats->ignore_count++; // Ignores this sample since stack limit exceeded
-  }
-
-  if (!global_func_stats->active) {
-    local_func_stats->stack_depth = 0;
-    local_func_stats->ignore_count = 0;
-  }
+  local_func_stats->invocation_stack[0].func_id = func_id;
+  local_func_stats->invocation_stack[0].timestamp = getticks();
 
   current_thread_stats->thread_local_count++;
   return current_thread_stats;
 
 }
 
-TLStatistics* samplingEpilogFunction(uint16_t func_id) {
+TLStatistics* minimalSamplingEpilogFunction(uint16_t func_id) {
 
   ticks epilog_start = getticks();
 
@@ -86,45 +61,8 @@ TLStatistics* samplingEpilogFunction(uint16_t func_id) {
   TLSSamplingProfilerStat* local_func_stats = &current_thread_func_stats_table[func_id];
 
   int thread_count = ((SamplingProfiler*)PROFILER_INSTANCE)->getThreadCount(); 
-  uint32_t stack_depth = local_func_stats->stack_depth;
 
-  if (local_func_stats->stack_depth == 0) {
-    return current_thread_stats;
-  }
-
-  InvocationData i_data = local_func_stats->invocation_stack[stack_depth-1];
-  if (i_data.timestamp < global_func_stats->latest_activation_time) {
-    local_func_stats->stack_depth = 0;
-    local_func_stats->ignore_count = 0;
-    return current_thread_stats;
-  }
-
-  if (stack_depth >= 20 && local_func_stats->ignore_count > 0) {
-    local_func_stats->ignore_count--;
-    local_func_stats->limited_count++;
-    local_func_stats->count++;
-
-    current_thread_stats->thread_local_count++;
-    return current_thread_stats;
-  }
-
-  uint64_t prolog_leaf_count_diff = prolog_leaf_counter - i_data.prolog_leaf_count;
-  uint64_t epilog_leaf_count_diff = epilog_leaf_counter - i_data.epilog_leaf_count;
-
-  uint64_t leaf_count_diff = 0;
-  if (prolog_leaf_count_diff > 0) {
-    leaf_count_diff += prolog_leaf_count_diff;
-  }
-
-  if (epilog_leaf_count_diff > 0) {
-    leaf_count_diff += epilog_leaf_count_diff;
-  }
-
-  epilog_leaf_counter++;
-
-  if (leaf_count_diff > 0) {
-    local_func_stats->is_leaf = false;
-  }
+  InvocationData i_data = local_func_stats->invocation_stack[0];
 
   local_func_stats->count++;
 
@@ -160,18 +98,12 @@ TLStatistics* samplingEpilogFunction(uint16_t func_id) {
     }
   }
 
-  if (!global_func_stats->active) {
-    local_func_stats->stack_depth = 0;
-    local_func_stats->ignore_count = 0;
-  } else {
-    local_func_stats->stack_depth--;
-  }
-
   current_thread_stats->thread_local_count++;
   return current_thread_stats;
 
 }
 
+/*
 // Probe monitor
 void* samplingProbeMonitor(void* param) {
 
@@ -199,11 +131,12 @@ void* samplingProbeMonitor(void* param) {
 
   }
 }
+*/
 
 // Profiler implementation 
-void SamplingProfiler::initialize() {
+void MinimalSamplingProfiler::initialize() {
 
-  Profiler::initInstrumentor(samplingPrologFunction, samplingEpilogFunction);
+  Profiler::initInstrumentor(minimalSamplingPrologFunction, minimalSamplingEpilogFunction);
 
 #if OVERHEAD_TIME_SERIES
   overhead_time_series = new list<string>();
@@ -249,19 +182,22 @@ void SamplingProfiler::initialize() {
     sp_epoch_period = epoch_period;
   }
 
-  fprintf(stderr, "[Sampling Profiler] **** Parameters : Sample size => %lu Epoch period => %.2lf \n", 
+  fprintf(stderr, "[Minimal Sampling Profiler] **** Parameters : Sample size => %lu Epoch period => %.2lf \n", 
       sp_sample_size, sp_epoch_period); 
 
   spawnMonitor();
 
 }
 
+/*
 void SamplingProfiler::spawnMonitor() {
 
   pthread_create(&g_monitor_thread, NULL, samplingProbeMonitor, (void*)NULL);
 
 }
+*/
 
+/*
 void SamplingProfiler::registerThreadStatistics(TLStatistics* stats) {
   // while(__sync_bool_compare_and_swap(&g_thread_lock, 0 , 1)); // Acquire lock
 
@@ -282,6 +218,7 @@ int SamplingProfiler::getThreadCount() {
 TLStatistics** SamplingProfiler::getThreadStatistics() {
   return tls_stats;
 }
+*/
 
 /*
 void printM(FuncIDMappings* func_id_mappings) {
@@ -290,17 +227,17 @@ void printM(FuncIDMappings* func_id_mappings) {
 }
 */
 
-void SamplingProfiler::dumpStatistics() {
+void MinimalSamplingProfiler::dumpStatistics() {
 
-  fprintf(stderr, "[Sampling Profier] Flushing statistics to disk..\n");
+  fprintf(stderr, "[Minimal Sampling Profier] Flushing statistics to disk..\n");
 
   FILE* fp = fopen("prof.out", "a");
 
   uint64_t total_count = 0;
   int func_count = ins->getFunctionCount();
   fprintf(stderr, "[finstrumentor] Total function count : %d\n", func_count);
-  fprintf(stderr, "[Sampling Profiler] Thread count : %d\n", thread_counter);
-  fprintf(fp, "Function,Count,Min_time,Max_time,Avg_time,Deactivation_count,Leaf?\n");
+  fprintf(stderr, "[Minimal Sampling Profiler] Thread count : %d\n", thread_counter);
+  fprintf(fp, "Function,Count,Min_time,Max_time,Avg_time,Deactivation_count\n");
   for(int i=0; i < func_count; i++) {
     statistics[i].count = 0;
     statistics[i].total_time = 0;
@@ -323,10 +260,6 @@ void SamplingProfiler::dumpStatistics() {
       if (cur_max < tls_func_stat[i].max_time) {
         cur_max = tls_func_stat[i].max_time;
       }
-
-      if (!tls_func_stat[i].is_leaf) {
-        statistics[i].is_leaf = false;
-      }
     }
 
     total_count += statistics[i].count;
@@ -334,15 +267,15 @@ void SamplingProfiler::dumpStatistics() {
     statistics[i].max_time = cur_max;
     
     if (statistics[i].count != 0) {
-      fprintf(fp, "%s,%lu,%lu,%lu,%ld,%d,%d\n",  
+      fprintf(fp, "%s,%lu,%lu,%lu,%ld,%d\n",  
           ins->getFunctionName(i).c_str(),  statistics[i].count,
           statistics[i].min_time, statistics[i].max_time, 
           statistics[i].total_time / (statistics[i].count - statistics[i].limited_count), 
-          statistics[i].deactivation_count, statistics[i].is_leaf); 
+          statistics[i].deactivation_count); 
     }
   }
 
-  fprintf(stderr, "\n[Sampling Profiler] NUMBER_OF_FUNCTION_CALLS: %lu\n", total_count);
+  fprintf(stderr, "\n[Minimal Sampling Profiler] NUMBER_OF_FUNCTION_CALLS: %lu\n", total_count);
 
   fclose(fp);
 
@@ -366,23 +299,6 @@ void SamplingProfiler::dumpStatistics() {
 
 }
 
-SamplingProfiler::~SamplingProfiler() {
-  dumpStatistics();
-
-  TLStatistics** tls_stat = ((SamplingProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
-  int thread_count = ((SamplingProfiler*)PROFILER_INSTANCE)->getThreadCount(); 
-
-  for (int i=0; i < thread_count; i++) {
-    g_probe_overheads += tls_stat[i]->thread_local_overhead; 
-    g_probe_count += tls_stat[i]->thread_local_count;
-  }
-  Profiler::cleanupInstrumentor();
-  delete (SamplingProfilerStat*)g_ubiprof_stats;
-
-  for (int i = 0; i < 64; i++) {
-    delete tls_stats[i];
-  }
-
-  delete tls_stats;
+MinimalSamplingProfiler::~MinimalSamplingProfiler() {
 
 }
