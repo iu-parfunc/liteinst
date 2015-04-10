@@ -517,13 +517,16 @@ __attribute__((constructor, no_instrument_function))
       } else if (!strcmp(profiler_type_str, "MINIMAL_ADAPTIVE")) {
         fprintf(stderr, "[Ubiprof] Intializing the Minimal Adaptive Profiler..\n");
         g_profiler_type = MINIMAL_ADAPTIVE;
+      } else if (!strcmp(profiler_type_str, "MINIMAL_BACKOFF")) {
+        fprintf(stderr, "[Ubiprof] Intializing the Minimal Backoff Profiler..\n");
+        g_profiler_type = MINIMAL_BACKOFF;
       } else {
-        fprintf(stderr, "154 [Ubiprof] Intializing the Adaptive Profiler..\n");
-        g_profiler_type = ADAPTIVE;
+        fprintf(stderr, "[Ubiprof] Intializing the Minimal Adaptive Profiler..\n");
+        g_profiler_type = MINIMAL_ADAPTIVE;
       }
     } else {
-      fprintf(stderr, "423 [Ubiprof] Intializing the Adaptive Profiler..\n");
-      g_profiler_type = ADAPTIVE;
+      fprintf(stderr, "[Ubiprof] Intializing the Minimal Adaptive Profiler..\n");
+      g_profiler_type = MINIMAL_ADAPTIVE;
     }
 
     // Init the suitable profiler depending on enviornment variable

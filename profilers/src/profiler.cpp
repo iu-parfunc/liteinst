@@ -36,6 +36,9 @@ Profiler* Profiler::getInstance(int type) {
     } else if (type == MINIMAL_ADAPTIVE) {
       PROFILER_INSTANCE = new MinimalAdaptiveProfiler();
       PROFILER_INSTANCE->initialize();
+    } else if (type == MINIMAL_BACKOFF) {
+      PROFILER_INSTANCE = new MinimalBackoffProfiler();
+      PROFILER_INSTANCE->initialize();
     }
   }
 

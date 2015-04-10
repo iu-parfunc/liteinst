@@ -50,11 +50,32 @@ class BackoffProfiler : public Profiler {
 
     BackoffProfilerStat* statistics; 
 
+  protected:
+    TLStatistics** tls_stats;
+    // TLSBackoffProfilerStat** tls_stats;
+    int thread_counter = 0; // Number of threads running
+    uint64_t sample_size = 10000; // Size of one sample
+};
+
+class MinimalBackoffProfiler : public BackoffProfiler {
+
+  public:
+    void initialize();
+    void dumpStatistics();
+    // int registerThreadStatistics(TLStatistics* tls_stat);
+    // int getThreadCount();
+    // TLStatistics** getThreadStatistics();
+    virtual ~MinimalBackoffProfiler();
+
+    // MinimalBackoffProfilerStat* statistics; 
+
+    /*
   private:
     TLStatistics** tls_stats;
     // TLSBackoffProfilerStat** tls_stats;
     int thread_counter = 0; // Number of threads running
     uint64_t sample_size = 10000; // Size of one sample
+    */
 };
 
 #endif /* _FPROFILER_HPP_ */
