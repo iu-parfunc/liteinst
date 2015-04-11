@@ -83,7 +83,8 @@ echo $PATH
 # cd $rootdir
 
 # (1) Piggy-back on teh standard regression tests to do the build:
-./.jenkins_script.sh
+#This should get the rest of the params, right ??? 
+./.jenkins_script.sh 
 
 # (2) Then benchmark:
 export DYN_OUTPUT_TYPE=CSV
