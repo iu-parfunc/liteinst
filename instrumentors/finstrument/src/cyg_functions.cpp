@@ -260,7 +260,8 @@ inline uint8_t* patch_first_parameter(uint64_t* call_return_addr, uint64_t* star
   // Address where EDI/RDI is set last before the call
   uint8_t* edi_set_addr = 0;
 
-  _DInst result[2*offset];
+  // _DInst result[2*offset];
+  _DInst* result = (_DInst*) malloc(sizeof(_DInst) * 2 * offset);
   unsigned int instructions_count = 0;
 
   _DecodedInst inst;
@@ -278,6 +279,7 @@ inline uint8_t* patch_first_parameter(uint64_t* call_return_addr, uint64_t* star
 
   if (instructions_count > offset) {
     fprintf(stderr, "[DEBUG] Instructions decoded : %d Offset : %lu\n", instructions_count, offset);
+    free(result);
     return 0 ;
   }
 
@@ -285,6 +287,7 @@ inline uint8_t* patch_first_parameter(uint64_t* call_return_addr, uint64_t* star
   for (int i = instructions_count - 1; i >= 0; i--) {
     if (result[i].flags == FLAG_NOT_DECODABLE) {
       printf("Bad decode attempt.. Call address : %p \n", call_addr);
+      free(result);
       return 0;
     }
 
@@ -317,6 +320,8 @@ inline uint8_t* patch_first_parameter(uint64_t* call_return_addr, uint64_t* star
   edi_set_addr = call_addr - edi_offset;
 
   bool status = patch_with_value(edi_set_addr, func_id);
+ 
+  free(result);
 
   if (!status) {
     return 0;

@@ -172,9 +172,21 @@ TLStatistics* adaptiveEpilogFunction(uint16_t func_id) {
 
 }
 
+void sleep_for_a_while() {
+  if (sp_epoch_period != 0) {
+    struct timespec ts;
+    uint64_t nanos = sp_epoch_period * 1000000; 
+    uint64_t secs = nanos / 1000000000;
+    uint64_t nsecs = nanos % 1000000000;
+    ts.tv_sec = secs;
+    ts.tv_nsec = nsecs;
+    nanosleep(&ts, NULL);
+  }
+}
+
 // Probe monitor
 void* adaptiveProbeMonitor(void* param) {
-
+ 
   if (g_shutting_down_flag == TERMINATE_REQUESTED) {
     g_shutting_down_flag = TERMINATED; // Signals the destructor thread that this thread is done executing
     return NULL;
@@ -183,6 +195,11 @@ void* adaptiveProbeMonitor(void* param) {
   AdaptiveProfilerStat* global_stats = (AdaptiveProfilerStat*) g_ubiprof_stats;
 
   while(true) {
+
+    if (!g_ubiprof_initialized) {
+      sleep_for_a_while();
+      continue;
+    }
 
     if (g_shutting_down_flag == TERMINATE_REQUESTED) {
       g_shutting_down_flag = TERMINATED; // Signals the destructor thread that this thread is done executing
@@ -225,7 +242,7 @@ void* adaptiveProbeMonitor(void* param) {
     if (g_total_process_time > g_total_overhead) {
       g_total_process_time -= g_total_overhead;
     } else {
-      fprintf(stderr, "[DEBUG] Boo \n");
+      // fprintf(stderr, "[DEBUG] Boo \n");
     }
 
     uint64_t overhead_delta = g_total_overhead - tmp_total_overhead;
@@ -258,7 +275,9 @@ void* adaptiveProbeMonitor(void* param) {
           g_skipped_epochs++;
           record_overhead_histogram(overhead_at_last_epoch, -1); // -1 signifies no new samples taken in this epoch
 #endif
-          goto sleep;
+
+          sleep_for_a_while();
+          continue;
         }
       }
 
@@ -301,7 +320,9 @@ void* adaptiveProbeMonitor(void* param) {
           g_skipped_epochs++;
           record_overhead_histogram(overhead_at_last_epoch, -1); // -1 signifies no new samples taken in this epoch
 #endif
-          goto sleep;
+
+          sleep_for_a_while();
+          continue;
         }
       }
 
@@ -355,7 +376,9 @@ void* adaptiveProbeMonitor(void* param) {
           g_skipped_epochs++;
           record_overhead_histogram(overhead_at_last_epoch, -1); // -1 signifies no new samples taken in this epoch
 #endif
-          goto sleep;
+
+          sleep_for_a_while();
+          continue;
         }
       }
 
@@ -391,7 +414,7 @@ void* adaptiveProbeMonitor(void* param) {
 
     // fprintf(stderr, "New sample size : %lu\n", sp_sample_size);
       
-
+/*
 sleep:
     if (sp_epoch_period != 0) {
       uint64_t nanos = sp_epoch_period * 1000000; 
@@ -401,6 +424,7 @@ sleep:
       ts.tv_nsec = nsecs;
       nanosleep(&ts, NULL);
     }
+*/
 
   }
 }
