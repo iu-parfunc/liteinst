@@ -190,7 +190,20 @@ if [ ! -d $DATADIR ] ; then
     mkdir $DATADIR
 fi 
 
+function build_it {
+#          -finstrument-functions-exclude-function-list
+    INSTR="-finstrument-functions-exclude-function-list="
+    echo "EXPORTING EXCLUDE LIST"
 
+    export EXCLUDED_FUNCTION_LIST=$INSTR"\"$EXCLUDED_LIST\""
+    echo "$EXCLUDED_FUNCTION_LIST"
+    BENCH=$1
+    echo "BUILDING:"$BENCH
+
+    (cd $BENCHROOT/$BENCH/ubiprof;EXCLUDED_FUNCTION_LIST=$INSTR"\"$EXCLUDED_LIST\"" make build)
+}
+
+: << 'EOF'
 function build_it { 
 #          -finstrument-functions-exclude-function-list
     INSTR="-finstrument-functions-exclude-function-list="
@@ -203,6 +216,8 @@ function build_it {
     
     (cd $BENCHROOT/$BENCH/ubiprof;EXCLUDED_FUNCTION_LIST=$INSTR$EXCLUDED_LIST make build)        
 }
+
+EOF
 
 function build_it_regular { 
     BENCH=$1
@@ -247,6 +262,8 @@ function run_it_par {
 #ubiprof parameters 
 export PROFILER_TYPE=FIXED_BACKOFF
 export SAMPLE_SIZE=200000000000
+
+: << 'EOF'
 
 for func in $H264_INSTR_FUNCS ; do 
     set_profiled_func H264_FUNCS $func
@@ -297,6 +314,9 @@ for func in $BZIP_INSTR_FUNCS ; do
 done
 
 
+
+
+
     #Those parallel benchmarks need special attention! 
 
     #blackscholes 
@@ -317,6 +337,8 @@ for func in $FLUID_INSTR_FUNCS ; do
     done 
 done 
 
+EOF
+
     #hull
 for func in $HULL_INSTR_FUNCS ; do
     set_profiled_func HULL_FUNCS $func
@@ -325,6 +347,8 @@ for func in $HULL_INSTR_FUNCS ; do
 	run_it_par hull quickHull $round $func    
     done 
 done
+
+: << 'EOF'
 
     #nbody 
 for func in $NBODY_INSTR_FUNCS ; do 
@@ -336,7 +360,6 @@ for func in $NBODY_INSTR_FUNCS ; do
 done 
 
 
-: << 'EOF'
 #adaptive runs
 # --------------
 

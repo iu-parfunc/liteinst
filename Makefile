@@ -72,13 +72,12 @@ lib:
 	# (cd ./zcatoggle/src; make install; make docs)
 	# (cd ./dynaprof/src; make install)
 
-#OVERRIDING ANY DECISION ABOUT CID AND SEC (WE HAD A LOT OF OUT OF QUOTA TROUBLE!) 
+#OVERRIDING ANY DECISION ABOUT CID AND SEC (WE HAD A LOT OF OUT OF QUOTA TROUBLE!)
 #CID=925399326325-6dir7re3ik7686p6v3kkfkf1kj0ec7ck.apps.googleusercontent.com
 #SEC=MQ72ZWDde_1e1ihI5YE9YlEi
-#CID=925399326325-6dir7re3ik7686p6v3kkfkf1kj0ec7ck.apps.googleusercontent.com
-#SEC=MQ72ZWDde_1e1ihI5YE9YlEi
-CID=326662702048-pv5d76crt1jge1lbaof8ebchcqguhon0.apps.googleusercontent.com 
-SEC=TUlJo1_Cb3iazDUfdAoLtoqv
+CID=42301043663-7dnt2gj4svc3uhsiads8n2j6rqm5695n.apps.googleusercontent.com 
+SEC=Drg2w-jGSMJGe9wdthz0sVx6
+
 
 # Run the benchmarks
 bench: run-benchmarks.exe
