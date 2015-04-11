@@ -73,7 +73,6 @@ lib:
 	# (cd ./dynaprof/src; make install)
 
 #OVERRIDING ANY DECISION ABOUT CID AND SEC (WE HAD A LOT OF OUT OF QUOTA TROUBLE!)
-echo "Overriding decision about CID and SEC" 
 #CID=925399326325-6dir7re3ik7686p6v3kkfkf1kj0ec7ck.apps.googleusercontent.com
 #SEC=MQ72ZWDde_1e1ihI5YE9YlEi
 CID=42301043663-7dnt2gj4svc3uhsiads8n2j6rqm5695n.apps.googleusercontent.com 
