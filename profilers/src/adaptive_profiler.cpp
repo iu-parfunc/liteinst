@@ -586,7 +586,7 @@ void AdaptiveProfiler::dumpStatistics() {
       statistics[i].limited_count += tls_func_stat[i].limited_count;
       // statistics[i].deactivation_count += tls_func_stat[i].deactivation_count;
 
-      if (cur_min > tls_func_stat[i].min_time) {
+      if (cur_min > tls_func_stat[i].min_time && tls_func_stat[i].min_time != 0) {
         cur_min = tls_func_stat[i].min_time;
       }
 

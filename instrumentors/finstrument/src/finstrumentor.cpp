@@ -259,16 +259,19 @@ int Finstrumentor::deactivateProbe(void* probe_id, int flag) {
 
 }
 
-void tokenize(const string& str, vector<string>& tokens, const string& delimiters = " ") {
+int tokenize(const string& str, vector<string>& tokens, const string& delimiters = " ") {
   string::size_type lastPos = str.find_first_not_of(delimiters, 0);
   string::size_type pos = str.find_first_of(delimiters, lastPos);
 
+  int count = 0;
   while (string::npos != pos || string::npos != lastPos)
   {
     tokens.push_back(str.substr(lastPos, pos - lastPos));
     lastPos = str.find_first_not_of(delimiters, pos);
     pos = str.find_first_of(delimiters, lastPos);
+    count++;
   }
+  return count;
 }
 
 uint16_t Finstrumentor::getFunctionId(uint64_t func_addr) {
@@ -345,7 +348,10 @@ void Finstrumentor::readFunctionInfo() {
       istringstream iss(line);
 
       vector<string> tokens;
-      tokenize(line, tokens, ",");
+      int num_tokens = tokenize(line, tokens, ",");
+      if (num_tokens < 2) {
+        continue;
+      }
 
       FunctionInfo* func_info = new FunctionInfo;
       // func_addr = (uint64_t) std::stol(tokens[0], &sz);

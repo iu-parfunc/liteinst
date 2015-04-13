@@ -22,7 +22,7 @@ volatile uint64_t g_deactivation_count;
 uint64_t g_cache_miss_overhead_upper_bound = 0;
 uint64_t g_init_overhead;
 
-bool g_ubiprof_initialized = false;
+volatile bool g_ubiprof_initialized = false;
 
 struct timespec g_begints;
 struct timespec g_endts;
@@ -538,13 +538,14 @@ __attribute__((constructor, no_instrument_function))
     // Calibrate for cache effects
     calibrate_cache_effects();
 
+    // ticks end = getticks();
+
+    g_ubiprof_initialized = true;
+
     fprintf(stderr, "[Ubiprof] Done intializing the profiler..\n\n");
     fprintf(stderr, "[Ubiprof] Calibrated parameter values per probe\n Indirect Jump Cost : %lu  Cache miss cost : %lu\n",
                         2*g_call_overhead, g_cache_miss_overhead_upper_bound);
 
-    // ticks end = getticks();
-
-    g_ubiprof_initialized = true;
 
     struct timespec end_ts;
     clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end_ts);
