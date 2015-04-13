@@ -5,11 +5,11 @@ ARGS= -g -Wall -fpermissive
 LIBS = -lpthread
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 
-# CCC = icc
-# CC = icc $(ARGS)
-# CPP = icpc -std=c++11 $(ARGS)
-# COMP = gcc
+#CCC = icc
+#CC = icc $(ARGS)
+#CPP = icpc -std=c++11 $(ARGS)
 CCC = gcc
+COMP = gcc
 CC = gcc $(ARGS)
 CPP = g++ -std=c++0x $(ARGS)
 
@@ -43,11 +43,11 @@ INSTALL = ../../build
 .PHONY: all build install
 
 libubiprof.so: libubiprof.a 
-	$(CC) $(LIBS) -shared -Wl,-soname,libubiprof.so -o libubiprof.so $(OBJ) $(INST_OBJ) $(DEPS) -lc -lrt -lm
+	$(CC) $(LIBS) -shared -Wl,-soname,libubiprof.so -o libubiprof.so $(OBJ) $(INST_OBJ) $(DEPS) -lc -lpapi -lrt -lm
 
 noprof.so: noprof.a 
 	if [ -d libubiprof.so ]; then rm -f libubiprof.so; fi	
-	$(CC) $(LIBS) -shared -Wl,-soname,libubiprof.so -o libubiprof.so $(INST_OBJ_NO_PROF) $(DEPS) -lc -lrt -lm
+	$(CC) $(LIBS) -shared -Wl,-soname,libubiprof.so -o libubiprof.so $(INST_OBJ_NO_PROF) $(DEPS) -lc -lpapi -lrt -lm
 
 # TODO: Include lpapi.a in the static library
 libubiprof.a: build distorm
@@ -68,10 +68,10 @@ install:
 	-rm -r $(INSTALL)
 	mkdir $(INSTALL)
 	mkdir $(INSTALL)/noprof
-	make libubiprof.so
+	make libubiprof.so -f Makefile_GCC
 	cp libubiprof.so $(INSTALL) 
 	cp libubiprof.a $(INSTALL) 
-	make noprof.so
+	make noprof.so -f Makefile_GCC
 	cp libubiprof.so $(INSTALL)/noprof
 	cp libubiprof.a $(INSTALL)/noprof
 

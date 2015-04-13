@@ -1,0 +1,15 @@
+
+.phony: all lib bench
+# ----------------------------------------
+
+# TODO: build everything before running/benchmarking:
+all: lib
+# Nothing here currently.
+
+# INST_OBJS := $(patsubst %.cpp,%.o,$(wildcard ./instrumentors/finstrument/src/*.cpp))
+
+lib:
+	(cd instrumentors/finstrument/src/; make -f Makefile_GCC)
+	(cd profilers/src/; make -f Makefile_GCC install)
+	# (cd ./zcatoggle/src; make install; make docs)
+	# (cd ./dynaprof/src; make install)
