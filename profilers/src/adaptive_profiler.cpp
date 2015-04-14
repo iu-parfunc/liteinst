@@ -152,10 +152,11 @@ TLStatistics* adaptiveEpilogFunction(uint16_t func_id) {
   // Skip deactivating if that's the case
   if (new_count >= global_func_stats->sample_size && g_ubiprof_initialized) {  
     if (__sync_bool_compare_and_swap(&(global_func_stats->lock), 0 , 1)) {
-      PROFILER_INSTANCE->deactivateFunction(&func_id);
-      global_func_stats->deactivation_count++; // Store in thread local structure and we sum all TL stuff when flushing results
-      global_func_stats->count_at_last_activation = global_count;
-      global_func_stats->active = false;
+       if (PROFILER_INSTANCE->deactivateFunction(&func_id) != -1) {;
+         global_func_stats->deactivation_count++; // Store in thread local structure and we sum all TL stuff when flushing results
+         global_func_stats->count_at_last_activation = global_count;
+         global_func_stats->active = false;
+       }
       __sync_bool_compare_and_swap(&(global_func_stats->lock), 1 , 0);
     }
   }
@@ -300,8 +301,9 @@ void* adaptiveProbeMonitor(void* param) {
       for(int i = 0; i < func_count; i++) {
         if (!global_stats[i].active) {
           global_stats[i].sample_size = sp_sample_size;
-          PROFILER_INSTANCE->activateFunction(&i);
-          global_stats[i].active = true;
+          if (PROFILER_INSTANCE->activateFunction(&i) != -1) {
+            global_stats[i].active = true;
+          }
         } else { // TODO: Reset all function sample sizes
           __sync_bool_compare_and_swap(&global_stats[i].sample_size, global_stats[i].sample_size, sp_sample_size); // Atomically set the value
         }
@@ -353,8 +355,9 @@ void* adaptiveProbeMonitor(void* param) {
         // Reset all function sample sizes
         if (!global_stats[i].active) {
           global_stats[i].sample_size = sp_sample_size;
-          PROFILER_INSTANCE->activateFunction(&i);
-          global_stats[i].active = true;
+          if (PROFILER_INSTANCE->activateFunction(&i) != -1) {
+            global_stats[i].active = true;
+          }
         } else { 
           __sync_bool_compare_and_swap(&global_stats[i].sample_size, global_stats[i].sample_size, sp_sample_size); // Atomically set the value
         }
@@ -401,8 +404,9 @@ void* adaptiveProbeMonitor(void* param) {
       for(int i = 0; i < func_count; i++) {
         if (!global_stats[i].active) {
           global_stats[i].sample_size = sp_sample_size; // Sample size doesn't change
-          PROFILER_INSTANCE->activateFunction(&i);
-          global_stats[i].active = true;
+          if (PROFILER_INSTANCE->activateFunction(&i) != -1) {
+            global_stats[i].active = true;
+          }
         }      
       }
 
