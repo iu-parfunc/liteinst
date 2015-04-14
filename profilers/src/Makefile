@@ -5,13 +5,13 @@ ARGS= -g -Wall -fpermissive
 LIBS = -lpthread
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 
-# CCC = icc
-# CC = icc $(ARGS)
-# CPP = icpc -std=c++11 $(ARGS)
+CCC = icc
+CC = icc $(ARGS)
+CPP = icpc -std=c++11 $(ARGS)
 # COMP = gcc
-CCC = gcc
-CC = gcc $(ARGS)
-CPP = g++ -std=c++0x $(ARGS)
+# CCC = gcc
+# CC = gcc $(ARGS)
+# CPP = g++ -std=c++0x $(ARGS)
 
 AR = ar
 RM = rm
