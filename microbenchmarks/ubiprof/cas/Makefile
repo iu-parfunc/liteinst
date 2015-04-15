@@ -9,13 +9,15 @@ endif
 
 build:
 	$(CC) $(CFLAGS)  cas.cpp $(LDFLAGS) -o cas.exe
-	$(CC) $(CFLAGS)  toggle.c $(LDFLAGS_TOGGLE) -o toggle.exe
 
 run: build
 	readelf -s cas.exe |grep FUNC | awk -F '[[:space:]]+' '{print $$3 "," $$9}' > functions.txt
 	LD_LIBRARY_PATH=../../../build:$(LD_LIBRARY_PATH) ./cas.exe ${N}
 
-toggle: build 
+build_toggle:
+	$(CC) $(CFLAGS)  toggle.c $(LDFLAGS_TOGGLE) -o toggle.exe
+
+toggle: build_toggle
 	./toggle.exe
 
 
