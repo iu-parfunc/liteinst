@@ -15,12 +15,12 @@ run: build
 	LD_LIBRARY_PATH=../../../build:$(LD_LIBRARY_PATH) ./cas.exe ${N}
 
 build_toggle:
-	$(CC) $(CFLAGS)  toggle.c $(LDFLAGS_TOGGLE) -o toggle.exe
+	$(CC) $(CFLAGS)  toggle_1.c $(LDFLAGS_TOGGLE) -o toggle_1.exe
 
 toggle: build_toggle
-	./toggle.exe
+	./toggle_1.exe
 
 
 clean:
-	rm -f *.exe *.o *.s *.csv 40_deactivate.cpp libubiprof.so prof.out
+	rm -f *.exe *.o *.s *.csv 40_deactivate.cpp libubiprof.so prof.out core
 
