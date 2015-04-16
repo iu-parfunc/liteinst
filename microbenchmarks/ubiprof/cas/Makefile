@@ -17,8 +17,14 @@ run: build
 build_toggle:
 	$(CC) $(CFLAGS)  toggle_1.c $(LDFLAGS_TOGGLE) -o toggle_1.exe
 
+build_toggle2:
+	$(CC) $(CFLAGS)  toggle_2.c $(LDFLAGS_TOGGLE) -o toggle_2.exe
+
 toggle: build_toggle
 	./toggle_1.exe
+
+toggle2: build_toggle2
+	./toggle_1.exe	
 
 
 clean:
