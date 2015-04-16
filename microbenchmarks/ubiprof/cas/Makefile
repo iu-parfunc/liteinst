@@ -1,4 +1,5 @@
 CC = icpc
+#CC = g++
 CFLAGS =-O2 -g -finstrument-functions -fno-optimize-sibling-calls -std=c++0x 
 LDFLAGS = -L../../../build -lubiprof -lrt -lpthread
 LDFLAGS_TOGGLE = -lrt -lpthread
@@ -24,7 +25,7 @@ toggle: build_toggle
 	./toggle_1.exe
 
 toggle2: build_toggle2
-	./toggle_1.exe	
+	./toggle_2.exe	
 
 
 clean:
