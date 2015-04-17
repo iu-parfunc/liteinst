@@ -1,6 +1,7 @@
-CC = icpc
-#CC = g++
+#CC = icpc
+CC = g++
 CFLAGS =-O2 -g -finstrument-functions -fno-optimize-sibling-calls -std=c++0x 
+CFLAGS_TOGGLE =-O2 -g -fno-optimize-sibling-calls -std=c++0x 
 LDFLAGS = -L../../../build -lubiprof -lrt -lpthread
 LDFLAGS_TOGGLE = -lrt -lpthread
 
@@ -16,10 +17,10 @@ run: build
 	LD_LIBRARY_PATH=../../../build:$(LD_LIBRARY_PATH) ./cas.exe ${N}
 
 build_toggle:
-	$(CC) $(CFLAGS)  toggle_1.c $(LDFLAGS_TOGGLE) -o toggle_1.exe
+	$(CC) $(CFLAGS_TOGGLE)  toggle_1.c $(LDFLAGS_TOGGLE) -o toggle_1.exe
 
 build_toggle2:
-	$(CC) $(CFLAGS)  toggle_2.c $(LDFLAGS_TOGGLE) -o toggle_2.exe
+	$(CC) $(CFLAGS_TOGGLE)  toggle_2.c $(LDFLAGS_TOGGLE) -o toggle_2.exe
 
 toggle: build_toggle
 	./toggle_1.exe

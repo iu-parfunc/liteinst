@@ -13,11 +13,29 @@ uint64_t deactiveSequence = 0; // NOP byte sequence for toggling off the functio
 int64_t counter = 0;
 //int64_t invocations = 1000000000;
 int64_t invocations = 10000; 
-volatile int ready_to_go = 0;
-volatile int done = 0;
+volatile int ready_to_go_foo = 0;
+volatile int done_foo = 0;
 volatile int initial = 0;
 
 volatile uint64_t lock = 0; 
+
+
+
+
+volatile int active_apa = 1; // Whether the function is toggled on or off. Not used currently
+uint64_t* funcAddr_apa = 0; // Address where function call happens which we need to toggle on/off
+uint64_t activeSequence_apa = 0; // Byte sequence for toggling on the function CALL
+uint64_t deactiveSequence_apa = 0; // NOP byte sequence for toggling off the function CALL
+int64_t counter_apa = 0;
+
+volatile int ready_to_go_apa = 0;
+volatile int done_apa = 0; 
+volatile int initial_apa = 0;
+
+
+
+
+
 
 int NUM_THREADS = 5;
 
@@ -83,12 +101,6 @@ void add_call() {
 int remove_call() {
 
     if (deactiveSequence != 0) {
-        /*
-        int status = modify_page_permissions(funcAddr);
-        if (!status) {
-            return -1;
-        }
-        */
 
         /* while (! ( __sync_bool_compare_and_swap((uint64_t*)&lock, */
 	/* 					0, 1))) { */
@@ -119,7 +131,75 @@ int remove_call() {
 }
 
 
-__attribute__((noinline))
+
+void add_call_apa() {
+    if (activeSequence_apa != 0) {
+      
+      /* while (! ( __sync_bool_compare_and_swap((uint64_t*)&lock, */
+      /* 					      0, 1))){  */
+      /* 	//fprintf(stderr,"+"); */
+      /* }  */
+
+      
+        uint64_t* start_addr = funcAddr_apa - 1;
+
+        fprintf(stderr, "Activating APA..\n");
+
+
+        uint64_t res = 0; 
+	//while (res != activeSequence) {
+	res = __sync_val_compare_and_swap((uint64_t*) start_addr,
+					    *((uint64_t*)start_addr), activeSequence_apa);
+	//}
+        // *(uint64_t*) start_addr = activeSequence;
+        active_apa = 1;
+
+	
+	/* __sync_bool_compare_and_swap((uint64_t*)&lock, */
+	/* 			     1, 0); */
+		
+	
+    } else {
+        fprintf(stderr, "Active sequence not initialized..\n");
+    }
+
+}
+
+int remove_call_apa() {
+
+    if (deactiveSequence_apa != 0) {
+
+        /* while (! ( __sync_bool_compare_and_swap((uint64_t*)&lock, */
+	/* 					0, 1))) { */
+	/*   //fprintf(stderr,"-"); */
+
+	/* } */
+     
+	
+      
+        uint64_t* start_addr = funcAddr_apa - 1;
+
+        fprintf(stderr, "Deactivating APA..\n");
+
+        uint64_t res = 0; 
+	//while (res != deactiveSequence) {
+	  res = __sync_val_compare_and_swap((uint64_t*)start_addr,
+					    *((uint64_t*)start_addr), deactiveSequence_apa);
+	  //}
+        // *(uint64_t*) start_addr = deactiveSequence;
+        active_apa = 0;
+	
+	/* __sync_bool_compare_and_swap((uint64_t*)&lock, */
+	/* 			     1, 0); */
+    } else {
+        fprintf(stderr, "Active sequence not initialized..\n");
+    }
+
+}
+
+
+
+// __attribute__((noinline))
 void foo(int i) {
 
     if (!initial) {
@@ -149,65 +229,157 @@ void foo(int i) {
     }
 
     counter++;
+
+    for (long j = 0; j < counter * 100; j++) { 
+      
+      if ( i + j == 10) printf("Hello foo\n"); 
+      
+      
+    }
+
     // fprintf(stderr, "Foo counter : %d\n", counter);
 }
 
+// __attribute__((noinline))
+void apa(uint64_t* a, uint64_t *b) { 
+  
+  if (!initial_apa) {
+    uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
+    funcAddr_apa = (uint64_t*)addr; // Save the call site address to a global variable so that it is visible to other threads
+    //__sync_synchronize();
+    
+    
+    uint64_t sequence =  *((uint64_t*)(addr-1));
+    uint64_t mask = 0x0000000000FFFFFF;
+    uint64_t deactive = (uint64_t) (sequence & mask);
+    mask = 0x0000441F0F000000; // We NOP 5 bytes of CALL instruction and leave rest of the 3 bytes as it is
+    
+    activeSequence_apa = sequence; // Saves the active 
+    deactiveSequence_apa = deactive |  mask;
+
+    
+    fprintf(stderr, "INITIAL CALL\n");
+    
+    int status = modify_page_permissions((uint8_t*)funcAddr_apa);
+    if (!status) {
+      fprintf(stderr, "ERROR : Failed to modify page permissions\n");
+      return;
+    }
+    
+    initial_apa = 1;
+  }
+  
+  counter_apa++;
+
+  for (long i = 0; i < counter * 1000; i++) { 
+    
+    if ( a + i == b) printf("Hello apa\n"); 
+    
+
+  } 
+
+    
+
+     
+  return;
+}
+
+
+
 void* stress_add(void* param) {
-    while(!ready_to_go) {
+  while(!(ready_to_go_apa && ready_to_go_foo)) {
         ;
     }
 
-    while(!done) {
+  while(!(done_apa && done_foo)) {
         add_call();
+	add_call_apa();
     }
 }
 
 void* stress_remove(void* param) {
-    while(!ready_to_go) {
+  while(!(ready_to_go_apa && ready_to_go_foo)) {
         ;
     }
 
-    while (!done) {
+  while (!(done_apa && done_foo)) {
         remove_call();
+	remove_call_apa();
     }
 }
 
-void validate_patching() {
-    long invocs = 0;
 
-loop:
-    for (long i=0; i<invocations; i++) {
-        foo(5); // This is the call site that we patch
-        invocs++;
+void* apa_thread(void* param) {
+
+  long i;
+  for (i=0; i<invocations; i++) {
+ 
+    apa((uint64_t*) 9999, (uint64_t*) i );
+
+    if (i==0) { 
+      fprintf(stderr, "Initial call done..\n");
+      ready_to_go_apa =1;
     }
+    
 
-    if (done != 0) {
-      goto incr;
-    } else {
-      goto remove;
-    }
+  }
+  done_apa=1;
+} 
 
-check:
-    if (done == 0) {
-      goto loop;
-remove:
-      remove_call();
-    } else if (done == 1) {
-      goto loop;
-    } else {
-      add_call();
-      goto loop;
-    }
 
-incr:
-   if (done < 2) {
-     done++;
-     goto loop; 
-   }
+void* foo_thread(void* param) {
 
-    // Printing diff to make sure that there indeed have been some deactivations
-    fprintf(stderr, "Final count : %ld Invocations : %ld Diff : %ld..\n\n\n", counter, invocs, invocs - counter);
+  long i;
+  for (i=0; i<invocations; i++) {  
+    foo(5); // This is the call site that we patch
+
+    if (i==0) { 
+    	fprintf(stderr, "Initial call done..\n");
+	ready_to_go_foo =1;
+      }
+
+  }
+  
+  done_foo=1;
 }
+
+
+/* void validate_patching() { */
+/*     long invocs = 0; */
+
+/* loop: */
+/*     for (long i=0; i<invocations; i++) { */
+/*         foo(5); // This is the call site that we patch */
+/*         invocs++; */
+/*     } */
+
+/*     if (done != 0) { */
+/*       goto incr; */
+/*     } else { */
+/*       goto remove; */
+/*     } */
+
+/* check: */
+/*     if (done == 0) { */
+/*       goto loop; */
+/* remove: */
+/*       remove_call(); */
+/*     } else if (done == 1) { */
+/*       goto loop; */
+/*     } else { */
+/*       add_call(); */
+/*       goto loop; */
+/*     } */
+
+/* incr: */
+/*    if (done < 2) { */
+/*      done++; */
+/*      goto loop;  */
+/*    } */
+
+/*     // Printing diff to make sure that there indeed have been some deactivations */
+/*     fprintf(stderr, "Final count : %ld Invocations : %ld Diff : %ld..\n\n\n", counter, invocs, invocs - counter); */
+/* } */
 
 int main() {
  
@@ -215,6 +387,8 @@ int main() {
 
     pthread_t threads[2*NUM_THREADS];
     int rc;
+
+    pthread_t app_threads[2]; 
 
     // Initialize the globals used for patching
     // foo(3);
@@ -235,27 +409,45 @@ int main() {
             printf("ERROR: thread creation failed with error %d\n", rc);
         }
     }
-
-    long i;
-    for (i=0; i<invocations; i++) {
+    
+    for (int i=0; i < 2; i+=2) {
       
-        /* while (! ( __sync_bool_compare_and_swap((uint64_t*)&lock, */
-	/* 				      0, 1))){  */
-	/*   //fprintf(stderr,"*"); */
-	/* }  */
-	
-        foo(5); // This is the call site that we patch
-
-	/* __sync_bool_compare_and_swap((uint64_t*)&lock, */
-				     /* 1, 0); */
-		
-        if (i==0) {
-            fprintf(stderr, "Initial call done..\n");
-            ready_to_go =1;
-        }
+      rc = pthread_create(&threads[i], NULL, apa_thread, (void*)0);
+      if (rc) {
+	printf("ERROR: thread creation failed with error %d\n", rc);
+      }
+      
+      rc = pthread_create(&threads[i+1], NULL, foo_thread, (void*)0);
+      if (rc) {
+	printf("ERROR: thread creation failed with error %d\n", rc);
+      }
     }
-    done = 1;
 
+
+    
+      
+
+
+    /* long i; */
+    /* for (i=0; i<invocations; i++) { */
+      
+    /*   /\* while (! ( __sync_bool_compare_and_swap((uint64_t*)&lock, *\/ */
+    /*   /\* 				      0, 1))){  *\/ */
+    /*   /\*   //fprintf(stderr,"*"); *\/ */
+    /*   /\* }  *\/ */
+      
+      
+    /*   /\* __sync_bool_compare_and_swap((uint64_t*)&lock, *\/ */
+    /*   /\* 1, 0); *\/ */
+      
+    /*   if (i==0) { */
+    /* 	fprintf(stderr, "Initial call done..\n"); */
+    /* 	ready_to_go =1; */
+    /*   } */
+   
+    /* } */
+    
+    
     int *k = NULL;
     // Wait for all threads to finish
     for (int i=0; i<2*NUM_THREADS; i++) {
@@ -264,7 +456,8 @@ int main() {
 
 
     // Printing diff to make sure that there indeed have been some deactivations
-    fprintf(stderr, "Final count : %ld Invocations : %ld Diff : %ld..\n\n\n", counter, i, (long)i - counter);
+    fprintf(stderr, "FOO: Final count : %ld Invocations : %ld Diff : %ld..\n\n\n", counter, invocations, (long)invocations - counter);
+    fprintf(stderr, "APA: Final count : %ld Invocations : %ld Diff : %ld..\n\n\n", counter_apa, invocations, (long)invocations - counter_apa);
 
     return 0;
 }
