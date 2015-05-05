@@ -100,7 +100,7 @@ void foo(int i) {
         funcAddr = (uint64_t*)addr; // Save the call site address to a global variable so that it is visible to other threads
         fprintf(stderr, "INITIAL CALL\n");
 
-        int status = modify_page_permissions(funcAddr);
+        int status = modify_page_permissions((uint8_t*)funcAddr);
         if (!status) {
             fprintf(stderr, "ERROR : Failed to modify page permissions\n");
             return;
