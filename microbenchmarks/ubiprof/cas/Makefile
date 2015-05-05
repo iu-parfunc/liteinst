@@ -22,11 +22,18 @@ build_toggle:
 build_toggle2:
 	$(CC) $(CFLAGS_TOGGLE)  toggle_2.c $(LDFLAGS_TOGGLE) -o toggle_2.exe
 
+build_toggle3:
+	$(CC) $(CFLAGS_TOGGLE)  toggle_3.c $(LDFLAGS_TOGGLE) -o toggle_3.exe
+
 toggle: build_toggle
 	./toggle_1.exe
 
 toggle2: build_toggle2
 	./toggle_2.exe	
+
+toggle3: build_toggle3
+	./toggle_3.exe	
+
 
 
 clean:
