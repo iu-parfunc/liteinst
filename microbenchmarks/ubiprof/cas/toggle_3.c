@@ -189,10 +189,10 @@ int main() {
             printf("ERROR: thread creation failed with error %d\n", rc);
         }
 
-        rc = pthread_create(&threads[i+1], NULL, stress_remove, (void*)k);
-        if (rc) {
-            printf("ERROR: thread creation failed with error %d\n", rc);
-        }
+	// rc = pthread_create(&threads[i+1], NULL, stress_remove, (void*)k);
+        //if (rc) {
+        //    printf("ERROR: thread creation failed with error %d\n", rc);
+        //}
     }
 
     long i;
