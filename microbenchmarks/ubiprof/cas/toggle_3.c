@@ -89,7 +89,7 @@ void foo(int i) {
 
     if (!initial) {
         uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
-        uint64_t sequence =  *((uint64_t*)(addr-8));
+        uint64_t sequence =  *((uint64_t*)(addr-1));
         uint64_t mask = 0x0000000000FFFFFF;
         uint64_t deactive = (uint64_t) (sequence & mask);
         mask = 0x0000441F0F000000; // We NOP 5 bytes of CALL instruction and leave rest of the 3 bytes as it is
