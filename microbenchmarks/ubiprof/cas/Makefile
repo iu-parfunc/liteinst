@@ -1,7 +1,7 @@
 #CC = icpc
 CC = g++
 CFLAGS =-O2 -g -finstrument-functions -fno-optimize-sibling-calls -std=c++0x 
-CFLAGS_TOGGLE =-O2 -g -fno-optimize-sibling-calls -std=c++0x 
+CFLAGS_TOGGLE =-O2 -g -fno-optimize-sibling-calls -std=c++0x -Wall -pedantic $(NUMNOPS)
 LDFLAGS = -L../../../build -lubiprof -lrt -lpthread
 LDFLAGS_TOGGLE = -lrt -lpthread
 
@@ -25,6 +25,10 @@ build_toggle2:
 build_toggle3:
 	$(CC) $(CFLAGS_TOGGLE)  toggle_3.c $(LDFLAGS_TOGGLE) -o toggle_3.exe
 
+build_toggle4:
+	$(CC) $(CFLAGS_TOGGLE)  toggle_4.c $(LDFLAGS_TOGGLE) -o toggle_4.exe
+
+
 toggle: build_toggle
 	./toggle_1.exe
 
@@ -33,6 +37,9 @@ toggle2: build_toggle2
 
 toggle3: build_toggle3
 	./toggle_3.exe	
+
+toggle4: build_toggle4
+	./toggle_4.exe	
 
 
 
