@@ -11,7 +11,7 @@ uint64_t* funcAddr = 0; // Address where function call happens which we need to 
 uint64_t activeSequence = 0; // Byte sequence for toggling on the function CALL
 uint64_t deactiveSequence = 0; // NOP byte sequence for toggling off the function CALL
 int64_t counter = 0;
-int64_t invocations = 10000000;
+int64_t invocations = 100000000;
 volatile int ready_to_go = 0;
 volatile int done = 0;
 volatile int initial = 0;
@@ -104,18 +104,35 @@ void remove_call() {
 __attribute__((noinline))
 void foo() {
 
-  if (!initial) {
-    uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
+    if (!initial) {
+      uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
 
-printf("address of call instr: %lx\n", (unsigned long)addr);
+    printf("------------------------------------\n");
+    printf("address of call instr: %lx\n", (unsigned long)addr);
     
     for (int apa = 1; apa < 17; apa*=2) {  
         if ((unsigned long)addr % apa == 0)
         printf("address is %dbytes aligned\n",apa);
     } 
  
-
+    uint64_t *probe_start = (uint64_t*)(addr-1);
     uint64_t sequence =  *((uint64_t*)(addr-1));
+    printf("start address of probe site: %lx\n", (unsigned long)(addr-1));   
+    if ((unsigned long)probe_start % 64 > 56) 
+      printf("Probe site straddles cache line\nsince %lx %% 64 > 56\n",(unsigned long) probe_start);
+  
+    unsigned long pm8 = (unsigned long)probe_start % 8; 
+    if ( pm8 != 0) { 
+      printf("Probe site straddles word boundary\nsince %lx %% 8 != 0\n",(unsigned long) probe_start);
+      printf("%lx %% 8 = %ld\n", (unsigned long)probe_start, pm8);  
+    }
+    for (int apa = 1; apa < 17; apa*=2) {  
+        if ((unsigned long)probe_start % apa == 0)
+        printf("probe_site is %dbytes aligned\n",apa);
+    }
+    printf("------------------------------------\n");
+    
+
     uint64_t mask = 0x0000000000FFFFFF;
     uint64_t deactive = (uint64_t) (sequence & mask);
     mask = 0x0000441F0F000000; // We NOP 5 bytes of CALL instruction and leave rest of the 3 bytes as it is
@@ -135,7 +152,7 @@ printf("address of call instr: %lx\n", (unsigned long)addr);
     initial = 1;
   }
   
-  if ( counter % 400000 == 0)  
+  if ( counter % 4000000 == 0)  
     printf("call of Cthu... I mean foo()\n");
   counter++;
     // fprintf(stderr, "Foo counter : %d\n", counter++);
