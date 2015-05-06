@@ -12,7 +12,7 @@ uint64_t* funcAddr = 0; // Address where function call happens which we need to 
 uint64_t activeSequence = 0; // Byte sequence for toggling on the function CALL
 uint64_t deactiveSequence = 0; // NOP byte sequence for toggling off the function CALL
 int64_t counter = 0;
-int64_t invocations = 100000000;
+int64_t invocations = 10000000;
 volatile int ready_to_go = 0;
 volatile int done = 0;
 volatile int initial = 0;
@@ -20,15 +20,71 @@ volatile int initial = 0;
 const int NUM_THREADS = 5;
 
 #define asm0 "call _Z3foov;"
-#define asm1 "nop; call _Z3foov;" 
-#define asm2 "nop; nop; call _Z3foov;" 
-#define asm3 "nop; nop; nop; call _Z3foov;" 
-#define asm4 "nop; nop; nop; nop; call _Z3foov;" 
-#define asm5 "nop; nop; nop; nop; nop; call _Z3foov;" 
-#define asm6 "nop; nop; nop; nop; nop; nop; call _Z3foov;" 
-#define asm7 "nop; nop; nop; nop; nop; nop; nop; call _Z3foov;" 
-#define asm8 "nop; nop; nop; nop; nop; nop; nop; nop; call _Z3foov;" 
-#define asm9 "nop; nop; nop; nop; nop; nop; nop; nop; nop; call _Z3foov;" 
+#define asm1 "nop;  call _Z3foov;"
+#define asm2 "nop;  nop;  call _Z3foov;"
+#define asm3 "nop;  nop;  nop;  call _Z3foov;"
+#define asm4 "nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm5 "nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm6 "nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm7 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm8 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm9 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm10 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm11 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm12 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm13 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm14 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm15 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm16 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm17 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm18 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm19 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm20 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm21 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm22 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm23 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm24 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm25 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm26 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm27 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm28 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm29 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm30 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm31 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm32 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm33 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm34 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm35 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm36 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm37 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm38 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm39 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm40 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm41 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm42 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm43 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm44 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm45 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm46 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm47 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm48 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm49 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm50 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm51 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm52 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm53 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm54 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm55 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm56 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm57 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm58 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm59 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm60 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm61 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm62 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm63 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm64 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
+#define asm65 "nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  nop;  call _Z3foov;"
 
 
 inline int modify_page_permissions(uint8_t* addr) {
@@ -119,8 +175,11 @@ void foo() {
     uint64_t *probe_start = (uint64_t*)(addr-1);
     uint64_t sequence =  *((uint64_t*)(addr-1));
     printf("start address of probe site: %lx\n", (unsigned long)(addr-1));   
-    if ((unsigned long)probe_start % 64 > 56) 
+    unsigned long pm64 = (unsigned long) probe_start % 64; 
+    if (pm64 > 56) {
       printf("Probe site straddles cache line\nsince %lx %% 64 > 56\n",(unsigned long) probe_start);
+      printf("%lx %% 64 = %ld\n",(unsigned long)probe_start, pm64);
+    }
   
     unsigned long pm8 = (unsigned long)probe_start % 8; 
     if ( pm8 != 0) { 
@@ -247,37 +306,269 @@ int main() {
     long i;
     for (i=0; i<invocations; i++) {
       //__asm__ ("call foo");
-      
-#ifdef ASM0 
-      __asm__(asm0);
-#endif 
-#ifdef ASM1 
-      __asm__(asm1);
-#endif 
+#ifdef ASM0
+  __asm__(asm0);
+#endif
+
+#ifdef ASM1
+  __asm__(asm1);
+#endif
+
 #ifdef ASM2
-      __asm__(asm2);
-#endif 
-#ifdef ASM3 
-      __asm__(asm3);
-#endif 
-#ifdef ASM4 
-      __asm__(asm4);
-#endif 
-#ifdef ASM5 
-      __asm__(asm5);
-#endif 
-#ifdef ASM6 
-      __asm__(asm6);
-#endif 
-#ifdef ASM7 
-      __asm__(asm7);
-#endif 
-#ifdef ASM8 
-      __asm__(asm8);
-#endif 
-#ifdef ASM9 
-      __asm__(asm9);
-#endif 
+  __asm__(asm2);
+#endif
+
+#ifdef ASM3
+  __asm__(asm3);
+#endif
+
+#ifdef ASM4
+  __asm__(asm4);
+#endif
+
+#ifdef ASM5
+  __asm__(asm5);
+#endif
+
+#ifdef ASM6
+  __asm__(asm6);
+#endif
+
+#ifdef ASM7
+  __asm__(asm7);
+#endif
+
+#ifdef ASM8
+  __asm__(asm8);
+#endif
+
+#ifdef ASM9
+  __asm__(asm9);
+#endif
+
+#ifdef ASM10
+  __asm__(asm10);
+#endif
+
+#ifdef ASM11
+  __asm__(asm11);
+#endif
+
+#ifdef ASM12
+  __asm__(asm12);
+#endif
+
+#ifdef ASM13
+  __asm__(asm13);
+#endif
+
+#ifdef ASM14
+  __asm__(asm14);
+#endif
+
+#ifdef ASM15
+  __asm__(asm15);
+#endif
+
+#ifdef ASM16
+  __asm__(asm16);
+#endif
+
+#ifdef ASM17
+  __asm__(asm17);
+#endif
+
+#ifdef ASM18
+  __asm__(asm18);
+#endif
+
+#ifdef ASM19
+  __asm__(asm19);
+#endif
+
+#ifdef ASM20
+  __asm__(asm20);
+#endif
+
+#ifdef ASM21
+  __asm__(asm21);
+#endif
+
+#ifdef ASM22
+  __asm__(asm22);
+#endif
+
+#ifdef ASM23
+  __asm__(asm23);
+#endif
+
+#ifdef ASM24
+  __asm__(asm24);
+#endif
+
+#ifdef ASM25
+  __asm__(asm25);
+#endif
+
+#ifdef ASM26
+  __asm__(asm26);
+#endif
+
+#ifdef ASM27
+  __asm__(asm27);
+#endif
+
+#ifdef ASM28
+  __asm__(asm28);
+#endif
+
+#ifdef ASM29
+  __asm__(asm29);
+#endif
+
+#ifdef ASM30
+  __asm__(asm30);
+#endif
+
+#ifdef ASM31
+  __asm__(asm31);
+#endif
+
+#ifdef ASM32
+  __asm__(asm32);
+#endif
+
+#ifdef ASM33
+  __asm__(asm33);
+#endif
+
+#ifdef ASM34
+  __asm__(asm34);
+#endif
+
+#ifdef ASM35
+  __asm__(asm35);
+#endif
+
+#ifdef ASM36
+  __asm__(asm36);
+#endif
+
+#ifdef ASM37
+  __asm__(asm37);
+#endif
+
+#ifdef ASM38
+  __asm__(asm38);
+#endif
+
+#ifdef ASM39
+  __asm__(asm39);
+#endif
+
+#ifdef ASM40
+  __asm__(asm40);
+#endif
+
+#ifdef ASM41
+  __asm__(asm41);
+#endif
+
+#ifdef ASM42
+  __asm__(asm42);
+#endif
+
+#ifdef ASM43
+  __asm__(asm43);
+#endif
+
+#ifdef ASM44
+  __asm__(asm44);
+#endif
+
+#ifdef ASM45
+  __asm__(asm45);
+#endif
+
+#ifdef ASM46
+  __asm__(asm46);
+#endif
+
+#ifdef ASM47
+  __asm__(asm47);
+#endif
+
+#ifdef ASM48
+  __asm__(asm48);
+#endif
+
+#ifdef ASM49
+  __asm__(asm49);
+#endif
+
+#ifdef ASM50
+  __asm__(asm50);
+#endif
+
+#ifdef ASM51
+  __asm__(asm51);
+#endif
+
+#ifdef ASM52
+  __asm__(asm52);
+#endif
+
+#ifdef ASM53
+  __asm__(asm53);
+#endif
+
+#ifdef ASM54
+  __asm__(asm54);
+#endif
+
+#ifdef ASM55
+  __asm__(asm55);
+#endif
+
+#ifdef ASM56
+  __asm__(asm56);
+#endif
+
+#ifdef ASM57
+  __asm__(asm57);
+#endif
+
+#ifdef ASM58
+  __asm__(asm58);
+#endif
+
+#ifdef ASM59
+  __asm__(asm59);
+#endif
+
+#ifdef ASM60
+  __asm__(asm60);
+#endif
+
+#ifdef ASM61
+  __asm__(asm61);
+#endif
+
+#ifdef ASM62
+  __asm__(asm62);
+#endif
+
+#ifdef ASM63
+  __asm__(asm63);
+#endif
+
+#ifdef ASM64
+  __asm__(asm64);
+#endif
+
+#ifdef ASM65
+  __asm__(asm65);
+#endif
 
 
       
