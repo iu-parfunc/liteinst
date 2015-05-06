@@ -246,6 +246,11 @@ int main() {
     long i;
     for (i=0; i<invocations; i++) {
       //__asm__ ("call foo");
+      
+      // move it a big distance 
+      for (int bepa = 0; bepa < 45; bepa ++) { 
+	__asm("nop;"); 
+      }
 
 #ifdef ASM0 
       __asm__(asm0);
