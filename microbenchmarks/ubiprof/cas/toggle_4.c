@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <unistd.h>
 
+
 volatile int active = 1; // Whether the function is toggled on or off. Not used currently
 uint64_t* funcAddr = 0; // Address where function call happens which we need to toggle on/off
 uint64_t activeSequence = 0; // Byte sequence for toggling on the function CALL
@@ -247,11 +248,6 @@ int main() {
     for (i=0; i<invocations; i++) {
       //__asm__ ("call foo");
       
-      // move it a big distance 
-      for (int bepa = 0; bepa < 45; bepa ++) { 
-	__asm("nop;"); 
-      }
-
 #ifdef ASM0 
       __asm__(asm0);
 #endif 
