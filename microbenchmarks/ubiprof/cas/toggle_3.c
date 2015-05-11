@@ -89,7 +89,7 @@ void foo(int i) {
 
     if (!initial) {
         uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
-        uint64_t sequence =  *((uint64_t*)(addr-8));
+        uint64_t sequence =  *((uint64_t*)(addr-1));
         uint64_t mask = 0x0000000000FFFFFF;
         uint64_t deactive = (uint64_t) (sequence & mask);
         mask = 0x0000441F0F000000; // We NOP 5 bytes of CALL instruction and leave rest of the 3 bytes as it is
@@ -100,7 +100,7 @@ void foo(int i) {
         funcAddr = (uint64_t*)addr; // Save the call site address to a global variable so that it is visible to other threads
         fprintf(stderr, "INITIAL CALL\n");
 
-        int status = modify_page_permissions(funcAddr);
+        int status = modify_page_permissions((uint8_t*)funcAddr);
         if (!status) {
             fprintf(stderr, "ERROR : Failed to modify page permissions\n");
             return;
@@ -189,10 +189,10 @@ int main() {
             printf("ERROR: thread creation failed with error %d\n", rc);
         }
 
-        rc = pthread_create(&threads[i+1], NULL, stress_remove, (void*)k);
-        if (rc) {
-            printf("ERROR: thread creation failed with error %d\n", rc);
-        }
+	// rc = pthread_create(&threads[i+1], NULL, stress_remove, (void*)k);
+        //if (rc) {
+        //    printf("ERROR: thread creation failed with error %d\n", rc);
+        //}
     }
 
     long i;
