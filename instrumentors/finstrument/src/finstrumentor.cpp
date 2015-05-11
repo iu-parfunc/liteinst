@@ -457,6 +457,7 @@ void dumpProbeOverheadStatistics() {
   }
 
   fprintf(fp, "\n>>\n");
+  fclose(fp);
 
 }
 #endif
@@ -495,6 +496,7 @@ void dumpProbeOverheadStatistics() {
   }
 
   fprintf(fp, "\n>>\n");
+  fclose(fp);
 
 }
 #endif
@@ -520,6 +522,8 @@ void dumpProbeMetaData() {
     fprintf(fp, "%d,", (*it)->int_aligned);
     fprintf(fp, "%d\n", (*it)->cache_aligned);
   }
+
+  fclose(fp);
 }
 
 // SIGSEV handler to dump probe meta data before exiting during a segmentation fault

@@ -631,6 +631,10 @@ void __cyg_profile_func_enter(void* func, void* caller) {
         fcs->addr = (uint64_t) addr;
         fcs->cutoff = cache_line_size - offset;
         g_cache_straddlers->push_front(fcs);
+
+        FILE* fp = fopen("straddlers.out", "a");
+        fprintf(fp, "%llx %lu\n", addr, cache_line_size - offset);
+        fclose(fp);
         break;
       default:
         ;
