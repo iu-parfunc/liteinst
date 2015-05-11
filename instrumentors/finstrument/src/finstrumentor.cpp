@@ -13,7 +13,11 @@
 #include <fstream>
 #include <sstream>
 
+#include <signal.h>
+
 using namespace std;
+
+void action(int sig, siginfo_t* siginfo, void* context); 
 
 // func_table functions; // Function address to function id mappings
 volatile uint16_t func_id_counter;
@@ -54,6 +58,7 @@ uint64_t* g_prolog_timings;
 uint64_t* g_probe_timings; 
 int g_num_bins;
 #endif
+
 
 
 Finstrumentor::Finstrumentor(InstrumentationFunc prolog, InstrumentationFunc epilog) {
@@ -104,6 +109,14 @@ void Finstrumentor::initialize() {
 #endif
 
   readFunctionInfo();
+
+  struct sigaction act;
+  memset(&act, 0, sizeof(act));
+  act.sa_sigaction = action;
+  act.sa_flags = SA_SIGINFO;
+  if (sigaction(SIGSEGV, &act, NULL) < 0) {
+    perror("sigaction");
+  }
 }
 
 /*
@@ -486,7 +499,7 @@ void dumpProbeOverheadStatistics() {
 }
 #endif
 
-void dumpProbeMetaDataStatistics() {
+void dumpProbeMetaData() {
   FILE* fp = fopen("meta.out", "a");
 
   fprintf(stderr, "\n Cache Straddlers : %lu\n", g_cache_straddlers->size());
@@ -509,10 +522,17 @@ void dumpProbeMetaDataStatistics() {
   }
 }
 
+// SIGSEV handler to dump probe meta data before exiting during a segmentation fault
+void action(int sig, siginfo_t* siginfo, void* context) {
+  dumpProbeMetaData();
+  exit(1);
+}
+
+
 Finstrumentor::~Finstrumentor() {
   fprintf(stderr, "[finstrumentor] NUM_ACCESSED_PROBE_SITES: %lu\n", ((Finstrumentor*) INSTRUMENTOR_INSTANCE)->probe_info->size()); 
 
-  dumpProbeMetaDataStatistics();
+  dumpProbeMetaData();
 
 #ifdef PROBE_HIST_ON 
   dumpProbeOverheadStatistics();
