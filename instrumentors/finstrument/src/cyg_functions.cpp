@@ -1,4 +1,5 @@
 
+#include <unistd.h>
 #include <inttypes.h>
 #include <stdlib.h>
 #include <alloca.h>
@@ -598,9 +599,43 @@ void __cyg_profile_func_enter(void* func, void* caller) {
     // abort();
   }
 
-
-
   uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
+
+  size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
+
+  bool word_aligned = (uint64_t) addr % 8 == 0 ? 1 : 0;
+  bool int_aligned = (uint64_t) addr % 32 == 0 ? 1 : 0;
+  bool cache_aligned = (uint64_t) addr % cache_line_size == 0 ? 1 : 0;
+
+  FinsProbeMetaData* pmd = new FinsProbeMetaData;
+  pmd->addr = (uint64_t) addr;
+  pmd->word_aligned = word_aligned;
+  pmd->int_aligned = int_aligned;
+  pmd->cache_aligned = cache_aligned;
+
+  g_probe_meta_data->push_front(pmd);
+
+  // Add to probe statistics
+  
+  int offset = (uint64_t) addr % cache_line_size;
+  if (!cache_aligned) {
+    switch (offset) {
+      case 57:
+      case 58:
+      case 59:
+      case 60:
+      case 61:
+      case 62:
+      case 63:
+        FinsCacheStraddler* fcs = new FinsCacheStraddler;
+        fcs->addr = (uint64_t) addr;
+        fcs->cutoff = cache_line_size - offset;
+        g_cache_straddlers->push_front(fcs);
+        break;
+      default:
+        ;
+    }
+  }
 
   if (addr < func) {
     // fprintf(stderr, "Function start is great than the cyg_enter return address.. Function address: %p Call address : %p \n", func, addr);

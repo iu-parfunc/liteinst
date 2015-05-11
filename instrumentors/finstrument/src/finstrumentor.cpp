@@ -23,6 +23,9 @@ InstrumentationFunc prologFunction;
 InstrumentationFunc epilogFunction;
 void* probeInfo;
 
+list<FinsProbeMetaData*>* g_probe_meta_data; 
+list<FinsCacheStraddler*>* g_cache_straddlers;
+
 #ifdef PROBE_HIST_ON
 ProbeStatistics* g_probe_stats; 
 uint64_t* g_epilog_timings; 
@@ -74,6 +77,9 @@ void Finstrumentor::initialize() {
   this->functions = new func_table; 
   this->function_ids = new func_id_table;
   this->probe_info = new probe_map; 
+  
+  g_probe_meta_data = new list<FinsProbeMetaData*>;
+  g_cache_straddlers = new list<FinsCacheStraddler*>;
 
 #ifdef PROBE_HIST_ON
   g_probe_stats = new ProbeStatistics; 
@@ -480,8 +486,33 @@ void dumpProbeOverheadStatistics() {
 }
 #endif
 
+void dumpProbeMetaDataStatistics() {
+  FILE* fp = fopen("meta.out", "a");
+
+  fprintf(stderr, "\n Cache Straddlers : %lu\n", g_cache_straddlers->size());
+  for (list<FinsCacheStraddler*>::iterator it=g_cache_straddlers->begin(); it != g_cache_straddlers->end(); ++it) {
+    fprintf(fp, "%llx, ", (*it)->addr);
+    fprintf(fp, "%d \n", (*it)->cutoff);
+    fprintf(stderr, "%llx, ", (*it)->addr);
+    fprintf(stderr, "%d \n", (*it)->cutoff);
+  }
+
+  fprintf(fp, "\n");
+
+  fprintf(fp, "Alignments\n"); 
+  fprintf(fp, "addr, word_aligned?, int_aligned?, cache_aligned?\n");
+  for (list<FinsProbeMetaData*>::iterator it=g_probe_meta_data->begin(); it != g_probe_meta_data->end(); ++it) {
+    fprintf(fp, "%llx,", (*it)->addr);
+    fprintf(fp, "%d,", (*it)->word_aligned);
+    fprintf(fp, "%d,", (*it)->int_aligned);
+    fprintf(fp, "%d\n", (*it)->cache_aligned);
+  }
+}
+
 Finstrumentor::~Finstrumentor() {
   fprintf(stderr, "[finstrumentor] NUM_ACCESSED_PROBE_SITES: %lu\n", ((Finstrumentor*) INSTRUMENTOR_INSTANCE)->probe_info->size()); 
+
+  dumpProbeMetaDataStatistics();
 
 #ifdef PROBE_HIST_ON 
   dumpProbeOverheadStatistics();
@@ -490,6 +521,9 @@ Finstrumentor::~Finstrumentor() {
 #ifdef PROBE_TRUE_EMPTY_ON
   dumpProbeOverheadStatistics();
 #endif
+
+  delete g_probe_meta_data;
+  delete g_cache_straddlers;
 
   delete this->probe_info;
   delete this->functions;

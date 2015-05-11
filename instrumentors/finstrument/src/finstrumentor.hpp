@@ -33,12 +33,29 @@ typedef struct FinsProbeInfo {
     bool isActive;
 } FinsProbeInfo;
 
+typedef struct FinsProbeMetaData {
+  uint64_t addr;
+  bool word_aligned;
+  bool int_aligned;
+  bool cache_aligned;
+} FinsProbeMetaData;
+
+typedef struct FinsCacheStraddler {
+  uint64_t addr;
+  uint8_t cutoff;
+} FinsCacheStraddler;
+
 typedef struct FinsStatistics {
     uint64_t funcAddr;
     uint64_t count;
 } FinsStatistics;
 
 /* Global Data */
+
+// Probe meta data
+extern std::list<FinsProbeMetaData*>* g_probe_meta_data;
+extern std::list<FinsCacheStraddler*>* g_cache_straddlers;
+
 typedef std::map<uint64_t, std::list<FinsProbeInfo*>*> probe_map;
 extern probe_map probe_info;
 
