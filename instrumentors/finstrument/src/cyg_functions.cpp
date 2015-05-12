@@ -601,14 +601,15 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 
   uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
 
+  uint64_t* probe_start = (uint64_t*)((uint8_t*) addr - 8);
   size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
 
-  bool word_aligned = (uint64_t) addr % 8 == 0 ? 1 : 0;
-  bool int_aligned = (uint64_t) addr % 32 == 0 ? 1 : 0;
-  bool cache_aligned = (uint64_t) addr % cache_line_size == 0 ? 1 : 0;
+  bool word_aligned = (uint64_t) probe_start % 8 == 0 ? 1 : 0;
+  bool int_aligned = (uint64_t) probe_start % 32 == 0 ? 1 : 0;
+  bool cache_aligned = (uint64_t) probe_start % cache_line_size == 0 ? 1 : 0;
 
   FinsProbeMetaData* pmd = new FinsProbeMetaData;
-  pmd->addr = (uint64_t) addr;
+  pmd->addr = (uint64_t) probe_start;
   pmd->word_aligned = word_aligned;
   pmd->int_aligned = int_aligned;
   pmd->cache_aligned = cache_aligned;
@@ -617,7 +618,7 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 
   // Add to probe statistics
   
-  int offset = (uint64_t) addr % cache_line_size;
+  int offset = (uint64_t) probe_start % cache_line_size;
   if (!cache_aligned) {
     switch (offset) {
       case 57:
@@ -627,15 +628,25 @@ void __cyg_profile_func_enter(void* func, void* caller) {
       case 61:
       case 62:
       case 63:
+        // Check if this straddler was already encountered
+        if (!(ins->probe_info->find((uint64_t)func) == ins->probe_info->end())) {
+          std::list<FinsProbeInfo*>* probe_list = ins->probe_info->find((uint64_t)func)->second;
+          for(std::list<FinsProbeInfo*>::iterator iter = probe_list->begin(); iter != probe_list->end(); iter++) {
+            FinsProbeInfo* probeInfo= *iter;
+            if (probeInfo->probeStartAddr == (uint8_t*)probe_start) {
+                return;
+            }
+          } 
+        }
         FinsCacheStraddler* fcs = new FinsCacheStraddler;
-        fcs->addr = (uint64_t) addr;
+        fcs->addr = (uint64_t) probe_start;
         fcs->cutoff = cache_line_size - offset;
         g_cache_straddlers->push_front(fcs);
 
         FILE* fp = fopen("straddlers.out", "a");
-        fprintf(fp, "%llx %lu\n", addr, cache_line_size - offset);
+        fprintf(fp, "%llx %lu\n", probe_start, cache_line_size - offset);
         fclose(fp);
-        break;
+        return;
       default:
         ;
     }
@@ -807,6 +818,57 @@ void __cyg_profile_func_exit(void* func, void* caller) {
   */
 
   uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
+
+  uint64_t* probe_start = (uint64_t*)((uint8_t*) addr - 8);
+  size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
+
+  bool word_aligned = (uint64_t) probe_start % 8 == 0 ? 1 : 0;
+  bool int_aligned = (uint64_t) probe_start % 32 == 0 ? 1 : 0;
+  bool cache_aligned = (uint64_t) probe_start % cache_line_size == 0 ? 1 : 0;
+
+  FinsProbeMetaData* pmd = new FinsProbeMetaData;
+  pmd->addr = (uint64_t) probe_start;
+  pmd->word_aligned = word_aligned;
+  pmd->int_aligned = int_aligned;
+  pmd->cache_aligned = cache_aligned;
+
+  g_probe_meta_data->push_front(pmd);
+
+  // Add to probe statistics
+  
+  int offset = (uint64_t) probe_start % cache_line_size;
+  if (!cache_aligned) {
+    switch (offset) {
+      case 57:
+      case 58:
+      case 59:
+      case 60:
+      case 61:
+      case 62:
+      case 63:
+        // Check if this straddler was already encountered
+        if (!(ins->probe_info->find((uint64_t)func) == ins->probe_info->end())) {
+          std::list<FinsProbeInfo*>* probe_list = ins->probe_info->find((uint64_t)func)->second;
+          for(std::list<FinsProbeInfo*>::iterator iter = probe_list->begin(); iter != probe_list->end(); iter++) {
+            FinsProbeInfo* probeInfo= *iter;
+            if (probeInfo->probeStartAddr == (uint8_t*)probe_start) {
+                return;
+            }
+          } 
+        }
+        FinsCacheStraddler* fcs = new FinsCacheStraddler;
+        fcs->addr = (uint64_t) probe_start;
+        fcs->cutoff = cache_line_size - offset;
+        g_cache_straddlers->push_front(fcs);
+
+        FILE* fp = fopen("straddlers.out", "a");
+        fprintf(fp, "%llx %lu\n", probe_start, cache_line_size - offset);
+        fclose(fp);
+        return;
+      default:
+        ;
+    }
+  }
 
   if (addr < func) {
     // fprintf(stderr, "Function start is great than the cyg_exit return address.. Function address: %p Call address : %p \n", func, addr);
