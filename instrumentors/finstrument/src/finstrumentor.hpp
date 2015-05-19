@@ -77,6 +77,8 @@ typedef std::map<uint16_t, FunctionInfo*> FuncIDMappings;
 
 extern volatile uint16_t func_id_counter;
 
+extern uint8_t* g_straddlers_bitmap;
+
 #ifdef __cplusplus
 extern "C"
 {

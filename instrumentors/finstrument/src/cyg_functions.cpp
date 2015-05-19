@@ -4,11 +4,13 @@
 #include <stdlib.h>
 #include <alloca.h>
 #include <setjmp.h>
+#include <limits.h>
 
 #include "cyg_functions.hpp"
 #include "patch_utils.hpp"
 #include "finstrumentor.hpp"
 #include "../../../common/include/cycle.h"
+#include "bitmap.hpp"
 
 #include "distorm.h"
 #include "mnemonics.h"
@@ -370,8 +372,12 @@ inline void init_probe_info(uint64_t func_addr, uint8_t* probe_addr) {
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
 
   uint64_t* lock = ins->getLock(func_addr);
+  int counter = 0;
   if (lock != NULL) {
+loop:
+    // fprintf(stderr, "Counter is : %d\n", counter);
     if (__sync_bool_compare_and_swap(lock, 0 , 1)) {
+      // fprintf(stderr, "LOCKED %p : %lu\n", lock, *lock);
       // fprintf(stderr, "probe_info address at init probe : %p\n", ins->probe_info);
       if(ins->probe_info->find(func_addr) == ins->probe_info->end()) {
         std::list<FinsProbeInfo*>* probe_list = new std::list<FinsProbeInfo*>;
@@ -397,7 +403,8 @@ inline void init_probe_info(uint64_t func_addr, uint8_t* probe_addr) {
         for(std::list<FinsProbeInfo*>::iterator iter = probe_list->begin(); iter != probe_list->end(); iter++) {
           FinsProbeInfo* probeInfo= *iter;
           if (probeInfo->probeStartAddr == (probe_addr-8)) {
-            __sync_bool_compare_and_swap(lock, 1 , 0);
+            while(!__sync_bool_compare_and_swap(lock, 1 , 0));
+            // fprintf(stderr, "UNLOCKING %p : %lu\n", lock, *lock);
             return; // Probe already initialized. Nothing to do.
           }
         }
@@ -416,10 +423,31 @@ inline void init_probe_info(uint64_t func_addr, uint8_t* probe_addr) {
 
         probe_list->push_back(probeInfo);
       }
-      __sync_bool_compare_and_swap(lock, 1 , 0);
+      while(!__sync_bool_compare_and_swap(lock, 1 , 0));
+      // fprintf(stderr, "UNLOCKING %p : %lu\n", lock, *lock);
     } else { // We failed. Wait until the other thread finish and just return
-      while (*lock); // Busy wait until the other thread finishes
+      // Busy wait until the other thread finishes
+      // while (!__sync_bool_compare_and_swap(lock, 0 , 1));
+
+      // while(!__sync_bool_compare_and_swap(lock, 1 , 0));
+      
       return;
+      /*
+      while (*lock) {
+        // fprintf(stderr, "LOCK %p : %lu\n", lock, *lock);
+        if (counter == INT_MAX) {
+          fprintf(stderr, "RESETTING the counter\n");
+          return;
+        }
+        counter += 1;
+        if (counter++ % 100000 == 0) { // Try for a while and then give up
+          // fprintf(stderr, "SPINNING at func : %lu\n", func_addr); 
+          return;
+          // goto loop;
+        }
+      }
+      return;
+      */
     }
   }
 }
@@ -601,13 +629,22 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 
   uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
 
+  uint16_t func_id = get_func_id((uint64_t)func);
+
+  // This is a straddler. Return without patching.
+  if (get_index(g_straddlers_bitmap, func_id)) {
+    // fprintf(stderr, "RETURNING FROM STRADDLER\n");
+    return;
+  }
+
   uint64_t* probe_start = (uint64_t*)((uint8_t*) addr - 8);
   size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
 
-  bool word_aligned = (uint64_t) probe_start % 8 == 0 ? 1 : 0;
-  bool int_aligned = (uint64_t) probe_start % 32 == 0 ? 1 : 0;
+  // bool word_aligned = (uint64_t) probe_start % 8 == 0 ? 1 : 0;
+  // bool int_aligned = (uint64_t) probe_start % 32 == 0 ? 1 : 0;
   bool cache_aligned = (uint64_t) probe_start % cache_line_size == 0 ? 1 : 0;
 
+  /*
   FinsProbeMetaData* pmd = new FinsProbeMetaData;
   pmd->addr = (uint64_t) probe_start;
   pmd->word_aligned = word_aligned;
@@ -615,11 +652,20 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   pmd->cache_aligned = cache_aligned;
 
   g_probe_meta_data->push_front(pmd);
+  */
 
   // Add to probe statistics
   
   int offset = (uint64_t) probe_start % cache_line_size;
   if (!cache_aligned) {
+    // return;
+    if (offset >= 57) {
+      // fprintf(stderr, "SETTING bit map for : %d\n", func_id);
+      set_index(g_straddlers_bitmap, func_id);
+      return;
+    }
+
+    /*
     switch (offset) {
       case 57:
       case 58:
@@ -628,6 +674,8 @@ void __cyg_profile_func_enter(void* func, void* caller) {
       case 61:
       case 62:
       case 63:
+        fprintf(stderr, "SETTING bit map for : %d\n", func_id);
+        set_index(g_straddlers_bitmap, func_id);
         // Check if this straddler was already encountered
         if (!(ins->probe_info->find((uint64_t)func) == ins->probe_info->end())) {
           std::list<FinsProbeInfo*>* probe_list = ins->probe_info->find((uint64_t)func)->second;
@@ -650,6 +698,7 @@ void __cyg_profile_func_enter(void* func, void* caller) {
       default:
         ;
     }
+    */
   }
 
   if (addr < func) {
@@ -672,7 +721,6 @@ void __cyg_profile_func_enter(void* func, void* caller) {
     return;
   }
 
-  uint16_t func_id = get_func_id((uint64_t)func);
   // If the function id mappings are not properly initialized fail gracefully
   if (!func_id && flag != -1) { 
     fprintf(stderr, "Returning from func addr : %p\n", func);
@@ -819,13 +867,22 @@ void __cyg_profile_func_exit(void* func, void* caller) {
 
   uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
 
+  uint16_t func_id = get_func_id((uint64_t)func);
+
+  // This is a straddler. Return without patching.
+  if (get_index(g_straddlers_bitmap, func_id)) {
+    // fprintf(stderr, "RETURNING FROM STRADDLER\n");
+    return;
+  }
+
   uint64_t* probe_start = (uint64_t*)((uint8_t*) addr - 8);
   size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
 
-  bool word_aligned = (uint64_t) probe_start % 8 == 0 ? 1 : 0;
-  bool int_aligned = (uint64_t) probe_start % 32 == 0 ? 1 : 0;
+  // bool word_aligned = (uint64_t) probe_start % 8 == 0 ? 1 : 0;
+  // bool int_aligned = (uint64_t) probe_start % 32 == 0 ? 1 : 0;
   bool cache_aligned = (uint64_t) probe_start % cache_line_size == 0 ? 1 : 0;
 
+  /*
   FinsProbeMetaData* pmd = new FinsProbeMetaData;
   pmd->addr = (uint64_t) probe_start;
   pmd->word_aligned = word_aligned;
@@ -833,11 +890,18 @@ void __cyg_profile_func_exit(void* func, void* caller) {
   pmd->cache_aligned = cache_aligned;
 
   g_probe_meta_data->push_front(pmd);
+  */
 
   // Add to probe statistics
   
   int offset = (uint64_t) probe_start % cache_line_size;
   if (!cache_aligned) {
+    if (offset >= 57) {
+      // fprintf(stderr, "SETTING bit map for : %d\n", func_id);
+      set_index(g_straddlers_bitmap, func_id);
+      return;
+    }
+    /*
     switch (offset) {
       case 57:
       case 58:
@@ -846,6 +910,8 @@ void __cyg_profile_func_exit(void* func, void* caller) {
       case 61:
       case 62:
       case 63:
+        fprintf(stderr, "SETTING bit map for : %d\n", func_id);
+        set_index(g_straddlers_bitmap, func_id);
         // Check if this straddler was already encountered
         if (!(ins->probe_info->find((uint64_t)func) == ins->probe_info->end())) {
           std::list<FinsProbeInfo*>* probe_list = ins->probe_info->find((uint64_t)func)->second;
@@ -868,6 +934,7 @@ void __cyg_profile_func_exit(void* func, void* caller) {
       default:
         ;
     }
+    */
   }
 
   if (addr < func) {
@@ -890,7 +957,6 @@ void __cyg_profile_func_exit(void* func, void* caller) {
     return;
   }
 
-  uint16_t func_id = get_func_id((uint64_t)func);
   // If the function id mappings are not properly initialized fail gracefully
   if (!func_id && flag != -1) { 
     fprintf(stderr, "Returning from func addr : %p\n", func);

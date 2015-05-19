@@ -22,6 +22,8 @@ void action(int sig, siginfo_t* siginfo, void* context);
 // func_table functions; // Function address to function id mappings
 volatile uint16_t func_id_counter;
 // probe_map probe_info;
+// straddlers bitmap
+uint8_t* g_straddlers_bitmap;
 Instrumentor* INSTRUMENTOR_INSTANCE = 0;
 InstrumentationFunc prologFunction;
 InstrumentationFunc epilogFunction;
@@ -110,6 +112,8 @@ void Finstrumentor::initialize() {
 
   readFunctionInfo();
 
+  g_straddlers_bitmap = new uint8_t[func_count/8 + 1](); 
+
   struct sigaction act;
   memset(&act, 0, sizeof(act));
   act.sa_sigaction = action;
@@ -162,7 +166,7 @@ int Finstrumentor::activateProbe(void* probe_id, int flag) {
   }
 
   if (lock!= NULL) {
-    while (!__sync_bool_compare_and_swap(lock, 0, 1)) {
+    while (__sync_bool_compare_and_swap(lock, 0, 1)) {
       std::list<FinsProbeInfo*>* ls = probe_info->find(func_addr)->second;  
       for (std::list<FinsProbeInfo*>::iterator it = ls->begin(); it != ls->end(); it++) {
         FinsProbeInfo* info = *it;
@@ -247,9 +251,13 @@ int Finstrumentor::deactivateProbe(void* probe_id, int flag) {
 
   std::list<FinsProbeInfo*>* ls = probe_info->find(func_addr)->second;  
 
+  if (ls == NULL) {
+    LOG_ERROR("GOING TO CRASH!!!!\n");
+  }
+
   // fprintf(stderr, "List address for func id %d : %p\n", func_id, ls);
   if (lock != NULL) {
-    while (!__sync_bool_compare_and_swap(lock, 0, 1)) {
+    while (__sync_bool_compare_and_swap(lock, 0, 1)) {
       for (std::list<FinsProbeInfo*>::iterator it = ls->begin(); it != ls->end(); it++) {
         FinsProbeInfo* info = *it;
 
