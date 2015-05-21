@@ -112,6 +112,7 @@ class Finstrumentor : public Instrumentor {
     uint64_t* getLock(uint64_t addr);
     void addFunction(uint64_t addr, char* name);
     std::string getFunctionName(uint16_t id);
+    std::list<FinsProbeInfo*>* getProbes(void* id);
     virtual ~Finstrumentor();
 
   private:

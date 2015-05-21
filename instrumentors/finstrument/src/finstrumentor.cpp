@@ -166,7 +166,7 @@ int Finstrumentor::activateProbe(void* probe_id, int flag) {
   }
 
   if (lock!= NULL) {
-    while (__sync_bool_compare_and_swap(lock, 0, 1)) {
+    if (__sync_bool_compare_and_swap(lock, 0, 1)) {
       std::list<FinsProbeInfo*>* ls = probe_info->find(func_addr)->second;  
       for (std::list<FinsProbeInfo*>::iterator it = ls->begin(); it != ls->end(); it++) {
         FinsProbeInfo* info = *it;
@@ -195,12 +195,14 @@ int Finstrumentor::activateProbe(void* probe_id, int flag) {
 
         info->isActive = true;
       }
-      __sync_bool_compare_and_swap(lock, 1 , 0);
+    } else {
+      return -1;
     }   
   } else {
     return -1;
   }
 
+  __sync_bool_compare_and_swap(lock, 1 , 0);
   return 0;
 
 }
@@ -223,6 +225,25 @@ int Finstrumentor::deactivateProbeByName(void* probe_id, int flag) {
 
   return deactivateProbe(&func_id, flag);
 
+}
+
+std::list<FinsProbeInfo*>* Finstrumentor::getProbes(void* probe_id) {
+  uint16_t func_id = *(uint16_t*)probe_id;
+  uint64_t func_addr;
+  uint64_t* lock = NULL;
+  if (func_id_mappings->find(func_id) != func_id_mappings->end()) { 
+    func_addr =  func_id_mappings->find(func_id)->second->func_addr;
+    lock = &(func_addr_mappings->find(func_addr)->second->lock);
+  } else {
+    return NULL;
+  }
+
+  if (probe_info->find(func_addr) == probe_info->end()) {
+    return NULL;
+  }
+
+  std::list<FinsProbeInfo*>* ls = probe_info->find(func_addr)->second;  
+  return ls;
 }
 
 /*
@@ -252,16 +273,18 @@ int Finstrumentor::deactivateProbe(void* probe_id, int flag) {
   std::list<FinsProbeInfo*>* ls = probe_info->find(func_addr)->second;  
 
   if (ls == NULL) {
-    LOG_ERROR("GOING TO CRASH!!!!\n");
+    return -1;
   }
 
   // fprintf(stderr, "List address for func id %d : %p\n", func_id, ls);
   if (lock != NULL) {
-    while (__sync_bool_compare_and_swap(lock, 0, 1)) {
+    if (__sync_bool_compare_and_swap(lock, 0, 1)) {
+      // fprintf(stderr, "Locked inside deactivateProbe with func id : %d\n", func_id);
       for (std::list<FinsProbeInfo*>::iterator it = ls->begin(); it != ls->end(); it++) {
         FinsProbeInfo* info = *it;
 
         if (!info->isActive) {
+          // fprintf(stderr, "Escaping the probe for func : %d\n", func_id);
           continue;
         }
 
@@ -293,8 +316,9 @@ int Finstrumentor::deactivateProbe(void* probe_id, int flag) {
         // fprintf(stderr, "Result : %p\n", res);
 
         info->isActive = false;
-        __sync_bool_compare_and_swap(lock, 1 , 0);
       }
+    } else {
+      return -1;
     }  
   } else {
     return -1;
@@ -302,6 +326,8 @@ int Finstrumentor::deactivateProbe(void* probe_id, int flag) {
 
   // fprintf(stderr, "Deactivated probe count: %d\n", count);
 
+  __sync_bool_compare_and_swap(lock, 1 , 0);
+  // fprintf(stderr, "Unlocked inside deactivateProbe with func id : %d\n", func_id);
   return 0;
 
 }

@@ -404,6 +404,7 @@ loop:
           FinsProbeInfo* probeInfo= *iter;
           if (probeInfo->probeStartAddr == (probe_addr-8)) {
             while(!__sync_bool_compare_and_swap(lock, 1 , 0));
+            // assert(*lock == 0);
             // fprintf(stderr, "UNLOCKING %p : %lu\n", lock, *lock);
             return; // Probe already initialized. Nothing to do.
           }
@@ -423,33 +424,40 @@ loop:
 
         probe_list->push_back(probeInfo);
       }
-      while(!__sync_bool_compare_and_swap(lock, 1 , 0));
       // fprintf(stderr, "UNLOCKING %p : %lu\n", lock, *lock);
     } else { // We failed. Wait until the other thread finish and just return
       // Busy wait until the other thread finishes
       // while (!__sync_bool_compare_and_swap(lock, 0 , 1));
 
       // while(!__sync_bool_compare_and_swap(lock, 1 , 0));
+
+
+      // assert(*lock == 0);
       
-      return;
-      /*
       while (*lock) {
         // fprintf(stderr, "LOCK %p : %lu\n", lock, *lock);
         if (counter == INT_MAX) {
           fprintf(stderr, "RESETTING the counter\n");
-          return;
+          fprintf(stderr, "Returning without adding the probe since lock is : %lu\n", *lock);
+          break;
         }
         counter += 1;
+        /*
         if (counter++ % 100000 == 0) { // Try for a while and then give up
           // fprintf(stderr, "SPINNING at func : %lu\n", func_addr); 
           return;
           // goto loop;
         }
+        */
       }
+
+      // fprintf(stderr, "Returning without adding the probe since lock is : %lu\n", *lock);
       return;
-      */
     }
   }
+
+  while(!__sync_bool_compare_and_swap(lock, 1 , 0));
+  // assert(*lock == 0);
 }
 
 void print_probe_info() {
@@ -632,10 +640,10 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   uint16_t func_id = get_func_id((uint64_t)func);
 
   // This is a straddler. Return without patching.
-  if (get_index(g_straddlers_bitmap, func_id)) {
+  // if (get_index(g_straddlers_bitmap, func_id)) {
     // fprintf(stderr, "RETURNING FROM STRADDLER\n");
-    return;
-  }
+    // return;
+  // }
 
   uint64_t* probe_start = (uint64_t*)((uint8_t*) addr - 8);
   size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
@@ -660,8 +668,41 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   if (!cache_aligned) {
     // return;
     if (offset >= 57) {
-      // fprintf(stderr, "SETTING bit map for : %d\n", func_id);
+      if (func_id == 408) {
+        fprintf(stderr, "SETTING bit map for enter : %d\n", func_id);
+      }
       set_index(g_straddlers_bitmap, func_id);
+      std::list<FinsProbeInfo*>* ls = ins->getProbes((void*)&func_id);
+      
+      int before = -1;
+      if (ls != NULL && !ls->empty()) {
+        before = ls->size();
+      }
+
+      int lock = *(ins->getLock((uint64_t) func));
+      /*
+      if (lock != 0) {
+        fprintf(stderr, "Func id before is : %d\n", func_id);
+        fprintf(stderr, "Func name : %s\n", ins->getFunctionName(func_id).c_str());
+      }
+      */
+      // assert(*(ins->getLock((uint64_t) func)) == 0);
+      init_probe_info((uint64_t)func, (uint8_t*)addr);
+
+      lock = *(ins->getLock((uint64_t) func));
+      /*
+      if (lock != 0) {
+        fprintf(stderr, "Func id after is : %d\n", func_id);
+        // fprintf(stderr, "Func name : %s\n", ins->getFunctionName(func_id).c_str());
+      }
+      */
+      // assert(*(ins->getLock((uint64_t) func)) == 0);
+
+      ls = ins->getProbes((void*)&func_id);
+      int after = ls->size();
+
+      int res = ins->deactivateProbe((void*)&func_id, FUNC);
+      // fprintf(stderr, "Deactivation result : %d Before : %d After : %d\n", res, before, after);
       return;
     }
 
@@ -858,22 +899,15 @@ void __cyg_profile_func_exit(void* func, void* caller) {
     return;
   }
 
-
-  /*
-  if((uint64_t) func == 0x00000000004a2af0) {
-    fprintf(stderr, "In Perl_pp_const\n");
-  }
-  */
-
   uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
 
   uint16_t func_id = get_func_id((uint64_t)func);
 
   // This is a straddler. Return without patching.
-  if (get_index(g_straddlers_bitmap, func_id)) {
+  // if (get_index(g_straddlers_bitmap, func_id)) {
     // fprintf(stderr, "RETURNING FROM STRADDLER\n");
-    return;
-  }
+    // return;
+  // }
 
   uint64_t* probe_start = (uint64_t*)((uint8_t*) addr - 8);
   size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
@@ -897,8 +931,27 @@ void __cyg_profile_func_exit(void* func, void* caller) {
   int offset = (uint64_t) probe_start % cache_line_size;
   if (!cache_aligned) {
     if (offset >= 57) {
-      // fprintf(stderr, "SETTING bit map for : %d\n", func_id);
+      if (func_id == 408) {
+        fprintf(stderr, "SETTING bit map for exit : %d\n", func_id);
+      }
+
       set_index(g_straddlers_bitmap, func_id);
+      std::list<FinsProbeInfo*>* ls = ins->getProbes((void*)&func_id);
+
+      int before;
+      if (ls != NULL) {
+        before = ls->size();
+      }
+
+      // assert(*(ins->getLock((uint64_t) func)) == 0);
+      init_probe_info((uint64_t)func, (uint8_t*)addr);
+      // assert(*(ins->getLock((uint64_t) func)) == 0);
+
+      ls = ins->getProbes((void*)&func_id);
+      int after = ls->size();
+
+      int res = ins->deactivateProbe((void*)&func_id, FUNC);
+      // fprintf(stderr, "Deactivation result : %d Before : %d After : %d\n", res, before, after);
       return;
     }
     /*
