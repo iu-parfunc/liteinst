@@ -639,6 +639,10 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 
   uint16_t func_id = get_func_id((uint64_t)func);
 
+  if (func_id == 408) {
+    fprintf(stderr, "AT CYG_ENTER of %d\n", func_id);
+  }
+
   // This is a straddler. Return without patching.
   // if (get_index(g_straddlers_bitmap, func_id)) {
     // fprintf(stderr, "RETURNING FROM STRADDLER\n");
@@ -668,10 +672,12 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   if (!cache_aligned) {
     // return;
     if (offset >= 57) {
+      fprintf(stderr, "[cyg_enter] Disabling function: %s\n", ins->getFunctionName(func_id).c_str());
+      set_index(g_straddlers_bitmap, func_id);
+      /*
       if (func_id == 408) {
         fprintf(stderr, "SETTING bit map for enter : %d\n", func_id);
       }
-      set_index(g_straddlers_bitmap, func_id);
       std::list<FinsProbeInfo*>* ls = ins->getProbes((void*)&func_id);
       
       int before = -1;
@@ -680,7 +686,6 @@ void __cyg_profile_func_enter(void* func, void* caller) {
       }
 
       int lock = *(ins->getLock((uint64_t) func));
-      /*
       if (lock != 0) {
         fprintf(stderr, "Func id before is : %d\n", func_id);
         fprintf(stderr, "Func name : %s\n", ins->getFunctionName(func_id).c_str());
@@ -689,8 +694,8 @@ void __cyg_profile_func_enter(void* func, void* caller) {
       // assert(*(ins->getLock((uint64_t) func)) == 0);
       init_probe_info((uint64_t)func, (uint8_t*)addr);
 
-      lock = *(ins->getLock((uint64_t) func));
       /*
+      lock = *(ins->getLock((uint64_t) func));
       if (lock != 0) {
         fprintf(stderr, "Func id after is : %d\n", func_id);
         // fprintf(stderr, "Func name : %s\n", ins->getFunctionName(func_id).c_str());
@@ -698,8 +703,10 @@ void __cyg_profile_func_enter(void* func, void* caller) {
       */
       // assert(*(ins->getLock((uint64_t) func)) == 0);
 
+      /*
       ls = ins->getProbes((void*)&func_id);
       int after = ls->size();
+      */
 
       int res = ins->deactivateProbe((void*)&func_id, FUNC);
       // fprintf(stderr, "Deactivation result : %d Before : %d After : %d\n", res, before, after);
@@ -903,11 +910,17 @@ void __cyg_profile_func_exit(void* func, void* caller) {
 
   uint16_t func_id = get_func_id((uint64_t)func);
 
+  if (func_id == 408) {
+    fprintf(stderr, "AT CYG_EXIT of %d\n", func_id);
+  }
+
   // This is a straddler. Return without patching.
-  // if (get_index(g_straddlers_bitmap, func_id)) {
-    // fprintf(stderr, "RETURNING FROM STRADDLER\n");
-    // return;
-  // }
+  if (get_index(g_straddlers_bitmap, func_id)) {
+    fprintf(stderr, "[cyg_exit] Disabling function trivial: %s\n", ins->getFunctionName(func_id).c_str());
+    init_probe_info((uint64_t)func, (uint8_t*)addr);
+    int res = ins->deactivateProbe((void*)&func_id, FUNC);
+    return;
+  }
 
   uint64_t* probe_start = (uint64_t*)((uint8_t*) addr - 8);
   size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
@@ -931,6 +944,9 @@ void __cyg_profile_func_exit(void* func, void* caller) {
   int offset = (uint64_t) probe_start % cache_line_size;
   if (!cache_aligned) {
     if (offset >= 57) {
+      fprintf(stderr, "[cyg_exit] Disabling function: %s\n", ins->getFunctionName(func_id).c_str());
+
+      /*
       if (func_id == 408) {
         fprintf(stderr, "SETTING bit map for exit : %d\n", func_id);
       }
@@ -942,13 +958,16 @@ void __cyg_profile_func_exit(void* func, void* caller) {
       if (ls != NULL) {
         before = ls->size();
       }
+      */
 
       // assert(*(ins->getLock((uint64_t) func)) == 0);
       init_probe_info((uint64_t)func, (uint8_t*)addr);
       // assert(*(ins->getLock((uint64_t) func)) == 0);
 
+      /*
       ls = ins->getProbes((void*)&func_id);
       int after = ls->size();
+      */
 
       int res = ins->deactivateProbe((void*)&func_id, FUNC);
       // fprintf(stderr, "Deactivation result : %d Before : %d After : %d\n", res, before, after);
