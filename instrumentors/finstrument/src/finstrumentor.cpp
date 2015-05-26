@@ -114,6 +114,7 @@ void Finstrumentor::initialize() {
 
   g_straddlers_bitmap = new uint8_t[func_count/8 + 1](); 
 
+  /*
   struct sigaction act;
   memset(&act, 0, sizeof(act));
   act.sa_sigaction = action;
@@ -121,6 +122,7 @@ void Finstrumentor::initialize() {
   if (sigaction(SIGSEGV, &act, NULL) < 0) {
     perror("sigaction");
   }
+  */
 }
 
 /*
