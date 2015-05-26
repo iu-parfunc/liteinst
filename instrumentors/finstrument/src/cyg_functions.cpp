@@ -945,6 +945,7 @@ void __cyg_profile_func_exit(void* func, void* caller) {
   if (!cache_aligned) {
     if (offset >= 57) {
       fprintf(stderr, "[cyg_exit] Disabling function: %s\n", ins->getFunctionName(func_id).c_str());
+      g_straddler_count++;
 
       /*
       if (func_id == 408) {

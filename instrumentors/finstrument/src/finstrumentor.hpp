@@ -79,6 +79,8 @@ extern volatile uint16_t func_id_counter;
 
 extern uint8_t* g_straddlers_bitmap;
 
+extern uint64_t g_straddler_count;
+
 #ifdef __cplusplus
 extern "C"
 {

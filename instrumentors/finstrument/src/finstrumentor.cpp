@@ -31,6 +31,7 @@ void* probeInfo;
 
 list<FinsProbeMetaData*>* g_probe_meta_data; 
 list<FinsCacheStraddler*>* g_cache_straddlers;
+uint64_t g_straddler_count = 0;
 
 #ifdef PROBE_HIST_ON
 ProbeStatistics* g_probe_stats; 
@@ -540,7 +541,7 @@ void dumpProbeOverheadStatistics() {
 void dumpProbeMetaData() {
   FILE* fp = fopen("meta.out", "a");
 
-  fprintf(stderr, "\n Cache Straddlers : %lu\n", g_cache_straddlers->size());
+  fprintf(stderr, "\n Cache Straddlers : %lu\n", g_straddler_count);
   for (list<FinsCacheStraddler*>::iterator it=g_cache_straddlers->begin(); it != g_cache_straddlers->end(); ++it) {
     fprintf(fp, "%llx, ", (*it)->addr);
     fprintf(fp, "%d \n", (*it)->cutoff);
