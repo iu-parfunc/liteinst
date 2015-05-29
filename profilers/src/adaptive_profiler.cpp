@@ -313,6 +313,8 @@ void* adaptiveProbeMonitor(void* param) {
       if (overhead_at_last_epoch != 0 && overhead_at_last_epoch >  sp_target_overhead) {
         uint64_t new_sample_size = ((double)sp_target_overhead / overhead_at_last_epoch) * sp_sample_size; 
 
+        fprintf(stderr, "Sample size : %lu\n", new_sample_size);
+
         if (new_sample_size > 0) {
           sp_sample_size = new_sample_size;
         } else {

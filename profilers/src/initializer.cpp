@@ -536,7 +536,9 @@ __attribute__((constructor, no_instrument_function))
     Profiler::getInstance(g_profiler_type);
 
     // Calibrate for cache effects
-    calibrate_cache_effects();
+    if (g_profiler_type == MINIMAL_ADAPTIVE || g_profiler_type == ADAPTIVE) {
+      calibrate_cache_effects();
+    }
 
     // ticks end = getticks();
 
