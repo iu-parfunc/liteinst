@@ -1,6 +1,6 @@
 
-CC = gcc
-CFLAGS = -O2
+CC = g++
+CFLAGS = -O2 $(NUMNOPS)
 
 all: main.exe 
 
@@ -20,6 +20,16 @@ sig2:
 sig3:
 	$(CC) $(CFLAGS) pt_main_3.c -lpthread -o pt_main_3.exe
 
+sig4:
+	$(CC) $(CFLAGS) pt_main_4.c -lpthread -o pt_main_4.exe
+
+sig5:
+	$(CC) $(CFLAGS) pt_main_5.c -lpthread -o pt_main_5.exe
+
+sig6:
+	$(CC) $(CFLAGS) pt_main_6.c -lpthread -o pt_main_6.exe
+
+
 # Just run
 runtime:
 	./main.exe
@@ -36,6 +46,16 @@ run2:
 run3:
 	./pt_main_3.exe
 
+run4:
+	./pt_main_4.exe
+
+run5:
+	./pt_main_5.exe
+
+run6:
+	./pt_main_6.exe
+
+
 # Build and run
 btime: sigtime
 	make runtime
@@ -51,6 +71,15 @@ brun2: sig2
 
 brun3: sig3
 	make run3
+
+brun4: sig4
+	make run4
+
+brun5: sig5
+	make run5
+
+brun6: sig6
+	make run6
 
 
 clean:
