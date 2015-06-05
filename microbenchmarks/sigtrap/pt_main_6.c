@@ -1,3 +1,8 @@
+
+// #ifndef - Doesn't work with g++ #$#$#$#$??
+#define _GNU_SOURCE
+// #endif
+
 #include <stdio.h>
 #include <inttypes.h>
 #include <time.h>
@@ -9,6 +14,7 @@
 #include <stdlib.h>
 #include <memory.h>
 #include <assert.h>
+#include <ucontext.h>
 
 
 volatile int active = 1; // Whether the function is toggled on or off. Not used currently
@@ -26,7 +32,7 @@ uint64_t deactivation_sequence_1;
 uint64_t deactivation_sequence_2;
 
 int64_t counter = 0;
-int64_t invocations = 100;
+int64_t invocations = 1000000;
 volatile int ready_to_go = 0;
 volatile int done = 0;
 volatile int initial = 0;
@@ -174,7 +180,7 @@ uint64_t get_msb_mask(int nbytes) {
 void add_call() {
     if (activeSequence != 0) {
 
-        uint64_t* start_addr = funcAddr - 1;
+        uint64_t* start_addr = (uint64_t*)((uint8_t*)funcAddr - 5);
 
         // fprintf(stderr, "Activating foo..\n");
 	
@@ -190,7 +196,7 @@ void add_call() {
 	  __sync_val_compare_and_swap((uint64_t*) start_addr,
                   *((uint64_t*)start_addr), activeSequence);
         } else {
-            printf("Adding straddler function call\n");
+            // printf("Adding straddler function call\n");
           __sync_val_compare_and_swap((uint64_t*) straddle_part_1_start,
                   *((uint64_t*)straddle_part_1_start), straddle_int3_sequence);
           __sync_val_compare_and_swap((uint64_t*) straddle_part_2_start,
@@ -202,9 +208,9 @@ void add_call() {
         // *(uint64_t*) start_addr = activeSequence;
         active = 1;
 
-        printf("Active sequence : %p Current Value : %p\n", 
-                activeSequence, *(uint64_t*)start_addr);
-        assert(activeSequence == (*(uint64_t*)start_addr));
+        // printf("Active sequence : %p Current Value : %p\n", 
+        //        activeSequence, *(uint64_t*)start_addr);
+        // assert(activeSequence == (*(uint64_t*)start_addr));
     } else {
         fprintf(stderr, "Active sequence not initialized..\n");
     }
@@ -221,7 +227,7 @@ void remove_call() {
         }
         */
 
-        uint64_t* start_addr = funcAddr - 1;
+        uint64_t* start_addr = (uint64_t*)((uint8_t*)funcAddr - 5);
 
         //fprintf(stderr, "Deactivating foo..\n");
         /* uint64_t res = __sync_val_compare_and_swap((uint64_t*)start_addr, */
@@ -236,7 +242,7 @@ void remove_call() {
           __sync_val_compare_and_swap((uint64_t*)start_addr,
                   *((uint64_t*)start_addr), deactiveSequence);
         } else {
-            printf("Removing Stradler function call\n");
+            // printf("Removing Stradler function call\n");
           __sync_val_compare_and_swap((uint64_t*) straddle_part_1_start,
                   *((uint64_t*)straddle_part_1_start), straddle_int3_sequence);
           __sync_val_compare_and_swap((uint64_t*) straddle_part_2_start,
@@ -245,9 +251,9 @@ void remove_call() {
                   *((uint64_t*)straddle_part_1_start), deactivation_sequence_1);
         }
 
-        printf("Deactive sequence : %p Current Value : %p\n", 
-                deactiveSequence, *(uint64_t*)start_addr);
-        assert(deactiveSequence == (*(uint64_t*)start_addr));
+        // printf("Deactive sequence : %p Current Value : %p\n", 
+        //         deactiveSequence, *(uint64_t*)start_addr);
+        // assert(deactiveSequence == (*(uint64_t*)start_addr));
 
         // *(uint64_t*) start_addr = deactiveSequence;
         active = 0;
@@ -257,7 +263,6 @@ void remove_call() {
 
 }
 
-
 __attribute__((noinline))
 void foo() {
 
@@ -266,15 +271,16 @@ void foo() {
 
     printf("------------------------------------\n");
     printf("address of call instr: %lx\n", (unsigned long)addr);
-    
-    for (int apa = 1; apa < 17; apa*=2) {  
+
+    int apa;
+    for (apa = 1; apa < 17; apa*=2) {  
         if ((unsigned long)addr % apa == 0)
         printf("address is %dbytes aligned\n",apa);
     } 
  
-    uint64_t *probe_start = (uint64_t*)(addr-1);
-    uint64_t sequence =  *((uint64_t*)(addr-1));
-    printf("start address of probe site: %lx\n", (unsigned long)(addr-1));   
+    uint64_t *probe_start = (uint64_t*)((uint8_t*)addr-5);
+    uint64_t sequence =  *((uint64_t*)((uint8_t*)addr-5));
+    printf("start address of probe site: %lx\n", (unsigned long)((uint8_t*)addr-5));   
     unsigned long pm64 = (unsigned long) probe_start % 64; 
     int cutoff_point = 0;
     if (pm64 > 56) {
@@ -289,27 +295,31 @@ void foo() {
       printf("Probe site straddles word boundary\nsince %lx %% 8 != 0\n",(unsigned long) probe_start);
       printf("%lx %% 8 = %ld\n", (unsigned long)probe_start, pm8);  
     }
-    for (int apa = 1; apa < 17; apa*=2) {  
+
+    for (apa = 1; apa < 17; apa*=2) {  
         if ((unsigned long)probe_start % apa == 0)
         printf("probe_site is %dbytes aligned\n",apa);
     }
     printf("------------------------------------\n");
     
-
-    uint64_t mask = 0x0000000000FFFFFF;
+    // uint64_t mask = 0x0000000000FFFFFF;
+    uint64_t mask = 0xFFFFFF0000000000;
     uint64_t deactive = (uint64_t) (sequence & mask);
-    mask = 0x0000441F0F000000; // We NOP 5 bytes of CALL instruction and leave rest of the 3 bytes as it is
+    mask = 0x0000000000441F0F; // We NOP 5 bytes of CALL instruction and leave rest of the 3 bytes as it is
     
     activeSequence = sequence; // Saves the active 
     deactiveSequence = deactive |  mask;
 
+    // straddler = 1;
+    // cutoff_point = 1;
     if (straddler) {
+      printf("CUTOFF POINT : %d\n", cutoff_point);
       uint64_t* straddle_point = (uint64_t*)((uint8_t*)probe_start + cutoff_point);
       straddle_part_1_start = straddle_point - 1;
       straddle_part_2_start = straddle_point;
       activation_sequence_1 = *straddle_part_1_start; 
       activation_sequence_2 = *straddle_part_2_start; 
-      int shift_size = (sizeof(uint8_t) * (cutoff_point-1));
+      int shift_size = (8 * (cutoff_point-1));
       uint64_t int3mask = 0xCC;
       uint64_t ormask = 0xFF;
       if (cutoff_point > 1) {
@@ -318,12 +328,16 @@ void foo() {
       }
       straddle_int3_sequence = (*straddle_part_1_start & ~ormask) | int3mask;
       uint64_t temp0 = deactiveSequence & get_lsb_mask(cutoff_point);
+      shift_size = (8 * (8-cutoff_point)); 
+      temp0 = (temp0 << shift_size);
       uint64_t temp1 = activation_sequence_1 & (~get_msb_mask(cutoff_point));
       deactivation_sequence_1 = temp0 | temp1;
 
       temp0 = deactiveSequence & (~get_lsb_mask(cutoff_point));
+      shift_size = (8 * cutoff_point);
+      temp0 = (temp0 >> shift_size);
       temp1 = activation_sequence_2 & get_msb_mask(cutoff_point); 
-      deactivation_sequence_2 = temp1 | temp0;
+      deactivation_sequence_2 = temp0 | temp1;
 
     }
     
@@ -405,10 +419,18 @@ void* stress_remove(void* param) {
 //    fprintf(stderr, "Final count : %ld Invocations : %ld Diff : %ld..\n\n\n", counter, invocs, invocs - counter);
 //}
 
-void catchit(int signo) { 
-  printf("Catching signal, num %d.. Signal handler going to an infinite loop. \n",signo);
-  // while(1);
-  printf("SIGHANDLE ..\n");
+// void catchit(int signo) { 
+void catchit(int signo, siginfo_t *inf, void* ptr) {
+  ucontext_t *ucontext = (ucontext_t*)ptr;
+  // printf("Caught signal, num %d..\n",signo);
+
+  // Restoring call site 
+  // __sync_val_compare_and_swap((uint64_t*) call_addr,
+  //         *((uint64_t*) call_addr), call_sequence);
+
+  // printf("Thread resume IP is : %p\n", (void*)ucontext->uc_mcontext.gregs[REG_RIP]);
+  ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] + 3;
+
   /*
   int i;
   for(i=0; i< 5; i++) {
@@ -425,7 +447,8 @@ int main() {
     struct sigaction newact; 
     struct sigaction oldact; 
     memset( &newact, 0, sizeof newact);
-    newact.sa_handler = & catchit;
+    newact.sa_sigaction = & catchit;
+    newact.sa_flags = SA_SIGINFO;
     sigemptyset(& (newact.sa_mask));
 
     sigaction(SIGTRAP, &newact, &oldact);
@@ -437,7 +460,8 @@ int main() {
     // Initialize the globals used for patching
     // foo(3);
 
-    for (int i=0; i < 2*NUM_THREADS; i+=2) {
+    int i;
+    for (i=0; i < 2*NUM_THREADS; i+=2) {
       //int j=i;
       //int k=i+1;
 
@@ -452,8 +476,8 @@ int main() {
         }
     }
 
-    long i;
-    for (i=0; i<invocations; i++) {
+    int j;
+    for (j=0; j<invocations; j++) {
       //__asm__ ("call foo");
 #ifdef ASM0
   __asm__(asm0);
@@ -563,9 +587,9 @@ int main() {
   __asm__(asm26);
 #endif
 
-// #ifdef ASM27
+#ifdef ASM27
   __asm__(asm27);
-// #endif
+#endif
 
 #ifdef ASM28
   __asm__(asm28);
@@ -722,16 +746,18 @@ int main() {
 
       
       //foo(5); // This is the call site that we patch
-        if (i==0) {
+        if (j==0) {
             fprintf(stderr, "Initial call done..\n");
             ready_to_go =1;
         }
+
+       // printf("NUM OF INVOCATIONS : %ld\n", j);
     }
 
     done =1; 
     int *k = NULL;
     // Wait for all threads to finish
-    for (int i=0; i<2*NUM_THREADS; i++) {
+    for (i=0; i<2*NUM_THREADS; i++) {
         pthread_join(threads[i], (void**)&k);
     }
 
