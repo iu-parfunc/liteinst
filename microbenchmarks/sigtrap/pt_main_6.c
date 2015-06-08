@@ -319,7 +319,7 @@ void foo() {
       straddle_part_2_start = straddle_point;
       activation_sequence_1 = *straddle_part_1_start; 
       activation_sequence_2 = *straddle_part_2_start; 
-      int shift_size = (8 * (cutoff_point-1));
+      int shift_size = 8 * (8 - cutoff_point);
       uint64_t int3mask = 0xCC;
       uint64_t ormask = 0xFF;
       if (cutoff_point > 1) {
@@ -327,6 +327,8 @@ void foo() {
         ormask = (ormask << shift_size);
       }
       straddle_int3_sequence = (*straddle_part_1_start & ~ormask) | int3mask;
+      // printf("Straddler sequence : %p INT3 sequence : %p\n", 
+      //        *straddle_part_1_start, straddle_int3_sequence);
       uint64_t temp0 = deactiveSequence & get_lsb_mask(cutoff_point);
       shift_size = (8 * (8-cutoff_point)); 
       temp0 = (temp0 << shift_size);
@@ -429,7 +431,7 @@ void catchit(int signo, siginfo_t *inf, void* ptr) {
   //         *((uint64_t*) call_addr), call_sequence);
 
   // printf("Thread resume IP is : %p\n", (void*)ucontext->uc_mcontext.gregs[REG_RIP]);
-  ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] + 3;
+  ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] + 4;
 
   /*
   int i;
