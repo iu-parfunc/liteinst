@@ -639,16 +639,13 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 
   uint16_t func_id = get_func_id((uint64_t)func);
 
-  if (func_id == 408) {
-    fprintf(stderr, "AT CYG_ENTER of %d\n", func_id);
-  }
-
   // This is a straddler. Return without patching.
   // if (get_index(g_straddlers_bitmap, func_id)) {
     // fprintf(stderr, "RETURNING FROM STRADDLER\n");
     // return;
   // }
 
+  // /*
   uint64_t* probe_start = (uint64_t*)((uint8_t*) addr - 8);
   size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
 
@@ -656,15 +653,13 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   // bool int_aligned = (uint64_t) probe_start % 32 == 0 ? 1 : 0;
   bool cache_aligned = (uint64_t) probe_start % cache_line_size == 0 ? 1 : 0;
 
-  /*
-  FinsProbeMetaData* pmd = new FinsProbeMetaData;
-  pmd->addr = (uint64_t) probe_start;
-  pmd->word_aligned = word_aligned;
-  pmd->int_aligned = int_aligned;
-  pmd->cache_aligned = cache_aligned;
+  // FinsProbeMetaData* pmd = new FinsProbeMetaData;
+  // pmd->addr = (uint64_t) probe_start;
+  // pmd->word_aligned = word_aligned;
+  // pmd->int_aligned = int_aligned;
+  // pmd->cache_aligned = cache_aligned;
 
-  g_probe_meta_data->push_front(pmd);
-  */
+  // g_probe_meta_data->push_front(pmd);
 
   // Add to probe statistics
   
@@ -674,80 +669,36 @@ void __cyg_profile_func_enter(void* func, void* caller) {
     if (offset >= 57) {
       fprintf(stderr, "[cyg_enter] Disabling function: %s\n", ins->getFunctionName(func_id).c_str());
       set_index(g_straddlers_bitmap, func_id);
-      /*
-      if (func_id == 408) {
-        fprintf(stderr, "SETTING bit map for enter : %d\n", func_id);
-      }
-      std::list<FinsProbeInfo*>* ls = ins->getProbes((void*)&func_id);
-      
-      int before = -1;
-      if (ls != NULL && !ls->empty()) {
-        before = ls->size();
-      }
 
-      int lock = *(ins->getLock((uint64_t) func));
-      if (lock != 0) {
-        fprintf(stderr, "Func id before is : %d\n", func_id);
-        fprintf(stderr, "Func name : %s\n", ins->getFunctionName(func_id).c_str());
-      }
-      */
+      // if (func_id == 408) {
+      //   fprintf(stderr, "SETTING bit map for enter : %d\n", func_id);
+      // }
+      // std::list<FinsProbeInfo*>* ls = ins->getProbes((void*)&func_id);
+      
+      // int before = -1;
+      // if (ls != NULL && !ls->empty()) {
+      //  before = ls->size();
+      // }
+
+      // int lock = *(ins->getLock((uint64_t) func));
+      // if (lock != 0) {
+      //  fprintf(stderr, "Func id before is : %d\n", func_id);
+      //  fprintf(stderr, "Func name : %s\n", ins->getFunctionName(func_id).c_str());
+      // }
+
       // assert(*(ins->getLock((uint64_t) func)) == 0);
       init_probe_info((uint64_t)func, (uint8_t*)addr);
 
-      /*
-      lock = *(ins->getLock((uint64_t) func));
-      if (lock != 0) {
-        fprintf(stderr, "Func id after is : %d\n", func_id);
-        // fprintf(stderr, "Func name : %s\n", ins->getFunctionName(func_id).c_str());
-      }
-      */
       // assert(*(ins->getLock((uint64_t) func)) == 0);
 
-      /*
-      ls = ins->getProbes((void*)&func_id);
-      int after = ls->size();
-      */
-
-      int res = ins->deactivateProbe((void*)&func_id, FUNC);
+      // int res = ins->deactivateProbe((void*)&func_id, FUNC);
       // fprintf(stderr, "Deactivation result : %d Before : %d After : %d\n", res, before, after);
       return;
     }
 
-    /*
-    switch (offset) {
-      case 57:
-      case 58:
-      case 59:
-      case 60:
-      case 61:
-      case 62:
-      case 63:
-        fprintf(stderr, "SETTING bit map for : %d\n", func_id);
-        set_index(g_straddlers_bitmap, func_id);
-        // Check if this straddler was already encountered
-        if (!(ins->probe_info->find((uint64_t)func) == ins->probe_info->end())) {
-          std::list<FinsProbeInfo*>* probe_list = ins->probe_info->find((uint64_t)func)->second;
-          for(std::list<FinsProbeInfo*>::iterator iter = probe_list->begin(); iter != probe_list->end(); iter++) {
-            FinsProbeInfo* probeInfo= *iter;
-            if (probeInfo->probeStartAddr == (uint8_t*)probe_start) {
-                return;
-            }
-          } 
-        }
-        FinsCacheStraddler* fcs = new FinsCacheStraddler;
-        fcs->addr = (uint64_t) probe_start;
-        fcs->cutoff = cache_line_size - offset;
-        g_cache_straddlers->push_front(fcs);
 
-        FILE* fp = fopen("straddlers.out", "a");
-        fprintf(fp, "%llx %lu\n", probe_start, cache_line_size - offset);
-        fclose(fp);
-        return;
-      default:
-        ;
-    }
-    */
   }
+  // */
 
   if (addr < func) {
     // fprintf(stderr, "Function start is great than the cyg_enter return address.. Function address: %p Call address : %p \n", func, addr);
@@ -915,6 +866,7 @@ void __cyg_profile_func_exit(void* func, void* caller) {
   }
 
   // This is a straddler. Return without patching.
+  // /*
   if (get_index(g_straddlers_bitmap, func_id)) {
     fprintf(stderr, "[cyg_exit] Disabling function trivial: %s\n", ins->getFunctionName(func_id).c_str());
     init_probe_info((uint64_t)func, (uint8_t*)addr);
@@ -929,15 +881,13 @@ void __cyg_profile_func_exit(void* func, void* caller) {
   // bool int_aligned = (uint64_t) probe_start % 32 == 0 ? 1 : 0;
   bool cache_aligned = (uint64_t) probe_start % cache_line_size == 0 ? 1 : 0;
 
-  /*
-  FinsProbeMetaData* pmd = new FinsProbeMetaData;
-  pmd->addr = (uint64_t) probe_start;
-  pmd->word_aligned = word_aligned;
-  pmd->int_aligned = int_aligned;
-  pmd->cache_aligned = cache_aligned;
+  // FinsProbeMetaData* pmd = new FinsProbeMetaData;
+  // pmd->addr = (uint64_t) probe_start;
+  // pmd->word_aligned = word_aligned;
+  // pmd->int_aligned = int_aligned;
+  // pmd->cache_aligned = cache_aligned;
 
-  g_probe_meta_data->push_front(pmd);
-  */
+  // g_probe_meta_data->push_front(pmd);
 
   // Add to probe statistics
   
@@ -947,68 +897,29 @@ void __cyg_profile_func_exit(void* func, void* caller) {
       fprintf(stderr, "[cyg_exit] Disabling function: %s\n", ins->getFunctionName(func_id).c_str());
       g_straddler_count++;
 
-      /*
-      if (func_id == 408) {
-        fprintf(stderr, "SETTING bit map for exit : %d\n", func_id);
-      }
+      // if (func_id == 408) {
+      //   fprintf(stderr, "SETTING bit map for exit : %d\n", func_id);
+      // }
 
-      set_index(g_straddlers_bitmap, func_id);
-      std::list<FinsProbeInfo*>* ls = ins->getProbes((void*)&func_id);
+      // set_index(g_straddlers_bitmap, func_id);
+      // std::list<FinsProbeInfo*>* ls = ins->getProbes((void*)&func_id);
 
-      int before;
-      if (ls != NULL) {
-        before = ls->size();
-      }
-      */
+      // int before;
+      // if (ls != NULL) {
+      //   before = ls->size();
+      // }
 
       // assert(*(ins->getLock((uint64_t) func)) == 0);
       init_probe_info((uint64_t)func, (uint8_t*)addr);
       // assert(*(ins->getLock((uint64_t) func)) == 0);
 
-      /*
-      ls = ins->getProbes((void*)&func_id);
-      int after = ls->size();
-      */
-
       int res = ins->deactivateProbe((void*)&func_id, FUNC);
       // fprintf(stderr, "Deactivation result : %d Before : %d After : %d\n", res, before, after);
       return;
     }
-    /*
-    switch (offset) {
-      case 57:
-      case 58:
-      case 59:
-      case 60:
-      case 61:
-      case 62:
-      case 63:
-        fprintf(stderr, "SETTING bit map for : %d\n", func_id);
-        set_index(g_straddlers_bitmap, func_id);
-        // Check if this straddler was already encountered
-        if (!(ins->probe_info->find((uint64_t)func) == ins->probe_info->end())) {
-          std::list<FinsProbeInfo*>* probe_list = ins->probe_info->find((uint64_t)func)->second;
-          for(std::list<FinsProbeInfo*>::iterator iter = probe_list->begin(); iter != probe_list->end(); iter++) {
-            FinsProbeInfo* probeInfo= *iter;
-            if (probeInfo->probeStartAddr == (uint8_t*)probe_start) {
-                return;
-            }
-          } 
-        }
-        FinsCacheStraddler* fcs = new FinsCacheStraddler;
-        fcs->addr = (uint64_t) probe_start;
-        fcs->cutoff = cache_line_size - offset;
-        g_cache_straddlers->push_front(fcs);
 
-        FILE* fp = fopen("straddlers.out", "a");
-        fprintf(fp, "%llx %lu\n", probe_start, cache_line_size - offset);
-        fclose(fp);
-        return;
-      default:
-        ;
-    }
-    */
   }
+  //  */
 
   if (addr < func) {
     // fprintf(stderr, "Function start is great than the cyg_exit return address.. Function address: %p Call address : %p \n", func, addr);
@@ -1460,3 +1371,73 @@ fprintf(stderr, "@@@@@@@@@@@ Function Prolog @@@@@@@@@@@@@\n");
 
 }
 */
+
+    /*
+    switch (offset) {
+      case 57:
+      case 58:
+      case 59:
+      case 60:
+      case 61:
+      case 62:
+      case 63:
+        fprintf(stderr, "SETTING bit map for : %d\n", func_id);
+        set_index(g_straddlers_bitmap, func_id);
+        // Check if this straddler was already encountered
+        if (!(ins->probe_info->find((uint64_t)func) == ins->probe_info->end())) {
+          std::list<FinsProbeInfo*>* probe_list = ins->probe_info->find((uint64_t)func)->second;
+          for(std::list<FinsProbeInfo*>::iterator iter = probe_list->begin(); iter != probe_list->end(); iter++) {
+            FinsProbeInfo* probeInfo= *iter;
+            if (probeInfo->probeStartAddr == (uint8_t*)probe_start) {
+                return;
+            }
+          } 
+        }
+        FinsCacheStraddler* fcs = new FinsCacheStraddler;
+        fcs->addr = (uint64_t) probe_start;
+        fcs->cutoff = cache_line_size - offset;
+        g_cache_straddlers->push_front(fcs);
+
+        FILE* fp = fopen("straddlers.out", "a");
+        fprintf(fp, "%llx %lu\n", probe_start, cache_line_size - offset);
+        fclose(fp);
+        return;
+      default:
+        ;
+    }
+    */
+
+    /*
+    switch (offset) {
+      case 57:
+      case 58:
+      case 59:
+      case 60:
+      case 61:
+      case 62:
+      case 63:
+        fprintf(stderr, "SETTING bit map for : %d\n", func_id);
+        set_index(g_straddlers_bitmap, func_id);
+        // Check if this straddler was already encountered
+        if (!(ins->probe_info->find((uint64_t)func) == ins->probe_info->end())) {
+          std::list<FinsProbeInfo*>* probe_list = ins->probe_info->find((uint64_t)func)->second;
+          for(std::list<FinsProbeInfo*>::iterator iter = probe_list->begin(); iter != probe_list->end(); iter++) {
+            FinsProbeInfo* probeInfo= *iter;
+            if (probeInfo->probeStartAddr == (uint8_t*)probe_start) {
+                return;
+            }
+          } 
+        }
+        FinsCacheStraddler* fcs = new FinsCacheStraddler;
+        fcs->addr = (uint64_t) probe_start;
+        fcs->cutoff = cache_line_size - offset;
+        g_cache_straddlers->push_front(fcs);
+
+        FILE* fp = fopen("straddlers.out", "a");
+        fprintf(fp, "%llx %lu\n", probe_start, cache_line_size - offset);
+        fclose(fp);
+        return;
+      default:
+        ;
+    }
+    */

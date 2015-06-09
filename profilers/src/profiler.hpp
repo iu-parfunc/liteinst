@@ -2,6 +2,7 @@
 #ifndef _PROFILER_HPP_
 #define _PROFILER_HPP_
 
+#include <assert.h>
 #include "../../api/ubiprof.hpp"
 #include "../../common/include/cycle.h"
 #include "globals.hpp"

@@ -540,9 +540,11 @@ void AdaptiveProfiler::spawnMonitor() {
 
 void AdaptiveProfiler::registerThreadStatistics(TLStatistics* stats) {
   // while(__sync_bool_compare_and_swap(&g_thread_lock, 0 , 1)); // Acquire lock
-
-  if (thread_counter+ 1 < 64) {
-    tls_stats[thread_counter++] = stats;
+  
+  // assert(stats != NULL);
+  if (thread_counter < 64) {
+    tls_stats[thread_counter] = stats;
+    thread_counter++;
   } else {
     fprintf(stderr, "[Adaptive Profiler] Max thread count exceeded. This thread will not be profiled..\n");
   }

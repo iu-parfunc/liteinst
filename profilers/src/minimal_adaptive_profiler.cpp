@@ -8,6 +8,7 @@
 #include <string.h>
 #include <list>
 #include <limits.h>
+#include <assert.h>
 
 #include "adaptive_profiler.hpp"
 #include "overhead_series.hpp"
@@ -23,16 +24,18 @@ static __thread TLStatistics* current_thread_stats;
 // Function statistics table for current thread 
 static __thread TLSAdaptiveProfilerStat* current_thread_func_stats_table;
 
+static __thread bool allocated;
+
 // Instrumentation Functions
 TLStatistics* minimalAdaptivePrologFunction(uint16_t func_id) {
-
-  static __thread bool allocated;
 
   if (!allocated) {
     allocated = true;
     long function_count = INSTRUMENTOR_INSTANCE->getFunctionCount();
     // C++ value initilization.. Similar to calloc
+    // int* intArr = new int[10];
     current_thread_func_stats_table = new TLSAdaptiveProfilerStat[function_count]();
+    assert(current_thread_func_stats_table != NULL);
     current_thread_stats = new TLStatistics;
     current_thread_stats->func_stats = current_thread_func_stats_table;
     current_thread_stats->thread_local_overhead = 0;
@@ -54,6 +57,12 @@ TLStatistics* minimalAdaptivePrologFunction(uint16_t func_id) {
 }
 
 TLStatistics* minimalAdaptiveEpilogFunction(uint16_t func_id) {
+
+  // Somehow epilog got called without proper prolog execution. (e.g: Race
+  // condition on deactivation etc). Just return in that case.
+  if (!allocated) {
+    return;
+  }
 
   ticks epilog_start = getticks();
 
