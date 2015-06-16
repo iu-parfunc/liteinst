@@ -34,7 +34,7 @@ uint64_t deactivation_sequence_2;
 int64_t counter = 0;
 int64_t invocations = 1000000;
 volatile int ready_to_go = 0;
-volatile int done = 0;
+volatile int remaining = 0;
 volatile int initial = 0;
 
 const int NUM_THREADS = 5;
@@ -177,6 +177,12 @@ uint64_t get_msb_mask(int nbytes) {
   }
 }
 
+inline void
+clflush(volatile void *p)
+{
+    asm volatile ("clflush (%0)" :: "r"(p));
+}
+
 void add_call() {
     if (activeSequence != 0) {
 
@@ -199,6 +205,8 @@ void add_call() {
             // printf("Adding straddler function call\n");
           __sync_val_compare_and_swap((uint64_t*) straddle_part_1_start,
                   *((uint64_t*)straddle_part_1_start), straddle_int3_sequence);
+          __sync_synchronize(); 
+          clflush(straddle_part_1_start);
           __sync_val_compare_and_swap((uint64_t*) straddle_part_2_start,
                   *((uint64_t*)straddle_part_2_start), activation_sequence_2);
           __sync_val_compare_and_swap((uint64_t*) straddle_part_1_start,
@@ -245,6 +253,8 @@ void remove_call() {
             // printf("Removing Stradler function call\n");
           __sync_val_compare_and_swap((uint64_t*) straddle_part_1_start,
                   *((uint64_t*)straddle_part_1_start), straddle_int3_sequence);
+          __sync_synchronize();
+          clflush(straddle_part_1_start);
           __sync_val_compare_and_swap((uint64_t*) straddle_part_2_start,
                   *((uint64_t*)straddle_part_2_start), deactivation_sequence_2);
           __sync_val_compare_and_swap((uint64_t*) straddle_part_1_start,
@@ -322,10 +332,10 @@ void foo() {
       int shift_size = 8 * (8 - cutoff_point);
       uint64_t int3mask = 0xCC;
       uint64_t ormask = 0xFF;
-      if (cutoff_point > 1) {
+      // if (cutoff_point > 1) {
         int3mask = (int3mask << shift_size);
         ormask = (ormask << shift_size);
-      }
+      // }
       straddle_int3_sequence = (*straddle_part_1_start & ~ormask) | int3mask;
       // printf("Straddler sequence : %p INT3 sequence : %p\n", 
       //        *straddle_part_1_start, straddle_int3_sequence);
@@ -355,132 +365,24 @@ void foo() {
     initial = 1;
   }
   
-  if ( counter % 4000000 == 0)  
-    printf("call of Cthu... I mean foo()\n");
+  // if ( counter % 4000000 == 0)  
+  //   printf("call of Cthu... I mean foo()\n");
   counter++;
     // fprintf(stderr, "Foo counter : %d\n", counter++);
 }
 
-void* stress_add(void*param) {
-    while(!ready_to_go) {
-        ;
-    }
+void* call_foo(void* param) {
 
-    while(!done) {
-        add_call();
-    }
-    // I don't know what this return value means. 
-    return NULL;
-}
-
-void* stress_remove(void* param) {
-    while(!ready_to_go) {
-        ;
-    }
-
-    while (!done) {
-        remove_call();
-    }
-    return NULL;
-}
-
-/* void validate_patching() { */
-/*     long invocs = 0; */
-
-/* loop: */
-/*     for (long i=0; i<invocations; i++) { */
-/*         foo(); // This is the call site that we patch */
-/*         invocs++; */
-/*     } */
-
-/*     if (done != 0) { */
-/*       goto incr; */
-/*     } else { */
-/*       goto remove; */
-/*     } */
-/*     // No Jump to check  */
-/*     //check: */
-/*     if (done == 0) { */
-/*       goto loop; */
-/* remove: */
-/*       remove_call(); */
-/*     } else if (done == 1) { */
-/*       goto loop; */
-/*     } else { */
-/*       add_call(); */
-/*       goto loop; */
-/*     } */
-
-/* incr: */
-/*    if (done < 2) { */
-/*      done++; */
-/*      goto loop;  */
-/*    } */
-
-    // Printing diff to make sure that there indeed have been some deactivations
-//    fprintf(stderr, "Final count : %ld Invocations : %ld Diff : %ld..\n\n\n", counter, invocs, invocs - counter);
-//}
-
-// void catchit(int signo) { 
-void catchit(int signo, siginfo_t *inf, void* ptr) {
-  ucontext_t *ucontext = (ucontext_t*)ptr;
-  // printf("Caught signal, num %d..\n",signo);
-
-  // Restoring call site 
-  // __sync_val_compare_and_swap((uint64_t*) call_addr,
-  //         *((uint64_t*) call_addr), call_sequence);
-
-  // printf("Thread resume IP is : %p\n", (void*)ucontext->uc_mcontext.gregs[REG_RIP]);
-  ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] + 4;
-
-  /*
-  int i;
-  for(i=0; i< 5; i++) {
-    sleep(1);
-    printf("SIGHANDLE ..\n");
-  }
-  */
-}
-
-int main() {
- 
-    // validate_patching();
-
-    struct sigaction newact; 
-    struct sigaction oldact; 
-    memset( &newact, 0, sizeof newact);
-    newact.sa_sigaction = & catchit;
-    newact.sa_flags = SA_SIGINFO;
-    sigemptyset(& (newact.sa_mask));
-
-    sigaction(SIGTRAP, &newact, &oldact);
-    printf("Sigaction set, old funptr %p\n", oldact.sa_handler);
-
-    pthread_t threads[2*NUM_THREADS];
-    int rc;
-
-    // Initialize the globals used for patching
-    // foo(3);
-
-    int i;
-    for (i=0; i < 2*NUM_THREADS; i+=2) {
-      //int j=i;
-      //int k=i+1;
-
-        rc = pthread_create(&threads[i], NULL, stress_add, (void*)0);
-        if (rc) {
-            printf("ERROR: thread creation failed with error %d\n", rc);
-        }
-
-	rc = pthread_create(&threads[i+1], NULL, stress_remove, (void*)0);
-        if (rc) {
-           printf("ERROR: thread creation failed with error %d\n", rc);
-        }
+    if (param == 0) {
+        printf("invocations = %d\n", invocations);
+        goto call;
     }
 
     int j;
     for (j=0; j<invocations; j++) {
-      //__asm__ ("call foo");
+      // printf("invocations = %d\n", invocations);
+      //__asm__ ("call foo")
+call:
 #ifdef ASM0
   __asm__(asm0);
 #endif
@@ -745,24 +647,172 @@ int main() {
   __asm__(asm65);
 #endif
 
-
+  if (param == 0) {
+      return NULL;
+  }
       
       //foo(5); // This is the call site that we patch
-        if (j==0) {
-            fprintf(stderr, "Initial call done..\n");
-            ready_to_go =1;
-        }
 
        // printf("NUM OF INVOCATIONS : %ld\n", j);
     }
 
-    done =1; 
+    __sync_fetch_and_sub(&remaining, 1);
+    // printf("Remaining : %d\n", remaining);
+    return NULL;
+
+}
+
+uint64_t lock = 0;
+
+void get_lock() {
+  while(!__sync_bool_compare_and_swap((uint64_t*) &lock, 0, 1));
+}
+
+void release() {
+  __sync_bool_compare_and_swap((uint64_t*) &lock, 1, 0);
+}
+
+void* stress_add(void*param) {
+    while(!ready_to_go) {
+        ;
+    }
+
+    while(remaining) {
+        // printf("Adding foo\n");
+        get_lock();
+        add_call();
+        release();
+    }
+    // I don't know what this return value means. 
+    return NULL;
+}
+
+void* stress_remove(void* param) {
+    while(!ready_to_go) {
+        ;
+    }
+
+    while (remaining) {
+        // printf("Removing foo\n");
+        get_lock();
+        remove_call();
+        release();
+    }
+    return NULL;
+}
+
+/* void validate_patching() { */
+/*     long invocs = 0; */
+
+/* loop: */
+/*     for (long i=0; i<invocations; i++) { */
+/*         foo(); // This is the call site that we patch */
+/*         invocs++; */
+/*     } */
+
+/*     if (done != 0) { */
+/*       goto incr; */
+/*     } else { */
+/*       goto remove; */
+/*     } */
+/*     // No Jump to check  */
+/*     //check: */
+/*     if (done == 0) { */
+/*       goto loop; */
+/* remove: */
+/*       remove_call(); */
+/*     } else if (done == 1) { */
+/*       goto loop; */
+/*     } else { */
+/*       add_call(); */
+/*       goto loop; */
+/*     } */
+
+/* incr: */
+/*    if (done < 2) { */
+/*      done++; */
+/*      goto loop;  */
+/*    } */
+
+    // Printing diff to make sure that there indeed have been some deactivations
+//    fprintf(stderr, "Final count : %ld Invocations : %ld Diff : %ld..\n\n\n", counter, invocs, invocs - counter);
+//}
+
+// void catchit(int signo) { 
+void catchit(int signo, siginfo_t *inf, void* ptr) {
+  ucontext_t *ucontext = (ucontext_t*)ptr;
+  // printf("Caught signal, num %d..\n",signo);
+
+  // Restoring call site 
+  // __sync_val_compare_and_swap((uint64_t*) call_addr,
+  //         *((uint64_t*) call_addr), call_sequence);
+
+  // printf("Thread resume IP is : %p\n", (void*)ucontext->uc_mcontext.gregs[REG_RIP]);
+  ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] + 4;
+
+  /*
+  int i;
+  for(i=0; i< 5; i++) {
+    sleep(1);
+    printf("SIGHANDLE ..\n");
+  }
+  */
+}
+
+int main() {
+ 
+    // validate_patching();
+
+    struct sigaction newact; 
+    struct sigaction oldact; 
+    memset( &newact, 0, sizeof newact);
+    newact.sa_sigaction = & catchit;
+    newact.sa_flags = SA_SIGINFO;
+    sigemptyset(& (newact.sa_mask));
+
+    sigaction(SIGTRAP, &newact, &oldact);
+    printf("Sigaction set, old funptr %p\n", oldact.sa_handler);
+
+    pthread_t threads[2*NUM_THREADS];
+    int rc;
+    pthread_t add_thread;
+
+    // Initialize the globals used for patching
+    // foo(3);
+
+    remaining=NUM_THREADS; 
+    call_foo((void*) 0);
+    fprintf(stderr, "Initial call done..\n");
+    ready_to_go =1;
+
+    rc = pthread_create(&add_thread, NULL, stress_add, (void*)0);
+    if (rc) {
+      printf("ERROR: thread creation failed with error %d\n", rc);
+    }
+
+    int i;
+    for (i=0; i < 2*NUM_THREADS; i+=2) {
+      //int j=i;
+      //int k=i+1;
+
+      rc = pthread_create(&threads[i], NULL, call_foo, (void*)1);
+      if (rc) {
+        printf("ERROR: thread creation failed with error %d\n", rc);
+      }
+    
+      rc = pthread_create(&threads[i+1], NULL, stress_remove, (void*)0);
+      if (rc) {
+        printf("ERROR: thread creation failed with error %d\n", rc);
+      }
+    }
+
     int *k = NULL;
     // Wait for all threads to finish
     for (i=0; i<2*NUM_THREADS; i++) {
-        pthread_join(threads[i], (void**)&k);
+         pthread_join(threads[i], (void**)&k);
     }
 
+    pthread_join(add_thread, (void**)&k);
 
     // Printing diff to make sure that there indeed have been some deactivations
     fprintf(stderr, "Final count : %ld Invocations : %lu Diff : %ld..\n\n\n", counter, i, (long)i - counter);
