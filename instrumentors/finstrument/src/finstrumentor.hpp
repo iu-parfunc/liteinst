@@ -14,9 +14,16 @@
 
 // typedef void (*InstrumentationFunc)(uint16_t);
 
+inline void
+clflush(volatile void *p)
+{
+    asm volatile ("clflush (%0)" :: "r"(p));
+}
+
 typedef struct FinsProbeInfo {
     uint8_t patch_strategy;
     uint8_t* probeStartAddr;
+
     // uint8_t* probe_end_addr;
     uint8_t size;
     /* argument patching strategy specific data */
@@ -31,6 +38,17 @@ typedef struct FinsProbeInfo {
     uint64_t activeSequence;
     uint64_t deactiveSequence;
     bool isActive;
+
+    // Straddler specific
+    bool straddler;
+    uint64_t* straddle_part_1_start;
+    uint64_t* straddle_part_2_start;
+    uint64_t straddle_int3_sequence;
+    uint64_t activation_sequence_1;
+    uint64_t activation_sequence_2;
+    uint64_t deactivation_sequence_1;
+    uint64_t deactivation_sequence_2;
+
 } FinsProbeInfo;
 
 typedef struct FinsProbeMetaData {

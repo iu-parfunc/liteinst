@@ -213,6 +213,8 @@ inline bool patch_with_value(uint8_t* addr, uint16_t func_id) {
   *(uint32_t*)(sequence_ptr+1) = (uint32_t)func_id;
 
   status = __sync_bool_compare_and_swap((uint64_t*)addr, *((uint64_t*)addr), masked_sequence);
+  __sync_synchronize(); 
+  clflush(addr);
 
   return status;
 
@@ -364,6 +366,112 @@ bool has_probe_info(uint64_t func_addr) {
   }
 }
 
+uint64_t get_lsb_mask(int nbytes) {
+  switch (nbytes) {
+    case 1:
+      return 0xFF;
+    case 2:
+      return 0xFFFF;
+    case 3:
+      return 0xFFFFFF;
+    case 4:
+      return 0xFFFFFFFF;
+    case 5:
+      return 0xFFFFFFFFFF;
+    case 6:
+      return 0xFFFFFFFFFFFF;
+    case 7:
+      return 0xFFFFFFFFFFFFFF;
+    default:
+      printf("ERROR : Invalid input to get_lsb_mask\n");
+      return 0;
+  }
+}
+
+uint64_t get_msb_mask(int nbytes) {
+  switch (nbytes) {
+    case 1:
+      return 0xFF00000000000000;
+    case 2:
+      return 0xFFFF000000000000;
+    case 3:
+      return 0xFFFFFF0000000000;
+    case 4:
+      return 0xFFFFFFFF00000000;
+    case 5:
+      return 0xFFFFFFFFFF000000;
+    case 6:
+      return 0xFFFFFFFFFFFF0000;
+    case 7:
+      return 0xFFFFFFFFFFFFFF00;
+    default:
+      printf("ERROR : Invalid input to get_msb_mask\n");
+      return 0;
+  }
+}
+
+FinsProbeInfo* populate_probe_info(uint8_t* probe_addr){
+  uint64_t* probe_start = (uint64_t*)(probe_addr - 5);
+
+  FinsProbeInfo* probeInfo = new FinsProbeInfo;
+  probeInfo->probeStartAddr = probe_addr-5;
+  probeInfo->isActive = 1;
+
+  uint64_t sequence = *probe_start;
+  uint64_t mask = 0xFFFFFF0000000000;
+  uint64_t deactive = (uint64_t) (sequence & mask); 
+  mask = 0x0000000000441F0F; // Mask with a 5 byte NOP
+
+  uint64_t activeSequence = sequence;
+  uint64_t deactiveSequence = deactive | mask;
+
+  size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
+  int offset = (uint64_t) probe_start % cache_line_size;
+  if (offset >= 57) { // If this is a cache line straddler
+    int cutoff_point = 64 - offset;
+
+    g_straddler_count++;
+    printf("CUTOFF POINT : %d\n", cutoff_point);
+
+    probeInfo->straddler = true;
+   
+    uint64_t* straddle_point = (uint64_t*)((uint8_t*)probe_start + cutoff_point);
+    probeInfo->straddle_part_1_start = straddle_point - 1;
+    probeInfo->straddle_part_2_start = straddle_point;
+    probeInfo->activation_sequence_1 = *(probeInfo->straddle_part_1_start); 
+    probeInfo->activation_sequence_2 = *(probeInfo->straddle_part_2_start); 
+
+    int shift_size = 8 * (8 - cutoff_point);
+    uint64_t int3mask = 0xCC;
+    uint64_t ormask = 0xFF;
+
+    int3mask = (int3mask << shift_size);
+    ormask = (ormask << shift_size);
+
+    probeInfo->straddle_int3_sequence = (*(probeInfo->straddle_part_1_start) & ~ormask) | int3mask;
+      
+    uint64_t temp0 = deactiveSequence & get_lsb_mask(cutoff_point);
+    shift_size = (8 * (8-cutoff_point)); 
+    temp0 = (temp0 << shift_size);
+    uint64_t temp1 = probeInfo->activation_sequence_1 & (~get_msb_mask(cutoff_point));
+    probeInfo->deactivation_sequence_1 = temp0 | temp1;
+
+    temp0 = deactiveSequence & (~get_lsb_mask(cutoff_point));
+    shift_size = (8 * cutoff_point);
+    temp0 = (temp0 >> shift_size);
+    temp1 = probeInfo->activation_sequence_2 & get_msb_mask(cutoff_point); 
+    probeInfo->deactivation_sequence_2 = temp0 | temp1;
+  } else {
+    probeInfo->straddler = false;
+  }
+
+  probeInfo->activeSequence = sequence;
+  probeInfo->deactiveSequence = deactiveSequence;
+
+  return probeInfo;
+
+}
+
 // TODO: Make this thread safe
 inline void init_probe_info(uint64_t func_addr, uint8_t* probe_addr) {
 
@@ -375,26 +483,66 @@ inline void init_probe_info(uint64_t func_addr, uint8_t* probe_addr) {
   int counter = 0;
   if (lock != NULL) {
 loop:
-    // fprintf(stderr, "Counter is : %d\n", counter);
     if (__sync_bool_compare_and_swap(lock, 0 , 1)) {
       // fprintf(stderr, "LOCKED %p : %lu\n", lock, *lock);
       // fprintf(stderr, "probe_info address at init probe : %p\n", ins->probe_info);
       if(ins->probe_info->find(func_addr) == ins->probe_info->end()) {
         std::list<FinsProbeInfo*>* probe_list = new std::list<FinsProbeInfo*>;
         // fprintf(stderr, "Probe list address for func id %d : %p\n", func_addr, probe_list);
+        /*
         FinsProbeInfo* probeInfo = new FinsProbeInfo;
         probeInfo->probeStartAddr = (probe_addr-8);
-        // probeInfo->activeSequence = (uint64_t)(probe_addr - 8); // Should be return address - 8
         probeInfo->isActive = 1;
 
-        uint64_t sequence = *((uint64_t*)(probe_addr-8));
-        uint64_t mask = 0x0000000000FFFFFF;
-        uint64_t deactiveSequence = (uint64_t) (sequence & mask); 
-        mask = 0x0000441F0F000000; // Mask with a 5 byte NOP
+        uint64_t sequence = *probe_start;
+        uint64_t mask = 0xFFFFFF0000000000;
+        uint64_t deactive = (uint64_t) (sequence & mask); 
+        mask = 0x0000000000441F0F; // Mask with a 5 byte NOP
+
+        uint64_t activeSequence = sequence;
+        uint64_t deactiveSequence = deactive | mask;
+
+        size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
+        int offset = (uint64_t) probe_start % cache_line_size;
+        if (offset >= 57) { // If this is a cache line straddler
+          int cutoff_point = 64 - offset;
+          printf("CUTOFF POINT : %d\n", cutoff_point);
+
+          probeInfo->straddler = true;
+   
+          uint64_t* straddle_point = (uint64_t*)((uint8_t*)probe_start + cutoff_point);
+          probeInfo->straddle_part_1_start = straddle_point - 1;
+          probeInfo->straddle_part_2_start = straddle_point;
+          probeInfo->activation_sequence_1 = *straddle_part_1_start; 
+          probeInfo->activation_sequence_2 = *straddle_part_2_start; 
+
+          int shift_size = 8 * (8 - cutoff_point);
+          uint64_t int3mask = 0xCC;
+          uint64_t ormask = 0xFF;
+
+          int3mask = (int3mask << shift_size);
+          ormask = (ormask << shift_size);
+
+          probeInfo->straddle_int3_sequence = (*straddle_part_1_start & ~ormask) | int3mask;
+      
+          uint64_t temp0 = deactiveSequence & get_lsb_mask(cutoff_point);
+          shift_size = (8 * (8-cutoff_point)); 
+          temp0 = (temp0 << shift_size);
+          uint64_t temp1 = probeInfo->activation_sequence_1 & (~get_msb_mask(cutoff_point));
+          probeInfo->deactivation_sequence_1 = temp0 | temp1;
+
+          temp0 = deactiveSequence & (~get_lsb_mask(cutoff_point));
+          shift_size = (8 * cutoff_point);
+          temp0 = (temp0 >> shift_size);
+          temp1 = probeInfo->activation_sequence_2 & get_msb_mask(cutoff_point); 
+          probeInfo->deactivation_sequence_2 = temp0 | temp1;
+        }
 
         probeInfo->activeSequence = sequence;
-        probeInfo->deactiveSequence = deactiveSequence | mask;
+        probeInfo->deactiveSequence = deactiveSequence;
+        */
 
+        FinsProbeInfo* probeInfo = populate_probe_info(probe_addr);
         probe_list->push_back(probeInfo);
         // fprintf(stderr, "Adding probe %p for function %p\n", probe_addr, (uint64_t*) func_addr);
         ins->probe_info->insert(make_pair(func_addr, probe_list));
@@ -410,6 +558,7 @@ loop:
           }
         }
 
+        /*
         FinsProbeInfo* probeInfo= new FinsProbeInfo;
         probeInfo->probeStartAddr = (probe_addr - 8);
         probeInfo->isActive = 1;
@@ -421,21 +570,15 @@ loop:
 
         probeInfo->activeSequence = sequence;
         probeInfo->deactiveSequence = deactiveSequence | mask;
+        */
 
+        FinsProbeInfo* probeInfo = populate_probe_info(probe_addr);
         probe_list->push_back(probeInfo);
       }
-      // fprintf(stderr, "UNLOCKING %p : %lu\n", lock, *lock);
     } else { // We failed. Wait until the other thread finish and just return
-      // Busy wait until the other thread finishes
-      // while (!__sync_bool_compare_and_swap(lock, 0 , 1));
-
-      // while(!__sync_bool_compare_and_swap(lock, 1 , 0));
-
-
       // assert(*lock == 0);
       
       while (*lock) {
-        // fprintf(stderr, "LOCK %p : %lu\n", lock, *lock);
         if (counter == INT_MAX) {
           fprintf(stderr, "RESETTING the counter\n");
           fprintf(stderr, "Returning without adding the probe since lock is : %lu\n", *lock);
@@ -451,13 +594,12 @@ loop:
         */
       }
 
-      // fprintf(stderr, "Returning without adding the probe since lock is : %lu\n", *lock);
       return;
     }
   }
 
   while(!__sync_bool_compare_and_swap(lock, 1 , 0));
-  // assert(*lock == 0);
+
 }
 
 void print_probe_info() {
@@ -646,7 +788,9 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   // }
 
   // /*
-  uint64_t* probe_start = (uint64_t*)((uint8_t*) addr - 8);
+  /* Newly commented ..
+   *
+  uint64_t* probe_start = (uint64_t*)((uint8_t*) addr - 5);
   size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
 
   // bool word_aligned = (uint64_t) probe_start % 8 == 0 ? 1 : 0;
@@ -664,11 +808,15 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   // Add to probe statistics
   
   int offset = (uint64_t) probe_start % cache_line_size;
+  if (offset >= 57) {
+
+  }
+
   if (!cache_aligned) {
     // return;
     if (offset >= 57) {
-      fprintf(stderr, "[cyg_enter] Disabling function: %s\n", ins->getFunctionName(func_id).c_str());
-      set_index(g_straddlers_bitmap, func_id);
+      // fprintf(stderr, "[cyg_enter] Disabling function: %s\n", ins->getFunctionName(func_id).c_str());
+      // set_index(g_straddlers_bitmap, func_id);
 
       // if (func_id == 408) {
       //   fprintf(stderr, "SETTING bit map for enter : %d\n", func_id);
@@ -698,7 +846,7 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 
 
   }
-  // */
+  */
 
   if (addr < func) {
     // fprintf(stderr, "Function start is great than the cyg_enter return address.. Function address: %p Call address : %p \n", func, addr);
@@ -867,13 +1015,17 @@ void __cyg_profile_func_exit(void* func, void* caller) {
 
   // This is a straddler. Return without patching.
   // /*
+  /*
   if (get_index(g_straddlers_bitmap, func_id)) {
     fprintf(stderr, "[cyg_exit] Disabling function trivial: %s\n", ins->getFunctionName(func_id).c_str());
     init_probe_info((uint64_t)func, (uint8_t*)addr);
     int res = ins->deactivateProbe((void*)&func_id, FUNC);
     return;
   }
+  */
 
+  /* Newly commented..
+   *
   uint64_t* probe_start = (uint64_t*)((uint8_t*) addr - 8);
   size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
 
@@ -919,7 +1071,7 @@ void __cyg_profile_func_exit(void* func, void* caller) {
     }
 
   }
-  //  */
+  */
 
   if (addr < func) {
     // fprintf(stderr, "Function start is great than the cyg_exit return address.. Function address: %p Call address : %p \n", func, addr);

@@ -62,6 +62,25 @@ uint64_t* g_probe_timings;
 int g_num_bins;
 #endif
 
+void int3_handler(int signo, siginfo_t *inf, void* ptr) {
+  ucontext_t *ucontext = (ucontext_t*)ptr;
+  printf("Caught signal, num %d..\n",signo);
+
+  // Restoring call site 
+  // __sync_val_compare_and_swap((uint64_t*) call_addr,
+  //         *((uint64_t*) call_addr), call_sequence);
+
+  // printf("Thread resume IP is : %p\n", (void*)ucontext->uc_mcontext.gregs[REG_RIP]);
+  ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] + 4;
+
+  /*
+  int i;
+  for(i=0; i< 5; i++) {
+    sleep(1);
+    printf("SIGHANDLE ..\n");
+  }
+  */
+}
 
 
 Finstrumentor::Finstrumentor(InstrumentationFunc prolog, InstrumentationFunc epilog) {
@@ -114,6 +133,16 @@ void Finstrumentor::initialize() {
   readFunctionInfo();
 
   g_straddlers_bitmap = new uint8_t[func_count/8 + 1](); 
+
+  struct sigaction newact; 
+  struct sigaction oldact; 
+  memset( &newact, 0, sizeof newact);
+  newact.sa_sigaction = & int3_handler;
+  newact.sa_flags = SA_SIGINFO;
+  sigemptyset(& (newact.sa_mask));
+
+  sigaction(SIGTRAP, &newact, &oldact);
+  printf("Sigaction set, old funptr %p\n", oldact.sa_handler);
 
   /*
   struct sigaction act;
@@ -188,9 +217,25 @@ int Finstrumentor::activateProbe(void* probe_id, int flag) {
         }
 
         // fprintf(stderr, "Activating with sequence : %p\n", info->activeSequence);
+        if (info->straddler) {
+           __sync_val_compare_and_swap((uint64_t*) info->straddle_part_1_start,
+                  *((uint64_t*)info->straddle_part_1_start), info->straddle_int3_sequence);
+          __sync_synchronize(); 
+          clflush(info->straddle_part_1_start);
+          __sync_val_compare_and_swap((uint64_t*) info->straddle_part_2_start,
+                  *((uint64_t*)info->straddle_part_2_start), info->activation_sequence_2);
+          __sync_val_compare_and_swap((uint64_t*) info->straddle_part_1_start,
+                  *((uint64_t*)info->straddle_part_1_start), info->activation_sequence_1);
+        } else {
+	  __sync_val_compare_and_swap((uint64_t*) info->probeStartAddr,
+                  *((uint64_t*)info->probeStartAddr), info->activeSequence);
+        }
+
+        /*
         uint64_t fetch = *((uint64_t*) info->probeStartAddr);
         uint64_t res = __sync_val_compare_and_swap((uint64_t*)info->probeStartAddr, 
             *((uint64_t*)info->probeStartAddr), info->activeSequence); 
+            */
         // fprintf(stderr, "Result : %p\n", res);
 
         // __sync_bool_compare_and_swap(info->probeStartAddr, 
@@ -312,9 +357,25 @@ int Finstrumentor::deactivateProbe(void* probe_id, int flag) {
         // fprintf(stderr, "Deactive sequence %08x\n", info->deactiveSequence);
 
         // fprintf(stderr, "Deactivating with sequence : %p\n", info->deactiveSequence);
+        if (info->straddler) {
+           __sync_val_compare_and_swap((uint64_t*) info->straddle_part_1_start,
+                  *((uint64_t*)info->straddle_part_1_start), info->straddle_int3_sequence);
+          __sync_synchronize(); 
+          clflush(info->straddle_part_1_start);
+          __sync_val_compare_and_swap((uint64_t*) info->straddle_part_2_start,
+                  *((uint64_t*)info->straddle_part_2_start), info->deactivation_sequence_2);
+          __sync_val_compare_and_swap((uint64_t*) info->straddle_part_1_start,
+                  *((uint64_t*)info->straddle_part_1_start), info->deactivation_sequence_1);
+        } else {
+	  __sync_val_compare_and_swap((uint64_t*) info->probeStartAddr,
+                  *((uint64_t*)info->probeStartAddr), info->deactiveSequence);
+        }
+
+        /*
         uint64_t fetch = *((uint64_t*) info->probeStartAddr);
         uint64_t res = __sync_val_compare_and_swap((uint64_t*)info->probeStartAddr, 
             *((uint64_t*)info->probeStartAddr), info->deactiveSequence); 
+            */
 
         // fprintf(stderr, "Result : %p\n", res);
 
