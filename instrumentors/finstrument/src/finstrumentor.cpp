@@ -71,6 +71,11 @@ void int3_handler(int signo, siginfo_t *inf, void* ptr) {
   //         *((uint64_t*) call_addr), call_sequence);
 
   // printf("Thread resume IP is : %p\n", (void*)ucontext->uc_mcontext.gregs[REG_RIP]);
+  uint8_t* rip_ptr = (uint8_t*) ucontext->uc_mcontext.gregs[REG_RIP];
+  if (*(rip_ptr-1) != 0XE8) {
+    printf("SIGNAL Handler for parameter patching invoked ..\n");
+  }
+
   ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] + 4;
 
   /*

@@ -8,6 +8,7 @@
 
 #include "cyg_functions.hpp"
 #include "patch_utils.hpp"
+
 #include "finstrumentor.hpp"
 #include "../../../common/include/cycle.h"
 #include "bitmap.hpp"
@@ -195,7 +196,49 @@ static void print_string_hex(char *comment, unsigned char *str, int len)
   printf("\n");
 }
 
+uint64_t get_lsb_mask(int nbytes) {
+  switch (nbytes) {
+    case 1:
+      return 0xFF;
+    case 2:
+      return 0xFFFF;
+    case 3:
+      return 0xFFFFFF;
+    case 4:
+      return 0xFFFFFFFF;
+    case 5:
+      return 0xFFFFFFFFFF;
+    case 6:
+      return 0xFFFFFFFFFFFF;
+    case 7:
+      return 0xFFFFFFFFFFFFFF;
+    default:
+      printf("ERROR : Invalid input to get_lsb_mask\n");
+      return 0;
+  }
+}
 
+uint64_t get_msb_mask(int nbytes) {
+  switch (nbytes) {
+    case 1:
+      return 0xFF00000000000000;
+    case 2:
+      return 0xFFFF000000000000;
+    case 3:
+      return 0xFFFFFF0000000000;
+    case 4:
+      return 0xFFFFFFFF00000000;
+    case 5:
+      return 0xFFFFFFFFFF000000;
+    case 6:
+      return 0xFFFFFFFFFFFF0000;
+    case 7:
+      return 0xFFFFFFFFFFFFFF00;
+    default:
+      printf("ERROR : Invalid input to get_msb_mask\n");
+      return 0;
+  }
+}
 
 inline bool patch_with_value(uint8_t* addr, uint16_t func_id) {
 
@@ -211,6 +254,54 @@ inline bool patch_with_value(uint8_t* addr, uint16_t func_id) {
   uint8_t* sequence_ptr = (uint8_t*) (&masked_sequence);
   sequence_ptr[0] = addr[0]; // MOV REG opcode
   *(uint32_t*)(sequence_ptr+1) = (uint32_t)func_id;
+
+  size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
+  int offset = (uint64_t) addr % cache_line_size;
+  if (offset >= 57) { // If this is a cache line straddler
+    int cutoff_point = 64 - offset;
+
+    uint64_t* straddle_point = (uint64_t*)((uint8_t*)addr + cutoff_point);
+    uint64_t* straddle_part_1_start = straddle_point - 1;
+    uint64_t* straddle_part_2_start = straddle_point;
+    uint64_t front_sequence = *straddle_part_1_start;
+    uint64_t back_sequence = *straddle_part_2_start;
+
+    // sequence_ptr[0] = 0xCC; // Overwrite INT3 
+
+    int shift_size = 8 * (8 - cutoff_point);
+
+    uint64_t int3mask = 0xCC;
+    uint64_t ormask = 0xFF;
+
+    int3mask = (int3mask << shift_size);
+    ormask = (ormask << shift_size);
+
+    uint64_t straddle_int3_sequence = (*straddle_part_1_start & ~ormask) | int3mask;
+      
+    uint64_t temp0 = masked_sequence & get_lsb_mask(cutoff_point);
+    shift_size = (8 * (8-cutoff_point)); 
+    temp0 = (temp0 << shift_size);
+    uint64_t temp1 = front_sequence & (~get_msb_mask(cutoff_point));
+    uint64_t new_front_sequence = temp0 | temp1;
+
+    temp0 = masked_sequence & (~get_lsb_mask(cutoff_point));
+    shift_size = (8 * cutoff_point);
+    temp0 = (temp0 >> shift_size);
+    temp1 = back_sequence & get_msb_mask(cutoff_point); 
+    uint64_t new_back_sequence = temp0 | temp1;
+
+    __sync_val_compare_and_swap((uint64_t*) straddle_part_1_start,
+             *((uint64_t*)straddle_part_1_start), straddle_int3_sequence);
+    __sync_synchronize(); 
+    clflush(straddle_part_1_start);
+    __sync_val_compare_and_swap((uint64_t*) straddle_part_2_start,
+            *((uint64_t*)straddle_part_2_start), new_back_sequence);
+    status = __sync_bool_compare_and_swap((uint64_t*) straddle_part_1_start,
+            *((uint64_t*)straddle_part_1_start), new_front_sequence);
+
+    return status;
+
+  }
 
   status = __sync_bool_compare_and_swap((uint64_t*)addr, *((uint64_t*)addr), masked_sequence);
   __sync_synchronize(); 
@@ -366,49 +457,7 @@ bool has_probe_info(uint64_t func_addr) {
   }
 }
 
-uint64_t get_lsb_mask(int nbytes) {
-  switch (nbytes) {
-    case 1:
-      return 0xFF;
-    case 2:
-      return 0xFFFF;
-    case 3:
-      return 0xFFFFFF;
-    case 4:
-      return 0xFFFFFFFF;
-    case 5:
-      return 0xFFFFFFFFFF;
-    case 6:
-      return 0xFFFFFFFFFFFF;
-    case 7:
-      return 0xFFFFFFFFFFFFFF;
-    default:
-      printf("ERROR : Invalid input to get_lsb_mask\n");
-      return 0;
-  }
-}
 
-uint64_t get_msb_mask(int nbytes) {
-  switch (nbytes) {
-    case 1:
-      return 0xFF00000000000000;
-    case 2:
-      return 0xFFFF000000000000;
-    case 3:
-      return 0xFFFFFF0000000000;
-    case 4:
-      return 0xFFFFFFFF00000000;
-    case 5:
-      return 0xFFFFFFFFFF000000;
-    case 6:
-      return 0xFFFFFFFFFFFF0000;
-    case 7:
-      return 0xFFFFFFFFFFFFFF00;
-    default:
-      printf("ERROR : Invalid input to get_msb_mask\n");
-      return 0;
-  }
-}
 
 FinsProbeInfo* populate_probe_info(uint8_t* probe_addr){
   uint64_t* probe_start = (uint64_t*)(probe_addr - 5);
@@ -482,7 +531,6 @@ inline void init_probe_info(uint64_t func_addr, uint8_t* probe_addr) {
   uint64_t* lock = ins->getLock(func_addr);
   int counter = 0;
   if (lock != NULL) {
-loop:
     if (__sync_bool_compare_and_swap(lock, 0 , 1)) {
       // fprintf(stderr, "LOCKED %p : %lu\n", lock, *lock);
       // fprintf(stderr, "probe_info address at init probe : %p\n", ins->probe_info);
