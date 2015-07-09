@@ -16,7 +16,7 @@ AR = ar
 RM = rm
 OPTS = 
 
-CODE = finstrumentor.cpp cyg_functions.cpp instrumentor.cpp noprof/no_prof_cyg_functions.cpp
+CODE = finstrumentor.cpp cyg_functions.cpp instrumentor.cpp noprof/no_prof_cyg_functions.cpp bitmap.cpp
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 
