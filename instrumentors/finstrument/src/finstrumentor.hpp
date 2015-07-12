@@ -41,6 +41,7 @@ typedef struct FinsProbeInfo {
 
     // Straddler specific
     bool straddler;
+    bool unpatched;
     uint64_t* straddle_part_1_start;
     uint64_t* straddle_part_2_start;
     uint64_t straddle_int3_sequence;
@@ -50,6 +51,12 @@ typedef struct FinsProbeInfo {
     uint64_t deactivation_sequence_2;
 
 } FinsProbeInfo;
+
+typedef struct PatchResult {
+  uint8_t* edi_set_addr;
+  bool success;
+  bool conflict;
+} PatchResult;
 
 typedef struct FinsProbeMetaData {
   uint64_t addr;

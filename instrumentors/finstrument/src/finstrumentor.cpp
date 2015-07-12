@@ -64,7 +64,7 @@ int g_num_bins;
 
 void int3_handler(int signo, siginfo_t *inf, void* ptr) {
   ucontext_t *ucontext = (ucontext_t*)ptr;
-  printf("Caught signal, num %d..\n",signo);
+  // printf("Caught signal, num %d..\n",signo);
 
   // Restoring call site 
   // __sync_val_compare_and_swap((uint64_t*) call_addr,
@@ -76,7 +76,17 @@ void int3_handler(int signo, siginfo_t *inf, void* ptr) {
     printf("SIGNAL Handler for parameter patching invoked ..\n");
   }
 
+  fprintf(stderr, "[Handler] RIP is %p\n", rip_ptr);
+
   ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] + 4;
+
+  if ((uint64_t)rip_ptr == 0x40b5fe) {
+    fprintf(stderr, "[Handler] Sleeping for a while..\n");
+    struct timespec ts;
+    ts.tv_sec = 0;
+    ts.tv_nsec = 1000000;
+    nanosleep(&ts, NULL);
+  }
 
   /*
   int i;
@@ -221,8 +231,13 @@ int Finstrumentor::activateProbe(void* probe_id, int flag) {
                      // already patched probe sites
         }
 
-        // fprintf(stderr, "Activating with sequence : %p\n", info->activeSequence);
         if (info->straddler) {
+          /*
+          fprintf(stderr, "[Finstrumentor] Activating probe site %p\n", 
+            info->probeStartAddr);
+          fprintf(stderr, "[Finstrumentor] Activating with sequence : %p Activation sequence 1 : %p Activation sequence 2 : %p INT3 sequence : %p\n", info->activeSequence, info->activation_sequence_1, info->activation_sequence_2, info->straddle_int3_sequence);
+          */
+ 
            __sync_val_compare_and_swap((uint64_t*) info->straddle_part_1_start,
                   *((uint64_t*)info->straddle_part_1_start), info->straddle_int3_sequence);
           __sync_synchronize(); 
@@ -360,9 +375,13 @@ int Finstrumentor::deactivateProbe(void* probe_id, int flag) {
 
         // fprintf(stderr, "Active sequence %08x\n", info->activeSequence);
         // fprintf(stderr, "Deactive sequence %08x\n", info->deactiveSequence);
-
-        // fprintf(stderr, "Deactivating with sequence : %p\n", info->deactiveSequence);
         if (info->straddler) {
+          /*
+          fprintf(stderr, "[Finstrumentor] Deactivating probe site %p\n", 
+              info->probeStartAddr);
+          fprintf(stderr, "[Finstrumentor] Deactivating with sequence : %p\n", info->deactiveSequence);
+          */
+ 
            __sync_val_compare_and_swap((uint64_t*) info->straddle_part_1_start,
                   *((uint64_t*)info->straddle_part_1_start), info->straddle_int3_sequence);
           __sync_synchronize(); 

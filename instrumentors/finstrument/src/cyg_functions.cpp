@@ -255,6 +255,7 @@ inline bool patch_with_value(uint8_t* addr, uint16_t func_id) {
   sequence_ptr[0] = addr[0]; // MOV REG opcode
   *(uint32_t*)(sequence_ptr+1) = (uint32_t)func_id;
 
+  /*
   size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
   int offset = (uint64_t) addr % cache_line_size;
   if (offset >= 57) { // If this is a cache line straddler
@@ -298,10 +299,13 @@ inline bool patch_with_value(uint8_t* addr, uint16_t func_id) {
             *((uint64_t*)straddle_part_2_start), new_back_sequence);
     status = __sync_bool_compare_and_swap((uint64_t*) straddle_part_1_start,
             *((uint64_t*)straddle_part_1_start), new_front_sequence);
+    __sync_synchronize(); 
+    clflush(straddle_part_1_start);
 
     return status;
 
   }
+  */
 
   status = __sync_bool_compare_and_swap((uint64_t*)addr, *((uint64_t*)addr), masked_sequence);
   __sync_synchronize(); 
@@ -337,7 +341,7 @@ void print_decoded_output(uint8_t* start, uint64_t length) {
   }
 }
 
-inline uint8_t* patch_first_parameter(uint64_t* call_return_addr, uint64_t* start_addr, uint16_t func_id) {
+inline PatchResult* patch_first_parameter(uint64_t* call_return_addr, uint64_t* start_addr, uint16_t func_id) {
 
   uint8_t* call_addr = (uint8_t*) call_return_addr - 5;
 
@@ -373,23 +377,32 @@ inline uint8_t* patch_first_parameter(uint64_t* call_return_addr, uint64_t* star
   uint64_t edi_offset = 0;
   uint8_t intermediate_reg = 0;
 
+  PatchResult* res = new PatchResult;
   if (instructions_count > offset) {
     fprintf(stderr, "[DEBUG] Instructions decoded : %d Offset : %lu\n", instructions_count, offset);
     free(result);
-    return 0 ;
+
+    res->success = false;
+    res->conflict = false;
+    return res;
   }
 
   bool edi_setter_found = false;
+  int instruction_offset = 0;
   for (int i = instructions_count - 1; i >= 0; i--) {
     if (result[i].flags == FLAG_NOT_DECODABLE) {
       printf("Bad decode attempt.. Call address : %p \n", call_addr);
       free(result);
-      return 0;
+
+      res->success = false;
+      res->conflict = false;
+      return res;
     }
 
     distorm_format(&ci, &result[i], &inst);
 
     ptr_size += result[i].size;
+    instruction_offset++;
 
     if (result[i].opcode == I_MOV) {
       if (!edi_setter_found && result[i].ops[0].type == O_REG && 
@@ -415,15 +428,35 @@ inline uint8_t* patch_first_parameter(uint64_t* call_return_addr, uint64_t* star
 
   edi_set_addr = call_addr - edi_offset;
 
+  // Hack : If the edi setter and the call site are adjacent and edi setter straddles a cache line
+  // we handle it specifically to escape patching it
+  if (instruction_offset == 1) {
+    size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
+    int edi_setter_cache_line_offset = (uint64_t) edi_set_addr % cache_line_size;
+    int call_instruction_cache_line_offset = ((uint64_t) call_addr) % cache_line_size;
+    if (edi_setter_cache_line_offset >= 57 ||
+       call_instruction_cache_line_offset >= 57) {
+      free(result);
+      res->success = false;
+      res->conflict = true;
+      return res;
+    }
+  }
+
   bool status = patch_with_value(edi_set_addr, func_id);
  
   free(result);
 
   if (!status) {
-    return 0;
+    res->success = false;
+    res->conflict = false;
+    return res;
   }
 
-  return edi_set_addr;
+  res->success = true;
+  res->conflict = false;
+  res->edi_set_addr = edi_set_addr;
+  return res;
 
 }
 
@@ -457,14 +490,32 @@ bool has_probe_info(uint64_t func_addr) {
   }
 }
 
+FinsProbeInfo* get_probe_info(uint64_t func_addr, uint8_t* addr) {
+  Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
+  if(ins->probe_info->find(func_addr) != ins->probe_info->end()) {
+    std::list<FinsProbeInfo*>* probe_list = ins->probe_info->find(func_addr)->second;
+    for(std::list<FinsProbeInfo*>::iterator iter = probe_list->begin(); 
+      iter != probe_list->end(); iter++) {
+      FinsProbeInfo* probeInfo= *iter;
+      if (probeInfo->probeStartAddr == addr-5) {
+        return probeInfo;
+      }
+    }
+  }
+  return NULL;
+}
 
+bool is_prolog_initialized(uint64_t func_addr) {
+  return has_probe_info(func_addr);
+}
 
-FinsProbeInfo* populate_probe_info(uint8_t* probe_addr){
+FinsProbeInfo* populate_probe_info(uint8_t* probe_addr, bool unpatched){
   uint64_t* probe_start = (uint64_t*)(probe_addr - 5);
 
   FinsProbeInfo* probeInfo = new FinsProbeInfo;
   probeInfo->probeStartAddr = probe_addr-5;
   probeInfo->isActive = 1;
+  probeInfo->unpatched = unpatched;
 
   uint64_t sequence = *probe_start;
   uint64_t mask = 0xFFFFFF0000000000;
@@ -522,7 +573,7 @@ FinsProbeInfo* populate_probe_info(uint8_t* probe_addr){
 }
 
 // TODO: Make this thread safe
-inline void init_probe_info(uint64_t func_addr, uint8_t* probe_addr) {
+inline void init_probe_info(uint64_t func_addr, uint8_t* probe_addr, bool unpatched) {
 
 
   // fprintf(stderr, "Function address at init probe : %p\n", func_addr);
@@ -590,7 +641,7 @@ inline void init_probe_info(uint64_t func_addr, uint8_t* probe_addr) {
         probeInfo->deactiveSequence = deactiveSequence;
         */
 
-        FinsProbeInfo* probeInfo = populate_probe_info(probe_addr);
+        FinsProbeInfo* probeInfo = populate_probe_info(probe_addr, unpatched);
         probe_list->push_back(probeInfo);
         // fprintf(stderr, "Adding probe %p for function %p\n", probe_addr, (uint64_t*) func_addr);
         ins->probe_info->insert(make_pair(func_addr, probe_list));
@@ -620,7 +671,7 @@ inline void init_probe_info(uint64_t func_addr, uint8_t* probe_addr) {
         probeInfo->deactiveSequence = deactiveSequence | mask;
         */
 
-        FinsProbeInfo* probeInfo = populate_probe_info(probe_addr);
+        FinsProbeInfo* probeInfo = populate_probe_info(probe_addr, unpatched);
         probe_list->push_back(probeInfo);
       }
     } else { // We failed. Wait until the other thread finish and just return
@@ -931,15 +982,27 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   }
   */
 
-  uint8_t* edi_set_addr = patch_first_parameter(addr, (uint64_t*) func, func_id);
-  if (edi_set_addr == 0) { // This could happen when the compiler insert non sensical function address value
-    fprintf(stderr, "[Finstrumentor] Parameter patching failed at address : %p function : %p function id : %d\n", 
-        addr, func, func_id);
-    return; // Ideally deactivate this probe
-    // abort();
-  }
+  FinsProbeInfo* probe_info = get_probe_info((uint64_t) func, (uint8_t*) addr);
+  if (probe_info != NULL && probe_info->unpatched) {
+    ; // Escape to just executing prolog function
+  } else {
+    PatchResult* res  = patch_first_parameter(addr, (uint64_t*) func, func_id);
 
-  init_probe_info((uint64_t)func, (uint8_t*)addr);
+    if (!res->success) {
+      if (res->conflict) {
+        fprintf(stderr, "[Finstrumentor] Detected straddler conflict at %p ..\n", addr);
+      }
+        
+      init_probe_info((uint64_t)func, (uint8_t*)addr, true);
+      fprintf(stderr, "[Finstrumentor] Adding straddler conflict at %p  function %p with probe info unpatched at %d ..\n", func, addr, probe_info);
+      probe_info = get_probe_info((uint64_t) func, (uint8_t*) addr);
+      fprintf(stderr, "[Finstrumentor] After adding conflict at %p function %p : %d\n", addr, func, probe_info->unpatched);
+    } else {
+      init_probe_info((uint64_t)func, (uint8_t*)addr, false);
+    }
+
+    delete res;
+  }
 
   ts = prologFunction(func_id);
   ticks end = getticks();
@@ -1057,10 +1120,6 @@ void __cyg_profile_func_exit(void* func, void* caller) {
 
   uint16_t func_id = get_func_id((uint64_t)func);
 
-  if (func_id == 408) {
-    fprintf(stderr, "AT CYG_EXIT of %d\n", func_id);
-  }
-
   // This is a straddler. Return without patching.
   // /*
   /*
@@ -1157,16 +1216,30 @@ void __cyg_profile_func_exit(void* func, void* caller) {
   */
 
   // For some reason (mostly compiler scrweing things up at prolog) the prolog has not been properly initialized. 
-  if (!has_probe_info((uint64_t)func)) {
+  if (!is_prolog_initialized((uint64_t)func)) {
     return;
   }
 
-  uint8_t* edi_set_addr = patch_first_parameter(addr, (uint64_t*) func, func_id);
+  FinsProbeInfo* probe_info = get_probe_info((uint64_t) func, (uint8_t*) addr);
+  if (probe_info != NULL && probe_info->unpatched) {
+    ; // Escape to just executing epilog function
+  } else {
+    PatchResult* res  = patch_first_parameter(addr, (uint64_t*) func, func_id);
 
-  init_probe_info((uint64_t)func, (uint8_t*)addr);
+    if (!res->success) {
+      if (res->conflict) {
+        fprintf(stderr, "[Finstrumentor] Detected straddler conflict at %p ..\n", addr);
+      }
+        
+      init_probe_info((uint64_t)func, (uint8_t*)addr, true);
+      fprintf(stderr, "[Finstrumentor] Adding straddler conflict at %p function %p  with probe info unpatched at %d ..\n", addr, func, probe_info);
+      probe_info = get_probe_info((uint64_t) func, (uint8_t*) addr);
+      fprintf(stderr, "[Finstrumentor] After adding conflict at %p function %p : %d\n", addr, func, probe_info->unpatched);
+    } else {
+      init_probe_info((uint64_t)func, (uint8_t*)addr, false);
+    }
 
-  if (edi_set_addr == 0) {
-    return; // Ideally deactive this probe 
+    delete res;
   }
 
   ts = epilogFunction(func_id);
