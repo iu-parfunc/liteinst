@@ -29,6 +29,9 @@ sig5:
 sig6:
 	$(CC) $(CFLAGS) pt_main_6.c -lpthread -o pt_main_6.exe
 
+sigjs:
+	$(CC) $(CFLAGS) pt_main_js.c -lpthread -o pt_main_js.exe
+
 
 # Just run
 runtime:
@@ -56,6 +59,10 @@ run6:
 	./pt_main_6.exe
 
 
+runjs:
+	./pt_main_js.exe
+
+
 # Build and run
 btime: sigtime
 	make runtime
@@ -80,6 +87,9 @@ brun5: sig5
 
 brun6: sig6
 	make run6
+
+brunjs: sigjs
+	make runjs
 
 
 clean:
