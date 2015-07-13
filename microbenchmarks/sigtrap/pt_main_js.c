@@ -340,7 +340,7 @@ void foo() {
       activation_sequence_1 = *straddle_part_1_start; 
       activation_sequence_2 = *straddle_part_2_start; 
 
-      int shift_size = 8 * (8 - cutoff_point - 1);
+      int shift_size = 8 * (8 - cutoff_point);
       printf("shift_size=%d\n", shift_size);
 
       if ((uint64_t)straddle_part_1_start + (8 - cutoff_point) != (uint64_t)probe_start) printf ("*********************************\n NONONONONNOON \n ********************** \n");
