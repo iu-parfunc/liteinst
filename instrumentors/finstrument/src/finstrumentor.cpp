@@ -2,6 +2,7 @@
 #include "finstrumentor.hpp"
 #include "patch_utils.hpp"
 #include "dynamicarray.h"
+#include "bitmap.hpp"
 
 #include <stdlib.h>
 #include <math.h>
@@ -205,6 +206,13 @@ int Finstrumentor::activateProbe(void* probe_id, int flag) {
   uint16_t func_id = *(uint16_t*)probe_id;
   uint64_t func_addr; 
   uint64_t* lock = NULL;
+
+  // straddler check
+  if (get_index(g_straddlers_bitmap, func_id)) {
+    // fprintf(stderr, "Skip activating the straddler function %d\n", func_id);
+    return -1;
+  }
+
   if (func_id_mappings->find(func_id) != func_id_mappings->end()) {
     func_addr =  func_id_mappings->find(func_id)->second->func_addr;
     lock = &(func_addr_mappings->find(func_addr)->second->lock);
@@ -231,12 +239,8 @@ int Finstrumentor::activateProbe(void* probe_id, int flag) {
                      // already patched probe sites
         }
 
+
         if (info->straddler) {
-          /*
-          fprintf(stderr, "[Finstrumentor] Activating probe site %p\n", 
-            info->probeStartAddr);
-          fprintf(stderr, "[Finstrumentor] Activating with sequence : %p Activation sequence 1 : %p Activation sequence 2 : %p INT3 sequence : %p\n", info->activeSequence, info->activation_sequence_1, info->activation_sequence_2, info->straddle_int3_sequence);
-          */
  
            __sync_val_compare_and_swap((uint64_t*) info->straddle_part_1_start,
                   *((uint64_t*)info->straddle_part_1_start), info->straddle_int3_sequence);
@@ -329,6 +333,13 @@ int Finstrumentor::deactivateProbe(void* probe_id, int flag) {
   uint16_t func_id = *(uint16_t*)probe_id;
   uint64_t func_addr;
   uint64_t* lock = NULL;
+
+  // straddler check
+  if (get_index(g_straddlers_bitmap, func_id)) {
+    // fprintf(stderr, "Skip deactivating the straddler function %d\n", func_id);
+    return -1;
+  }
+
   if (func_id_mappings->find(func_id) != func_id_mappings->end()) { 
     func_addr =  func_id_mappings->find(func_id)->second->func_addr;
     lock = &(func_addr_mappings->find(func_addr)->second->lock);
@@ -375,14 +386,10 @@ int Finstrumentor::deactivateProbe(void* probe_id, int flag) {
 
         // fprintf(stderr, "Active sequence %08x\n", info->activeSequence);
         // fprintf(stderr, "Deactive sequence %08x\n", info->deactiveSequence);
+
+
         if (info->straddler) {
-          /*
-          fprintf(stderr, "[Finstrumentor] Deactivating probe site %p\n", 
-              info->probeStartAddr);
-          fprintf(stderr, "[Finstrumentor] Deactivating with sequence : %p\n", info->deactiveSequence);
-          */
- 
-           __sync_val_compare_and_swap((uint64_t*) info->straddle_part_1_start,
+          __sync_val_compare_and_swap((uint64_t*) info->straddle_part_1_start,
                   *((uint64_t*)info->straddle_part_1_start), info->straddle_int3_sequence);
           __sync_synchronize(); 
           clflush(info->straddle_part_1_start);

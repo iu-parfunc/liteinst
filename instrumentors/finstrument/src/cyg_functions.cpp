@@ -997,6 +997,10 @@ void __cyg_profile_func_enter(void* func, void* caller) {
       fprintf(stderr, "[Finstrumentor] Adding straddler conflict at %p  function %p with probe info unpatched at %d ..\n", func, addr, probe_info);
       probe_info = get_probe_info((uint64_t) func, (uint8_t*) addr);
       fprintf(stderr, "[Finstrumentor] After adding conflict at %p function %p : %d\n", addr, func, probe_info->unpatched);
+
+      // Mark this as a function to escape patching
+      set_index(g_straddlers_bitmap, func_id);
+
     } else {
       init_probe_info((uint64_t)func, (uint8_t*)addr, false);
     }
@@ -1235,6 +1239,9 @@ void __cyg_profile_func_exit(void* func, void* caller) {
       fprintf(stderr, "[Finstrumentor] Adding straddler conflict at %p function %p  with probe info unpatched at %d ..\n", addr, func, probe_info);
       probe_info = get_probe_info((uint64_t) func, (uint8_t*) addr);
       fprintf(stderr, "[Finstrumentor] After adding conflict at %p function %p : %d\n", addr, func, probe_info->unpatched);
+      
+      // Mark this as a function to escape patching
+      set_index(g_straddlers_bitmap, func_id);
     } else {
       init_probe_info((uint64_t)func, (uint8_t*)addr, false);
     }
