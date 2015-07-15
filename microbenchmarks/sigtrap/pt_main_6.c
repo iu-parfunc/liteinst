@@ -207,6 +207,9 @@ void add_call() {
                   *((uint64_t*)straddle_part_1_start), straddle_int3_sequence);
           __sync_synchronize(); 
           clflush(straddle_part_1_start);
+
+	  //sleep(1);
+	  usleep(1);
           __sync_val_compare_and_swap((uint64_t*) straddle_part_2_start,
                   *((uint64_t*)straddle_part_2_start), activation_sequence_2);
           __sync_val_compare_and_swap((uint64_t*) straddle_part_1_start,
@@ -255,6 +258,9 @@ void remove_call() {
                   *((uint64_t*)straddle_part_1_start), straddle_int3_sequence);
           __sync_synchronize();
           clflush(straddle_part_1_start);
+
+	  //sleep(1);
+	  usleep(1);
           __sync_val_compare_and_swap((uint64_t*) straddle_part_2_start,
                   *((uint64_t*)straddle_part_2_start), deactivation_sequence_2);
           __sync_val_compare_and_swap((uint64_t*) straddle_part_1_start,

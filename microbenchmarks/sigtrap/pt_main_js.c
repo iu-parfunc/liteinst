@@ -207,6 +207,9 @@ void add_call() {
                   *((uint64_t*)straddle_part_1_start), straddle_int3_sequence);
           __sync_synchronize(); 
           clflush(straddle_part_1_start);
+	  
+	  sleep(1);
+	  
           __sync_val_compare_and_swap((uint64_t*) straddle_part_2_start,
                   *((uint64_t*)straddle_part_2_start), activation_sequence_2);
           __sync_val_compare_and_swap((uint64_t*) straddle_part_1_start,
@@ -255,6 +258,10 @@ void remove_call() {
                   *((uint64_t*)straddle_part_1_start), straddle_int3_sequence);
           __sync_synchronize();
           clflush(straddle_part_1_start);
+
+	  
+	  sleep(1);
+
           __sync_val_compare_and_swap((uint64_t*) straddle_part_2_start,
                   *((uint64_t*)straddle_part_2_start), deactivation_sequence_2);
           __sync_val_compare_and_swap((uint64_t*) straddle_part_1_start,
@@ -776,6 +783,9 @@ void catchit(int signo, siginfo_t *inf, void* ptr) {
   // __sync_val_compare_and_swap((uint64_t*) call_addr,
   //         *((uint64_t*) call_addr), call_sequence);
 
+  
+    
+  
   // printf("Thread resume IP is : %p\n", (void*)ucontext->uc_mcontext.gregs[REG_RIP]);
   ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] + 4;
 
