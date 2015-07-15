@@ -73,14 +73,17 @@ void int3_handler(int signo, siginfo_t *inf, void* ptr) {
 
   // printf("Thread resume IP is : %p\n", (void*)ucontext->uc_mcontext.gregs[REG_RIP]);
   uint8_t* rip_ptr = (uint8_t*) ucontext->uc_mcontext.gregs[REG_RIP];
+  /*
   if (*(rip_ptr-1) != 0XE8) {
     printf("SIGNAL Handler for parameter patching invoked ..\n");
   }
 
   fprintf(stderr, "[Handler] RIP is %p\n", rip_ptr);
+  */
 
   ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] + 4;
 
+  /*
   if ((uint64_t)rip_ptr == 0x40b5fe) {
     fprintf(stderr, "[Handler] Sleeping for a while..\n");
     struct timespec ts;
@@ -88,6 +91,7 @@ void int3_handler(int signo, siginfo_t *inf, void* ptr) {
     ts.tv_nsec = 1000000;
     nanosleep(&ts, NULL);
   }
+  */
 
   /*
   int i;
@@ -244,8 +248,9 @@ int Finstrumentor::activateProbe(void* probe_id, int flag) {
  
            __sync_val_compare_and_swap((uint64_t*) info->straddle_part_1_start,
                   *((uint64_t*)info->straddle_part_1_start), info->straddle_int3_sequence);
-          __sync_synchronize(); 
-          clflush(info->straddle_part_1_start);
+          for(long i = 0; i < 1000; i++) { asm(""); }
+          // __sync_synchronize(); 
+          // clflush(info->straddle_part_1_start);
           __sync_val_compare_and_swap((uint64_t*) info->straddle_part_2_start,
                   *((uint64_t*)info->straddle_part_2_start), info->activation_sequence_2);
           __sync_val_compare_and_swap((uint64_t*) info->straddle_part_1_start,
@@ -391,8 +396,9 @@ int Finstrumentor::deactivateProbe(void* probe_id, int flag) {
         if (info->straddler) {
           __sync_val_compare_and_swap((uint64_t*) info->straddle_part_1_start,
                   *((uint64_t*)info->straddle_part_1_start), info->straddle_int3_sequence);
-          __sync_synchronize(); 
-          clflush(info->straddle_part_1_start);
+          for(long i = 0; i < 1000; i++) { asm(""); }
+          // __sync_synchronize(); 
+          // clflush(info->straddle_part_1_start);
           __sync_val_compare_and_swap((uint64_t*) info->straddle_part_2_start,
                   *((uint64_t*)info->straddle_part_2_start), info->deactivation_sequence_2);
           __sync_val_compare_and_swap((uint64_t*) info->straddle_part_1_start,
