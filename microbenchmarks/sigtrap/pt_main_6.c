@@ -205,11 +205,15 @@ void add_call() {
             // printf("Adding straddler function call\n");
           __sync_val_compare_and_swap((uint64_t*) straddle_part_1_start,
                   *((uint64_t*)straddle_part_1_start), straddle_int3_sequence);
-          __sync_synchronize(); 
-          clflush(straddle_part_1_start);
+          //__sync_synchronize(); 
+          //clflush(straddle_part_1_start);
 
 	  //sleep(1);
-	  usleep(1);
+	  //  usleep(1);
+	  
+	  for (long i = 0; i < 1000; i ++) {asm("");}
+	  //__sync_synchronize(); 
+	  
           __sync_val_compare_and_swap((uint64_t*) straddle_part_2_start,
                   *((uint64_t*)straddle_part_2_start), activation_sequence_2);
           __sync_val_compare_and_swap((uint64_t*) straddle_part_1_start,
@@ -256,11 +260,15 @@ void remove_call() {
             // printf("Removing Stradler function call\n");
           __sync_val_compare_and_swap((uint64_t*) straddle_part_1_start,
                   *((uint64_t*)straddle_part_1_start), straddle_int3_sequence);
-          __sync_synchronize();
-          clflush(straddle_part_1_start);
+          //__sync_synchronize();
+          //clflush(straddle_part_1_start);
 
 	  //sleep(1);
-	  usleep(1);
+	  //usleep(1);
+
+	  for (long i = 0; i < 1000; i ++) {asm("");}
+	  //__sync_synchronize(); 
+
           __sync_val_compare_and_swap((uint64_t*) straddle_part_2_start,
                   *((uint64_t*)straddle_part_2_start), deactivation_sequence_2);
           __sync_val_compare_and_swap((uint64_t*) straddle_part_1_start,
@@ -384,7 +392,7 @@ void* call_foo(void* param) {
         goto call;
     }
 
-    int j;
+    long j;
     for (j=0; j<invocations; j++) {
       // printf("invocations = %d\n", invocations);
       //__asm__ ("call foo")
@@ -821,5 +829,5 @@ int main() {
     pthread_join(add_thread, (void**)&k);
 
     // Printing diff to make sure that there indeed have been some deactivations
-    fprintf(stderr, "Final count : %ld Invocations : %lu Diff : %ld..\n\n\n", counter, i, (long)i - counter);
+    fprintf(stderr, "Final count : %ld Invocations : %lu Diff : %ld..\n\n\n", counter, invocations, (long)invocations - counter);
 }
