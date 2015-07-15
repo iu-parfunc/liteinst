@@ -430,6 +430,7 @@ inline PatchResult* patch_first_parameter(uint64_t* call_return_addr, uint64_t* 
 
   // Hack : If the edi setter and the call site are adjacent and edi setter straddles a cache line
   // we handle it specifically to escape patching it
+  /*
   if (instruction_offset == 1) {
     size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
     int edi_setter_cache_line_offset = (uint64_t) edi_set_addr % cache_line_size;
@@ -442,6 +443,7 @@ inline PatchResult* patch_first_parameter(uint64_t* call_return_addr, uint64_t* 
       return res;
     }
   }
+  */
 
   bool status = patch_with_value(edi_set_addr, func_id);
  
