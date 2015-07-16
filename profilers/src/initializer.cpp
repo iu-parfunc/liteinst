@@ -68,8 +68,8 @@ void __attribute__ ((noinline)) emptyFunc(uint64_t* a, uint64_t* b) {
 
 uint64_t get_average_time(ticks* elapsed, int size) {
 
-  int BIN_SIZE = 100;
-  int HIST_SIZE = 21; // 21 bins of 100 cycles width. 2000+ to a single bin
+  const int BIN_SIZE = 100;
+  const int HIST_SIZE = 21; // 21 bins of 100 cycles width. 2000+ to a single bin
   int histogram[HIST_SIZE];
   for (int i=0; i<HIST_SIZE; i++) {
     histogram[i] = 0;

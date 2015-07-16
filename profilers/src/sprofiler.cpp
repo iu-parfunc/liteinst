@@ -38,7 +38,7 @@ TLStatistics* samplingPrologFunction(uint16_t func_id) {
     current_thread_stats->thread_local_overhead = 0;
     current_thread_stats->thread_local_count = 0;
 
-    for (int i=0; i < function_count; i++) {
+    for (unsigned int i=0; i < function_count; i++) {
       current_thread_func_stats_table[i].is_leaf = true;
       current_thread_func_stats_table[i].stack_depth = 0;
     }
@@ -336,7 +336,7 @@ void SamplingProfiler::dumpStatistics() {
     statistics[i].max_time = cur_max;
     
     if (statistics[i].count != 0) {
-      fprintf(fp, "%s,%lu,%lu,%lu,%ld,%d,%d\n",  
+      fprintf(fp, "%s,%lu,%llu,%llu,%llu,%d,%d\n",  
           ins->getFunctionName(i).c_str(),  statistics[i].count,
           statistics[i].min_time, statistics[i].max_time, 
           statistics[i].total_time / (statistics[i].count - statistics[i].limited_count), 

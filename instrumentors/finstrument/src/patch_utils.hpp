@@ -71,6 +71,7 @@ inline bool modify_page_permissions(uint8_t* addr) {
   return true;
 }
 
+// Currently unused. 
 inline bool patch_with_call(uint64_t* addr, uint64_t fn) {
 
   uint64_t old_val = *(addr-1); 
@@ -137,7 +138,9 @@ inline bool patch_params(uint64_t* addr, uint8_t start_idx, uint32_t func_id) {
 
   int func_id_low_bytes = 7 - start_idx - 3;
 
-  uint32_t func_id_reversed = convert_to_little_endian_32(func_id);
+  // BJS: func_id_reversed was unused.
+  //uint32_t func_id_reversed = convert_to_little_endian_32(func_id);
+
   uint8_t* func_id_ptr = (uint8_t*) &func_id;
 
   switch(func_id_low_bytes) {

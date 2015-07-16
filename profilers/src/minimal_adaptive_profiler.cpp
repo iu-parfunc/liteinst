@@ -60,8 +60,10 @@ TLStatistics* minimalAdaptiveEpilogFunction(uint16_t func_id) {
 
   // Somehow epilog got called without proper prolog execution. (e.g: Race
   // condition on deactivation etc). Just return in that case.
+
+  // BJS: Need to return something and check for error in caller. 
   if (!allocated) {
-    return;
+    return NULL;
   }
 
   ticks epilog_start = getticks();
@@ -250,7 +252,7 @@ void MinimalAdaptiveProfiler::dumpStatistics() {
     statistics[i].max_time = cur_max;
     
     if (statistics[i].count != 0) {
-      fprintf(fp, "%s,%lu,%lu,%lu,%ld,%d\n",  
+      fprintf(fp, "%s,%lu,%llu,%llu,%llu,%d\n",  
           ins->getFunctionName(i).c_str(),  statistics[i].count,
           statistics[i].min_time, statistics[i].max_time, 
           statistics[i].total_time / (statistics[i].count - statistics[i].limited_count), 

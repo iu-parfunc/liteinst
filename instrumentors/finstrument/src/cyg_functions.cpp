@@ -150,10 +150,11 @@ inline bool check_if_mov(uint8_t progbit) {
 
 int counter = 0;
 
-bool starts_with(const char *str, const char *pre) {
-  size_t lenpre = strlen(pre), lenstr = strlen(str);
-  return lenstr < lenpre ? false : strncmp(pre, str, lenpre) == 0;
-}
+// BJS: This was unused
+//static bool starts_with(const char *str, const char *pre) {
+//  size_t lenpre = strlen(pre), lenstr = strlen(str);
+//  return lenstr < lenpre ? false : strncmp(pre, str, lenpre) == 0;
+//}
 
 /*
 bool disassemble_sequence(uint8_t* addr, uint8_t size, _DInst* result, uint8_t result_size) {
@@ -196,7 +197,7 @@ static void print_string_hex(char *comment, unsigned char *str, int len)
   printf("\n");
 }
 
-uint64_t get_lsb_mask(int nbytes) {
+static uint64_t get_lsb_mask(int nbytes) {
   switch (nbytes) {
     case 1:
       return 0xFF;
@@ -218,7 +219,7 @@ uint64_t get_lsb_mask(int nbytes) {
   }
 }
 
-uint64_t get_msb_mask(int nbytes) {
+static uint64_t get_msb_mask(int nbytes) {
   switch (nbytes) {
     case 1:
       return 0xFF00000000000000;
@@ -315,10 +316,10 @@ inline bool patch_with_value(uint8_t* addr, uint16_t func_id) {
 
 }
 
-void print_decoded_output(uint8_t* start, uint64_t length) {
+static void print_decoded_output(uint8_t* start, uint64_t length) {
 
   _DecodeResult res;
-  _DecodedInst disassembled[length];
+  _DecodedInst *disassembled = new _DecodedInst [length];
   unsigned int decodedInstructionsCount = 0;
   _OffsetType offset = 0;
 
@@ -330,7 +331,15 @@ void print_decoded_output(uint8_t* start, uint64_t length) {
       length,
       &decodedInstructionsCount);
 
-  for (int i = 0; i < decodedInstructionsCount; i++) {
+  if ( res != DECRES_SUCCESS) {
+    printf("Decoding failed\n");
+    delete(disassembled);
+    return;
+  }
+     
+  // CHECK res here... 
+
+  for (unsigned int i = 0; i < decodedInstructionsCount; i++) {
     printf("(%02d) %-24s %s%s%s\r\n",
         // disassembled[i].offset,
         disassembled[i].size,
@@ -339,6 +348,8 @@ void print_decoded_output(uint8_t* start, uint64_t length) {
         disassembled[i].operands.length != 0 ? " " : "",
         (char*)disassembled[i].operands.p);
   }
+  
+  delete(disassembled);
 }
 
 inline PatchResult* patch_first_parameter(uint64_t* call_return_addr, uint64_t* start_addr, uint16_t func_id) {
@@ -366,11 +377,15 @@ inline PatchResult* patch_first_parameter(uint64_t* call_return_addr, uint64_t* 
 
   _DecodedInst inst;
 
-  _CodeInfo ci = {0};
+  _CodeInfo ci;//  = {0};
   ci.code = (uint8_t*)start_addr;
   ci.codeLen = offset;
   ci.dt = Decode64Bits;
   ci.codeOffset = 0x100000;
+  ci.nextOffset =  { 0 };
+  ci.code = { 0 };
+  ci.codeLen = { 0 };
+  ci.features = { 0 };
 
   distorm_decompose(&ci, result, offset, &instructions_count);
   uint64_t ptr_size = 0;
@@ -482,7 +497,7 @@ inline uint16_t get_func_id(uint64_t func_addr) {
 
 }
 
-bool has_probe_info(uint64_t func_addr) {
+static bool has_probe_info(uint64_t func_addr) {
 
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
   if (ins->probe_info->find(func_addr) == ins->probe_info->end()) {
@@ -492,7 +507,7 @@ bool has_probe_info(uint64_t func_addr) {
   }
 }
 
-FinsProbeInfo* get_probe_info(uint64_t func_addr, uint8_t* addr) {
+static FinsProbeInfo* get_probe_info(uint64_t func_addr, uint8_t* addr) {
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
   if(ins->probe_info->find(func_addr) != ins->probe_info->end()) {
     std::list<FinsProbeInfo*>* probe_list = ins->probe_info->find(func_addr)->second;
@@ -507,11 +522,11 @@ FinsProbeInfo* get_probe_info(uint64_t func_addr, uint8_t* addr) {
   return NULL;
 }
 
-bool is_prolog_initialized(uint64_t func_addr) {
+static bool is_prolog_initialized(uint64_t func_addr) {
   return has_probe_info(func_addr);
 }
 
-FinsProbeInfo* populate_probe_info(uint8_t* probe_addr, bool unpatched){
+static FinsProbeInfo* populate_probe_info(uint8_t* probe_addr, bool unpatched){
   uint64_t* probe_start = (uint64_t*)(probe_addr - 5);
 
   FinsProbeInfo* probeInfo = new FinsProbeInfo;
@@ -524,7 +539,7 @@ FinsProbeInfo* populate_probe_info(uint8_t* probe_addr, bool unpatched){
   uint64_t deactive = (uint64_t) (sequence & mask); 
   mask = 0x0000000000441F0F; // Mask with a 5 byte NOP
 
-  uint64_t activeSequence = sequence;
+  //uint64_t activeSequence = sequence;
   uint64_t deactiveSequence = deactive | mask;
 
   size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
@@ -582,7 +597,7 @@ inline void init_probe_info(uint64_t func_addr, uint8_t* probe_addr, bool unpatc
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
 
   uint64_t* lock = ins->getLock(func_addr);
-  int counter = 0;
+  int spin_counter = 0;
   if (lock != NULL) {
     if (__sync_bool_compare_and_swap(lock, 0 , 1)) {
       // fprintf(stderr, "LOCKED %p : %lu\n", lock, *lock);
@@ -679,13 +694,15 @@ inline void init_probe_info(uint64_t func_addr, uint8_t* probe_addr, bool unpatc
     } else { // We failed. Wait until the other thread finish and just return
       // assert(*lock == 0);
       
+      //BJS: I dont understand this. 
+      
       while (*lock) {
-        if (counter == INT_MAX) {
+        if (spin_counter == INT_MAX) {
           fprintf(stderr, "RESETTING the counter\n");
           fprintf(stderr, "Returning without adding the probe since lock is : %lu\n", *lock);
           break;
         }
-        counter += 1;
+        spin_counter += 1;
         /*
         if (counter++ % 100000 == 0) { // Try for a while and then give up
           // fprintf(stderr, "SPINNING at func : %lu\n", func_addr); 
@@ -703,7 +720,7 @@ inline void init_probe_info(uint64_t func_addr, uint8_t* probe_addr, bool unpatc
 
 }
 
-void print_probe_info() {
+static void print_probe_info() {
 
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
   // fprintf(stderr, "Map size : %d\n", ins->probe_info->size());
@@ -992,13 +1009,13 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 
     if (!res->success) {
       if (res->conflict) {
-        fprintf(stderr, "[Finstrumentor] Detected straddler conflict at %p ..\n", addr);
+        fprintf(stderr, "[Finstrumentor] Detected straddler conflict at %p ..\n", (void*)addr);
       }
         
       init_probe_info((uint64_t)func, (uint8_t*)addr, true);
-      fprintf(stderr, "[Finstrumentor] Adding straddler conflict at %p  function %p with probe info unpatched at %d ..\n", func, addr, probe_info);
+      fprintf(stderr, "[Finstrumentor] Adding straddler conflict at %p  function %p with probe info unpatched at %p ..\n", func, (void*)addr, (void*)probe_info);
       probe_info = get_probe_info((uint64_t) func, (uint8_t*) addr);
-      fprintf(stderr, "[Finstrumentor] After adding conflict at %p function %p : %d\n", addr, func, probe_info->unpatched);
+      fprintf(stderr, "[Finstrumentor] After adding conflict at %p function %p : %p\n", (void*)addr, func, (void*)probe_info->unpatched);
 
       // Mark this as a function to escape patching
       set_index(g_straddlers_bitmap, func_id);
@@ -1234,13 +1251,13 @@ void __cyg_profile_func_exit(void* func, void* caller) {
 
     if (!res->success) {
       if (res->conflict) {
-        fprintf(stderr, "[Finstrumentor] Detected straddler conflict at %p ..\n", addr);
+        fprintf(stderr, "[Finstrumentor] Detected straddler conflict at %p ..\n", (void*)addr);
       }
         
       init_probe_info((uint64_t)func, (uint8_t*)addr, true);
-      fprintf(stderr, "[Finstrumentor] Adding straddler conflict at %p function %p  with probe info unpatched at %d ..\n", addr, func, probe_info);
+      fprintf(stderr, "[Finstrumentor] Adding straddler conflict at %p function %p  with probe info unpatched at %p ..\n", (void*)addr, func, (void*)probe_info);
       probe_info = get_probe_info((uint64_t) func, (uint8_t*) addr);
-      fprintf(stderr, "[Finstrumentor] After adding conflict at %p function %p : %d\n", addr, func, probe_info->unpatched);
+      fprintf(stderr, "[Finstrumentor] After adding conflict at %p function %p : %d\n", (void *)addr, func, probe_info->unpatched);
       
       // Mark this as a function to escape patching
       set_index(g_straddlers_bitmap, func_id);

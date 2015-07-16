@@ -89,7 +89,7 @@ static inline char *timenow();
 #define LOG_ERROR(message, args...)
 #endif
 
-#if LOG_LEVEL >= NO_LOGS
+#if LOG_LEVEL >= NO_LOG
 #define LOG_IF_ERROR(condition, message, args...) if (condition) PRINTFUNCTION(LOG_FMT message NEWLINE, LOG_ARGS(ERROR_TAG), ## args)
 #else
 #define LOG_IF_ERROR(condition, message, args...)

@@ -1,7 +1,8 @@
 
 # CFLAGS += -DOVERHEAD_TIME_SERIES 
 # CFLAGS += -DNO_INIT 
-ARGS= -g -Wall -fpermissive
+
+ARGS= -g -Wall -fpermissive 
 LIBS = -lpthread
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 

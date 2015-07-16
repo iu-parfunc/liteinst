@@ -63,7 +63,7 @@ uint64_t* g_probe_timings;
 int g_num_bins;
 #endif
 
-void int3_handler(int signo, siginfo_t *inf, void* ptr) {
+static void int3_handler(int signo, siginfo_t *inf, void* ptr) {
   ucontext_t *ucontext = (ucontext_t*)ptr;
   // printf("Caught signal, num %d..\n",signo);
 
@@ -72,7 +72,9 @@ void int3_handler(int signo, siginfo_t *inf, void* ptr) {
   //         *((uint64_t*) call_addr), call_sequence);
 
   // printf("Thread resume IP is : %p\n", (void*)ucontext->uc_mcontext.gregs[REG_RIP]);
-  uint8_t* rip_ptr = (uint8_t*) ucontext->uc_mcontext.gregs[REG_RIP];
+
+  //BJS: rip_ptr was unused 
+  //uint8_t* rip_ptr = (uint8_t*) ucontext->uc_mcontext.gregs[REG_RIP];
   /*
   if (*(rip_ptr-1) != 0XE8) {
     printf("SIGNAL Handler for parameter patching invoked ..\n");
@@ -162,7 +164,7 @@ void Finstrumentor::initialize() {
   sigemptyset(& (newact.sa_mask));
 
   sigaction(SIGTRAP, &newact, &oldact);
-  printf("Sigaction set, old funptr %p\n", oldact.sa_handler);
+  printf("Sigaction set, old funptr %p\n", (void*)oldact.sa_handler);
 
   /*
   struct sigaction act;
@@ -307,10 +309,14 @@ int Finstrumentor::deactivateProbeByName(void* probe_id, int flag) {
 std::list<FinsProbeInfo*>* Finstrumentor::getProbes(void* probe_id) {
   uint16_t func_id = *(uint16_t*)probe_id;
   uint64_t func_addr;
-  uint64_t* lock = NULL;
+  
+  
+  // BJS: something is strange here. 
+  //uint64_t* lock = NULL;
+ 
   if (func_id_mappings->find(func_id) != func_id_mappings->end()) { 
     func_addr =  func_id_mappings->find(func_id)->second->func_addr;
-    lock = &(func_addr_mappings->find(func_addr)->second->lock);
+    //lock = &(func_addr_mappings->find(func_addr)->second->lock);
   } else {
     return NULL;
   }
@@ -433,7 +439,7 @@ int Finstrumentor::deactivateProbe(void* probe_id, int flag) {
 
 }
 
-int tokenize(const string& str, vector<string>& tokens, const string& delimiters = " ") {
+static int tokenize(const string& str, vector<string>& tokens, const string& delimiters = " ") {
   string::size_type lastPos = str.find_first_not_of(delimiters, 0);
   string::size_type pos = str.find_first_of(delimiters, lastPos);
 
@@ -636,14 +642,14 @@ void dumpProbeOverheadStatistics() {
 }
 #endif
 
-void dumpProbeMetaData() {
+static void dumpProbeMetaData() {
   FILE* fp = fopen("meta.out", "a");
 
   fprintf(stderr, "\n Cache Straddlers : %lu\n", g_straddler_count);
   for (list<FinsCacheStraddler*>::iterator it=g_cache_straddlers->begin(); it != g_cache_straddlers->end(); ++it) {
-    fprintf(fp, "%llx, ", (*it)->addr);
+    fprintf(fp, "%lx, ", (*it)->addr);
     fprintf(fp, "%d \n", (*it)->cutoff);
-    fprintf(stderr, "%llx, ", (*it)->addr);
+    fprintf(stderr, "%lx, ", (*it)->addr);
     fprintf(stderr, "%d \n", (*it)->cutoff);
   }
 
@@ -652,7 +658,7 @@ void dumpProbeMetaData() {
   fprintf(fp, "Alignments\n"); 
   fprintf(fp, "addr, word_aligned?, int_aligned?, cache_aligned?\n");
   for (list<FinsProbeMetaData*>::iterator it=g_probe_meta_data->begin(); it != g_probe_meta_data->end(); ++it) {
-    fprintf(fp, "%llx,", (*it)->addr);
+    fprintf(fp, "%lx,", (*it)->addr);
     fprintf(fp, "%d,", (*it)->word_aligned);
     fprintf(fp, "%d,", (*it)->int_aligned);
     fprintf(fp, "%d\n", (*it)->cache_aligned);

@@ -612,7 +612,7 @@ void AdaptiveProfiler::dumpStatistics() {
     statistics[i].max_time = cur_max;
     
     if (statistics[i].count != 0) {
-      fprintf(fp, "%s,%lu,%lu,%lu,%ld,%d,%d\n",  
+      fprintf(fp, "%s,%lu,%llu,%llu,%llu,%d,%d\n",  
           ins->getFunctionName(i).c_str(),  statistics[i].count,
           statistics[i].min_time, statistics[i].max_time, 
           statistics[i].total_time / (statistics[i].count - statistics[i].limited_count), 
