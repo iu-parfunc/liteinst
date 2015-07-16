@@ -73,7 +73,7 @@ build: $(OBJ)
 
 install:
 	# something awkward here!  (should be part of clean?)
-	rm -r $(INSTALL)
+	-rm -r $(INSTALL)
 	mkdir $(INSTALL)
 	mkdir $(INSTALL)/noprof
 	make libubiprof.so -f Makefile_GCC

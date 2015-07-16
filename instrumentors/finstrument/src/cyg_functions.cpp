@@ -377,15 +377,15 @@ inline PatchResult* patch_first_parameter(uint64_t* call_return_addr, uint64_t* 
 
   _DecodedInst inst;
 
-  _CodeInfo ci;//  = {0};
+  _CodeInfo ci  = {0};
   ci.code = (uint8_t*)start_addr;
   ci.codeLen = offset;
   ci.dt = Decode64Bits;
   ci.codeOffset = 0x100000;
-  ci.nextOffset =  { 0 };
-  ci.code = { 0 };
-  ci.codeLen = { 0 };
-  ci.features = { 0 };
+  // ci.nextOffset =  { 0 };
+  // ci.code = { 0 };
+  // ci.codeLen = { 0 };
+  // ci.features = { 0 };
 
   distorm_decompose(&ci, result, offset, &instructions_count);
   uint64_t ptr_size = 0;
