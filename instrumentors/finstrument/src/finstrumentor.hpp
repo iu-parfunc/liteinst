@@ -8,33 +8,13 @@
 #include <list>
 #include <unordered_map>
 #include <map>
-#include "dynamicarray.h"
 
 #define DEFAULT_PROBE_COUNT 1024 
-
-// typedef void (*InstrumentationFunc)(uint16_t);
-
-inline void
-clflush(volatile void *p)
-{
-    asm volatile ("clflush (%0)" :: "r"(p));
-}
 
 typedef struct FinsProbeInfo {
     uint8_t patch_strategy;
     uint8_t* probeStartAddr;
-
-    // uint8_t* probe_end_addr;
     uint8_t size;
-    /* argument patching strategy specific data */
-    // uint8_t* rsi_addr;
-    // uint8_t* rdi_addr;
-    // uint8_t rsi_ins_size;
-    // uint8_t rdi_ins_size;
-    // uint8_t param_ins_distance;
-    // uint64_t original_info;
-
-    /* call site redirection strategy specific data */
     uint64_t activeSequence;
     uint64_t deactiveSequence;
     bool isActive;
@@ -58,28 +38,7 @@ typedef struct PatchResult {
   bool conflict;
 } PatchResult;
 
-typedef struct FinsProbeMetaData {
-  uint64_t addr;
-  bool word_aligned;
-  bool int_aligned;
-  bool cache_aligned;
-} FinsProbeMetaData;
-
-typedef struct FinsCacheStraddler {
-  uint64_t addr;
-  uint8_t cutoff;
-} FinsCacheStraddler;
-
-typedef struct FinsStatistics {
-    uint64_t funcAddr;
-    uint64_t count;
-} FinsStatistics;
-
 /* Global Data */
-
-// Probe meta data
-extern std::list<FinsProbeMetaData*>* g_probe_meta_data;
-extern std::list<FinsCacheStraddler*>* g_cache_straddlers;
 
 typedef std::map<uint64_t, std::list<FinsProbeInfo*>*> probe_map;
 extern probe_map probe_info;
@@ -109,7 +68,6 @@ extern uint64_t g_straddler_count;
 #ifdef __cplusplus
 extern "C"
 {
-  // extern Instrumentor* INSTRUMENTOR_INSTANCE; // Need to be set by the Profiler
   extern InstrumentationFunc prologFunction;
   extern InstrumentationFunc epilogFunction;
   extern void* probeInfo;
@@ -125,8 +83,6 @@ class Finstrumentor : public Instrumentor {
     volatile uint16_t func_id_counter;
     InstrumentationFunc prologFunc;
     InstrumentationFunc epilogFunc;
-    // DynamicArray<FinsProbeInfo>* probeInfo;
-    // FinsProbeInfo* probeInfo;
 
     Finstrumentor(InstrumentationFunc prologFunc, InstrumentationFunc epilogFunc); 
     void initialize();
@@ -148,10 +104,6 @@ class Finstrumentor : public Instrumentor {
     void readFunctionInfo();
 
 };
-
-// Statistics* ubi_global_stats;
-
-
 
 #endif /* _FINSTRUMENTOR_HPP_ */
 
