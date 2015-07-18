@@ -356,7 +356,7 @@ static int tokenize(const string& str, vector<string>& tokens, const string& del
   return count;
 }
 
-uint16_t Finstrumentor::getFunctionId(uint64_t func_addr) {
+uint32_t Finstrumentor::getFunctionId(uint64_t func_addr) {
   if (func_addr_mappings->find(func_addr) != func_addr_mappings->end()) {
     return func_addr_mappings->find(func_addr)->second->func_id;
   } else {
@@ -364,7 +364,7 @@ uint16_t Finstrumentor::getFunctionId(uint64_t func_addr) {
   } 
 }
 
-uint64_t Finstrumentor::getFunctionAddress(uint16_t func_id) {
+uint64_t Finstrumentor::getFunctionAddress(uint32_t func_id) {
   if (func_id_mappings->find(func_id) != func_id_mappings->end()) {
     return func_id_mappings->find(func_id)->second->func_addr;
   } else {
@@ -396,7 +396,7 @@ void printMap(FuncIDMappings* func_id_mappings) {
 */
 
 void Finstrumentor::addFunction(uint64_t addr, char* name) {
-  FunctionInfo* func_info = new FunctionInfo;
+  FunctionInfo<FinsProbeInfo>* func_info = new FunctionInfo<FinsProbeInfo>;
   func_info->func_addr = addr;
   func_info->func_name = string(name);
   func_info->func_id = func_count-1;
@@ -410,8 +410,8 @@ void Finstrumentor::addFunction(uint64_t addr, char* name) {
 void Finstrumentor::readFunctionInfo() {
 
   fprintf(stderr, "Initializing mappings data structure..\n");
-  func_addr_mappings = new FuncAddrMappings;
-  func_id_mappings = new FuncIDMappings;
+  func_addr_mappings = new FuncAddrMappings<FinsProbeInfo>;
+  func_id_mappings = new FuncIDMappings<FinsProbeInfo>;
 
   string line;
   ifstream fp ("functions.txt");
@@ -429,7 +429,7 @@ void Finstrumentor::readFunctionInfo() {
         continue;
       }
 
-      FunctionInfo* func_info = new FunctionInfo;
+      FunctionInfo<FinsProbeInfo>* func_info = new FunctionInfo<FinsProbeInfo>;
       func_info->func_addr = (uint64_t) strtoul(tokens[0].c_str(), NULL, 16);
       func_info->func_name = tokens[1];
       func_info->func_id = func_count++;

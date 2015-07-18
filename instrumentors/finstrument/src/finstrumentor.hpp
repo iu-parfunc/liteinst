@@ -8,10 +8,11 @@
 #include <list>
 #include <unordered_map>
 #include <map>
+#include <vector>
 
 #define DEFAULT_PROBE_COUNT 1024 
 
-typedef struct FinsProbeInfo {
+struct FinsProbeInfo {
     uint8_t patch_strategy;
     uint8_t* probeStartAddr;
     uint8_t size;
@@ -30,7 +31,7 @@ typedef struct FinsProbeInfo {
     uint64_t deactivation_sequence_1;
     uint64_t deactivation_sequence_2;
 
-} FinsProbeInfo;
+};
 
 typedef struct PatchResult {
   uint8_t* edi_set_addr;
@@ -49,15 +50,22 @@ extern func_table functions;
 typedef std::map<uint16_t, uint64_t> func_id_table;
 extern func_id_table function_ids;
 
-typedef struct FunctionInfo {
+template<class T>
+struct FunctionInfo {
   uint16_t func_id;
   uint64_t func_addr;
   std::string func_name;
   uint64_t lock;
-} FunctionInfo;
+  std::vector<T> probe_Info; 
+};
 
-typedef std::map<uint64_t, FunctionInfo*> FuncAddrMappings;
-typedef std::map<uint16_t, FunctionInfo*> FuncIDMappings;
+// Using some alias templates
+template <class T>
+using FuncAddrMappings = std::map<uint64_t, FunctionInfo<T>*> ;
+template <class T>
+using FuncIDMappings = std::map<uint16_t, FunctionInfo<T>*>;
+template <class T>
+using FuncNameMappings = std::map<std::string, FunctionInfo<T>*>;
 
 extern volatile uint16_t func_id_counter;
 
@@ -86,12 +94,30 @@ class Finstrumentor : public Instrumentor {
 
     Finstrumentor(InstrumentationFunc prologFunc, InstrumentationFunc epilogFunc); 
     void initialize();
+
+    // Function granularity activation and deactivation
+    // bool activateFunction(string name);
+    // bool activateFunction(uint32_t id);
+
+    // bool deactivateFunction(string name);
+    // bool deactivateFunction(uint32_t id);
+
+    // Call site / Probe granularity activation and deactivation
+    // Not all instrumentors may support this
     int activateProbe(void* id, int type);
     int activateProbeByName(void* id, int type);
     int deactivateProbe(void* id, int type);
     int deactivateProbeByName(void* id, int type);
-    uint16_t getFunctionId(uint64_t addr);
-    uint64_t getFunctionAddress(uint16_t id);
+
+    // Function name to id mapping (generic)
+    // string getFunctionName(uint32_t id);
+    // uint32_t getFunctionId(string name);
+
+    // Function address to id mapping (Finstrumentor specific)
+    uint32_t getFunctionId(uint64_t addr);
+    uint64_t getFunctionAddress(uint32_t id);
+
+    // Given function address 
     uint64_t* getLock(uint64_t addr);
     void addFunction(uint64_t addr, char* name);
     std::string getFunctionName(uint16_t id);
@@ -99,8 +125,9 @@ class Finstrumentor : public Instrumentor {
     virtual ~Finstrumentor();
 
   private:
-    FuncAddrMappings* func_addr_mappings;
-    FuncIDMappings* func_id_mappings;
+    FuncAddrMappings<FinsProbeInfo>* func_addr_mappings;
+    FuncIDMappings<FinsProbeInfo>* func_id_mappings;
+    FuncNameMappings<FinsProbeInfo>* func_name_mappings;
     void readFunctionInfo();
 
 };

@@ -72,7 +72,7 @@ class Profiler {
      *
      *  \param id function name 
      */
-    virtual int activateFunctionByName(void* id);
+    virtual int activateFunctionByName(void* name);
 
     /// Dectivates profiling for the function with given id
     /** This method is mainly for use within profiler instrumentation 

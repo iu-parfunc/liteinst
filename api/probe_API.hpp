@@ -110,6 +110,10 @@ class Instrumentor {
      */
     virtual void initialize() = 0;
 
+    // Function granularity activation and deactivation
+    // virtual bool activateFunction(string name) = 0;
+    // virtual bool deactivateFunction(string name) = 0;
+
     /// Activates profiling for the probesite with given id.
     /// As of now probesite == function
     /** This method is mainly for use by profiler  
