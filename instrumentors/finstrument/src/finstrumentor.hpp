@@ -109,10 +109,6 @@ class Finstrumentor : public Instrumentor {
     int deactivateProbe(void* id, int type);
     int deactivateProbeByName(void* id, int type);
 
-    FinsProbeInfo* getProbeInfo(uint64_t func_addr, uint8_t* addr); 
-    bool hasProbeInfo(uint64_t func_addr);
-    void addProbeInfo(uint64_t func_addr, uint8_t* probe_addr, bool unpatched); 
-
     // Function name to id mapping (generic)
     // string getFunctionName(uint32_t id);
     // uint32_t getFunctionId(string name);

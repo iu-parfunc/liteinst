@@ -5,7 +5,6 @@
 
 #include <stdlib.h>
 #include <math.h>
-#include <limits.h>
 
 #include <cstdio>
 #include <vector>
@@ -17,9 +16,6 @@
 #include <signal.h>
 
 using namespace std;
-
-
-FinsProbeInfo* populateProbeInfo(uint8_t* probe_addr, bool unpatched);
 
 volatile uint16_t func_id_counter;
 uint8_t* g_straddlers_bitmap;
@@ -345,93 +341,20 @@ int Finstrumentor::deactivateProbe(void* probe_id, int flag) {
 
 }
 
-bool Finstrumentor::hasProbeInfo(uint64_t func_addr) {
+static int tokenize(const string& str, vector<string>& tokens, const string& delimiters = " ") {
+  string::size_type lastPos = str.find_first_not_of(delimiters, 0);
+  string::size_type pos = str.find_first_of(delimiters, lastPos);
 
-  if (probe_info->find(func_addr) == probe_info->end()) {
-    return false;
-  } else {
-    return true;
+  int count = 0;
+  while (string::npos != pos || string::npos != lastPos)
+  {
+    tokens.push_back(str.substr(lastPos, pos - lastPos));
+    lastPos = str.find_first_not_of(delimiters, pos);
+    pos = str.find_first_of(delimiters, lastPos);
+    count++;
   }
+  return count;
 }
-
-FinsProbeInfo* Finstrumentor::getProbeInfo(uint64_t func_addr, uint8_t* addr) {
-  if(probe_info->find(func_addr) != probe_info->end()) {
-    std::list<FinsProbeInfo*>* probe_list = probe_info->find(func_addr)->second;
-    for(std::list<FinsProbeInfo*>::iterator iter = probe_list->begin(); 
-      iter != probe_list->end(); iter++) {
-      FinsProbeInfo* probeInfo= *iter;
-      if (probeInfo->probeStartAddr == addr-5) {
-        return probeInfo;
-      }
-    }
-  }
-  return NULL;
-}
-
-void Finstrumentor::addProbeInfo(uint64_t func_addr, uint8_t* probe_addr, bool unpatched) {
-
-  uint64_t* lock = getLock(func_addr);
-  int spin_counter = 0;
-  if (lock != NULL) {
-    if (__sync_bool_compare_and_swap(lock, 0 , 1)) {
-      if(probe_info->find(func_addr) == probe_info->end()) {
-        std::list<FinsProbeInfo*>* probe_list = new std::list<FinsProbeInfo*>;
-
-        FinsProbeInfo* probeInfo = populateProbeInfo(probe_addr, unpatched);
-        probe_list->push_back(probeInfo);
-        probe_info->insert(make_pair(func_addr, probe_list));
-      } else {
-        std::list<FinsProbeInfo*>* probe_list = probe_info->find(func_addr)->second;
-        for(std::list<FinsProbeInfo*>::iterator iter = probe_list->begin(); iter != probe_list->end(); iter++) {
-          FinsProbeInfo* probeInfo= *iter;
-          if (probeInfo->probeStartAddr == (probe_addr-8)) {
-            while(!__sync_bool_compare_and_swap(lock, 1 , 0));
-            return; // Probe already initialized. Nothing to do.
-          }
-        }
-
-        FinsProbeInfo* probeInfo = populateProbeInfo(probe_addr, unpatched);
-        probe_list->push_back(probeInfo);
-      }
-    } else { // We failed. Wait until the other thread finish and just return
-      
-      //BJS: I dont understand this. 
-      
-      while (*lock) {
-        if (spin_counter == INT_MAX) {
-          fprintf(stderr, "RESETTING the counter\n");
-          fprintf(stderr, "Returning without adding the probe since lock is : %lu\n", *lock);
-          break;
-        }
-        spin_counter += 1;
-      }
-
-      return;
-    }
-  }
-
-  while(!__sync_bool_compare_and_swap(lock, 1 , 0));
-
-}
-
-/*
-static void print_probe_info() {
-
-  Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
-  // fprintf(stderr, "Map size : %d\n", ins->probe_info->size());
-  for(auto iter = ins->probe_info->begin(); iter != ins->probe_info->end(); iter++) {
-    std::list<FinsProbeInfo*>* probe_list = iter->second;
-    /// / fprintf(stderr, "Function address : %p\n", iter->first);
-
-    for (std::list<FinsProbeInfo*>::iterator it = probe_list->begin(); it!= probe_list->end(); it++) {
-      FinsProbeInfo* probeData = *it;
-
-      fprintf(stderr, "Probe start address : %p\n", probeData->probeStartAddr);
-    }
-
-  }
-}
-*/
 
 uint32_t Finstrumentor::getFunctionId(uint64_t func_addr) {
   if (func_addr_mappings->find(func_addr) != func_addr_mappings->end()) {
@@ -523,69 +446,6 @@ void Finstrumentor::readFunctionInfo() {
   if (func_count == 1) {
     fprintf(stderr, "[Ubiprof] ERROR : functions.txt not present. Ubiprof will not profile this application...\n");
   }
-}
-
-FinsProbeInfo* populateProbeInfo(uint8_t* probe_addr, bool unpatched){
-  uint64_t* probe_start = (uint64_t*)(probe_addr - 5);
-
-  FinsProbeInfo* probeInfo = new FinsProbeInfo;
-  probeInfo->probeStartAddr = probe_addr-5;
-  probeInfo->isActive = 1;
-  probeInfo->unpatched = unpatched;
-
-  uint64_t sequence = *probe_start;
-  uint64_t mask = 0xFFFFFF0000000000;
-  uint64_t deactive = (uint64_t) (sequence & mask); 
-  mask = 0x0000000000441F0F; // Mask with a 5 byte NOP
-
-  //uint64_t activeSequence = sequence;
-  uint64_t deactiveSequence = deactive | mask;
-
-  size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
-  int offset = (uint64_t) probe_start % cache_line_size;
-  if (offset >= 57) { // If this is a cache line straddler
-    int cutoff_point = 64 - offset;
-
-    g_straddler_count++;
-    // printf("CUTOFF POINT : %d\n", cutoff_point);
-
-    probeInfo->straddler = true;
-   
-    uint64_t* straddle_point = (uint64_t*)((uint8_t*)probe_start + cutoff_point);
-    probeInfo->straddle_part_1_start = straddle_point - 1;
-    probeInfo->straddle_part_2_start = straddle_point;
-    probeInfo->activation_sequence_1 = *(probeInfo->straddle_part_1_start); 
-    probeInfo->activation_sequence_2 = *(probeInfo->straddle_part_2_start); 
-
-    int shift_size = 8 * (8 - cutoff_point);
-    uint64_t int3mask = 0xCC;
-    uint64_t ormask = 0xFF;
-
-    int3mask = (int3mask << shift_size);
-    ormask = (ormask << shift_size);
-
-    probeInfo->straddle_int3_sequence = (*(probeInfo->straddle_part_1_start) & ~ormask) | int3mask;
-      
-    uint64_t temp0 = deactiveSequence & get_lsb_mask(cutoff_point);
-    shift_size = (8 * (8-cutoff_point)); 
-    temp0 = (temp0 << shift_size);
-    uint64_t temp1 = probeInfo->activation_sequence_1 & (~get_msb_mask(cutoff_point));
-    probeInfo->deactivation_sequence_1 = temp0 | temp1;
-
-    temp0 = deactiveSequence & (~get_lsb_mask(cutoff_point));
-    shift_size = (8 * cutoff_point);
-    temp0 = (temp0 >> shift_size);
-    temp1 = probeInfo->activation_sequence_2 & get_msb_mask(cutoff_point); 
-    probeInfo->deactivation_sequence_2 = temp0 | temp1;
-  } else {
-    probeInfo->straddler = false;
-  }
-
-  probeInfo->activeSequence = sequence;
-  probeInfo->deactiveSequence = deactiveSequence;
-
-  return probeInfo;
-
 }
 
 #ifdef PROBE_HIST_ON 
