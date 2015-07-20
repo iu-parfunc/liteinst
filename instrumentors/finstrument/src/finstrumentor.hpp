@@ -41,7 +41,7 @@ typedef struct PatchResult {
 
 /* Global Data */
 
-typedef std::map<uint64_t, std::vector<FinsProbeInfo*>*> probe_map;
+typedef std::map<uint64_t, std::list<FinsProbeInfo*>*> probe_map;
 extern probe_map probe_info;
 
 typedef std::map<uint64_t, volatile uint16_t> func_table;
@@ -125,7 +125,7 @@ class Finstrumentor : public Instrumentor {
     uint64_t* getLock(uint64_t addr);
     void addFunction(uint64_t addr, char* name);
     std::string getFunctionName(uint16_t id);
-    std::vector<FinsProbeInfo*>* getProbes(void* id);
+    std::list<FinsProbeInfo*>* getProbes(void* id);
     virtual ~Finstrumentor();
 
   private:
