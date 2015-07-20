@@ -176,8 +176,8 @@ int Finstrumentor::activateProbe(void* probe_id, int flag) {
 
   if (lock!= NULL) {
     if (__sync_bool_compare_and_swap(lock, 0, 1)) {
-      std::list<FinsProbeInfo*>* ls = probe_info->find(func_addr)->second;  
-      for (std::list<FinsProbeInfo*>::iterator it = ls->begin(); it != ls->end(); it++) {
+      std::vector<FinsProbeInfo*>* ls = probe_info->find(func_addr)->second;  
+      for (std::vector<FinsProbeInfo*>::iterator it = ls->begin(); it != ls->end(); it++) {
         FinsProbeInfo* info = *it;
 
         if (info->isActive) {
@@ -244,7 +244,7 @@ int Finstrumentor::deactivateProbeByName(void* probe_id, int flag) {
 
 }
 
-std::list<FinsProbeInfo*>* Finstrumentor::getProbes(void* probe_id) {
+std::vector<FinsProbeInfo*>* Finstrumentor::getProbes(void* probe_id) {
   uint16_t func_id = *(uint16_t*)probe_id;
   uint64_t func_addr;
   
@@ -260,7 +260,7 @@ std::list<FinsProbeInfo*>* Finstrumentor::getProbes(void* probe_id) {
     return NULL;
   }
 
-  std::list<FinsProbeInfo*>* ls = probe_info->find(func_addr)->second;  
+  std::vector<FinsProbeInfo*>* ls = probe_info->find(func_addr)->second;  
   return ls;
 }
 
@@ -291,7 +291,7 @@ int Finstrumentor::deactivateProbe(void* probe_id, int flag) {
     return -1;
   }
 
-  std::list<FinsProbeInfo*>* ls = probe_info->find(func_addr)->second;  
+  std::vector<FinsProbeInfo*>* ls = probe_info->find(func_addr)->second;  
 
   if (ls == NULL) {
     return -1;
@@ -299,7 +299,7 @@ int Finstrumentor::deactivateProbe(void* probe_id, int flag) {
 
   if (lock != NULL) {
     if (__sync_bool_compare_and_swap(lock, 0, 1)) {
-      for (std::list<FinsProbeInfo*>::iterator it = ls->begin(); it != ls->end(); it++) {
+      for (std::vector<FinsProbeInfo*>::iterator it = ls->begin(); it != ls->end(); it++) {
         FinsProbeInfo* info = *it;
 
         if (!info->isActive) {
@@ -356,8 +356,8 @@ bool Finstrumentor::hasProbeInfo(uint64_t func_addr) {
 
 FinsProbeInfo* Finstrumentor::getProbeInfo(uint64_t func_addr, uint8_t* addr) {
   if(probe_info->find(func_addr) != probe_info->end()) {
-    std::list<FinsProbeInfo*>* probe_list = probe_info->find(func_addr)->second;
-    for(std::list<FinsProbeInfo*>::iterator iter = probe_list->begin(); 
+    std::vector<FinsProbeInfo*>* probe_list = probe_info->find(func_addr)->second;
+    for(std::vector<FinsProbeInfo*>::iterator iter = probe_list->begin(); 
       iter != probe_list->end(); iter++) {
       FinsProbeInfo* probeInfo= *iter;
       if (probeInfo->probeStartAddr == addr-5) {
@@ -375,14 +375,15 @@ void Finstrumentor::addProbeInfo(uint64_t func_addr, uint8_t* probe_addr, bool u
   if (lock != NULL) {
     if (__sync_bool_compare_and_swap(lock, 0 , 1)) {
       if(probe_info->find(func_addr) == probe_info->end()) {
-        std::list<FinsProbeInfo*>* probe_list = new std::list<FinsProbeInfo*>;
+        std::vector<FinsProbeInfo*>* probe_list = new std::vector<FinsProbeInfo*>;
+        probe_list->reserve(5);
 
         FinsProbeInfo* probeInfo = populateProbeInfo(probe_addr, unpatched);
         probe_list->push_back(probeInfo);
         probe_info->insert(make_pair(func_addr, probe_list));
       } else {
-        std::list<FinsProbeInfo*>* probe_list = probe_info->find(func_addr)->second;
-        for(std::list<FinsProbeInfo*>::iterator iter = probe_list->begin(); iter != probe_list->end(); iter++) {
+        std::vector<FinsProbeInfo*>* probe_list = probe_info->find(func_addr)->second;
+        for(std::vector<FinsProbeInfo*>::iterator iter = probe_list->begin(); iter != probe_list->end(); iter++) {
           FinsProbeInfo* probeInfo= *iter;
           if (probeInfo->probeStartAddr == (probe_addr-8)) {
             while(!__sync_bool_compare_and_swap(lock, 1 , 0));
