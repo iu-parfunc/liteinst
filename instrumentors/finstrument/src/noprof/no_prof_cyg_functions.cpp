@@ -21,7 +21,7 @@ inline void init_probe_info(uint64_t func_addr, uint8_t* probe_addr) {
 
   // fprintf(stderr, "probe_info address at init probe : %p\n", ins->probe_info);
   if(ins->probe_info->find(func_addr) == ins->probe_info->end()) {
-    std::vector<FinsProbeInfo*>* probe_list = new std::vector<FinsProbeInfo*>;
+    std::list<FinsProbeInfo*>* probe_list = new std::list<FinsProbeInfo*>;
     // fprintf(stderr, "Probe list address for func id %d : %p\n", func_addr, probe_list);
     FinsProbeInfo* probeInfo = new FinsProbeInfo;
     probeInfo->probeStartAddr = (probe_addr-8);
@@ -40,8 +40,8 @@ inline void init_probe_info(uint64_t func_addr, uint8_t* probe_addr) {
     // fprintf(stderr, "Adding probe %p for function %p\n", probe_addr, (uint64_t*) func_addr);
     ins->probe_info->insert(make_pair(func_addr, probe_list));
   } else {
-    std::vector<FinsProbeInfo*>* probe_list = ins->probe_info->find(func_addr)->second;
-    for(std::vector<FinsProbeInfo*>::iterator iter = probe_list->begin(); iter != probe_list->end(); iter++) {
+    std::list<FinsProbeInfo*>* probe_list = ins->probe_info->find(func_addr)->second;
+    for(std::list<FinsProbeInfo*>::iterator iter = probe_list->begin(); iter != probe_list->end(); iter++) {
       FinsProbeInfo* probeInfo= *iter;
       if (probeInfo->probeStartAddr == (probe_addr-8)) {
         return; // Probe already initialized. Nothing to do.
