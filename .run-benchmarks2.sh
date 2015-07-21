@@ -60,8 +60,6 @@ case $HOSTNAME in
 	echo "NO SPECIAL HACKS FOR THIS MACHINE" 
 esac
 
-# after hacks.. add intel libs 
-module add intel 
 		
 echo "*** CHECK IF THESE PATHS ARE SANE ***" 
 echo "***"
@@ -96,16 +94,23 @@ echo $PATH
 #./.jenkins_script.sh 
 case $LIBCOMPILER in 
     icc) 
+	# after hacks.. add intel libs 
+	module add intel 
+
 	make clean
 	make all
 	;;
-    *) 
+    gcc) 
 	module add gcc/4.9.2
 	
 	make clean 
 	make lib -f Makefile_GCC 
 	make run-benchmarks.exe 
-
+	;;
+    *)
+	echo "No suitable compiler for the library chosen: ABORTING!"
+        exit 1
+	
 esac
 
 
