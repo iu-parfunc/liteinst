@@ -24,8 +24,10 @@ ifeq ($(JENKINS_GHC),)
   JENKINS_GHC=7.8.2
 endif
 
-TRIALS=6
-# TRIALS=1
+#TRIALS=6
+TRIALS=2
+
+
 TOP=$(shell pwd)
 
 # Google API authentication

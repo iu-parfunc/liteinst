@@ -6,6 +6,8 @@ echo "Run benchmarks script starting, located at: $0"
 
 rootdir=$1
 shift
+LIBCOMPILER=$1
+shift 
 export BENCHARGS=$*
 set -e
 
@@ -13,6 +15,12 @@ if [ "$rootdir" == "" ] || ! [ -d "$rootdir" ];
 then echo ".run-benchmarks, cannot proceed because rootdir ($rootdir) does not exist."
      exit 1 
 fi 
+
+if [ "$LIBCOMPILER" == "" ]; 
+then echo ".run-benchmarks, cannot proceed because library compiler ($LIBCOMPILER) not set."
+     exit 1 
+fi 
+
 
 cd $rootdir
 echo "Switched to working-copy directory: "`pwd`
@@ -52,8 +60,6 @@ case $HOSTNAME in
 	echo "NO SPECIAL HACKS FOR THIS MACHINE" 
 esac
 
-# after hacks.. add intel libs 
-module add intel 
 		
 echo "*** CHECK IF THESE PATHS ARE SANE ***" 
 echo "***"
@@ -85,7 +91,28 @@ echo $PATH
 # (1) Piggy-back on teh standard regression tests to do the build:
 #This should get the rest of the params, right ??? 
 
-./.jenkins_script.sh 
+#./.jenkins_script.sh 
+case $LIBCOMPILER in 
+    icc) 
+	# after hacks.. add intel libs 
+	module add intel 
+
+	make clean
+	make all
+	;;
+    gcc) 
+	module add gcc/4.9.2
+	
+	make clean 
+	make lib -f Makefile_GCC 
+	make run-benchmarks.exe 
+	;;
+    *)
+	echo "No suitable compiler for the library chosen: ABORTING!"
+        exit 1
+	
+esac
+
 
 # (2) Then benchmark:
 export DYN_OUTPUT_TYPE=CSV
