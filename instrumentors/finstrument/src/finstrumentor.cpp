@@ -132,8 +132,10 @@ void Finstrumentor::initialize() {
  * flag = Specifies which probes within the probe site to be disabled. Currently 
  *        defaults to function start and end
  */
-int Finstrumentor::activateProbeByName(void* probe_id, int flag) {
+bool Finstrumentor::activateFunction(string name) {
 
+  uint16_t func_id = getFunctionId(name);
+  /*
   uint64_t func_addr = (uint64_t)probe_id;
   uint64_t func_id; 
   if (func_addr_mappings->find(func_addr) != func_addr_mappings->end()) {
@@ -141,8 +143,9 @@ int Finstrumentor::activateProbeByName(void* probe_id, int flag) {
   } else {
     return -1;
   }
+  */
 
-  return activateProbe(&func_id, flag);
+  return activateFunction(func_id);
 
 }
 
@@ -155,23 +158,23 @@ int Finstrumentor::activateProbeByName(void* probe_id, int flag) {
  */
 // Here probe_id is actually function id. We only have function level 
 // probe toggling granularity at the moment
-int Finstrumentor::activateProbe(void* probe_id, int flag) {
+bool Finstrumentor::activateFunction(uint16_t func_id) {
 
-  uint16_t func_id = *(uint16_t*)probe_id;
+  // uint16_t func_id = *(uint16_t*)probe_id;
   uint64_t func_addr; 
   uint64_t* lock = NULL;
 
   // straddler check
   if (get_index(g_straddlers_bitmap, func_id)) {
     // fprintf(stderr, "Skip activating the straddler function %d\n", func_id);
-    return -1;
+    return false;
   }
 
   if (func_id_mappings->find(func_id) != func_id_mappings->end()) {
     func_addr =  func_id_mappings->find(func_id)->second->func_addr;
     lock = &(func_addr_mappings->find(func_addr)->second->lock);
   } else {
-    return -1;
+    return false;
   }
 
   if (lock!= NULL) {
@@ -188,7 +191,7 @@ int Finstrumentor::activateProbe(void* probe_id, int flag) {
         if (!status) {
           LOG_ERROR("Patching the probesite failed at %p. Skipping..\n", info->probeStartAddr);
           __sync_bool_compare_and_swap(lock, 1 , 0);
-          return -1; // This is little bit troublesome. We sort of need transaction rollback
+          return false; // This is little bit troublesome. We sort of need transaction rollback
                      // if this happens during the middle of the iteration for
                      // already patched probe sites
         }
@@ -213,14 +216,14 @@ int Finstrumentor::activateProbe(void* probe_id, int flag) {
         info->isActive = true;
       }
     } else {
-      return -1;
+      return false;
     }   
   } else {
-    return -1;
+    return false;
   }
 
   __sync_bool_compare_and_swap(lock, 1 , 0);
-  return 0;
+  return true;
 
 }
 
@@ -230,22 +233,23 @@ int Finstrumentor::activateProbe(void* probe_id, int flag) {
  * flag = Specifies which probes within the probe site to be disabled. Currently 
  *        defaults to function start and end
  */
-int Finstrumentor::deactivateProbeByName(void* probe_id, int flag) {
+bool Finstrumentor::deactivateFunction(string name) {
 
-  uint64_t func_addr = (uint64_t)probe_id;
-  uint64_t func_id;
+  uint16_t func_id = getFunctionId(name);
+  /*
   if (func_addr_mappings->find(func_addr) != func_addr_mappings->end()) {
     func_id =  func_addr_mappings->find(func_addr)->second->func_id;
   } else {
-    return -1;
+    return false;
   }
+  */
 
-  return deactivateProbe(&func_id, flag);
+  return deactivateFunction(func_id);
 
 }
 
-std::vector<FinsProbeInfo*>* Finstrumentor::getProbes(void* probe_id) {
-  uint16_t func_id = *(uint16_t*)probe_id;
+std::vector<FinsProbeInfo*>* Finstrumentor::getProbes(uint16_t func_id) {
+  // uint16_t func_id = *(uint16_t*)probe_id;
   uint64_t func_addr;
   
   // BJS: something is strange here. 
@@ -273,28 +277,28 @@ std::vector<FinsProbeInfo*>* Finstrumentor::getProbes(void* probe_id) {
  */
 // Here probe_id is actually function id. We only have function level 
 // probe toggling granularity at the moment
-int Finstrumentor::deactivateProbe(void* probe_id, int flag) {
+bool Finstrumentor::deactivateFunction(uint16_t func_id) {
 
-  uint16_t func_id = *(uint16_t*)probe_id;
+  // uint16_t func_id = *(uint16_t*)probe_id;
   uint64_t func_addr;
   uint64_t* lock = NULL;
 
   // straddler check
   if (get_index(g_straddlers_bitmap, func_id)) {
-    return -1;
+    return false;
   }
 
   if (func_id_mappings->find(func_id) != func_id_mappings->end()) { 
     func_addr =  func_id_mappings->find(func_id)->second->func_addr;
     lock = &(func_addr_mappings->find(func_addr)->second->lock);
   } else {
-    return -1;
+    return false;
   }
 
   std::vector<FinsProbeInfo*>* ls = probe_info->find(func_addr)->second;  
 
   if (ls == NULL) {
-    return -1;
+    return false;
   }
 
   if (lock != NULL) {
@@ -311,7 +315,7 @@ int Finstrumentor::deactivateProbe(void* probe_id, int flag) {
         if (!status) {
           LOG_ERROR("Patching the probesite failed at %p. Skipping..\n", info->probeStartAddr);
           __sync_bool_compare_and_swap(lock, 1 , 0);
-          return -1;
+          return false;
         }
 
         if (info->straddler) {
@@ -332,16 +336,16 @@ int Finstrumentor::deactivateProbe(void* probe_id, int flag) {
         info->isActive = false;
       }
     } else {
-      return -1;
+      return false;
     }  
   } else {
-    return -1;
+    return false;
   }
 
   // fprintf(stderr, "Deactivated probe count: %d\n", count);
   __sync_bool_compare_and_swap(lock, 1 , 0);
 
-  return 0;
+  return true;
 
 }
 
@@ -434,7 +438,7 @@ static void print_probe_info() {
 }
 */
 
-uint32_t Finstrumentor::getFunctionId(uint64_t func_addr) {
+uint16_t Finstrumentor::getFunctionId(uint64_t func_addr) {
   if (func_addr_mappings->find(func_addr) != func_addr_mappings->end()) {
     return func_addr_mappings->find(func_addr)->second->func_id;
   } else {
@@ -442,9 +446,25 @@ uint32_t Finstrumentor::getFunctionId(uint64_t func_addr) {
   } 
 }
 
-uint64_t Finstrumentor::getFunctionAddress(uint32_t func_id) {
+uint64_t Finstrumentor::getFunctionAddress(uint16_t func_id) {
   if (func_id_mappings->find(func_id) != func_id_mappings->end()) {
     return func_id_mappings->find(func_id)->second->func_addr;
+  } else {
+    return 0;
+  }
+}
+
+uint16_t Finstrumentor::getFunctionId(string name) {
+  if (func_name_mappings->find(name) != func_name_mappings->end()) {
+    return func_name_mappings->find(name)->second->func_id;
+  } else {
+   return 0;
+  } 
+}
+
+string Finstrumentor::getFunctionName(uint16_t func_id) {
+  if (func_id_mappings->find(func_id) != func_id_mappings->end()) {
+    return func_id_mappings->find(func_id)->second->func_name;
   } else {
     return 0;
   }
@@ -458,6 +478,7 @@ uint64_t* Finstrumentor::getLock(uint64_t func_addr) {
   } 
 }
 
+/*
 string Finstrumentor::getFunctionName(uint16_t func_id) {
   if (func_id_mappings->find(func_id) != func_id_mappings->end()) {
     return func_id_mappings->find(func_id)->second->func_name;
@@ -465,6 +486,7 @@ string Finstrumentor::getFunctionName(uint16_t func_id) {
     return NULL;
   }
 }
+*/
 
 /*
 void printMap(FuncIDMappings* func_id_mappings) {
@@ -473,15 +495,16 @@ void printMap(FuncIDMappings* func_id_mappings) {
 }
 */
 
-void Finstrumentor::addFunction(uint64_t addr, char* name) {
+void Finstrumentor::addFunction(uint64_t addr,string name) {
   FunctionInfo<FinsProbeInfo>* func_info = new FunctionInfo<FinsProbeInfo>;
   func_info->func_addr = addr;
-  func_info->func_name = string(name);
+  func_info->func_name = name;
   func_info->func_id = func_count-1;
   func_info->lock = 0;
 
   func_addr_mappings->insert(make_pair(func_info->func_addr, func_info));
   func_id_mappings->insert(make_pair(func_info->func_id, func_info));
+  func_name_mappings->insert(make_pair(func_info->func_name, func_info));
 
 }
 
@@ -490,6 +513,7 @@ void Finstrumentor::readFunctionInfo() {
   fprintf(stderr, "Initializing mappings data structure..\n");
   func_addr_mappings = new FuncAddrMappings<FinsProbeInfo>;
   func_id_mappings = new FuncIDMappings<FinsProbeInfo>;
+  func_name_mappings = new FuncNameMappings<FinsProbeInfo>;
 
   string line;
   ifstream fp ("functions.txt");
@@ -515,6 +539,7 @@ void Finstrumentor::readFunctionInfo() {
 
       func_addr_mappings->insert(make_pair(func_info->func_addr, func_info));
       func_id_mappings->insert(make_pair(func_info->func_id, func_info));
+      func_name_mappings->insert(make_pair(func_info->func_name, func_info));
     }
     func_count++; // Hack to include calibrate_cache_effects
     // printMap(func_id_mappings);

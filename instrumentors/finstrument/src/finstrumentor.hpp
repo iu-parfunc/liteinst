@@ -96,36 +96,35 @@ class Finstrumentor : public Instrumentor {
     void initialize();
 
     // Function granularity activation and deactivation
-    // bool activateFunction(string name);
-    // bool activateFunction(uint32_t id);
+    bool activateFunction(std::string name);
+    bool activateFunction(uint16_t id);
 
-    // bool deactivateFunction(string name);
-    // bool deactivateFunction(uint32_t id);
+    bool deactivateFunction(std::string name);
+    bool deactivateFunction(uint16_t id);
 
     // Call site / Probe granularity activation and deactivation
     // Not all instrumentors may support this
-    int activateProbe(void* id, int type);
-    int activateProbeByName(void* id, int type);
-    int deactivateProbe(void* id, int type);
-    int deactivateProbeByName(void* id, int type);
+    // int activateProbe(void* id, int type);
+    // int activateProbeByName(void* id, int type);
+    // int deactivateProbe(void* id, int type);
+    // int deactivateProbeByName(void* id, int type);
 
     FinsProbeInfo* getProbeInfo(uint64_t func_addr, uint8_t* addr); 
     bool hasProbeInfo(uint64_t func_addr);
     void addProbeInfo(uint64_t func_addr, uint8_t* probe_addr, bool unpatched); 
 
     // Function name to id mapping (generic)
-    // string getFunctionName(uint32_t id);
-    // uint32_t getFunctionId(string name);
+    uint16_t getFunctionId(std::string name);
+    std::string getFunctionName(uint16_t id);
 
     // Function address to id mapping (Finstrumentor specific)
-    uint32_t getFunctionId(uint64_t addr);
-    uint64_t getFunctionAddress(uint32_t id);
+    uint16_t getFunctionId(uint64_t addr);
+    uint64_t getFunctionAddress(uint16_t id);
 
     // Given function address 
     uint64_t* getLock(uint64_t addr);
-    void addFunction(uint64_t addr, char* name);
-    std::string getFunctionName(uint16_t id);
-    std::vector<FinsProbeInfo*>* getProbes(void* id);
+    void addFunction(uint64_t addr, std::string name);
+    std::vector<FinsProbeInfo*>* getProbes(uint16_t func_id);
     virtual ~Finstrumentor();
 
   private:

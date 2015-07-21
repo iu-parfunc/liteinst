@@ -78,6 +78,7 @@ void __cyg_profile_func_exit(void* func, void* caller) {
   // fprintf(stderr, "At function exit : %p\n", func);
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
   uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
+  uint16_t func_id = ins->getFunctionId((uint64_t) func);
   init_probe_info((uint64_t)func, (uint8_t*)addr);
-  ins->deactivateProbeByName(func, 0); // Deactivate the probes for this function
+  ins->deactivateFunction(func_id); // Deactivate the probes for this function
 }

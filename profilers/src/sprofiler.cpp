@@ -152,7 +152,7 @@ TLStatistics* samplingEpilogFunction(uint16_t func_id) {
   // Skip deactivating if that's the case
   if (new_count >= global_func_stats->sample_size && g_ubiprof_initialized) {
     if (__sync_bool_compare_and_swap(&(global_func_stats->lock), 0 , 1)) {
-      if (PROFILER_INSTANCE->deactivateFunction(&func_id) != -1) {
+      if (PROFILER_INSTANCE->deactivateFunction(func_id) != -1) {
         global_func_stats->deactivation_count++; // Store in thread local structure and we sum all TL stuff when flushing results
         global_func_stats->count_at_last_activation = global_count;
         global_func_stats->active = false;
@@ -184,7 +184,7 @@ void* samplingProbeMonitor(void* param) {
     for(int i = 0; i < func_count; i++) {
       if (!g_stats[i].active) {
         g_stats[i].sample_size = sp_sample_size;
-        if (PROFILER_INSTANCE->activateFunction(&i) != -1) {
+        if (PROFILER_INSTANCE->activateFunction(i) != -1) {
           g_stats[i].active = true;
         }
       } else {

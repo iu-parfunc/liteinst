@@ -60,28 +60,27 @@ void Profiler::cleanupInstrumentor() {
   delete ins;
 }
 
-int Profiler::activateFunction(void* id) {
+int Profiler::activateFunction(uint16_t func_id) {
 
-  return ins->activateProbe(id, FUNC);
-
-}
-
-int Profiler::activateFunctionByName(void* id) {
-
-  return ins->activateProbeByName(id, FUNC);
+  return ins->activateFunction(func_id);
 
 }
 
+int Profiler::activateFunction(std::string name) {
 
-int Profiler::deactivateFunction(void* id) {
+  return ins->activateFunction(name);
+
+}
+
+int Profiler::deactivateFunction(uint16_t func_id) {
   g_deactivation_count++;
-  return ins->deactivateProbe(id, FUNC);
+  return ins->deactivateFunction(func_id);
 
 }
 
-int Profiler::deactivateFunctionByName(void* id) {
+int Profiler::deactivateFunction(std::string name) {
   g_deactivation_count++;
-  return ins->deactivateProbeByName(id, FUNC);
+  return ins->deactivateFunction(name);
 
 }
 

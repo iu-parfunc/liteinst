@@ -63,7 +63,7 @@ class Profiler {
      *
      *  \param id 16bit integer id uniquely identifying the function
      */
-    virtual int activateFunction(void* id);
+    virtual int activateFunction(uint16_t func_id);
 
     /// Activates profiling for the function with given name 
     /** This is the method which should be used for programatically
@@ -72,7 +72,7 @@ class Profiler {
      *
      *  \param id function name 
      */
-    virtual int activateFunctionByName(void* name);
+    virtual int activateFunction(std::string name);
 
     /// Dectivates profiling for the function with given id
     /** This method is mainly for use within profiler instrumentation 
@@ -86,7 +86,7 @@ class Profiler {
      *
      *  \param id 16bit integer id uniquely identifying the function
      */
-    virtual int deactivateFunction(void* id);
+    virtual int deactivateFunction(uint16_t id);
 
     /// Dectivates profiling for the function with given name 
     /** This is the method which should be used for programatically
@@ -95,7 +95,7 @@ class Profiler {
      *
      *  \param id function name 
      */
-    virtual int deactivateFunctionByName(void* id);
+    virtual int deactivateFunction(std::string name);
 
     /// Starts profiling all functions
     virtual void startProfiler();

@@ -129,7 +129,7 @@ class Instrumentor {
      *               provided in Constants.h
      *               FUNC - For function entry and exit probes 
      */
-    virtual int activateProbe(void* id, int mask) = 0;
+    virtual bool activateFunction(std::string name) = 0;
 
     /// Activates profiling for the probesite with given name 
     /// As of now probesite == function
@@ -139,7 +139,7 @@ class Instrumentor {
      *
      *  \param id function name 
      */
-    virtual int activateProbeByName(void* id, int mask) = 0;
+    virtual bool activateFunction(uint16_t id) = 0;
 
     /// Deactivates profiling for the probesite with given id.
     /// As of now probesite == function
@@ -157,7 +157,7 @@ class Instrumentor {
      *               FUNC - For function entry and exit probes 
      */
 
-    virtual int deactivateProbe(void* id, int mask) = 0;
+    virtual bool deactivateFunction(std::string name) = 0;
 
     /// Deactivates profiling for the probesite with given name 
     /// As of now probesite == function
@@ -167,7 +167,7 @@ class Instrumentor {
      *
      *  \param id function name 
      */
-    virtual int deactivateProbeByName(void* id, int mask) = 0;
+    virtual bool deactivateFunction(uint16_t id) = 0;
 
     /// Returns name of the function associated with given id
     /**
@@ -184,7 +184,7 @@ class Instrumentor {
      * \param addr function address
      * \param name function name
      */
-    virtual void addFunction(uint64_t addr, char* name) = 0;
+    virtual void addFunction(uint64_t addr, std::string name) = 0;
 
 
     /// Returns the total number of functions being profiled
@@ -200,8 +200,3 @@ class Instrumentor {
 extern Instrumentor* INSTRUMENTOR_INSTANCE; ///< Global instrumentor instance handle
 
 #endif /* _PROBE_API_HPP_ */
-
-
-
-
-

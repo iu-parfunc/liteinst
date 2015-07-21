@@ -84,7 +84,7 @@ TLStatistics* minimalBackoffEpilogFunction(uint16_t func_id) {
 
   if ((global_count/2) >= mfb_sample_size) { // Since we get prolog + epilog count here
     if (__sync_bool_compare_and_swap(&(global_func_stats->lock), 0 , 1)) {
-      PROFILER_INSTANCE->deactivateFunction(&func_id);
+      PROFILER_INSTANCE->deactivateFunction(func_id);
       g_deactivation_count++;
       global_func_stats->deactivation_count++; 
       current_thread_stats->deactivated = true;
