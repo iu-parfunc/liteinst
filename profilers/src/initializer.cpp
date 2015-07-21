@@ -150,7 +150,7 @@ void calibrate_cache_effects() {
     __cyg_profile_func_exit((void*)&calibrate_cache_effects, (void*)-1); 
   }
 
-  int rounds = 100;
+  const int rounds = 100;
   // Get warm cache results
   ticks elapsed[rounds];
   for (int i=0; i<rounds; i++) {
