@@ -42,7 +42,6 @@ TLStatistics* minimalSamplingPrologFunction(uint16_t func_id) {
     all_thread_stats = ((SamplingProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
   }
 
-  SamplingProfilerStat* global_func_stats = &((SamplingProfilerStat*) g_ubiprof_stats)[func_id];
   TLSSamplingProfilerStat* local_func_stats = &current_thread_func_stats_table[func_id];
 
   local_func_stats->invocation_stack[0].func_id = func_id;

@@ -42,7 +42,6 @@ TLStatistics* backoffPrologFunction(uint16_t func_id) {
     all_thread_stats = ((BackoffProfiler*) PROFILER_INSTANCE)->getThreadStatistics();
   }
 
-  BackoffProfilerStat* global_func_stats = &((BackoffProfilerStat*) g_ubiprof_stats)[func_id];
   TLSBackoffProfilerStat* local_func_stats = &current_thread_func_stats_table[func_id];
 
   uint32_t stack_depth = local_func_stats->stack_depth;
