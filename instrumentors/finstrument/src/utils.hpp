@@ -418,7 +418,7 @@ inline PatchResult* patch_first_parameter(uint64_t* call_return_addr, uint64_t* 
 
       edi_set_addr = call_addr - edi_offset;
 
-      fprintf(stderr, "[DEBUG] Call address : %p EDI offset : %lu EDI set address : %p \n", call_addr, edi_offset, edi_set_addr);
+      // fprintf(stderr, "[DEBUG] Call address : %p EDI offset : %lu EDI set address : %p \n", call_addr, edi_offset, edi_set_addr);
 
   // Hack : If the edi setter and the call site are adjacent and edi setter straddles a cache line
   // we handle it specifically to escape patching it
