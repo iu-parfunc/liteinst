@@ -217,12 +217,20 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   // NOW PATCH ARGUMENTS (Set up for next run to enter the efficient branch) 
 
   FinsProbeInfo* probe_info = ins->getProbeInfo((uint64_t) func, (uint8_t*) addr);
-  if (probe_info != NULL && probe_info->unpatched) {
-    ; // Escape to just executing prolog function
-  } else {
+
+  
+  if (probe_info == NULL) {
+    //  if (probe_info != NULL && probe_info->unpatched) {
+    //  ; // Escape to just executing prolog function
+    //} else {
+
+
     PatchResult* res  = patch_first_parameter(addr, (uint64_t*) func, func_id);
 
-    if (!res->success) {
+    if (res->success) {
+      ins->addProbeInfo((uint64_t)func, (uint8_t*)addr, false);
+    } else {
+
       if (res->conflict) {
         fprintf(stderr, "[Finstrumentor] Detected straddler conflict at %p ..\n", (void*)addr);
       }
@@ -234,9 +242,6 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 
       // Mark this as a function to escape patching
       set_index(g_straddlers_bitmap, func_id);
-
-    } else {
-      ins->addProbeInfo((uint64_t)func, (uint8_t*)addr, false);
     }
 
     delete res;
