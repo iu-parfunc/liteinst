@@ -217,13 +217,12 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   // NOW PATCH ARGUMENTS (Set up for next run to enter the efficient branch) 
 
   FinsProbeInfo* probe_info = ins->getProbeInfo((uint64_t) func, (uint8_t*) addr);
-
   
+  //BJS: I think this does the same.
   if (probe_info == NULL) {
     //  if (probe_info != NULL && probe_info->unpatched) {
     //  ; // Escape to just executing prolog function
     //} else {
-
 
     PatchResult* res  = patch_first_parameter(addr, (uint64_t*) func, func_id);
 
