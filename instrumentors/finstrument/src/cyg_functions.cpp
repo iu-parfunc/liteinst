@@ -330,22 +330,9 @@ void __cyg_profile_func_exit(void* func, void* caller) {
 
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
 
-  // If the Ubiprof library has not yet been properly initialized return.
-  // But caller parameter being -1 signals a special explicit invocation
-  // of the instrumentation which is done for calibration purposes at 
-  // the library init time. If that's the case we atually want to continue
-  // executing.
-  //int64_t flag = (int64_t) caller;
-
   if (!g_ubiprof_initialized) {
-    // fprintf(stderr, "Returning from func addr : %p\n", func);
     return;
   }
-
-  // Explicitly set the function id for calibrate_cache_effects
-  //if (flag == -1) {
-  //  func = (void*) (ins->getFunctionCount() - 1);
-  //}
 
   if (IS_FUNC_ID(function)) { 
     process_func_by_id_exit(function, start); 
