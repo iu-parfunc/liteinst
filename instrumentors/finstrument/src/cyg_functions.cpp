@@ -155,10 +155,13 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
   int64_t flag = (int64_t) caller;
-  uint64_t function = (int64_t) func; // this is either an address or an ID
-  // BJS: moved some decls to top. I think the compiler will put 
-  //  these here anywhere. 
-  
+  uint64_t function = (uint64_t) func; // this is either an address or an ID
+
+  // If not initialized, just exit. 
+  if (!g_ubiprof_initialized) { 
+    return; 
+  }
+
 #ifdef PROBE_CPU_TIME
   struct timespec ts0;
   clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts0);
@@ -166,28 +169,7 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 #else
   ticks start = getticks();
 #endif
-
-  if (!g_ubiprof_initialized) { 
-    // calibrate_cache_effects is expected to take place before initialization (during) 
-    // At least if I read the code correctly (initializer.cpp and minimal_adaptive_profiler.cpp)
-    // g_ubiprof_initialized is set = true after the call to calibrate_cache_effects. 
-
-    if (flag == -1) {
-      // I'm  not sure what the expectation is on getFunctionCount before initialization!! 
-      // This code seems to expect that intialization is somewhat done. 
-      int64_t tmp_id = ins->getFunctionCount();
-      function = tmp_id - 1;
-      
-      // At this point we should be sure that function is an ID 
-      
-      process_func_by_id(function,start);
-      // At this point we are done with the -1 flag and can EXIT this function.
-      return; 
-    }
-    // not initialized and not the special case... exit 
-    else return; 
-  }
-
+  
   // NOW AT THIS POINT WE KNOW THAT UBIPROF IS INITIALIZED 
   assert(g_ubiprof_initialized == true); 
   // I WANT THE ASSERT BELOW TO PASS 
@@ -250,6 +232,39 @@ void __cyg_profile_func_enter(void* func, void* caller) {
   process_func_by_id(func_id,start); 
 }
 #endif
+
+/* -----------------------------------------------------------------
+   FAKE CYG ENTER specifically for calibrate_cache_effects
+   ----------------------------------------------------------------- */ 
+void fake_cyg_profile_func_enter(void* func, void* caller) {
+  
+  Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
+  int64_t flag = (int64_t) caller;
+  uint64_t function = (uint64_t) func; // this is either an address or an ID
+  // BJS: moved some decls to top. I think the compiler will put 
+  //  these here anywhere. 
+
+#ifdef PROBE_CPU_TIME
+  struct timespec ts0;
+  clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts0);
+  ticks start = (ticks)((ts0.tv_sec * 1000000000LL + ts0.tv_nsec) * g_TicksPerNanoSec);
+#else
+  ticks start = getticks();
+#endif
+  
+  if (!g_ubiprof_initialized) { 
+    // calibrate_cache_effects is expected to take place before initialization (during) 
+    // At least if I read the code correctly (initializer.cpp and minimal_adaptive_profiler.cpp)
+    // g_ubiprof_initialized is set = true after the call to calibrate_cache_effects. 
+    
+    process_func_by_id(function,start);
+    return; 
+  } else { 
+    fprintf(stderr,"fake_cyg_profile_func_enter is called after initialization!\n");
+  }
+}
+
+ 
 
 
 /* 
@@ -401,7 +416,341 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 */ 
 
 
+/* ----------------------------------------------------------------- 
+   EXIT 
+   ----------------------------------------------------------------- */ 
+
+#ifdef PROBE_TRUE_EMPTY_ON
 void __cyg_profile_func_exit(void* func, void* caller) {
+#ifdef PROBE_CPU_TIME
+  struct timespec ts0;
+  struct timespec ts1;
+  clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts0);
+  clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts1);
+
+  ticks start = (ticks)((ts0.tv_sec * 1000000000LL + ts0.tv_nsec) * g_TicksPerNanoSec);
+  ticks end = (ticks)((ts1.tv_sec * 1000000000LL + ts1.tv_nsec) * g_TicksPerNanoSec);
+#else
+  ticks start = getticks();
+  ticks end = getticks();
+#endif
+
+  update_empty_overheads(end - start, EPILOG); 
+  return;
+}
+
+#else 
+void __cyg_profile_func_exit(void* func, void* caller) {
+
+  #ifdef PROBE_CPU_TIME
+    struct timespec ts0;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts0);
+    ticks start = (ticks)((ts0.tv_sec * 1000000000LL + ts0.tv_nsec) * g_TicksPerNanoSec);
+  #else
+    ticks start = getticks();
+  #endif
+
+  Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
+
+  // If the Ubiprof library has not yet been properly initialized return.
+  // But caller parameter being -1 signals a special explicit invocation
+  // of the instrumentation which is done for calibration purposes at 
+  // the library init time. If that's the case we atually want to continue
+  // executing.
+  //int64_t flag = (int64_t) caller;
+
+  if (!g_ubiprof_initialized) {
+    // fprintf(stderr, "Returning from func addr : %p\n", func);
+    return;
+  }
+
+  // Explicitly set the function id for calibrate_cache_effects
+  //if (flag == -1) {
+  //  func = (void*) (ins->getFunctionCount() - 1);
+  //}
+
+  TLStatistics* ts;
+  if ((uint64_t) func < 0x400200) {
+    // fprintf(stderr, "\n[cyg_exit] Low function address  : %lu\n", ((uint64_t)func));
+    // ts = epilogFunction((uint16_t)func);
+    ts = epilogFunction((uint64_t)func);
+
+  #ifdef PROBE_CPU_TIME
+    struct timespec ts1;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts1);
+    ticks end= (ticks)((ts1.tv_sec * 1000000000LL + ts1.tv_nsec) * g_TicksPerNanoSec);
+  #else 
+    ticks end = getticks();
+  #endif
+
+    uint64_t epilog_overhead = (end - start);
+    ts->thread_local_overhead += epilog_overhead;
+
+  #ifdef PROBE_HIST_ON
+    update_overhead_histograms(ts, epilog_overhead, EPILOG); 
+    /*
+    if (!ts->deactivated) {
+      if (md == NULL) {
+        // fprintf(stderr, "Updating REGULAR flow\n");
+        update_overhead_histograms(ts, epilog_overhead, EPILOG); 
+      }
+    } else {
+      if (md != NULL) {
+        fprintf(stderr, "Updating DEACTIVATION flow\n");
+        update_overhead_histograms(ts, epilog_overhead, EPILOG); 
+      }
+      ts->deactivated = false;
+    }
+    */
+  #endif
+
+    return;
+  }
+
+  uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
+  uint16_t func_id = ins->getFunctionId((uint64_t)func);
+  // uint16_t func_id = get_func_id((uint64_t)func);
+
+  if (addr < func) {
+    // fprintf(stderr, "Function start is great than the cyg_exit return address.. Function address: %p Call address : %p \n", func, addr);
+  #ifdef PROBE_CPU_TIME
+    struct timespec ts1;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts1);
+    ticks end= (ticks)((ts1.tv_sec * 1000000000LL + ts1.tv_nsec) * g_TicksPerNanoSec);
+  #else 
+    ticks end = getticks();
+  #endif
+
+    uint64_t epilog_overhead = (end - start);
+    if (ts != NULL){
+      ts->thread_local_overhead += epilog_overhead;
+    } else {
+      fprintf(stderr,"cyg_exit: ts is not initialized, exiting.\n");
+      exit(EXIT_FAILURE); 
+    }
+
+  #ifdef PROBE_HIST_ON
+    update_overhead_histograms(ts, epilog_overhead, EPILOG); 
+  #endif
+
+    return;
+  }
+
+  // If the function id mappings are not properly initialized fail gracefully
+  //if (!func_id && flag != -1) { 
+  //  fprintf(stderr, "Returning from func addr : %p\n", func);
+  //  return;
+  //}
+
+  // For some reason (mostly compiler scrweing things up at prolog) the prolog has not been properly initialized. 
+  if (!is_prolog_initialized((uint64_t)func)) {
+    return;
+  }
+
+  FinsProbeInfo* probe_info = ins->getProbeInfo((uint64_t) func, (uint8_t*) addr);
+  if (probe_info != NULL && probe_info->unpatched) {
+    ; // Escape to just executing epilog function
+  } else {
+    PatchResult* res  = patch_first_parameter(addr, (uint64_t*) func, func_id);
+
+    if (!res->success) {
+      if (res->conflict) {
+        fprintf(stderr, "[Finstrumentor] Detected straddler conflict at %p ..\n", (void*)addr);
+      }
+        
+      ins->addProbeInfo((uint64_t)func, (uint8_t*)addr, true);
+      fprintf(stderr, "[Finstrumentor] Patching failed at %p function %p ..\n", (void*)addr, func);
+      probe_info = ins->getProbeInfo((uint64_t) func, (uint8_t*) addr);
+      // fprintf(stderr, "[Finstrumentor] After adding conflict at %p function %p : %d\n", (void *)addr, func, probe_info->unpatched);
+      
+      // Mark this as a function to escape patching
+      set_index(g_straddlers_bitmap, func_id);
+    } else {
+      ins->addProbeInfo((uint64_t)func, (uint8_t*)addr, false);
+    }
+
+    delete res;
+  }
+
+  ts = epilogFunction(func_id);
+  ticks end = getticks();
+  ticks epilog_overhead = (end - start);
+  ts->thread_local_overhead += epilog_overhead;
+
+#ifdef PROBE_HIST_ON
+    update_overhead_histograms(ts, epilog_overhead, EPILOG); 
+#endif
+
+
+}
+#endif
+
+/*
+void __cyg_profile_func_exit(void* func, void* caller) {
+
+#ifdef PROBE_TRUE_EMPTY_ON
+  #ifdef PROBE_CPU_TIME
+    struct timespec ts0;
+    struct timespec ts1;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts0);
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts1);
+
+    ticks start = (ticks)((ts0.tv_sec * 1000000000LL + ts0.tv_nsec) * g_TicksPerNanoSec);
+    ticks end = (ticks)((ts1.tv_sec * 1000000000LL + ts1.tv_nsec) * g_TicksPerNanoSec);
+  #else
+    ticks start = getticks();
+    ticks end = getticks();
+  #endif
+
+  update_empty_overheads(end - start, EPILOG); 
+  return;
+#else 
+  #ifdef PROBE_CPU_TIME
+    struct timespec ts0;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts0);
+    ticks start = (ticks)((ts0.tv_sec * 1000000000LL + ts0.tv_nsec) * g_TicksPerNanoSec);
+  #else
+    ticks start = getticks();
+  #endif
+
+  Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
+
+  // If the Ubiprof library has not yet been properly initialized return.
+  // But caller parameter being -1 signals a special explicit invocation
+  // of the instrumentation which is done for calibration purposes at 
+  // the library init time. If that's the case we atually want to continue
+  // executing.
+  int64_t flag = (int64_t) caller;
+  if (!g_ubiprof_initialized && flag != -1) {
+    // fprintf(stderr, "Returning from func addr : %p\n", func);
+    return;
+  }
+
+  // Explicitly set the function id for calibrate_cache_effects
+  if (flag == -1) {
+    func = (void*) (ins->getFunctionCount() - 1);
+  }
+
+  TLStatistics* ts;
+  if ((uint64_t) func < 0x400200) {
+    // fprintf(stderr, "\n[cyg_exit] Low function address  : %lu\n", ((uint64_t)func));
+    // ts = epilogFunction((uint16_t)func);
+    ts = epilogFunction((uint64_t)func);
+
+  #ifdef PROBE_CPU_TIME
+    struct timespec ts1;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts1);
+    ticks end= (ticks)((ts1.tv_sec * 1000000000LL + ts1.tv_nsec) * g_TicksPerNanoSec);
+  #else 
+    ticks end = getticks();
+  #endif
+
+    uint64_t epilog_overhead = (end - start);
+    ts->thread_local_overhead += epilog_overhead;
+
+  #ifdef PROBE_HIST_ON
+    update_overhead_histograms(ts, epilog_overhead, EPILOG); 
+    // 
+    // if (!ts->deactivated) {
+    //   if (md == NULL) {
+    //     // fprintf(stderr, "Updating REGULAR flow\n");
+    //     update_overhead_histograms(ts, epilog_overhead, EPILOG); 
+    //   }
+    // } else {
+    //   if (md != NULL) {
+    //     fprintf(stderr, "Updating DEACTIVATION flow\n");
+    //     update_overhead_histograms(ts, epilog_overhead, EPILOG); 
+    //   }
+    //   ts->deactivated = false;
+    // }
+    // 
+  #endif
+
+    return;
+  }
+
+  uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
+  uint16_t func_id = ins->getFunctionId((uint64_t)func);
+  // uint16_t func_id = get_func_id((uint64_t)func);
+
+  if (addr < func) {
+    // fprintf(stderr, "Function start is great than the cyg_exit return address.. Function address: %p Call address : %p \n", func, addr);
+  #ifdef PROBE_CPU_TIME
+    struct timespec ts1;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts1);
+    ticks end= (ticks)((ts1.tv_sec * 1000000000LL + ts1.tv_nsec) * g_TicksPerNanoSec);
+  #else 
+    ticks end = getticks();
+  #endif
+
+    uint64_t epilog_overhead = (end - start);
+    if (ts != NULL){
+      ts->thread_local_overhead += epilog_overhead;
+    } else {
+      fprintf(stderr,"cyg_exit: ts is not initialized, exiting.\n");
+      exit(EXIT_FAILURE); 
+    }
+
+  #ifdef PROBE_HIST_ON
+    update_overhead_histograms(ts, epilog_overhead, EPILOG); 
+  #endif
+
+    return;
+  }
+
+  // If the function id mappings are not properly initialized fail gracefully
+  if (!func_id && flag != -1) { 
+    fprintf(stderr, "Returning from func addr : %p\n", func);
+    return;
+  }
+
+  // For some reason (mostly compiler scrweing things up at prolog) the prolog has not been properly initialized. 
+  if (!is_prolog_initialized((uint64_t)func)) {
+    return;
+  }
+
+  FinsProbeInfo* probe_info = ins->getProbeInfo((uint64_t) func, (uint8_t*) addr);
+  if (probe_info != NULL && probe_info->unpatched) {
+    ; // Escape to just executing epilog function
+  } else {
+    PatchResult* res  = patch_first_parameter(addr, (uint64_t*) func, func_id);
+
+    if (!res->success) {
+      if (res->conflict) {
+        fprintf(stderr, "[Finstrumentor] Detected straddler conflict at %p ..\n", (void*)addr);
+      }
+        
+      ins->addProbeInfo((uint64_t)func, (uint8_t*)addr, true);
+      fprintf(stderr, "[Finstrumentor] Patching failed at %p function %p ..\n", (void*)addr, func);
+      probe_info = ins->getProbeInfo((uint64_t) func, (uint8_t*) addr);
+      // fprintf(stderr, "[Finstrumentor] After adding conflict at %p function %p : %d\n", (void *)addr, func, probe_info->unpatched);
+      
+      // Mark this as a function to escape patching
+      set_index(g_straddlers_bitmap, func_id);
+    } else {
+      ins->addProbeInfo((uint64_t)func, (uint8_t*)addr, false);
+    }
+
+    delete res;
+  }
+
+  ts = epilogFunction(func_id);
+  ticks end = getticks();
+  ticks epilog_overhead = (end - start);
+  ts->thread_local_overhead += epilog_overhead;
+
+#ifdef PROBE_HIST_ON
+    update_overhead_histograms(ts, epilog_overhead, EPILOG); 
+#endif
+
+#endif
+
+}
+*/
+
+
+
+void fake_cyg_profile_func_exit(void* func, void* caller) {
 
 #ifdef PROBE_TRUE_EMPTY_ON
   #ifdef PROBE_CPU_TIME

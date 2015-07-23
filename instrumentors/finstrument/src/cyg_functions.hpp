@@ -58,14 +58,18 @@
 #define ARGUMENT_PATCH_STRATEGY 0
 #define CALL_REDIRECT_STRATEGY 1
 
-#ifdef __cplusplus
+//#ifdef __cplusplus
 extern "C"
 {
   void __cyg_profile_func_enter(void *this_fn, void *call_site)
     __attribute__((no_instrument_function));
   void __cyg_profile_func_exit(void *this_fn, void *call_site)
     __attribute__((no_instrument_function));
+  void fake_cyg_profile_func_enter(void *this_fn, void *call_site)
+    __attribute__((no_instrument_function));
+  void fake_cyg_profile_func_exit(void *this_fn, void *call_site)
+    __attribute__((no_instrument_function));
 }
-#endif
+//#endif
 
 #endif /* _CYG_FUNCTIONS_HPP__ */

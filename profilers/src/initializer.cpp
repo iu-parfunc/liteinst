@@ -37,6 +37,10 @@ extern "C"
     __attribute__((no_instrument_function));
   void __cyg_profile_func_exit(void *this_fn, void *call_site)
     __attribute__((no_instrument_function));
+  void fake_cyg_profile_func_enter(void *this_fn, void *call_site)
+    __attribute__((no_instrument_function));
+  void fake_cyg_profile_func_exit(void *this_fn, void *call_site)
+    __attribute__((no_instrument_function));
 }
 #endif
 
@@ -149,15 +153,18 @@ void calibrate_cache_effects() {
   // functions since we don't explicitly handle finstrumented shared 
   // libraries at the moment.
   INSTRUMENTOR_INSTANCE->addFunction((uint64_t)&calibrate_cache_effects, "calibrate_cache_effects");;
-
+  
+  // Can we not do this? 
+  uint16_t func_id = INSTRUMENTOR_INSTANCE->getFunctionCount() + 1;
+  
   // Warm the cache. Incidently we don't capture initial setup and patching
   // overhead due to this. But it should be ok since it is one time and
   // would not effect that much since it would get amortized in the long 
   // run even if accounted for.
   for (int i=0; i<19; i++) {
     // Invoke instrumentation explicitly. We use the second param to signal that this is a special invocation 
-    __cyg_profile_func_enter((void*)&calibrate_cache_effects, (void*)-1); 
-    __cyg_profile_func_exit((void*)&calibrate_cache_effects, (void*)-1); 
+    fake_cyg_profile_func_enter((void*)(uint64_t)func_id, (void*)0); 
+    fake_cyg_profile_func_exit((void*)(uint64_t)func_id, (void*)0); 
   }
 
   const int rounds = 100;
@@ -166,8 +173,8 @@ void calibrate_cache_effects() {
   for (int i=0; i<rounds; i++) {
     // ticks start = getstart();
     ticks start = getticks();
-    __cyg_profile_func_enter((void*)&calibrate_cache_effects, (void*)-1); 
-    __cyg_profile_func_exit((void*)&calibrate_cache_effects, (void*)-1); 
+    fake_cyg_profile_func_enter((void*)(uint64_t)func_id, (void*)0); 
+    fake_cyg_profile_func_exit((void*)(uint64_t)func_id, (void*)0); 
     // ticks end = getend();
     ticks end = getticks();
     elapsed[i] = (end - start);
@@ -187,8 +194,8 @@ void calibrate_cache_effects() {
     // fprintf(stderr, "[DEBUG] Hey we are here...\n");
     // ticks start = getstart();
     ticks start = getticks();
-    __cyg_profile_func_enter((void*)&calibrate_cache_effects, (void*)-1); 
-    __cyg_profile_func_exit((void*)&calibrate_cache_effects, (void*)-1); 
+    fake_cyg_profile_func_enter((void*)(uint64_t)func_id, (void*)0); 
+    fake_cyg_profile_func_exit((void*)(uint64_t)func_id, (void*)0); 
     // ticks end = getend();
     ticks end = getticks();
 
