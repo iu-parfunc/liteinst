@@ -155,7 +155,7 @@ void calibrate_cache_effects() {
   INSTRUMENTOR_INSTANCE->addFunction((uint64_t)&calibrate_cache_effects, "calibrate_cache_effects");;
   
   // Can we not do this? 
-  uint16_t func_id = INSTRUMENTOR_INSTANCE->getFunctionCount() + 1;
+  uint16_t func_id = INSTRUMENTOR_INSTANCE->getFunctionCount() - 1;
   
   // Warm the cache. Incidently we don't capture initial setup and patching
   // overhead due to this. But it should be ok since it is one time and
