@@ -93,7 +93,7 @@ void update_empty_overheads(uint64_t overhead, int type) {
 
 // BJS: START cyg func refactor attempt 
 
-#define IS_FUNC_ID(x) ((x) < 0x400200 && (x) > 0) 
+#define IS_FUNC_ID(x) ((x) < 0x400200)
 
 /* -----------------------------------------------------------------
    ENTER/Exit HELPERS 
@@ -103,7 +103,7 @@ static inline void process_func_by_id_enter(uint64_t function, ticks start) {
 
   assert(IS_FUNC_ID(function));
  	 
-  fprintf(stderr, "\n[cyg_enter] Low function address  : %lu\n", function);
+  // fprintf(stderr, "\n[cyg_enter] Low function address  : %lu\n", function);
   // ts = prologFunction((uint16_t)func);
   tstats = prologFunction(function);
 
