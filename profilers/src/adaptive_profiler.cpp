@@ -228,8 +228,8 @@ void* adaptiveProbeMonitor(void* param) {
 
     uint64_t probe_thread_overhead = nanoSecs * g_TicksPerNanoSec;  
 
-    uint64_t tmp_total_overhead  = g_total_overhead;
-    uint64_t tmp_total_process_time = g_total_process_time;
+    //uint64_t tmp_total_overhead  = g_total_overhead;
+    //uint64_t tmp_total_process_time = g_total_process_time;
 
     g_total_overhead = thread_overheads + probe_thread_overhead + call_overhead + 
                        cache_perturbation_overhead + g_init_overhead;
@@ -246,8 +246,8 @@ void* adaptiveProbeMonitor(void* param) {
       // fprintf(stderr, "[DEBUG] Boo \n");
     }
 
-    uint64_t overhead_delta = g_total_overhead - tmp_total_overhead;
-    uint64_t process_time_delta = g_total_process_time - tmp_total_process_time;
+    //uint64_t overhead_delta = g_total_overhead - tmp_total_overhead;
+    //uint64_t process_time_delta = g_total_process_time - tmp_total_process_time;
 
     // fprintf(stderr, "Total overhead : %lu Total process time : %lu Thread overhead : %lu Probe thread Overhead : %lu\n", 
     //        g_total_overhead, g_total_process_time, thread_overheads, probe_thread_overhead); 

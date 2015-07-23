@@ -40,9 +40,11 @@ extern "C"
 }
 #endif
 
+// BJS: I am very confused about why no_instrument_function would 
+// ever be needed inside this area of the code. 
 __attribute__((no_instrument_function))
 struct timespec *timeSpecDiff(struct timespec *ts1, struct timespec *ts2) {
-  static struct timespec ts;
+  //static struct timespec ts;
   g_diff.tv_sec = ts1->tv_sec - ts2->tv_sec;
   g_diff.tv_nsec = ts1->tv_nsec - ts2->tv_nsec;
   
@@ -65,8 +67,13 @@ double getSecondsFromTS(timespec* ts) {
 void __attribute__ ((noinline)) emptyFunc(uint64_t* a, uint64_t* b) {
 
 }
-
+// BJS: I think it is slightly awkward that producing a histogram 
+// takes multiple passes over the data. Refactor this. 
 uint64_t get_average_time(ticks* elapsed, int size) {
+  
+  // It seems that on our platforms the ticks type 
+  // is defined as unsigned long long 
+
 
   const int BIN_SIZE = 100;
   const int HIST_SIZE = 21; // 21 bins of 100 cycles width. 2000+ to a single bin
@@ -94,7 +101,10 @@ uint64_t get_average_time(ticks* elapsed, int size) {
   for (int i=0; i<size; i++) {
     if (elapsed[i] > 2100 && max_bin == HIST_SIZE -1) {
       sum += elapsed[i];
-    } else if (elapsed[i]/BIN_SIZE == max_bin) {
+      // I'm not sure this comparison is "safe" 
+      // adding a (ticks) on max bin to ensure conversion in the 
+      // correct "direction". Don't know if needed
+    } else if (elapsed[i]/BIN_SIZE == (ticks)max_bin) {
       sum += elapsed[i];
     }
   }
@@ -120,13 +130,13 @@ void calibrate_cache_effects() {
   fprintf(stderr, "[Ubiprof] Number of cache lines : %lu\n", cache_lines);
   fprintf(stderr, "[Ubiprof] Number of processors : %lu\n", num_cpus);
 
-  double FUDGE = 1;
+  //double FUDGE = 1;
   size_t alloc_size = sysconf(_SC_LEVEL3_CACHE_SIZE) * (num_cpus + 1) * 2;
 
   fprintf(stderr, "[DEBUG] Cache mult : %lu\n", (num_cpus + 1) * 2);
 
   long num_cache_lines = alloc_size / cache_line_size;
-  char *a, *b;
+  char *a;// , *b;
   a = (char*) malloc(alloc_size); // Allocates two times the caches just to be sure
   if (!a) {
     fprintf(stderr, "[Ubiprof] ERROR : Faliure allocating memory in cache effect calibration.\n");
@@ -374,7 +384,7 @@ void calibrate_cache_effects_1() {
 
 __attribute__((no_instrument_function))
 void calibrateTicks() {
-  struct timespec begints, endts, diff;
+  struct timespec begints, endts;//, diff;
   uint64_t begin = 0, end = 0;
   clock_gettime(CLOCK_MONOTONIC, &begints);
   begin = getticks();
@@ -416,7 +426,7 @@ void getFinalOverhead() {
     fprintf(stderr, "Error obtaining main thread cpu time ..\n");
   }
 
-  if (g_monitor_thread != NULL) {
+  if (g_monitor_thread != 0) {
     c = pthread_getcpuclockid(g_monitor_thread, &cid);
     if (c != 0) {
       fprintf(stderr, "Error obtaining monitor thread cpu time ..\n");
@@ -431,14 +441,14 @@ void getFinalOverhead() {
   }
 
   double probe_thread_cpu_time = 0;
-  if (g_monitor_thread != NULL) {
+  if (g_monitor_thread != 0) {
     probe_thread_cpu_time =  getSecondsFromTS(&monitor_ts);
   }
 
   double main_thread_cpu_time = getSecondsFromTS(&main_ts);
   double process_cpu_time = getSecondsFromTS(&p_ts);
 
-  double process_overhead_delta = process_cpu_time - main_thread_cpu_time - probe_thread_cpu_time;  
+  //  double process_overhead_delta = process_cpu_time - main_thread_cpu_time - probe_thread_cpu_time;  
   double calculated_overheads = probe_overhead + jump_overhead + init_overhead + cache_overhead;
 
   double overhead_at_final_epoch = ((double)g_total_overhead / g_total_process_time) * 100;

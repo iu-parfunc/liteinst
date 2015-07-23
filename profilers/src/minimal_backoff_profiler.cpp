@@ -26,7 +26,7 @@ TLStatistics* minimalBackoffPrologFunction(uint16_t func_id) {
 
   if (!allocated) {
     allocated = true;
-    uint32_t function_count = INSTRUMENTOR_INSTANCE->getFunctionCount();
+    //uint32_t function_count = INSTRUMENTOR_INSTANCE->getFunctionCount();
     // C++ value initilization.. Similar to calloc
     current_thread_func_stats_table = new TLSBackoffProfilerStat[INSTRUMENTOR_INSTANCE->getFunctionCount()](); 
     current_thread_stats = new TLStatistics;
@@ -38,7 +38,7 @@ TLStatistics* minimalBackoffPrologFunction(uint16_t func_id) {
     all_thread_stats = ((BackoffProfiler*) PROFILER_INSTANCE)->getThreadStatistics();
   }
 
-  BackoffProfilerStat* global_func_stats = &((BackoffProfilerStat*) g_ubiprof_stats)[func_id];
+  //BackoffProfilerStat* global_func_stats = &((BackoffProfilerStat*) g_ubiprof_stats)[func_id];
   TLSBackoffProfilerStat* local_func_stats = &current_thread_func_stats_table[func_id];
 
   local_func_stats->invocation_stack[0].func_id = func_id;
