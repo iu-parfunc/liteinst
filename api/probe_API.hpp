@@ -186,9 +186,10 @@ class Instrumentor {
      */
     virtual void addFunction(uint64_t addr, std::string name) = 0;
 
-
     /// Returns the total number of functions being profiled
     long getFunctionCount() { return func_count; }
+
+    virtual uint64_t getInstrumentorBackgroundOverhead() = 0;
 
     virtual ~Instrumentor() {}
 
