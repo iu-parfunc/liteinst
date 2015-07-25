@@ -27,7 +27,10 @@ Instrumentor* INSTRUMENTOR_INSTANCE = 0;
 InstrumentationFunc prologFunction;
 InstrumentationFunc epilogFunction;
 
+uint64_t g_finstrumentor_overhead = 0;
+uint64_t g_int3_interrupt_overhead = 0;
 uint64_t g_straddler_count = 0;
+uint64_t g_int3_interrupt_count = 0;
 
 #ifdef PROBE_HIST_ON
 ProbeStatistics* g_probe_stats; 
@@ -58,11 +61,21 @@ uint64_t* g_probe_timings;
 int g_num_bins;
 #endif
 
+static void empty_int3_handler(int signo, siginfo_t *inf, void* ptr) {
+  return;
+}
+
 static void int3_handler(int signo, siginfo_t *inf, void* ptr) {
+
+  ticks start = getticks();
   ucontext_t *ucontext = (ucontext_t*)ptr;
 
   // Resuming the thread after skipping the call instruction.
   ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] + 4;
+
+  g_int3_interrupt_count++;
+  ticks end = getticks();
+  g_finstrumentor_overhead += (g_int3_interrupt_overhead + end - start);
 
 }
 
@@ -112,8 +125,31 @@ void Finstrumentor::initialize() {
 
   g_straddlers_bitmap = new uint8_t[func_count/8 + 1](); 
 
+  // Set signal handling overhead using empty signal handler
   struct sigaction newact; 
   struct sigaction oldact; 
+  memset( &newact, 0, sizeof newact);
+  newact.sa_sigaction = & empty_int3_handler;
+  newact.sa_flags = SA_SIGINFO;
+  sigemptyset(& (newact.sa_mask));
+
+  sigaction(SIGTRAP, &newact, &oldact);
+
+  ticks start;
+  ticks end;
+  int N_TIMES = 3;
+  for (int i=0; i < N_TIMES; i++) {
+    start = getticks();
+    __asm__ ("int $0x03" : : );
+    end = getticks();
+    g_int3_interrupt_overhead += (end - start);
+  }
+
+  g_int3_interrupt_overhead = g_int3_interrupt_overhead / N_TIMES;
+
+  fprintf(stderr, "[Finstrumentor] INT3 Overhead : %lu\n", g_int3_interrupt_overhead);
+
+  // Set real signal handler
   memset( &newact, 0, sizeof newact);
   newact.sa_sigaction = & int3_handler;
   newact.sa_flags = SA_SIGINFO;
@@ -122,7 +158,9 @@ void Finstrumentor::initialize() {
   sigaction(SIGTRAP, &newact, &oldact);
 
   // DEBUG LOG ONLY
-  fprintf(stderr, "Sigaction set, old funptr %p\n", (void*)oldact.sa_handler);
+  // fprintf(stderr, "Sigaction set, old funptr %p\n", (void*)oldact.sa_handler);
+
+  // __asm__ ("nop, nop, nop, nop" : :);
 
 }
 
@@ -700,9 +738,14 @@ void dumpProbeOverheadStatistics() {
 }
 #endif
 
+uint64_t Finstrumentor::getInstrumentorBackgroundOverhead() {
+  return g_finstrumentor_overhead;
+}
+
 
 Finstrumentor::~Finstrumentor() {
-  fprintf(stderr, "[finstrumentor] NUM_ACCESSED_PROBE_SITES: %lu\n", ((Finstrumentor*) INSTRUMENTOR_INSTANCE)->probe_info->size()); 
+  fprintf(stderr, "[Finstrumentor] NUM_ACCESSED_PROBE_SITES: %lu\n", ((Finstrumentor*) INSTRUMENTOR_INSTANCE)->probe_info->size()); 
+  fprintf(stderr, "[Finstrumentor] NUM_INTERRUPTS : %lu\n", g_int3_interrupt_count);
 
 #ifdef PROBE_HIST_ON 
   dumpProbeOverheadStatistics();

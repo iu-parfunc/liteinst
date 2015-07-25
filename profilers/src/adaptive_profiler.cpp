@@ -232,7 +232,8 @@ void* adaptiveProbeMonitor(void* param) {
     //uint64_t tmp_total_process_time = g_total_process_time;
 
     g_total_overhead = thread_overheads + probe_thread_overhead + call_overhead + 
-                       cache_perturbation_overhead + g_init_overhead;
+                       cache_perturbation_overhead + g_init_overhead +
+                       INSTRUMENTOR_INSTANCE->getInstrumentorBackgroundOverhead();
 
     struct timespec ts1;
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts1);

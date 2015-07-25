@@ -3,6 +3,7 @@
 #define _FINSTRUMENTOR_HPP_
 
 #include "../../../api/probe_API.hpp"
+#include "../../../common/include/cycle.h"
 #include <cstdint> 
 #include <string>
 #include <list>
@@ -120,6 +121,8 @@ class Finstrumentor : public Instrumentor {
     // Function address to id mapping (Finstrumentor specific)
     uint16_t getFunctionId(uint64_t addr);
     uint64_t getFunctionAddress(uint16_t id);
+
+    uint64_t getInstrumentorBackgroundOverhead();
 
     // Given function address 
     uint64_t* getLock(uint64_t addr);
