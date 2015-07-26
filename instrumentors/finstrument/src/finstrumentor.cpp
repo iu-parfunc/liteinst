@@ -225,16 +225,6 @@ bool Finstrumentor::activateFunction(uint16_t func_id) {
           continue;
         }
 
-        bool status = modify_page_permissions(info->probeStartAddr);
-        if (!status) {
-          LOG_ERROR("Patching the probesite failed at %p. Skipping..\n", info->probeStartAddr);
-          __sync_bool_compare_and_swap(lock, 1 , 0);
-          return false; // This is little bit troublesome. We sort of need transaction rollback
-                     // if this happens during the middle of the iteration for
-                     // already patched probe sites
-        }
-
-
         if (info->straddler) {
  
            __sync_val_compare_and_swap((uint64_t*) info->straddle_part_1_start,
@@ -347,13 +337,6 @@ bool Finstrumentor::deactivateFunction(uint16_t func_id) {
         if (!info->isActive) {
           // fprintf(stderr, "Escaping the probe for func : %d\n", func_id);
           continue;
-        }
-
-        bool status = modify_page_permissions(info->probeStartAddr);
-        if (!status) {
-          LOG_ERROR("Patching the probesite failed at %p. Skipping..\n", info->probeStartAddr);
-          __sync_bool_compare_and_swap(lock, 1 , 0);
-          return false;
         }
 
         if (info->straddler) {
@@ -741,7 +724,6 @@ void dumpProbeOverheadStatistics() {
 uint64_t Finstrumentor::getInstrumentorBackgroundOverhead() {
   return g_finstrumentor_overhead;
 }
-
 
 Finstrumentor::~Finstrumentor() {
   fprintf(stderr, "[Finstrumentor] NUM_ACCESSED_PROBE_SITES: %lu\n", ((Finstrumentor*) INSTRUMENTOR_INSTANCE)->probe_info->size()); 

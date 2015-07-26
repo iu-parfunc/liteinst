@@ -233,7 +233,10 @@ void __cyg_profile_func_enter(void* func, void* caller) {
     //  if (probe_info != NULL && probe_info->unpatched) {
     //  ; // Escape to just executing prolog function
     //} else {
+    //
 
+    // Enable write permission to call site
+    modify_page_permissions((uint8_t*) addr - 5);
     PatchResult* res  = patch_first_parameter(addr, (uint64_t*) func, func_id);
 
     if (res->success) {
@@ -359,6 +362,9 @@ void __cyg_profile_func_exit(void* func, void* caller) {
   FinsProbeInfo* probe_info = ins->getProbeInfo((uint64_t) func, (uint8_t*) addr);
   
   if (probe_info == NULL) {
+    // Enable write permission to call site
+    modify_page_permissions((uint8_t*) addr - 5);
+
     PatchResult* res  = patch_first_parameter(addr, (uint64_t*) func, func_id);
     if (res->success) { 
       ins->addProbeInfo((uint64_t)func, (uint8_t*)addr, false);
