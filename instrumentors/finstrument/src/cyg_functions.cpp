@@ -269,8 +269,8 @@ void __cyg_profile_func_enter(void* func, void* caller) {
    ----------------------------------------------------------------- */ 
 void fake_cyg_profile_func_enter(void* func, void* caller) {
   
-  Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
-  int64_t flag = (int64_t) caller;
+  //Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
+  //int64_t flag = (int64_t) caller;
   uint64_t function = (uint64_t) func; // this is either an address or an ID
   // BJS: moved some decls to top. I think the compiler will put 
   //  these here anywhere. 
