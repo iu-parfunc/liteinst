@@ -474,8 +474,8 @@ inline PatchResult* patch_first_parameter(uint64_t* call_return_addr, uint64_t* 
       pthread_t tid = pthread_self();
       ticks t1 = getticks();
       fprintf( stderr
-	     , "[utils.hpp patch_first_parameter] ThreadID: %lu was busy-waiting for %d iterations.\nWait took %lu ticks.\n"
-	     , (unsigned long int)tid,spin_counter,(t1-t0));
+	     , "[utils.hpp patch_first_parameter] ThreadID: %lu was busy-waiting for %d iterations.\nWait took %lu ticks while attempting to patch function %d.\n"
+	       , (unsigned long int)tid,spin_counter,(t1-t0),func_id);
 
 #endif 
 

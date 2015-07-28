@@ -267,7 +267,11 @@ void __cyg_profile_func_enter(void* func, void* caller) {
     // Enable write permission to call site
     modify_page_permissions((uint8_t*) addr - 5);
     PatchResult* res  = patch_first_parameter(addr, (uint64_t*) func, func_id);
-
+   
+    //BJS: THIS PART IS SOMEWHAT REDUNDANT. 
+    //     Come up with a refactor on this that does 
+    //     not require threads to wait in both patch_first and in add_probe_info
+ 
     if (res->success) {
       ins->addProbeInfo((uint64_t)func, (uint8_t*)addr, false);
     } else {
