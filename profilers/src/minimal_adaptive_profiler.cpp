@@ -24,7 +24,7 @@ static __thread TLStatistics* current_thread_stats;
 // Function statistics table for current thread 
 static __thread TLSAdaptiveProfilerStat* current_thread_func_stats_table;
 
-static __thread bool allocated;
+static __thread bool allocated=false;
 
 // Instrumentation Functions
 TLStatistics* minimalAdaptivePrologFunction(uint16_t func_id) {
@@ -43,6 +43,11 @@ TLStatistics* minimalAdaptivePrologFunction(uint16_t func_id) {
 
     ((AdaptiveProfiler*)PROFILER_INSTANCE)->registerThreadStatistics(current_thread_stats);
     all_thread_stats = ((AdaptiveProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
+
+#ifndef NDEBUG
+    pthread_t tid = pthread_self();
+    fprintf(stderr,"ThreadID: %lu has allocated local storage at: 0x%p\n", (unsigned long int)tid,current_thread_stats);
+#endif 
   }
 
   TLSAdaptiveProfilerStat* local_func_stats = &current_thread_func_stats_table[func_id];
@@ -51,6 +56,7 @@ TLStatistics* minimalAdaptivePrologFunction(uint16_t func_id) {
   local_func_stats->invocation_stack[0].timestamp = getticks();
 
   current_thread_stats->thread_local_count++;
+
   return current_thread_stats;
 
 }
@@ -99,7 +105,7 @@ TLStatistics* minimalAdaptiveEpilogFunction(uint16_t func_id) {
   local_func_stats->total_time += elapsed;
   // There is a chance this condition might be satistified during the calibrations at init time
   // Skip deactivating if that's the case
-  if (new_count >= global_func_stats->sample_size && g_ubiprof_initialized) {  
+  if (new_count >= (global_func_stats->sample_size/thread_count) && g_ubiprof_initialized) {  
     if (__sync_bool_compare_and_swap(&(global_func_stats->lock), 0 , 1)) {
       if (PROFILER_INSTANCE->deactivateFunction(func_id) != -1) {
         global_func_stats->deactivation_count++; // Store in thread local structure and we sum all TL stuff when flushing results

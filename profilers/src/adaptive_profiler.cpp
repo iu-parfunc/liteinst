@@ -26,10 +26,12 @@ static __thread TLStatistics* current_thread_stats;
 // Function statistics table for current thread 
 static __thread TLSAdaptiveProfilerStat* current_thread_func_stats_table;
 
+
+
 // Instrumentation Functions
 TLStatistics* adaptivePrologFunction(uint16_t func_id) {
 
-  static __thread bool allocated;
+  static __thread bool allocated=false;
 
   if (!allocated) {
     allocated = true;
@@ -48,6 +50,7 @@ TLStatistics* adaptivePrologFunction(uint16_t func_id) {
 
     ((AdaptiveProfiler*)PROFILER_INSTANCE)->registerThreadStatistics(current_thread_stats);
     all_thread_stats = ((AdaptiveProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
+   
   }
 
   AdaptiveProfilerStat* global_func_stats = &((AdaptiveProfilerStat*) g_ubiprof_stats)[func_id];

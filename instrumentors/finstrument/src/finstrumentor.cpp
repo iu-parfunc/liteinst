@@ -422,7 +422,9 @@ void Finstrumentor::addProbeInfo(uint64_t func_addr, uint8_t* probe_addr, bool u
     } else { // We failed. Wait until the other thread finish and just return
       
       //BJS: I dont understand this. 
-      
+#ifndef NDEBUG
+      ticks t0 = getticks(); 
+#endif 
       while (*lock) {
         if (spin_counter == INT_MAX) {
           fprintf(stderr, "RESETTING the counter\n");
@@ -431,7 +433,14 @@ void Finstrumentor::addProbeInfo(uint64_t func_addr, uint8_t* probe_addr, bool u
         }
         spin_counter += 1;
       }
+#ifndef NDEBUG
+      pthread_t tid = pthread_self();
+      ticks t1 = getticks();
+      fprintf( stderr
+	     , "[Finstrumentor::addProbeInfo] ThreadID: %lu was busy-waiting for %d iterations.\nWait took %lu ticks.\n"
+	     , (unsigned long int)tid,spin_counter,(t1-t0));
 
+#endif 
       return;
     }
   }

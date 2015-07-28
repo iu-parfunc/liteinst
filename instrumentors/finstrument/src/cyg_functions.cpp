@@ -139,6 +139,12 @@ static inline void process_func_by_id_exit(uint64_t function, ticks start) {
   assert(IS_FUNC_ID(function)); 
   
   ts = epilogFunction(function);
+#ifndef NDEBUG
+  if (ts == NULL) { 
+    fprintf(stderr, "epilogFunction returned NULL\n"); 
+    return; 
+  }
+#endif 
 
 #ifdef PROBE_CPU_TIME
   struct timespec ts1;

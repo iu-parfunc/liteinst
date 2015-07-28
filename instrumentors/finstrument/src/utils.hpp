@@ -459,6 +459,9 @@ inline PatchResult* patch_first_parameter(uint64_t* call_return_addr, uint64_t* 
       
       //BJS: I dont understand this. 
       
+#ifndef NDEBUG
+      ticks t0 = getticks(); 
+#endif 
       while (*lock) {
         if (spin_counter == INT_MAX) {
           fprintf(stderr, "RESETTING the counter\n");
@@ -467,6 +470,16 @@ inline PatchResult* patch_first_parameter(uint64_t* call_return_addr, uint64_t* 
         }
         spin_counter += 1;
       }
+#ifndef NDEBUG
+      pthread_t tid = pthread_self();
+      ticks t1 = getticks();
+      fprintf( stderr
+	     , "[utils.hpp patch_first_parameter] ThreadID: %lu was busy-waiting for %d iterations.\nWait took %lu ticks.\n"
+	     , (unsigned long int)tid,spin_counter,(t1-t0));
+
+#endif 
+
+
 
       res->success = true;
       res->conflict = false;
