@@ -13,9 +13,9 @@
 #include "../../../common/include/cycle.h"
 #include "bitmap.hpp"
 
-#define _GNU_SOURCE
+#ifdef _GNU_SOURCE
 #include <dlfcn.h>
-
+#endif
 
 extern uint64_t g_TicksPerNanoSec;
 
@@ -226,9 +226,10 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 
   // Replaced branches that never seemed to happen with asserts. 
   //assert(((uint64_t)addr < function) == false);   
+
   if ((uint64_t)addr < function) { 
     //fprintf(stderr, "ENTER_ERR: What does this mean!? %llx < %llx\n",(uint64_t)addr,function); 
-
+#ifdef _GNU_SOURCE
     Dl_info d;
     (void)dladdr(addr, &d);
     fprintf(stderr,"cyg_enter was called from function %s\n",
@@ -237,11 +238,13 @@ void __cyg_profile_func_enter(void* func, void* caller) {
     fprintf(stderr," * Loaded into (base) 0x%p\n", d.dli_fbase);
     fprintf(stderr," * Addr of caller (symbol)  0x%p\n", d.dli_saddr);
     fprintf(stderr,"Possibly caused by function inlining\n");
+#endif 
     fprintf(stderr,"Compile with -fno-inline and at most -O2\n"); 
-
     exit(EXIT_FAILURE); 
-    return; // Just return, do nothing.
   }
+
+
+
   assert((func_id > 0) == true); 
 	 
   // NOW PATCH ARGUMENTS (Set up for next run to enter the efficient branch) 
@@ -368,10 +371,22 @@ void __cyg_profile_func_exit(void* func, void* caller) {
   
   
   //assert((addr < func) == false); 
-  if (addr < func) { 
-    fprintf(stderr, "EXIT_ERR: What does this mean!? %llx < %llx\n",(uint64_t)addr,function); 
-    return; // Just return, do nothing.
+  if ((uint64_t)addr < function) { 
+    //fprintf(stderr, "ENTER_ERR: What does this mean!? %llx < %llx\n",(uint64_t)addr,function); 
+#ifdef _GNU_SOURCE
+    Dl_info d;
+    (void)dladdr(addr, &d);
+    fprintf(stderr,"cyg_exit was called from function %s\n",
+	    d.dli_sname); 
+    fprintf(stderr," * Object file: %s\n", d.dli_fname);
+    fprintf(stderr," * Loaded into (base) 0x%p\n", d.dli_fbase);
+    fprintf(stderr," * Addr of caller (symbol)  0x%p\n", d.dli_saddr);
+    fprintf(stderr,"Possibly caused by function inlining\n");
+#endif 
+    fprintf(stderr,"Compile with -fno-inline and at most -O2\n"); 
+    exit(EXIT_FAILURE); 
   }
+
   assert((func_id > 0) == true);
   
   // For some reason (mostly compiler scrweing things up at prolog) the prolog has not been properly initialized. 
@@ -425,7 +440,7 @@ void fake_cyg_profile_func_exit(void* func, void* caller) {
     ticks start = getticks();
   #endif
 
-  Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
+    //Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
 
   // If the Ubiprof library has not yet been properly initialized return.
   // But caller parameter being -1 signals a special explicit invocation
