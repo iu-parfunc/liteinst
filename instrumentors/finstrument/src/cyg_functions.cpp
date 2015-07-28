@@ -266,31 +266,30 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 
     // Enable write permission to call site
     modify_page_permissions((uint8_t*) addr - 5);
-    PatchResult* res  = patch_first_parameter(addr, (uint64_t*) func, func_id);
+    PatchResult* res  = patch_first_parameter(probe_info, addr, (uint64_t*) func, func_id);
    
     //BJS: THIS PART IS SOMEWHAT REDUNDANT. 
     //     Come up with a refactor on this that does 
     //     not require threads to wait in both patch_first and in add_probe_info
  
-    if (res->success) {
-      ins->addProbeInfo((uint64_t)func, (uint8_t*)addr, false);
-    } else {
+    // if (res->success) {
+    //   ins->addProbeInfo((uint64_t)func, (uint8_t*)addr, false);
+    // } else {
 
-      if (res->conflict) {
-        fprintf(stderr, "[Finstrumentor] Detected straddler conflict at %p ..\n", (void*)addr);
-      }
+    //   if (res->conflict) {
+    //     fprintf(stderr, "[Finstrumentor] Detected straddler conflict at %p ..\n", (void*)addr);
+    //   }
         
-      ins->addProbeInfo((uint64_t)func, (uint8_t*)addr, true);
-      // fprintf(stderr, "[Finstrumentor] Adding straddler conflict at %p  function %p with probe info unpatched at %p ..\n", func, (void*)addr, (void*)probe_info);
-      probe_info = ins->getProbeInfo((uint64_t) func, (uint8_t*) addr);
-      // fprintf(stderr, "[Finstrumentor] After adding conflict at %p function %p : %p\n", (void*)addr, func, (void*)probe_info->unpatched);
+    //   ins->addProbeInfo((uint64_t)func, (uint8_t*)addr, true);
+    //   // fprintf(stderr, "[Finstrumentor] Adding straddler conflict at %p  function %p with probe info unpatched at %p ..\n", func, (void*)addr, (void*)probe_info);
+    //   probe_info = ins->getProbeInfo((uint64_t) func, (uint8_t*) addr);
+    //   // fprintf(stderr, "[Finstrumentor] After adding conflict at %p function %p : %p\n", (void*)addr, func, (void*)probe_info->unpatched);
 
-      // Mark this as a function to escape patching
-      set_index(g_straddlers_bitmap, func_id);
+    //   // Mark this as a function to escape patching
+    //   set_index(g_straddlers_bitmap, func_id);
     }
 
-    delete res;
-  }
+  //delete res;
 
   // Finish off by using the normal process_func_by_id 
   process_func_by_id_enter(func_id,start); 
@@ -414,21 +413,21 @@ void __cyg_profile_func_exit(void* func, void* caller) {
     // Enable write permission to call site
     modify_page_permissions((uint8_t*) addr - 5);
 
-    PatchResult* res  = patch_first_parameter(addr, (uint64_t*) func, func_id);
-    if (res->success) { 
-      ins->addProbeInfo((uint64_t)func, (uint8_t*)addr, false);
-    } else { 
-      if (res->conflict) {
-	fprintf(stderr, "[Finstrumentor] Detected straddler conflict at %p ..\n", (void*)addr);
-      }
+    PatchResult* res  = patch_first_parameter(probe_info,addr, (uint64_t*) func, func_id);
+    // if (res->success) { 
+    //   ins->addProbeInfo((uint64_t)func, (uint8_t*)addr, false);
+    // } else { 
+    //   if (res->conflict) {
+    // 	fprintf(stderr, "[Finstrumentor] Detected straddler conflict at %p ..\n", (void*)addr);
+    //   }
       
-      ins->addProbeInfo((uint64_t)func, (uint8_t*)addr, true);
-      fprintf(stderr, "[Finstrumentor] Patching failed at %p function %p ..\n", (void*)addr, func);
-      probe_info = ins->getProbeInfo((uint64_t) func, (uint8_t*) addr);
+    //   ins->addProbeInfo((uint64_t)func, (uint8_t*)addr, true);
+    //   fprintf(stderr, "[Finstrumentor] Patching failed at %p function %p ..\n", (void*)addr, func);
+    //   probe_info = ins->getProbeInfo((uint64_t) func, (uint8_t*) addr);
  
-      // Mark this as a function to escape patching
-      set_index(g_straddlers_bitmap, func_id);
-    }
+    //   // Mark this as a function to escape patching
+    //   set_index(g_straddlers_bitmap, func_id);
+    // }
   
   delete res;
   }  

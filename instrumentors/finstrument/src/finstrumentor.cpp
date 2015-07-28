@@ -394,6 +394,30 @@ FinsProbeInfo* Finstrumentor::getProbeInfo(uint64_t func_addr, uint8_t* addr) {
   return NULL;
 }
 
+void Finstrumentor::addProbeInfo_(uint64_t func_addr, uint8_t* probe_addr, bool unpatched) {
+  Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
+  if(probe_info->find(func_addr) == probe_info->end()) {
+    std::vector<FinsProbeInfo*>* probe_list = new std::vector<FinsProbeInfo*>;
+    probe_list->reserve(5);
+    
+    FinsProbeInfo* probeInfo = populateProbeInfo(probe_addr, unpatched);
+    probe_list->push_back(probeInfo);
+    probe_info->insert(make_pair(func_addr, probe_list));
+  } else {
+    std::vector<FinsProbeInfo*>* probe_list = probe_info->find(func_addr)->second;
+    for(std::vector<FinsProbeInfo*>::iterator iter = probe_list->begin(); iter != probe_list->end(); iter++) {
+      FinsProbeInfo* probeInfo= *iter;
+      if (probeInfo->probeStartAddr == (probe_addr-8)) {
+	return; // Probe already initialized. Nothing to do.
+      }
+    }
+    
+    FinsProbeInfo* probeInfo = populateProbeInfo(probe_addr, unpatched);
+    probe_list->push_back(probeInfo);
+  }
+}
+
+
 void Finstrumentor::addProbeInfo(uint64_t func_addr, uint8_t* probe_addr, bool unpatched) {
 
   uint64_t* lock = getLock(func_addr);
@@ -403,7 +427,7 @@ void Finstrumentor::addProbeInfo(uint64_t func_addr, uint8_t* probe_addr, bool u
       if(probe_info->find(func_addr) == probe_info->end()) {
         std::vector<FinsProbeInfo*>* probe_list = new std::vector<FinsProbeInfo*>;
         probe_list->reserve(5);
-
+	
         FinsProbeInfo* probeInfo = populateProbeInfo(probe_addr, unpatched);
         probe_list->push_back(probeInfo);
         probe_info->insert(make_pair(func_addr, probe_list));
@@ -416,7 +440,7 @@ void Finstrumentor::addProbeInfo(uint64_t func_addr, uint8_t* probe_addr, bool u
             return; // Probe already initialized. Nothing to do.
           }
         }
-
+	
         FinsProbeInfo* probeInfo = populateProbeInfo(probe_addr, unpatched);
         probe_list->push_back(probeInfo);
       }
@@ -438,17 +462,18 @@ void Finstrumentor::addProbeInfo(uint64_t func_addr, uint8_t* probe_addr, bool u
       pthread_t tid = pthread_self();
       ticks t1 = getticks();
       fprintf( stderr
-	     , "[Finstrumentor::addProbeInfo] ThreadID: %lu was busy-waiting for %d iterations.\nWait took %lu ticks.\n"
-	     , (unsigned long int)tid,spin_counter,(t1-t0));
-
+	       , "[Finstrumentor::addProbeInfo] ThreadID: %lu was busy-waiting for %d iterations.\nWait took %lu ticks.\n"
+	       , (unsigned long int)tid,spin_counter,(t1-t0));
+      
 #endif 
       return;
     }
   }
-
-  while(!__sync_bool_compare_and_swap(lock, 1 , 0));
-
+      
+  while(!__sync_bool_compare_and_swap(lock, 1 , 0));      
 }
+      
+ 
 
 /*
 static void print_probe_info() {
@@ -581,6 +606,8 @@ void Finstrumentor::readFunctionInfo() {
     fprintf(stderr, "[Ubiprof] ERROR : functions.txt not present. Ubiprof will not profile this application...\n");
   }
 }
+
+
 
 FinsProbeInfo* populateProbeInfo(uint8_t* probe_addr, bool unpatched){
   uint64_t* probe_start = (uint64_t*)(probe_addr - 5);
