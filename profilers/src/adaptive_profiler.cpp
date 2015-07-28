@@ -12,6 +12,9 @@
 #include "adaptive_profiler.hpp"
 #include "overhead_series.hpp"
 
+// BJS: I picked at Random... please improve
+#define SP_EPOCH_PERIOD_EPSILON 0.0
+
 using namespace std;
 
 // All thread statistics data thread local reference
@@ -173,8 +176,11 @@ TLStatistics* adaptiveEpilogFunction(uint16_t func_id) {
 
 }
 
-void sleep_for_a_while() {
-  if (sp_epoch_period != 0) {
+inline void sleep_for_a_while() {
+  assert(sp_epoch_period >= 0); 
+  // if (sp_epoch_period != 0) {
+  if (sp_epoch_period > SP_EPOCH_PERIOD_EPSILON){ 
+
     struct timespec ts;
     uint64_t nanos = sp_epoch_period * 1000000; 
     uint64_t secs = nanos / 1000000000;

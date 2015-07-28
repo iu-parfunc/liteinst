@@ -9,7 +9,11 @@ all: lib
 # INST_OBJS := $(patsubst %.cpp,%.o,$(wildcard ./instrumentors/finstrument/src/*.cpp))
 
 lib:
+	(cd instrumentors/finstrument/src/; \
+	make -f Makefile_GCC CFLAGS='-DNDEBUG -O3')
+	(cd profilers/src/; \
+	make -f Makefile_GCC install CFLAGS='-DNDEBUG -O3')
+
+libdebug: 
 	(cd instrumentors/finstrument/src/; make -f Makefile_GCC)
 	(cd profilers/src/; make -f Makefile_GCC install)
-	# (cd ./zcatoggle/src; make install; make docs)
-	# (cd ./dynaprof/src; make install)
