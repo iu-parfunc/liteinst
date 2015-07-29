@@ -67,7 +67,12 @@ TLStatistics* minimalAdaptiveEpilogFunction(uint16_t func_id) {
   // condition on deactivation etc). Just return in that case.
 
   // BJS: Need to return something and check for error in caller. 
+
   if (!allocated) {
+#ifndef NDEBUG
+    pthread_t tid = pthread_self();
+    fprintf(stderr,"ThreadID %lu \"allocated=false\" in EpilogFunction \n", (unsigned long int)tid);
+#endif 
     return NULL;
   }
 
@@ -90,6 +95,7 @@ TLStatistics* minimalAdaptiveEpilogFunction(uint16_t func_id) {
     global_count += ((TLSAdaptiveProfilerStat*) all_thread_stats[i]->func_stats)[func_id].count; 
   }
 
+  uint64_t old_count = global_func_stats->count_at_last_activation; 
   uint64_t new_count = global_count - global_func_stats->count_at_last_activation; 
 
   ticks elapsed = epilog_start - i_data.timestamp ;
@@ -108,6 +114,16 @@ TLStatistics* minimalAdaptiveEpilogFunction(uint16_t func_id) {
   if (new_count >= global_func_stats->sample_size && g_ubiprof_initialized) {  
     if (__sync_bool_compare_and_swap(&(global_func_stats->lock), 0 , 1)) {
       if (PROFILER_INSTANCE->deactivateFunction(func_id) != -1) {
+    
+#ifndef NDEBUG
+	pthread_t tid = pthread_self();
+	uint64_t old_count2 = global_func_stats->count_at_last_activation;
+	if (old_count != old_count2) {
+	  fprintf(stderr,"ThreadID %lu: WARNING GLOBAL COUNT WILL BE BROKEN\nold_count=%llu, old_count2=%llu\n", (unsigned long int)tid,old_count,old_count2); 
+	}
+#endif 
+    
+    
         global_func_stats->deactivation_count++; // Store in thread local structure and we sum all TL stuff when flushing results
         global_func_stats->count_at_last_activation = global_count;
         global_func_stats->active = false;

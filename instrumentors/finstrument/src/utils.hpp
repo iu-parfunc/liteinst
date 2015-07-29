@@ -496,6 +496,7 @@ inline int patch_first_parameter(FinsProbeInfo* probe_info,uint64_t* call_return
 	break;
       }
       spin_counter += 1;
+      pthread_yield();
     }
 #ifndef NDEBUG
     pthread_t tid = pthread_self();
