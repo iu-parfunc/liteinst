@@ -46,7 +46,7 @@ TLStatistics* minimalAdaptivePrologFunction(uint16_t func_id) {
 
 #ifndef NDEBUG
     pthread_t tid = pthread_self();
-    fprintf(stderr,"ThreadID: %lu has allocated local storage at: 0x%p\n", (unsigned long int)tid,current_thread_stats);
+    fprintf(stderr,"ThreadID: %lu has allocated local storage at: 0x%p\n", (unsigned long int)tid,(void*)current_thread_stats);
 #endif 
   }
 

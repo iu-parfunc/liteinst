@@ -266,7 +266,7 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 
     // Enable write permission to call site
     modify_page_permissions((uint8_t*) addr - 5);
-    PatchResult* res  = patch_first_parameter(probe_info, addr, (uint64_t*) func, func_id);
+    patch_first_parameter(probe_info, addr, (uint64_t*) func, func_id);
    
     //BJS: THIS PART IS SOMEWHAT REDUNDANT. 
     //     Come up with a refactor on this that does 
@@ -413,7 +413,7 @@ void __cyg_profile_func_exit(void* func, void* caller) {
     // Enable write permission to call site
     modify_page_permissions((uint8_t*) addr - 5);
 
-    PatchResult* res  = patch_first_parameter(probe_info,addr, (uint64_t*) func, func_id);
+    patch_first_parameter(probe_info,addr, (uint64_t*) func, func_id);
     // if (res->success) { 
     //   ins->addProbeInfo((uint64_t)func, (uint8_t*)addr, false);
     // } else { 
@@ -428,8 +428,6 @@ void __cyg_profile_func_exit(void* func, void* caller) {
     //   // Mark this as a function to escape patching
     //   set_index(g_straddlers_bitmap, func_id);
     // }
-  
-  delete res;
   }  
 
   

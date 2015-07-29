@@ -440,14 +440,15 @@ inline uint8_t* get_edi_set_addr(uint8_t* call_return_addr, uint8_t* start_addr)
   */
 //}
 
+#define PARAMETER_PATCH_ERROR (-1)
+#define PARAMETER_PATCH_OK    1 
 
-
-inline PatchResult* patch_first_parameter(FinsProbeInfo* probe_info,uint64_t* call_return_addr, uint64_t* start_addr, uint16_t func_id) {
+inline int patch_first_parameter(FinsProbeInfo* probe_info,uint64_t* call_return_addr, uint64_t* start_addr, uint16_t func_id) {
 
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
   uint64_t* lock = ins->getLock((uint64_t) start_addr);
   int spin_counter = 0;
-  PatchResult* res = new PatchResult;
+  //PatchResult* res = new PatchResult;
 
 
   // It seems that lock == NULL should be an error ? 
@@ -461,25 +462,25 @@ inline PatchResult* patch_first_parameter(FinsProbeInfo* probe_info,uint64_t* ca
     bool status = patch_with_value(edi_set_addr, func_id);
 
     if (!status) {
-      res->success = false;
-      res->conflict = false;
+      //res->success = false;
+      //res->conflict = false;
       
 
       ins->addProbeInfo_((uint64_t)start_addr, (uint8_t*)call_return_addr, true);
       probe_info = ins->getProbeInfo((uint64_t)start_addr, (uint8_t*) call_return_addr);
       set_index(g_straddlers_bitmap, func_id);
       while(!__sync_bool_compare_and_swap(lock, 1 , 0));
-      return res;
+      return PARAMETER_PATCH_OK;
     }
     
-    res->success = true;
-    res->conflict = false;
-    res->edi_set_addr = edi_set_addr;
+    //res->success = true;
+    //res->conflict = false;
+    //res->edi_set_addr = edi_set_addr;
 
     ins->addProbeInfo_((uint64_t)start_addr, (uint8_t*)call_return_addr, false);
     
     while(!__sync_bool_compare_and_swap(lock, 1 , 0));
-    return res;
+    return PARAMETER_PATCH_OK;
     
   } else { // We failed. Wait until the other thread finish and just return
     
@@ -500,17 +501,17 @@ inline PatchResult* patch_first_parameter(FinsProbeInfo* probe_info,uint64_t* ca
     pthread_t tid = pthread_self();
     ticks t1 = getticks();
     fprintf( stderr
-	     , "[utils.hpp ***NEW*** patch_first_parameter] ThreadID: %lu was busy-waiting for %d iterations.\nWait took %lu ticks while attempting to patch function %d.\n"
+	     , "[utils.hpp ***NEW*** patch_first_parameter] ThreadID: %lu was busy-waiting for %d iterations.\nWait took %llu ticks while attempting to patch function %d.\n"
 	     , (unsigned long int)tid,spin_counter,(t1-t0),func_id);
 
 #endif 
 
-    
+    // maybe here, let thread actually check what kind of patching took place 
+    // by the successful thread. But it may just be unnecessary. 
 
-    res->success = true;
-    res->conflict = false;
-    
-    return res;
+
+    // as it is now it seems this function really has no "fail-mode" 
+    return PARAMETER_PATCH_OK;
   }
 }
 
@@ -659,7 +660,7 @@ inline PatchResult* patch_first_parameter_old(uint64_t* call_return_addr, uint64
       pthread_t tid = pthread_self();
       ticks t1 = getticks();
       fprintf( stderr
-	     , "[utils.hpp ***OLD*** patch_first_parameter] ThreadID: %lu was busy-waiting for %d iterations.\nWait took %lu ticks while attempting to patch function %d.\n"
+	     , "[utils.hpp ***OLD*** patch_first_parameter] ThreadID: %lu was busy-waiting for %d iterations.\nWait took %llu ticks while attempting to patch function %d.\n"
 	       , (unsigned long int)tid,spin_counter,(t1-t0),func_id);
 
 #endif 
