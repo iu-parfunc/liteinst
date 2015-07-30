@@ -16,6 +16,7 @@
 #include <pthread.h> 
 
 #include <signal.h>
+#include <assert.h> 
 
 using namespace std;
 
@@ -778,4 +779,6 @@ Finstrumentor::~Finstrumentor() {
   delete this->functions;
   delete this->func_addr_mappings; // Delete individual entries as well 
   delete this->func_id_mappings; 
+// BJS: Don't know about this 
+  INSTRUMENTOR_INSTANCE = NULL; 
 }

@@ -1,3 +1,10 @@
+### June 30 2015 ### 
+ 
+  * The Makefile_GCC has two modes: 
+     make lib 
+     make libdebug 
+    These two modes of operation are not present in the ICC makefile. 
+    	  	  	  
 
 
 ### 6-29-13 Nikhil ###

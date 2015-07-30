@@ -16,7 +16,7 @@ uint64_t g_TicksPerNanoSec = 0; // Calibrated ticks per nano second
 uint64_t g_call_overhead = 0; // Call overhead calibrated value
 uint16_t g_strategy = SLOW_RAMP_UP; // Overhead control strategy to use
 uint64_t g_thread_lock = 0;
-uint64_t g_shutting_down_flag = 0;
+volatile uint64_t g_shutting_down_flag = 0;
 
 // Leaf node tracking
 uint64_t prolog_leaf_counter = 0;

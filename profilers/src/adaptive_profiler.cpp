@@ -193,8 +193,182 @@ inline void sleep_for_a_while() {
     nanosleep(&ts, NULL);
   }
 }
+// /////////////////////////////////////////////////////////////////
+// Strategies 
+// /////////////////////////////////////////////////////////////////
+inline void do_proportional(AdaptiveProfilerStat* global_stats, int func_count, double overhead_at_last_epoch) {
+  
+  if (overhead_at_last_epoch != 0 && overhead_at_last_epoch >  sp_target_overhead) {
+    uint64_t new_sample_size = ((double)sp_target_overhead / overhead_at_last_epoch) * sp_sample_size; 
+    
+    if (new_sample_size > 0) {
+      sp_sample_size = new_sample_size;
+    } else {
+      // Entirely skip probe activation for this sample due to small sample size
+      // Too much overhead to control via reducing the sample size
+#ifdef OVERHEAD_TIME_SERIES
+      g_skipped_epochs++;
+      record_overhead_histogram(overhead_at_last_epoch, -1); // -1 signifies no new samples taken in this epoch
+#endif
+      
+      //sleep_for_a_while();
+      //continue;
+      return;
+    }
+  }
+  
+  if (overhead_at_last_epoch != 0 && overhead_at_last_epoch <  0.75 * sp_target_overhead) {
+    uint64_t new_sample_size = ((double)sp_target_overhead / overhead_at_last_epoch) * sp_sample_size; 
+    
+    // Here we don't set the sample size to more than its initial setting to prevent overshooting.
+    // TODO: Revisit this
+    if (new_sample_size < sp_initial_sample_size) {
+      sp_sample_size = new_sample_size;
+    } else {
+      sp_sample_size = sp_initial_sample_size;
+    }
+  }
+  
+#ifdef OVERHEAD_TIME_SERIES
+  record_overhead_histogram(overhead_at_last_epoch, sp_epoch_period);
+#endif
+  
+  for(int i = 0; i < func_count; i++) {
+    if (!global_stats[i].active) {
+      global_stats[i].sample_size = sp_sample_size;
+      if (PROFILER_INSTANCE->activateFunction(i) != -1) {
+	global_stats[i].active = true;
+      }
+    } else { // TODO: Reset all function sample sizes
+      __sync_bool_compare_and_swap(&global_stats[i].sample_size, global_stats[i].sample_size, sp_sample_size); // Atomically set the value
+    }
+  }  
+}
 
+
+inline void do_ramp_up(AdaptiveProfilerStat* global_stats, int func_count, double overhead_at_last_epoch) {
+  
+  if (overhead_at_last_epoch != 0 && overhead_at_last_epoch >  sp_target_overhead) {
+	
+    double overhead_delta=(double)sp_target_overhead / overhead_at_last_epoch;
+    
+    uint64_t new_sample_size = overhead_delta * sp_sample_size; 
+    
+    // fprintf(stderr, "Sample size : %lu\n", new_sample_size);
+    
+    if (new_sample_size > 0) {
+      sp_sample_size = new_sample_size;
+    } else {
+      // Entirely skip probe activation for this sample due to small sample size
+      // Too much overhead to control via reducing the sample size
+#ifdef OVERHEAD_TIME_SERIES
+      g_skipped_epochs++;
+      record_overhead_histogram(overhead_at_last_epoch, -1); // -1 signifies no new samples taken in this epoch
+#endif
+      //sleep_for_a_while();
+      //continue;
+      return;
+    }
+  }
+  
+  double fudge_factor = 1;
+  if (overhead_at_last_epoch != 0 && overhead_at_last_epoch <  fudge_factor * sp_target_overhead) {
+    double new_target_overhead = overhead_at_last_epoch + (fudge_factor * (double) sp_target_overhead - overhead_at_last_epoch) / 2;
+    uint64_t new_sample_size = ((double)new_target_overhead / overhead_at_last_epoch) * sp_sample_size; 
+    
+    
+    
+    // Here we don't set the sample size to more than its initial setting to prevent overshooting.
+        // TODO: Revisit this
+        /*
+	  if (new_sample_size < sp_initial_sample_size) {
+          sp_sample_size = new_sample_size;
+	  } else {
+          sp_sample_size = sp_initial_sample_size;
+	  }
+	*/
+    if (new_sample_size > sp_sample_size) {
+      sp_sample_size = new_sample_size; 
+    }
+  }
+
+#ifdef OVERHEAD_TIME_SERIES
+  record_overhead_histogram(overhead_at_last_epoch, sp_epoch_period);
+#endif
+  
+  for(int i = 0; i < func_count; i++) {
+    // Reset all function sample sizes
+    if (!global_stats[i].active) {
+      global_stats[i].sample_size = sp_sample_size;
+      if (PROFILER_INSTANCE->activateFunction(i) != -1) {
+	global_stats[i].active = true;
+      }
+        } else { 
+      __sync_bool_compare_and_swap(&global_stats[i].sample_size, global_stats[i].sample_size, sp_sample_size); // Atomically set the value
+    }
+  }  
+}
+
+inline void do_epoch_control(AdaptiveProfilerStat* global_stats,int func_count, double overhead_at_last_epoch){
+ 
+  if (overhead_at_last_epoch != 0 && overhead_at_last_epoch >  sp_target_overhead) {
+    //   fprintf(stderr, "[ubiprof] Overhead : %.2lf Target overhead : %.2lf Epoch period : %.2lf\n", 
+    //       overhead_at_last_epoch, sp_target_overhead, sp_epoch_period);
+    double new_epoch_period = ((double) overhead_at_last_epoch /sp_target_overhead) * sp_epoch_period; 
+    //   fprintf(stderr, "[ubiprof] New epoch period : %.2lf\n", new_epoch_period);
+    
+    if (new_epoch_period > 0) {
+      sp_epoch_period = new_epoch_period;
+    } else {
+      // Entirely skip probe activation for this sample due to small sample size
+      // Too much overhead to control via reducing the sample size
+#ifdef OVERHEAD_TIME_SERIES
+      g_skipped_epochs++;
+      record_overhead_histogram(overhead_at_last_epoch, -1); // -1 signifies no new samples taken in this epoch
+#endif
+      
+      //sleep_for_a_while();
+      //continue;
+      return; 
+    }
+  }
+  
+  double fudge_factor = 1;
+  if (overhead_at_last_epoch != 0 && overhead_at_last_epoch <  fudge_factor * sp_target_overhead) {
+    double new_target_overhead = overhead_at_last_epoch + (fudge_factor * (double) sp_target_overhead - overhead_at_last_epoch) / 2;
+    //  fprintf(stderr, "[ubiprof] Overhead : %.2lf New Target Overhead : %.2lf Epoch period : %.2lf\n", 
+    //      overhead_at_last_epoch, new_target_overhead, sp_epoch_period);
+    double new_epoch_period =  ((double) overhead_at_last_epoch /new_target_overhead) * sp_epoch_period; 
+    //  fprintf(stderr, "[ubiprof] New epoch period : %.2lf\n", new_epoch_period);
+    
+    if (new_epoch_period < sp_epoch_period) {
+      sp_epoch_period = new_epoch_period; 
+    }
+  }
+  
+  // fprintf(stderr, "[ubiprof] Epoch Size : %lu\n", sp_epoch_period);
+  
+  // Reactivate all the deactivated methods
+      for(int i = 0; i < func_count; i++) {
+        if (!global_stats[i].active) {
+          global_stats[i].sample_size = sp_sample_size; // Sample size doesn't change
+          if (PROFILER_INSTANCE->activateFunction(i) != -1) {
+            global_stats[i].active = true;
+          }
+        }      
+      }
+      
+#ifdef OVERHEAD_TIME_SERIES
+      record_overhead_histogram(overhead_at_last_epoch, sp_epoch_period);
+#endif
+      
+}
+
+
+
+// /////////////////////////////////////////////////////////////////
 // Probe monitor
+// /////////////////////////////////////////////////////////////////
 void* adaptiveProbeMonitor(void* param) {
  
   if (g_shutting_down_flag == TERMINATE_REQUESTED) {
@@ -203,23 +377,32 @@ void* adaptiveProbeMonitor(void* param) {
   }
 
   AdaptiveProfilerStat* global_stats = (AdaptiveProfilerStat*) g_ubiprof_stats;
+  
+  // optimizations
+  
+  while (!g_ubiprof_initialized) { 
+    sleep_for_a_while(); 
+  }
+  
+  // declaration 
+  double overhead_at_last_epoch = 0; 
 
-  while(true) {
-
-    if (!g_ubiprof_initialized) {
-      sleep_for_a_while();
-      continue;
-    }
-
-    if (g_shutting_down_flag == TERMINATE_REQUESTED) {
-      g_shutting_down_flag = TERMINATED; // Signals the destructor thread that this thread is done executing
-      return NULL;
-    }
-
-    int func_count = INSTRUMENTOR_INSTANCE->getFunctionCount();
+  // These are Expected to be constant once it is obtained, right ? 
+  int func_count = INSTRUMENTOR_INSTANCE->getFunctionCount();
+  
+  TLStatistics** tls_stat = ((AdaptiveProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
+  
+  
+  // /////////////////////////////////////////////////////////////////
+  // Monitor thread loop 
+  // /////////////////////////////////////////////////////////////////
+  while(g_shutting_down_flag == NO_TERMINATE_REQUESTS) {
+    
+    sleep_for_a_while();
+    
     int thread_count = ((AdaptiveProfiler*)PROFILER_INSTANCE)->getThreadCount(); 
 
-    TLStatistics** tls_stat = ((AdaptiveProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
+    //TLStatistics** tls_stat = ((AdaptiveProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
 
     uint64_t thread_overheads = 0;
     uint64_t global_count = 0;
@@ -240,6 +423,11 @@ void* adaptiveProbeMonitor(void* param) {
     //uint64_t tmp_total_overhead  = g_total_overhead;
     //uint64_t tmp_total_process_time = g_total_process_time;
 
+    // BJS: Have seen a segfault point to something about getInstrumentorBackgroundOverhead(),
+    //      rarely. 
+
+    assert(INSTRUMENTOR_INSTANCE != NULL); 
+
     g_total_overhead = thread_overheads + probe_thread_overhead + call_overhead + 
                        cache_perturbation_overhead + g_init_overhead +
                        INSTRUMENTOR_INSTANCE->getInstrumentorBackgroundOverhead();
@@ -250,11 +438,27 @@ void* adaptiveProbeMonitor(void* param) {
 
     g_total_process_time = nanoSecs * g_TicksPerNanoSec;
     
-    if (g_total_process_time > g_total_overhead) {
-      g_total_process_time -= g_total_overhead;
-    } else {
-      // fprintf(stderr, "[DEBUG] Boo \n");
-    }
+    
+    // BJS: I assume this assert must hold or something has gone wrong? 
+    assert(g_total_process_time >= g_total_overhead); 
+
+    // BJS: Since g_total_process_time is the amount of time the process has been  
+    //      running, that INCLUDES all the overhead, right ? 
+    //      In the extreme, we could be at a point where all "processing" that 
+    //      has taken place is overhead .. and g_total_process_time == g_total_overhead
+ 
+    // BJS: For some reason adding something that takes some "time" here
+    //      totally changes the bahaviour of the algorithm. 
+    //      It can be a pthread_yield or it can be a print statements. 
+   
+    g_total_process_time -= g_total_overhead;
+
+    //BJS:  I dont really understand this logic. 
+    //if (g_total_process_time > g_total_overhead) {
+    //  g_total_process_time -= g_total_overhead;
+    //} else {
+    //  // fprintf(stderr, "[DEBUG] Boo \n");
+    //}
 
     //uint64_t overhead_delta = g_total_overhead - tmp_total_overhead;
     //uint64_t process_time_delta = g_total_process_time - tmp_total_process_time;
@@ -263,189 +467,47 @@ void* adaptiveProbeMonitor(void* param) {
     //        g_total_overhead, g_total_process_time, thread_overheads, probe_thread_overhead); 
 
     // uint64_t overhead_at_last_epoch = ((double)overhead_delta / process_time_delta) * 100;
-    double overhead_at_last_epoch = ((double)g_total_overhead / g_total_process_time) * 100;
-    // fprintf(stderr, "Per function call overhead (cycles) : %lu\n", g_call_overhead);
-    // fprintf(stderr, "Global overhead (cycles) : %lu Global process time : %lu \n", g_total_overhead,
-    //     g_total_process_time);
-    // fprintf(stderr, "Global overhead delta : %lu Global process delta : %lu \n", overhead_delta,
-    //     process_time_delta);
 
-    // *** Turn this on for runtime overhead logging **
-    // fprintf(stderr, "Overhead : %lf\n", overhead_at_last_epoch);
-
-    if (g_strategy == PROPOTIONAL) {
-      if (overhead_at_last_epoch != 0 && overhead_at_last_epoch >  sp_target_overhead) {
-        uint64_t new_sample_size = ((double)sp_target_overhead / overhead_at_last_epoch) * sp_sample_size; 
-
-        if (new_sample_size > 0) {
-          sp_sample_size = new_sample_size;
-        } else {
-          // Entirely skip probe activation for this sample due to small sample size
-          // Too much overhead to control via reducing the sample size
-#ifdef OVERHEAD_TIME_SERIES
-          g_skipped_epochs++;
-          record_overhead_histogram(overhead_at_last_epoch, -1); // -1 signifies no new samples taken in this epoch
-#endif
-
-          sleep_for_a_while();
-          continue;
-        }
-      }
-
-      if (overhead_at_last_epoch != 0 && overhead_at_last_epoch <  0.75 * sp_target_overhead) {
-        uint64_t new_sample_size = ((double)sp_target_overhead / overhead_at_last_epoch) * sp_sample_size; 
-
-        // Here we don't set the sample size to more than its initial setting to prevent overshooting.
-        // TODO: Revisit this
-        if (new_sample_size < sp_initial_sample_size) {
-          sp_sample_size = new_sample_size;
-        } else {
-          sp_sample_size = sp_initial_sample_size;
-        }
-      }
-
-#ifdef OVERHEAD_TIME_SERIES
-    record_overhead_histogram(overhead_at_last_epoch, sp_epoch_period);
-#endif
-
-      for(int i = 0; i < func_count; i++) {
-        if (!global_stats[i].active) {
-          global_stats[i].sample_size = sp_sample_size;
-          if (PROFILER_INSTANCE->activateFunction(i) != -1) {
-            global_stats[i].active = true;
-          }
-        } else { // TODO: Reset all function sample sizes
-          __sync_bool_compare_and_swap(&global_stats[i].sample_size, global_stats[i].sample_size, sp_sample_size); // Atomically set the value
-        }
-      }
-
-    } else if (g_strategy == SLOW_RAMP_UP) {
-      if (overhead_at_last_epoch != 0 && overhead_at_last_epoch >  sp_target_overhead) {
-        uint64_t new_sample_size = ((double)sp_target_overhead / overhead_at_last_epoch) * sp_sample_size; 
-
-        // fprintf(stderr, "Sample size : %lu\n", new_sample_size);
-
-        if (new_sample_size > 0) {
-          sp_sample_size = new_sample_size;
-        } else {
-          // Entirely skip probe activation for this sample due to small sample size
-          // Too much overhead to control via reducing the sample size
-#ifdef OVERHEAD_TIME_SERIES
-          g_skipped_epochs++;
-          record_overhead_histogram(overhead_at_last_epoch, -1); // -1 signifies no new samples taken in this epoch
-#endif
-
-          sleep_for_a_while();
-          continue;
-        }
-      }
-
-      double fudge_factor = 1;
-      if (overhead_at_last_epoch != 0 && overhead_at_last_epoch <  fudge_factor * sp_target_overhead) {
-	      double new_target_overhead = overhead_at_last_epoch + (fudge_factor * (double) sp_target_overhead - overhead_at_last_epoch) / 2;
-        uint64_t new_sample_size = ((double)new_target_overhead / overhead_at_last_epoch) * sp_sample_size; 
-
-        // Here we don't set the sample size to more than its initial setting to prevent overshooting.
-        // TODO: Revisit this
-        /*
-        if (new_sample_size < sp_initial_sample_size) {
-          sp_sample_size = new_sample_size;
-        } else {
-          sp_sample_size = sp_initial_sample_size;
-        }
-       */
-       if (new_sample_size > sp_sample_size) {
-         sp_sample_size = new_sample_size; 
-       }
-      }
-
-#ifdef OVERHEAD_TIME_SERIES
-    record_overhead_histogram(overhead_at_last_epoch, sp_epoch_period);
-#endif
-
-      for(int i = 0; i < func_count; i++) {
-        // Reset all function sample sizes
-        if (!global_stats[i].active) {
-          global_stats[i].sample_size = sp_sample_size;
-          if (PROFILER_INSTANCE->activateFunction(i) != -1) {
-            global_stats[i].active = true;
-          }
-        } else { 
-          __sync_bool_compare_and_swap(&global_stats[i].sample_size, global_stats[i].sample_size, sp_sample_size); // Atomically set the value
-        }
-      }
-
-    } else if (g_strategy == EPOCH_CONTROL) {
-      if (overhead_at_last_epoch != 0 && overhead_at_last_epoch >  sp_target_overhead) {
-     //   fprintf(stderr, "[ubiprof] Overhead : %.2lf Target overhead : %.2lf Epoch period : %.2lf\n", 
-     //       overhead_at_last_epoch, sp_target_overhead, sp_epoch_period);
-        double new_epoch_period = ((double) overhead_at_last_epoch /sp_target_overhead) * sp_epoch_period; 
-     //   fprintf(stderr, "[ubiprof] New epoch period : %.2lf\n", new_epoch_period);
-
-        if (new_epoch_period > 0) {
-          sp_epoch_period = new_epoch_period;
-        } else {
-          // Entirely skip probe activation for this sample due to small sample size
-          // Too much overhead to control via reducing the sample size
-#ifdef OVERHEAD_TIME_SERIES
-          g_skipped_epochs++;
-          record_overhead_histogram(overhead_at_last_epoch, -1); // -1 signifies no new samples taken in this epoch
-#endif
-
-          sleep_for_a_while();
-          continue;
-        }
-      }
-
-      double fudge_factor = 1;
-      if (overhead_at_last_epoch != 0 && overhead_at_last_epoch <  fudge_factor * sp_target_overhead) {
-	      double new_target_overhead = overhead_at_last_epoch + (fudge_factor * (double) sp_target_overhead - overhead_at_last_epoch) / 2;
-      //  fprintf(stderr, "[ubiprof] Overhead : %.2lf New Target Overhead : %.2lf Epoch period : %.2lf\n", 
-      //      overhead_at_last_epoch, new_target_overhead, sp_epoch_period);
-        double new_epoch_period =  ((double) overhead_at_last_epoch /new_target_overhead) * sp_epoch_period; 
-      //  fprintf(stderr, "[ubiprof] New epoch period : %.2lf\n", new_epoch_period);
-
-       if (new_epoch_period < sp_epoch_period) {
-         sp_epoch_period = new_epoch_period; 
-       }
-      }
-
-      // fprintf(stderr, "[ubiprof] Epoch Size : %lu\n", sp_epoch_period);
-
-      // Reactivate all the deactivated methods
-      for(int i = 0; i < func_count; i++) {
-        if (!global_stats[i].active) {
-          global_stats[i].sample_size = sp_sample_size; // Sample size doesn't change
-          if (PROFILER_INSTANCE->activateFunction(i) != -1) {
-            global_stats[i].active = true;
-          }
-        }      
-      }
-
-#ifdef OVERHEAD_TIME_SERIES
-    record_overhead_histogram(overhead_at_last_epoch, sp_epoch_period);
-#endif
-
+    // compute % overhead. 
+    
+    if (g_total_process_time > 0) {
+      overhead_at_last_epoch = ((double)g_total_overhead / g_total_process_time) * 100;
+    } else { 
+      overhead_at_last_epoch = 100; // otherwise 100% overhead
     }
 
-    // fprintf(stderr, "New sample size : %lu\n", sp_sample_size);
-      
-/*
-sleep:
-    if (sp_epoch_period != 0) {
-      uint64_t nanos = sp_epoch_period * 1000000; 
-      uint64_t secs = nanos / 1000000000;
-      uint64_t nsecs = nanos % 1000000000;
-      ts.tv_sec = secs;
-      ts.tv_nsec = nsecs;
-      nanosleep(&ts, NULL);
-    }
-*/
+#ifndef NDEBUG      
+    fprintf(stderr,"Last epoch: %f\nTarget OH:%f\n",overhead_at_last_epoch,sp_target_overhead); 
+#endif     
+    
+    // REFACTOR for readability 
+    //   They all update globals.. which makes this look a bit mysterious 
+    
+    switch (g_strategy) { 
 
-  }
+      //BJS: PROPOTIONAL is a spelling error isnt it ? 
+    case PROPOTIONAL: do_proportional(global_stats,func_count, overhead_at_last_epoch); break;
+    case SLOW_RAMP_UP: do_ramp_up(global_stats,func_count, overhead_at_last_epoch); break;
+    case EPOCH_CONTROL: do_epoch_control(global_stats,func_count, overhead_at_last_epoch); break; 
+    default: fprintf(stderr,"No matching strategy"); 
+    }
+    
+   
+  } // while(g_shutting_down_flag == NO_TERMINATE_REQUESTS)
+
+#ifndef NDEBUG 
+  fprintf(stderr," LEAVING MONITOR LOOP: Shutting down\n");
+#endif 
+  // Signals the destructor thread that this thread is done executing
+  g_shutting_down_flag = TERMINATED; 
+  return NULL; 
+
 }
 
-// Profiler implementation 
+
+// /////////////////////////////////////////////////////////////////
+// Profiler initialization 
+// /////////////////////////////////////////////////////////////////
 void AdaptiveProfiler::initialize() {
 
   Profiler::initInstrumentor(adaptivePrologFunction, adaptiveEpilogFunction);
