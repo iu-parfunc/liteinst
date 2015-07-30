@@ -93,5 +93,5 @@ void Profiler::stopProfiler() {
 }
 
 Profiler::~Profiler() {
-  // delete ins;
+  delete ins;
 }

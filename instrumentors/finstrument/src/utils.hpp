@@ -485,8 +485,6 @@ inline int patch_first_parameter(FinsProbeInfo* probe_info,uint64_t* call_return
     
   } else { // We failed. Wait until the other thread finish and just return
     
-    //BJS: I dont understand this. 
-    
 #ifndef NDEBUG
     ticks t0 = getticks(); 
 #endif 

@@ -497,7 +497,6 @@ void* adaptiveProbeMonitor(void* param) {
   // Signals the destructor thread that this thread is done executing
   g_shutting_down_flag = TERMINATED; 
   return NULL; 
-
 }
 
 
