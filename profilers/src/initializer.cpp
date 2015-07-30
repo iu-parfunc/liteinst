@@ -583,7 +583,7 @@ __attribute__((destructor))
 
 
     // Tell probe monitor thread to shurdown 
-    if (g_profiler_type == ADAPTIVE) {
+    if (g_profiler_type == ADAPTIVE || g_profiler_type == MINIMAL_ADAPTIVE) {
       g_shutting_down_flag = TERMINATE_REQUESTED;
       int retries = 0;
       while (g_shutting_down_flag != TERMINATED && retries++ < 2) {
