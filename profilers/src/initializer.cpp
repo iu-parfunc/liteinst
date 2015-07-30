@@ -413,13 +413,13 @@ void calibrateTicks() {
 }
 
 void getFinalOverhead() {
-
+  // Monitor thread is finished already, so there are no races on these globals:
   uint64_t call_overhead = g_probe_count * g_call_overhead;
   uint64_t cache_perturbation_overhead = g_probe_count * g_cache_miss_overhead_upper_bound;
 
-  double init_overhead = getSecondsFromTicks(g_init_overhead);
+  double init_overhead  = getSecondsFromTicks(g_init_overhead);
   double probe_overhead = getSecondsFromTicks(g_probe_overheads);
-  double jump_overhead = getSecondsFromTicks(call_overhead);
+  double jump_overhead  = getSecondsFromTicks(call_overhead);
   double cache_overhead = getSecondsFromTicks(cache_perturbation_overhead);
 
   clockid_t cid;
@@ -463,6 +463,7 @@ void getFinalOverhead() {
 #ifdef OVERHEAD_TIME_SERIES
   FILE* fp = fopen("statistics.out", "a");
   fprintf(fp, "DEACTIVATIONS : %lu\n", g_deactivation_count);
+  // TODO: Rename to MAIN_THREAD_CPU_TIME:
   fprintf(fp, "APPLICATION_CPU_TIME(s): %lf\n", main_thread_cpu_time);
   fprintf(fp, "MONITOR_THREAD_CPU_TIME(s): %lf\n", probe_thread_cpu_time);
   fprintf(fp, "PROCESS_CPU_TIME(s): %lf\n", process_cpu_time);
@@ -471,7 +472,7 @@ void getFinalOverhead() {
   fprintf(fp, "PROBE_OVERHEAD: %lf\n", probe_overhead);
   fprintf(fp, "JUMP_OVERHEAD: %lf\n", jump_overhead);
   fprintf(fp, "CUMULATIVE_OVERHEAD: %lf\n", calculated_overheads);
-  fprintf(fp, "REAL_EXEC_TIME: %lf\n\n", main_thread_cpu_time - calculated_overheads);
+  //  fprintf(fp, "REAL_EXEC_TIME: %lf\n\n", main_thread_cpu_time - calculated_overheads);
   fprintf(fp, "TARGET_OVERHEAD: %.2lf\n", (double) sp_target_overhead);
   fprintf(fp, "RUNTIME_OVERHEAD: %.2lf\n", overhead_at_final_epoch);
   fclose(fp);
@@ -490,7 +491,7 @@ void getFinalOverhead() {
   fprintf(stderr, "[ubiprof] PROBE_OVERHEAD(s): %lf\n", probe_overhead);
   fprintf(stderr, "[ubiprof] JUMP_OVERHEAD(s): %lf\n", jump_overhead);
   fprintf(stderr, "[ubiprof] CUMULATIVE_OVERHEAD(s): %lf\n", calculated_overheads);
-  fprintf(stderr, "[ubiprof] REAL_EXEC_TIME(s): %lf\n", main_thread_cpu_time - calculated_overheads);
+  //  fprintf(stderr, "[ubiprof] REAL_EXEC_TIME(s): %lf\n", main_thread_cpu_time - calculated_overheads);
   fprintf(stderr, "[ubiprof] TARGET_OVERHEAD: %.2lf\n", (double) sp_target_overhead);
   fprintf(stderr, "[ubiprof] RUNTIME_OVERHEAD: %.2lf\n", overhead_at_final_epoch);
 
@@ -578,11 +579,13 @@ __attribute__((constructor, no_instrument_function))
 #endif
 
 #ifndef NO_INIT
+// This is called by the main thread when the app is shutting down.
+// (After main() finishes.)
 __attribute__((destructor))
   void destroyProfiler() {
 
 
-    // Tell probe monitor thread to shurdown 
+    // Tell probe monitor thread to shutdown 
     if (g_profiler_type == ADAPTIVE || g_profiler_type == MINIMAL_ADAPTIVE) {
       g_shutting_down_flag = TERMINATE_REQUESTED;
       int retries = 0;

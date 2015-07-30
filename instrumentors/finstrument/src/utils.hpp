@@ -237,6 +237,7 @@ inline bool patch_with_value(uint8_t* addr, uint16_t func_id) {
   sequence_ptr[0] = addr[0]; // MOV REG opcode
   *(uint32_t*)(sequence_ptr+1) = (uint32_t)func_id;
 
+  // This disabled code handles straddlers:
   /*
   size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
   int offset = (uint64_t) addr % cache_line_size;
