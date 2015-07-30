@@ -446,10 +446,6 @@ void* adaptiveProbeMonitor(void* param) {
     //      running, that INCLUDES all the overhead, right ? 
     //      In the extreme, we could be at a point where all "processing" that 
     //      has taken place is overhead .. and g_total_process_time == g_total_overhead
- 
-    // BJS: For some reason adding something that takes some "time" here
-    //      totally changes the bahaviour of the algorithm. 
-    //      It can be a pthread_yield or it can be a print statements. 
    
     g_total_process_time -= g_total_overhead;
 
