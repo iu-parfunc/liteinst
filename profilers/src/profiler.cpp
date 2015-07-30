@@ -93,5 +93,10 @@ void Profiler::stopProfiler() {
 }
 
 Profiler::~Profiler() {
-  delete ins;
+  
+#ifndef NDEBUG 
+  fprintf(stderr,"[Profiler.cpp] Executing Profiler instance destructor\n");
+#endif 
+  
+  //delete ins;
 }

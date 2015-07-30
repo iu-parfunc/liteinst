@@ -584,35 +584,40 @@ __attribute__((constructor, no_instrument_function))
 __attribute__((destructor))
   void destroyProfiler() {
 
-
-    // Tell probe monitor thread to shutdown 
-    if (g_profiler_type == ADAPTIVE || g_profiler_type == MINIMAL_ADAPTIVE) {
-      g_shutting_down_flag = TERMINATE_REQUESTED;
-      int retries = 0;
-      while (g_shutting_down_flag != TERMINATED && retries++ < 2) {
-        struct timespec ts;
-        uint64_t nanos = 10 * 1000000;  // Sleep 10 milli seconds
-        uint64_t secs = nanos / 1000000000;
-        uint64_t nsecs = nanos % 1000000000;
-        ts.tv_sec = secs;
-        ts.tv_nsec = nsecs;
-        nanosleep(&ts, NULL);
-	// sleep(10);
-        // fprintf(stderr, "Trying to finish..\n");
-        // sleep(sp_epoch_period); // Sleep for a while until probe monitor thread terminates
+  int retries = 0;
+  // Tell probe monitor thread to shutdown 
+  if (g_profiler_type == ADAPTIVE || g_profiler_type == MINIMAL_ADAPTIVE) {
+    g_shutting_down_flag = TERMINATE_REQUESTED;
+    while (g_shutting_down_flag != TERMINATED) {
+      struct timespec ts;
+      uint64_t nanos = 10 * 1000000;  // Sleep 10 milli seconds
+      uint64_t secs = nanos / 1000000000;
+      uint64_t nsecs = nanos % 1000000000;
+      ts.tv_sec = secs;
+      ts.tv_nsec = nsecs;
+      nanosleep(&ts, NULL);
+      // sleep(10);
+      // fprintf(stderr, "Trying to finish..\n");
+      // sleep(sp_epoch_period); // Sleep for a while until probe monitor thread terminates
         // break;
+      retries++; 
       }
-    }
+  }
+  // BJS HACK 
+  fprintf(stderr,"Waited %d ms for monitor to shut down\n", retries * 10);
+  
+  clock_gettime(CLOCK_MONOTONIC, &g_endts);
+  timeSpecDiff(&g_endts, &g_begints);
 
-    clock_gettime(CLOCK_MONOTONIC, &g_endts);
-    timeSpecDiff(&g_endts, &g_begints);
+  fprintf(stderr, "\n[Ubiprof] Destroying the profiler..\n");  
+  delete Profiler::getInstance(g_profiler_type);  
+  // BJS: Something is still accessing datastructures help within these instances 
+  //      here... It crashes! 
 
-    fprintf(stderr, "\n[Ubiprof] Destroying the profiler..\n");
-    delete Profiler::getInstance(g_profiler_type);
-
-    getFinalOverhead();
-
-    fprintf(stderr, "\n[ubiprof] UBIPROF_ELAPSED_TIME : %lf\n", getSecondsFromTS(&g_diff));
-
-  } 
+  getFinalOverhead();
+    
+  
+  fprintf(stderr, "\n[ubiprof] UBIPROF_ELAPSED_TIME : %lf\n", getSecondsFromTS(&g_diff));
+  
+} 
 #endif
