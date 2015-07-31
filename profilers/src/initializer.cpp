@@ -488,6 +488,7 @@ void getFinalOverhead() {
 
   fprintf(stderr, "[ubiprof] INIT_OVERHEAD(S): %lf\n", init_overhead);
   fprintf(stderr, "[ubiprof] CACHE_PERTURBATION_OVERHEAD(s): %lf\n", cache_overhead);
+  //fprintf(stderr, "[ubiprof] PROBE_OVERHEAD(Ticks): %lld\n", g_probe_overheads);
   fprintf(stderr, "[ubiprof] PROBE_OVERHEAD(s): %lf\n", probe_overhead);
   fprintf(stderr, "[ubiprof] JUMP_OVERHEAD(s): %lf\n", jump_overhead);
   fprintf(stderr, "[ubiprof] CUMULATIVE_OVERHEAD(s): %lf\n", calculated_overheads);
@@ -609,12 +610,22 @@ __attribute__((destructor))
   clock_gettime(CLOCK_MONOTONIC, &g_endts);
   timeSpecDiff(&g_endts, &g_begints);
 
+  
   fprintf(stderr, "\n[Ubiprof] Destroying the profiler..\n");  
+  // run the destructor of the profiler instance. 
   delete Profiler::getInstance(g_profiler_type);  
-  // BJS: Something is still accessing datastructures help within these instances 
-  //      here... It crashes! 
 
+  // getFinalOverhead needs to happen after the 
+  // destructor of the profiler is executed. 
   getFinalOverhead();
+
+ 
+  // BJS: Something is still accessing datastructures held within these instances 
+  //      here... It crashes! 
+  //      The crash is a lookup into a stl datastructure (That I suppose has been freed). 
+  //
+  //      The destruction of the instrumentor instance as part of the Profiler destructor 
+  //      has been turned of as a hack. 
     
   
   fprintf(stderr, "\n[ubiprof] UBIPROF_ELAPSED_TIME : %lf\n", getSecondsFromTS(&g_diff));

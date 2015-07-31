@@ -156,6 +156,9 @@ static inline void process_func_by_id_exit(uint64_t function, ticks start) {
 
   uint64_t epilog_overhead = (end - start);
   ts->thread_local_overhead += epilog_overhead;
+  //#ifndef NDEBUG 
+  //fprintf(stderr,"Added %ld to thread_local_overhead\n", epilog_overhead);
+  //#endif 
   
 #ifdef PROBE_HIST_ON
   update_overhead_histograms(ts, epilog_overhead, EPILOG); 

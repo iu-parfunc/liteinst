@@ -27,10 +27,8 @@ static __thread TLStatistics* current_thread_stats;
 static __thread TLSAdaptiveProfilerStat* current_thread_func_stats_table;
 
 
-
 // Instrumentation Functions
 TLStatistics* adaptivePrologFunction(uint16_t func_id) {
-
   static __thread bool allocated=false;
 
   if (!allocated) {
@@ -207,7 +205,7 @@ inline void do_proportional(AdaptiveProfilerStat* global_stats, int func_count, 
       // Entirely skip probe activation for this sample due to small sample size
       // Too much overhead to control via reducing the sample size
 #ifdef OVERHEAD_TIME_SERIES
-      g_skipped_epochs++;
+      skipped_epochs++;
       record_overhead_histogram(overhead_at_last_epoch, -1); // -1 signifies no new samples taken in this epoch
 #endif
       
@@ -392,11 +390,14 @@ void* adaptiveProbeMonitor(void* param) {
   
   TLStatistics** tls_stat = ((AdaptiveProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
   
+  uint64_t process_time_until_now = 0;
   
   // /////////////////////////////////////////////////////////////////
   // Monitor thread loop 
   // /////////////////////////////////////////////////////////////////
   while(g_shutting_down_flag == NO_TERMINATE_REQUESTS) {
+    
+    
     
     sleep_for_a_while();
     
@@ -410,6 +411,7 @@ void* adaptiveProbeMonitor(void* param) {
       thread_overheads += tls_stat[i]->thread_local_overhead; 
       global_count += tls_stat[i]->thread_local_count;
     }
+    //fprintf(stderr,"PROBE_OVERHEAD_TICKS: %ld\n",thread_overheads);
 
     uint64_t call_overhead = global_count * g_call_overhead;
     uint64_t cache_perturbation_overhead = global_count * g_cache_miss_overhead_upper_bound;
@@ -436,18 +438,20 @@ void* adaptiveProbeMonitor(void* param) {
     clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &ts1);
     nanoSecs = ts1.tv_sec * 1000000000LL + ts1.tv_nsec;
 
-    g_total_process_time = nanoSecs * g_TicksPerNanoSec;
+    // The time spent up until now. 
+    process_time_until_now = nanoSecs * g_TicksPerNanoSec; 
+    //g_total_process_time = nanoSecs * g_TicksPerNanoSec;
     
     
     // BJS: I assume this assert must hold or something has gone wrong? 
-    assert(g_total_process_time >= g_total_overhead); 
+    assert(process_time_until_now >= g_total_overhead); 
 
     // BJS: Since g_total_process_time is the amount of time the process has been  
     //      running, that INCLUDES all the overhead, right ? 
     //      In the extreme, we could be at a point where all "processing" that 
     //      has taken place is overhead .. and g_total_process_time == g_total_overhead
    
-    g_total_process_time -= g_total_overhead;
+    uint64_t process_time_no_overhead = process_time_until_now - g_total_overhead;
 
     //BJS:  I dont really understand this logic. 
     //if (g_total_process_time > g_total_overhead) {
@@ -466,8 +470,8 @@ void* adaptiveProbeMonitor(void* param) {
 
     // compute % overhead. 
     
-    if (g_total_process_time > 0) {
-      overhead_at_last_epoch = ((double)g_total_overhead / g_total_process_time) * 100;
+    if (process_time_no_overhead > 0) {
+      overhead_at_last_epoch = ((double)g_total_overhead / process_time_no_overhead) * 100;
     } else { 
       overhead_at_last_epoch = 100; // otherwise 100% overhead
     }
@@ -490,6 +494,9 @@ void* adaptiveProbeMonitor(void* param) {
     
    
   } // while(g_shutting_down_flag == NO_TERMINATE_REQUESTS)
+
+  // Do this or actually grab the value again 
+  g_total_process_time = process_time_until_now; 
 
 #ifndef NDEBUG 
   fprintf(stderr," LEAVING MONITOR LOOP: Shutting down\n");
@@ -625,6 +632,7 @@ int AdaptiveProfiler::getThreadCount() {
 }
 
 TLStatistics** AdaptiveProfiler::getThreadStatistics() {
+  fprintf(stderr,"USING ADAPTIVE's getThreadStatistics\n");
   return tls_stats;
 }
 
@@ -716,11 +724,13 @@ AdaptiveProfiler::~AdaptiveProfiler() {
 
   TLStatistics** tls_stat = ((AdaptiveProfiler*)PROFILER_INSTANCE)->getThreadStatistics();
   int thread_count = ((AdaptiveProfiler*)PROFILER_INSTANCE)->getThreadCount(); 
-
+  
   for (int i=0; i < thread_count; i++) {
     g_probe_overheads += tls_stat[i]->thread_local_overhead; 
     g_probe_count += tls_stat[i]->thread_local_count;
   }
+  fprintf(stderr,"PROBE_OVERHEAD_TICKS: %ld\n",g_probe_overheads);
+  
   Profiler::cleanupInstrumentor();
   free((AdaptiveProfilerStat*)g_ubiprof_stats);
   // delete (AdaptiveProfilerStat*)g_ubiprof_stats;

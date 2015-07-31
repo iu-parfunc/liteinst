@@ -26,6 +26,12 @@ static __thread TLSAdaptiveProfilerStat* current_thread_func_stats_table;
 
 static __thread bool allocated=false;
 
+//TLStatistics** MinimalAdaptiveProfiler::getThreadStatistics() {
+//  fprintf(stderr,"USING MINIMAL getThreadStatistics\n");
+//  return tls_stats;
+//}
+
+
 // Instrumentation Functions
 TLStatistics* minimalAdaptivePrologFunction(uint16_t func_id) {
 
@@ -95,7 +101,7 @@ TLStatistics* minimalAdaptiveEpilogFunction(uint16_t func_id) {
     global_count += ((TLSAdaptiveProfilerStat*) all_thread_stats[i]->func_stats)[func_id].count; 
   }
 
-  uint64_t old_count = global_func_stats->count_at_last_activation; 
+  //uint64_t old_count = global_func_stats->count_at_last_activation; 
   uint64_t new_count = global_count - global_func_stats->count_at_last_activation; 
 
   ticks elapsed = epilog_start - i_data.timestamp ;
