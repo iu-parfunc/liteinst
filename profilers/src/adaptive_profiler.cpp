@@ -632,7 +632,6 @@ int AdaptiveProfiler::getThreadCount() {
 }
 
 TLStatistics** AdaptiveProfiler::getThreadStatistics() {
-  fprintf(stderr,"USING ADAPTIVE's getThreadStatistics\n");
   return tls_stats;
 }
 
@@ -729,7 +728,6 @@ AdaptiveProfiler::~AdaptiveProfiler() {
     g_probe_overheads += tls_stat[i]->thread_local_overhead; 
     g_probe_count += tls_stat[i]->thread_local_count;
   }
-  fprintf(stderr,"PROBE_OVERHEAD_TICKS: %ld\n",g_probe_overheads);
   
   Profiler::cleanupInstrumentor();
   free((AdaptiveProfilerStat*)g_ubiprof_stats);
