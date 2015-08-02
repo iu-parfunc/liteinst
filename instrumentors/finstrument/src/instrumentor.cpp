@@ -7,7 +7,7 @@
 Instrumentor* Instrumentor::getInstance(int type, InstrumentationFunc prolog, InstrumentationFunc epilog) {
   
   // Delete existing instance possibly with all the accumilated data up to now.
-  if (!INSTRUMENTOR_INSTANCE) {
+  if (INSTRUMENTOR_INSTANCE) {
     fprintf(stderr, "WARNING : Deleting existing instrumentor instance. Data may be lost..\n");
     delete INSTRUMENTOR_INSTANCE;
   }

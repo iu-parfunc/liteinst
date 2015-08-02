@@ -30,9 +30,12 @@ TLStatistics* emptyProlog(uint16_t id) {
 __attribute__((no_instrument_function))
 TLStatistics* epilog(uint16_t id) {
   call_count++;
+  return current_thread_stats; 
 }
 
 int main() {
+
+  fprintf(stderr," [MAIN] Entering main..\n");
 
   Instrumentor* instrumentor = Instrumentor::getInstance(FINSTRUMENT, emptyProlog, epilog); 
 
@@ -58,7 +61,11 @@ int main() {
 
   assert(call_count == 200);
 
+  fprintf(stderr," [MAIN] Done test..\n");
+
   delete instrumentor;
+
+  fprintf(stderr," [MAIN] Exiting main..\n");
 
   exit(0);
 
