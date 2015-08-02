@@ -413,13 +413,13 @@ void calibrateTicks() {
 }
 
 void getFinalOverhead() {
-
+  // Monitor thread is finished already, so there are no races on these globals:
   uint64_t call_overhead = g_probe_count * g_call_overhead;
   uint64_t cache_perturbation_overhead = g_probe_count * g_cache_miss_overhead_upper_bound;
 
-  double init_overhead = getSecondsFromTicks(g_init_overhead);
+  double init_overhead  = getSecondsFromTicks(g_init_overhead);
   double probe_overhead = getSecondsFromTicks(g_probe_overheads);
-  double jump_overhead = getSecondsFromTicks(call_overhead);
+  double jump_overhead  = getSecondsFromTicks(call_overhead);
   double cache_overhead = getSecondsFromTicks(cache_perturbation_overhead);
 
   clockid_t cid;
@@ -463,6 +463,7 @@ void getFinalOverhead() {
 #ifdef OVERHEAD_TIME_SERIES
   FILE* fp = fopen("statistics.out", "a");
   fprintf(fp, "DEACTIVATIONS : %lu\n", g_deactivation_count);
+  // TODO: Rename to MAIN_THREAD_CPU_TIME:
   fprintf(fp, "APPLICATION_CPU_TIME(s): %lf\n", main_thread_cpu_time);
   fprintf(fp, "MONITOR_THREAD_CPU_TIME(s): %lf\n", probe_thread_cpu_time);
   fprintf(fp, "PROCESS_CPU_TIME(s): %lf\n", process_cpu_time);
@@ -471,7 +472,7 @@ void getFinalOverhead() {
   fprintf(fp, "PROBE_OVERHEAD: %lf\n", probe_overhead);
   fprintf(fp, "JUMP_OVERHEAD: %lf\n", jump_overhead);
   fprintf(fp, "CUMULATIVE_OVERHEAD: %lf\n", calculated_overheads);
-  fprintf(fp, "REAL_EXEC_TIME: %lf\n\n", main_thread_cpu_time - calculated_overheads);
+  //  fprintf(fp, "REAL_EXEC_TIME: %lf\n\n", main_thread_cpu_time - calculated_overheads);
   fprintf(fp, "TARGET_OVERHEAD: %.2lf\n", (double) sp_target_overhead);
   fprintf(fp, "RUNTIME_OVERHEAD: %.2lf\n", overhead_at_final_epoch);
   fclose(fp);
@@ -487,10 +488,11 @@ void getFinalOverhead() {
 
   fprintf(stderr, "[ubiprof] INIT_OVERHEAD(S): %lf\n", init_overhead);
   fprintf(stderr, "[ubiprof] CACHE_PERTURBATION_OVERHEAD(s): %lf\n", cache_overhead);
+  //fprintf(stderr, "[ubiprof] PROBE_OVERHEAD(Ticks): %lld\n", g_probe_overheads);
   fprintf(stderr, "[ubiprof] PROBE_OVERHEAD(s): %lf\n", probe_overhead);
   fprintf(stderr, "[ubiprof] JUMP_OVERHEAD(s): %lf\n", jump_overhead);
   fprintf(stderr, "[ubiprof] CUMULATIVE_OVERHEAD(s): %lf\n", calculated_overheads);
-  fprintf(stderr, "[ubiprof] REAL_EXEC_TIME(s): %lf\n", main_thread_cpu_time - calculated_overheads);
+  //  fprintf(stderr, "[ubiprof] REAL_EXEC_TIME(s): %lf\n", main_thread_cpu_time - calculated_overheads);
   fprintf(stderr, "[ubiprof] TARGET_OVERHEAD: %.2lf\n", (double) sp_target_overhead);
   fprintf(stderr, "[ubiprof] RUNTIME_OVERHEAD: %.2lf\n", overhead_at_final_epoch);
 
@@ -578,38 +580,55 @@ __attribute__((constructor, no_instrument_function))
 #endif
 
 #ifndef NO_INIT
+// This is called by the main thread when the app is shutting down.
+// (After main() finishes.)
 __attribute__((destructor))
   void destroyProfiler() {
 
-
-    // Tell probe monitor thread to shurdown 
-    if (g_profiler_type == ADAPTIVE) {
-      g_shutting_down_flag = TERMINATE_REQUESTED;
-      int retries = 0;
-      while (g_shutting_down_flag != TERMINATED && retries++ < 2) {
-        struct timespec ts;
-        uint64_t nanos = 10 * 1000000;  // Sleep 10 milli seconds
-        uint64_t secs = nanos / 1000000000;
-        uint64_t nsecs = nanos % 1000000000;
-        ts.tv_sec = secs;
-        ts.tv_nsec = nsecs;
-        nanosleep(&ts, NULL);
-	// sleep(10);
-        // fprintf(stderr, "Trying to finish..\n");
-        // sleep(sp_epoch_period); // Sleep for a while until probe monitor thread terminates
+  int retries = 0;
+  // Tell probe monitor thread to shutdown 
+  if (g_profiler_type == ADAPTIVE || g_profiler_type == MINIMAL_ADAPTIVE) {
+    g_shutting_down_flag = TERMINATE_REQUESTED;
+    while (g_shutting_down_flag != TERMINATED) {
+      struct timespec ts;
+      uint64_t nanos = 10 * 1000000;  // Sleep 10 milli seconds
+      uint64_t secs = nanos / 1000000000;
+      uint64_t nsecs = nanos % 1000000000;
+      ts.tv_sec = secs;
+      ts.tv_nsec = nsecs;
+      nanosleep(&ts, NULL);
+      // sleep(10);
+      // fprintf(stderr, "Trying to finish..\n");
+      // sleep(sp_epoch_period); // Sleep for a while until probe monitor thread terminates
         // break;
+      retries++; 
       }
-    }
+  }
+  // BJS HACK 
+  fprintf(stderr,"Waited %d ms for monitor to shut down\n", retries * 10);
+  
+  clock_gettime(CLOCK_MONOTONIC, &g_endts);
+  timeSpecDiff(&g_endts, &g_begints);
 
-    clock_gettime(CLOCK_MONOTONIC, &g_endts);
-    timeSpecDiff(&g_endts, &g_begints);
+  
+  fprintf(stderr, "\n[Ubiprof] Destroying the profiler..\n");  
+  // run the destructor of the profiler instance. 
+  delete Profiler::getInstance(g_profiler_type);  
 
-    fprintf(stderr, "\n[Ubiprof] Destroying the profiler..\n");
-    delete Profiler::getInstance(g_profiler_type);
+  // getFinalOverhead needs to happen after the 
+  // destructor of the profiler is executed. 
+  getFinalOverhead();
 
-    getFinalOverhead();
-
-    fprintf(stderr, "\n[ubiprof] UBIPROF_ELAPSED_TIME : %lf\n", getSecondsFromTS(&g_diff));
-
-  } 
+ 
+  // BJS: Something is still accessing datastructures held within these instances 
+  //      here... It crashes! 
+  //      The crash is a lookup into a stl datastructure (That I suppose has been freed). 
+  //
+  //      The destruction of the instrumentor instance as part of the Profiler destructor 
+  //      has been turned of as a hack. 
+    
+  
+  fprintf(stderr, "\n[ubiprof] UBIPROF_ELAPSED_TIME : %lf\n", getSecondsFromTS(&g_diff));
+  
+} 
 #endif

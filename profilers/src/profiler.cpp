@@ -13,9 +13,9 @@ void* g_ubiprof_stats = 0;
 
 // Temporarily exposing monitor thread to get thread overhead statististics to 
 // finalize
-pthread_t g_monitor_thread;
-uint64_t g_probe_overheads = 0;
-uint64_t g_probe_count = 0;
+
+
+
 
 Profiler* Profiler::getInstance(int type) {
 
@@ -93,5 +93,10 @@ void Profiler::stopProfiler() {
 }
 
 Profiler::~Profiler() {
-  // delete ins;
+  
+#ifndef NDEBUG 
+  fprintf(stderr,"[Profiler.cpp] Executing Profiler instance destructor\n");
+#endif 
+  
+  //delete ins;
 }

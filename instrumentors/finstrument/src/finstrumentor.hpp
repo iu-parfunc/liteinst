@@ -84,7 +84,7 @@ extern "C"
 #endif
 
 class Finstrumentor : public Instrumentor {
-
+  
   public :
     probe_map* probe_info;
     func_table* functions;
@@ -113,7 +113,8 @@ class Finstrumentor : public Instrumentor {
     FinsProbeInfo* getProbeInfo(uint64_t func_addr, uint8_t* addr); 
     bool hasProbeInfo(uint64_t func_addr);
     void addProbeInfo(uint64_t func_addr, uint8_t* probe_addr, bool unpatched); 
-
+    void addProbeInfo_(uint64_t func_addr, uint8_t* probe_addr, bool unpatched); 
+  
     // Function name to id mapping (generic)
     uint16_t getFunctionId(std::string name);
     std::string getFunctionName(uint16_t id);

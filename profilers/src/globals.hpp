@@ -26,16 +26,16 @@ extern uint64_t g_probe_count;
 
 extern uint64_t sp_initial_sample_size;
 extern uint64_t sp_sample_size;
-extern double sp_epoch_period;
+extern volatile double sp_epoch_period;
 extern double sp_target_overhead;
 extern uint64_t g_total_overhead; // Overhead incurred due to profiling
-extern uint64_t g_total_process_time; // Total process time until last epoch sample
+extern volatile uint64_t g_total_process_time; // Total process time until last epoch sample
 extern uint64_t g_last_epoch_random; // Random added to last epoch period
 extern uint64_t g_TicksPerNanoSec; // Calibrated ticks per nano second
 extern uint64_t g_call_overhead; // Call overhead calibrated value
 extern uint16_t g_strategy; // Overhead control strategy to use
 extern uint64_t g_thread_lock;
-extern uint64_t g_shutting_down_flag; // Flag to indicate the application is terminating. 
+extern volatile uint64_t g_shutting_down_flag; // Flag to indicate the application is terminating. 
                                       // Used to alert probe monitor thread to terminate safely
 
 // Leaf node tracking

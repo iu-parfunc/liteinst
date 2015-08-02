@@ -11,11 +11,13 @@
 #include <errno.h>
 #include <unistd.h>
 #include <limits.h>
+#include <assert.h> 
 
 #include "finstrumentor.hpp"
 #include "distorm.h"
 #include "mnemonics.h"
 #include "logger.hpp"
+#include "bitmap.hpp"
 
 #define PROBESIZE 16
 
@@ -220,6 +222,8 @@ inline uint64_t get_msb_mask(int nbytes) {
 
 inline bool patch_with_value(uint8_t* addr, uint16_t func_id) {
 
+  if (addr == NULL) return false; 
+  
   bool status = modify_page_permissions(addr);
   if (!status) {
     LOG_ERROR("Patching the probesite failed at %p. Skipping..\n", addr);
@@ -233,6 +237,7 @@ inline bool patch_with_value(uint8_t* addr, uint16_t func_id) {
   sequence_ptr[0] = addr[0]; // MOV REG opcode
   *(uint32_t*)(sequence_ptr+1) = (uint32_t)func_id;
 
+  // This disabled code handles straddlers:
   /*
   size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
   int offset = (uint64_t) addr % cache_line_size;
@@ -329,7 +334,188 @@ inline void print_decoded_output(uint8_t* start, uint64_t length) {
   delete(disassembled);
 }
 
-inline PatchResult* patch_first_parameter(uint64_t* call_return_addr, uint64_t* start_addr, uint16_t func_id) {
+
+inline uint8_t* get_edi_set_addr(uint8_t* call_return_addr, uint8_t* start_addr) {
+  uint8_t* call_addr = (uint8_t*) call_return_addr - 5;
+  uint64_t offset = (uint8_t*)call_addr - (uint8_t*)start_addr;
+
+  /*
+    Diagnostics
+    print_decoded_output((uint8_t*)start_addr, offset);
+  */
+  
+  // Address where EDI/RDI is set last before the call
+  uint8_t* edi_set_addr = 0;
+  _DInst* result = (_DInst*) malloc(sizeof(_DInst) * 2 * offset);
+  unsigned int instructions_count = 0;
+  
+  _DecodedInst inst;
+  
+  _CodeInfo ci  = {0};
+  ci.code = (uint8_t*)start_addr;
+  ci.codeLen = offset;
+  ci.dt = Decode64Bits;
+  ci.codeOffset = 0x100000;
+  
+  distorm_decompose(&ci, result, offset, &instructions_count);
+  uint64_t ptr_size = 0;
+  uint64_t edi_offset = 0;
+  uint8_t intermediate_reg = 0;
+  
+  if (instructions_count > offset) {
+    fprintf(stderr, "[DEBUG] Instructions decoded : %d Offset : %lu\n", instructions_count, offset);
+    free(result);
+    
+    //res->success = false;
+    //res->conflict = false;
+    
+    //while(!__sync_bool_compare_and_swap(lock, 1 , 0));
+    //return res;
+    return NULL;
+  }
+  
+  bool edi_setter_found = false;
+  int instruction_offset = 0;
+  for (int i = instructions_count - 1; i >= 0; i--) {
+    if (result[i].flags == FLAG_NOT_DECODABLE) {
+      printf("Bad decode attempt.. Call address : %p \n", call_addr);
+      free(result);
+      
+      //res->success = false;
+      //res->conflict = false;
+      
+      //while(!__sync_bool_compare_and_swap(lock, 1 , 0));
+      //return res;
+      return NULL;
+    }
+    
+    distorm_format(&ci, &result[i], &inst);
+    
+    ptr_size += result[i].size;
+    instruction_offset++;
+    
+    if (result[i].opcode == I_MOV) {
+      if (!edi_setter_found && result[i].ops[0].type == O_REG && 
+	  (result[i].ops[0].index == R_EDI || result[i].ops[0].index == R_RDI)) {
+	if (result[i].ops[1].type == O_IMM || result[i].ops[1].type == O_IMM1 || result[i].ops[1].type == O_IMM2) {
+	  edi_offset = ptr_size;
+	  break;
+	} else if (result[i].ops[1].type == O_REG) {
+	  edi_setter_found = true;
+	  intermediate_reg  = result[i].ops[1].index;
+	}
+      } else if(edi_setter_found && result[i].ops[0].type == O_REG && 
+		(reg_equal(intermediate_reg, result[i].ops[0].index))) {
+	if (result[i].ops[1].type == O_IMM || result[i].ops[1].type == O_IMM1 || result[i].ops[1].type == O_IMM2) {
+	  edi_offset = ptr_size;
+	  break;
+	} else if (result[i].ops[1].type == O_REG) {
+	  intermediate_reg  = result[i].ops[1].index;
+	}
+      }
+    }
+  }
+  free(result);
+  
+  edi_set_addr = call_addr - edi_offset;
+  return edi_set_addr;
+}
+  
+      // fprintf(stderr, "[DEBUG] Call address : %p EDI offset : %lu EDI set address : %p \n", call_addr, edi_offset, edi_set_addr);
+
+  // Hack : If the edi setter and the call site are adjacent and edi setter straddles a cache line
+  // we handle it specifically to escape patching it
+  /*
+  if (instruction_offset == 1) {
+    size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
+    int edi_setter_cache_line_offset = (uint64_t) edi_set_addr % cache_line_size;
+    int call_instruction_cache_line_offset = ((uint64_t) call_addr) % cache_line_size;
+    if (edi_setter_cache_line_offset >= 57 ||
+       call_instruction_cache_line_offset >= 57) {
+      free(result);
+      res->success = false;
+      res->conflict = true;
+      return res;
+    }
+  }
+  */
+//}
+
+#define PARAMETER_PATCH_ERROR (-1)
+#define PARAMETER_PATCH_OK    1 
+
+inline int patch_first_parameter(FinsProbeInfo* probe_info,uint64_t* call_return_addr, uint64_t* start_addr, uint16_t func_id) {
+
+  Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
+  uint64_t* lock = ins->getLock((uint64_t) start_addr);
+  int spin_counter = 0;
+  //PatchResult* res = new PatchResult;
+
+
+  // It seems that lock == NULL should be an error ? 
+  assert(lock != NULL);
+
+
+  if (__sync_bool_compare_and_swap(lock, 0 , 1)) {
+    
+    uint8_t *edi_set_addr = get_edi_set_addr((uint8_t*)call_return_addr, (uint8_t*) start_addr);
+    
+    bool status = patch_with_value(edi_set_addr, func_id);
+
+    if (!status) {
+      //res->success = false;
+      //res->conflict = false;
+      
+
+      ins->addProbeInfo_((uint64_t)start_addr, (uint8_t*)call_return_addr, true);
+      probe_info = ins->getProbeInfo((uint64_t)start_addr, (uint8_t*) call_return_addr);
+      set_index(g_straddlers_bitmap, func_id);
+      while(!__sync_bool_compare_and_swap(lock, 1 , 0));
+      return PARAMETER_PATCH_OK;
+    }
+    
+    //res->success = true;
+    //res->conflict = false;
+    //res->edi_set_addr = edi_set_addr;
+
+    ins->addProbeInfo_((uint64_t)start_addr, (uint8_t*)call_return_addr, false);
+    
+    while(!__sync_bool_compare_and_swap(lock, 1 , 0));
+    return PARAMETER_PATCH_OK;
+    
+  } else { // We failed. Wait until the other thread finish and just return
+    
+#ifndef NDEBUG
+    ticks t0 = getticks(); 
+#endif 
+    while (*lock) {
+      if (spin_counter == INT_MAX) {
+	fprintf(stderr, "RESETTING the counter\n");
+	fprintf(stderr, "Returning without adding the probe since lock is : %lu\n", *lock);
+	break;
+      }
+      spin_counter += 1;
+      pthread_yield();
+    }
+#ifndef NDEBUG
+    pthread_t tid = pthread_self();
+    ticks t1 = getticks();
+    fprintf( stderr
+	     , "[utils.hpp ***NEW*** patch_first_parameter] ThreadID: %lu was busy-waiting for %d iterations.\nWait took %llu ticks while attempting to patch function %d.\n"
+	     , (unsigned long int)tid,spin_counter,(t1-t0),func_id);
+
+#endif 
+
+    // maybe here, let thread actually check what kind of patching took place 
+    // by the successful thread. But it may just be unnecessary. 
+
+
+    // as it is now it seems this function really has no "fail-mode" 
+    return PARAMETER_PATCH_OK;
+  }
+}
+
+inline PatchResult* patch_first_parameter_old(uint64_t* call_return_addr, uint64_t* start_addr, uint16_t func_id) {
 
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
   uint64_t* lock = ins->getLock((uint64_t) start_addr);
@@ -474,7 +660,7 @@ inline PatchResult* patch_first_parameter(uint64_t* call_return_addr, uint64_t* 
       pthread_t tid = pthread_self();
       ticks t1 = getticks();
       fprintf( stderr
-	     , "[utils.hpp patch_first_parameter] ThreadID: %lu was busy-waiting for %d iterations.\nWait took %lu ticks while attempting to patch function %d.\n"
+	     , "[utils.hpp ***OLD*** patch_first_parameter] ThreadID: %lu was busy-waiting for %d iterations.\nWait took %llu ticks while attempting to patch function %d.\n"
 	       , (unsigned long int)tid,spin_counter,(t1-t0),func_id);
 
 #endif 

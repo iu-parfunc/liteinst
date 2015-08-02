@@ -190,6 +190,9 @@ class Instrumentor {
     /// Returns the total number of functions being profiled
     long getFunctionCount() { return func_count; }
 
+    /// Overhead which indirectly due to the methods of this class,
+    /// but which does not directly appear within those calls.
+    /// Returns a value in cycles (ticks).
     virtual uint64_t getInstrumentorBackgroundOverhead() = 0;
 
     virtual ~Instrumentor() {}
