@@ -53,6 +53,8 @@ int main() {
     foo();
   }
 
+  assert(call_count == 100);
+
   instrumentor->activateFunction("_Z3foov");
 
   for (int i=0; i<100; i++) {
@@ -62,8 +64,6 @@ int main() {
   assert(call_count == 200);
 
   fprintf(stderr," [MAIN] Done test..\n");
-
-  delete instrumentor;
 
   fprintf(stderr," [MAIN] Exiting main..\n");
 
