@@ -4,6 +4,7 @@
 
 // #include "probe_API.h"
 #include "../common/include/constants.h"
+#include <cstdint>
 #include <string>
 
 /*
