@@ -552,7 +552,7 @@ __attribute__((constructor, no_instrument_function))
     }
 
     // Init the suitable profiler depending on enviornment variable
-    Profiler::getInstance(g_profiler_type);
+    Profiler::newInstance(g_profiler_type);
 
     // Calibrate for cache effects
     if (g_profiler_type == MINIMAL_ADAPTIVE || g_profiler_type == ADAPTIVE) {
@@ -613,7 +613,7 @@ __attribute__((destructor))
   
   fprintf(stderr, "\n[Ubiprof] Destroying the profiler..\n");  
   // run the destructor of the profiler instance. 
-  delete Profiler::getInstance(g_profiler_type);  
+  delete Profiler::getInstance();  
 
   // getFinalOverhead needs to happen after the 
   // destructor of the profiler is executed. 

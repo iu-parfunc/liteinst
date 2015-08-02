@@ -4,7 +4,7 @@
 
 // Note: This is not thread safe. But should be probably fine for now
 // since we are only invoking this once at application startup
-Instrumentor* Instrumentor::getInstance(int type, InstrumentationFunc prolog, InstrumentationFunc epilog) {
+Instrumentor* Instrumentor::newInstance(int type, InstrumentationFunc prolog, InstrumentationFunc epilog) {
   
   // Delete existing instance possibly with all the accumilated data up to now.
   if (INSTRUMENTOR_INSTANCE) {
@@ -22,4 +22,10 @@ Instrumentor* Instrumentor::getInstance(int type, InstrumentationFunc prolog, In
   }
 
   return INSTRUMENTOR_INSTANCE;
+}
+
+Instrumentor* Instrumentor::getInstance() {
+
+  return INSTRUMENTOR_INSTANCE;
+
 }

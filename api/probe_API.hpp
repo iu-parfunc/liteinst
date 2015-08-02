@@ -104,7 +104,9 @@ class Instrumentor {
      *  \param epilog Epilog instrumentation function as provided by the calling
      *                profiler 
      */
-    static Instrumentor* getInstance(int type, InstrumentationFunc prolog, InstrumentationFunc epilog); 
+    static Instrumentor* newInstance(int type, InstrumentationFunc prolog, InstrumentationFunc epilog); 
+
+    static Instrumentor* getInstance(); 
 
     /// Initializes the instrumentor
     /** All instrumentor specific data can be intitialized here 

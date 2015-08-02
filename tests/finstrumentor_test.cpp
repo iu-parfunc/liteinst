@@ -37,7 +37,7 @@ int main() {
 
   fprintf(stderr," [MAIN] Entering main..\n");
 
-  Instrumentor* instrumentor = Instrumentor::getInstance(FINSTRUMENT, emptyProlog, epilog); 
+  Instrumentor* instrumentor = Instrumentor::newInstance(FINSTRUMENT, emptyProlog, epilog); 
 
   assert(call_count == 0);
 

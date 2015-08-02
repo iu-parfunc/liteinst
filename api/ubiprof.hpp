@@ -39,7 +39,9 @@ class Profiler {
      *              Current types as provided in constants.h are
      *              BACKOFF | SAMPLING | EMPTY 
      */
-    static Profiler* getInstance(int type);
+    static Profiler* newInstance(int type);
+
+    static Profiler* getInstance();
 
     /// Initializes the profiler
     /** Initializing the Instrumentor associated with this profiler 

@@ -14,36 +14,34 @@ void* g_ubiprof_stats = 0;
 // Temporarily exposing monitor thread to get thread overhead statististics to 
 // finalize
 
+Profiler* Profiler::newInstance(int type) {
 
+  if (PROFILER_INSTANCE) {
+    fprintf(stderr, "[Ubiprof] WARNING : deleting the existing profiler possibly with accumilated data..\n");
+    delete PROFILER_INSTANCE;
+  }
 
-
-Profiler* Profiler::getInstance(int type) {
-
-  // TODO: Change to proper constants. Use constants.h
-  if(!PROFILER_INSTANCE) {
-    if (type == BACKOFF) {
-      PROFILER_INSTANCE = new BackoffProfiler();
-      PROFILER_INSTANCE->initialize();
-    } else if (type == SAMPLING) {
-      PROFILER_INSTANCE = new SamplingProfiler();
-      PROFILER_INSTANCE->initialize();
-    } else if (type == EMPTY) {
-      PROFILER_INSTANCE = new EmptyProfiler();
-      PROFILER_INSTANCE->initialize();
-    } else if (type == ADAPTIVE) {
-      PROFILER_INSTANCE = new AdaptiveProfiler();
-      PROFILER_INSTANCE->initialize();
-    } else if (type == MINIMAL_ADAPTIVE) {
-      PROFILER_INSTANCE = new MinimalAdaptiveProfiler();
-      PROFILER_INSTANCE->initialize();
-    } else if (type == MINIMAL_BACKOFF) {
-      PROFILER_INSTANCE = new MinimalBackoffProfiler();
-      PROFILER_INSTANCE->initialize();
-    } else if (type == MINIMAL_SAMPLING) {
-      PROFILER_INSTANCE = new MinimalSamplingProfiler();
-      PROFILER_INSTANCE->initialize();
-    }
-
+  if (type == BACKOFF) {
+    PROFILER_INSTANCE = new BackoffProfiler();
+    PROFILER_INSTANCE->initialize();
+  } else if (type == SAMPLING) {
+    PROFILER_INSTANCE = new SamplingProfiler();
+    PROFILER_INSTANCE->initialize();
+  } else if (type == EMPTY) {
+    PROFILER_INSTANCE = new EmptyProfiler();
+    PROFILER_INSTANCE->initialize();
+  } else if (type == ADAPTIVE) {
+    PROFILER_INSTANCE = new AdaptiveProfiler();
+    PROFILER_INSTANCE->initialize();
+  } else if (type == MINIMAL_ADAPTIVE) {
+    PROFILER_INSTANCE = new MinimalAdaptiveProfiler();
+    PROFILER_INSTANCE->initialize();
+  } else if (type == MINIMAL_BACKOFF) {
+    PROFILER_INSTANCE = new MinimalBackoffProfiler();
+    PROFILER_INSTANCE->initialize();
+  } else if (type == MINIMAL_SAMPLING) {
+    PROFILER_INSTANCE = new MinimalSamplingProfiler();
+    PROFILER_INSTANCE->initialize();
   }
 
   return PROFILER_INSTANCE;
@@ -52,9 +50,15 @@ Profiler* Profiler::getInstance(int type) {
 
 void Profiler::initInstrumentor(InstrumentationFunc prologFunction, InstrumentationFunc epilogFunction) {
 
-  ins = Instrumentor::getInstance(FINSTRUMENT, prologFunction, epilogFunction);
+  ins = Instrumentor::newInstance(FINSTRUMENT, prologFunction, epilogFunction);
 
 }
+
+
+Profiler* Profiler::getInstance() {
+  return PROFILER_INSTANCE;
+}
+
 
 void Profiler::cleanupInstrumentor() {
   delete ins;
