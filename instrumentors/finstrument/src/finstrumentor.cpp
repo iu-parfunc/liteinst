@@ -523,6 +523,9 @@ uint16_t Finstrumentor::getFunctionId(string name) {
 // BJS: It is apparently not good to return 0 (NULL) 
 //      as a string. 
 //      This seems to be a case where icpc and g++ are differ in implementation
+//     
+//      If we need to check for an error case here, there is a Boost::Optional. 
+//      (Like Haskell Maybe) 
 string Finstrumentor::getFunctionName(uint16_t func_id) {
   if (func_id_mappings->find(func_id) != func_id_mappings->end()) {
     return func_id_mappings->find(func_id)->second->func_name;
