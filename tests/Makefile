@@ -29,4 +29,5 @@ run:
 	LD_LIBRARY_PATH=$(UBIPATH):$(LD_LIBRARY_PATH) ./finstrumentor_test.exe
 
 clean:
-	rm -f *.o *.exe functions.txt core
+	rm -f *.o *.exe functions.txt core prof.out functions.txt
+
