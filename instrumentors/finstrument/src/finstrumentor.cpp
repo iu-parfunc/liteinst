@@ -519,11 +519,15 @@ uint16_t Finstrumentor::getFunctionId(string name) {
   } 
 }
 
+
+// BJS: It is apparently not good to return 0 (NULL) 
+//      as a string. 
+//      This seems to be a case where icpc and g++ are differ in implementation
 string Finstrumentor::getFunctionName(uint16_t func_id) {
   if (func_id_mappings->find(func_id) != func_id_mappings->end()) {
     return func_id_mappings->find(func_id)->second->func_name;
   } else {
-    return 0;
+    return "NO_NAME_MAPPING";
   }
 }
 
