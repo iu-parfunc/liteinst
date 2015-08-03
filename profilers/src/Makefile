@@ -77,10 +77,10 @@ install:
 	-rm -r $(INSTALL)
 	mkdir $(INSTALL)
 	mkdir $(INSTALL)/noprof
-	make libubiprof.so -f Makefile_GCC
+	make libubiprof.so 
 	cp libubiprof.so $(INSTALL) 
 	cp libubiprof.a $(INSTALL) 
-	make noprof.so -f Makefile_GCC
+	make noprof.so 
 	cp libubiprof.so $(INSTALL)/noprof
 	cp libubiprof.a $(INSTALL)/noprof
 
