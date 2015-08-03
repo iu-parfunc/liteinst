@@ -1,4 +1,21 @@
-### June 30 2015 ### 
+
+### Aug 3 2015 ###
+   * New makefile setup. 
+     make lib : makes the library with default GXX=g++ setting 
+     make lib GXX=icpc : uses intel compiler 
+   
+   * Makefile for library is now standalone from makefile for 
+     benchmarking. 
+     "make -f Make_runbench" does the benchmarking. 
+     The .run_benchmarks2.sh script has been updated to reflect this. 
+     
+     TODO: the .run_benchmarks files need an overhaul, cleaning and polish. 
+           Much of it should probably go to archive 
+      
+     
+   
+
+### Jul 30 2015 ### 
  
   * The Makefile_GCC has two modes: 
      make lib 
