@@ -1,21 +1,16 @@
 
 # CFLAGS=-DPROBE_TRUE_EMPTY_ON -DPROBE_CPU_TIME
 # CFLAGS=-DPROBE_HIST_ON -DPROBE_CPU_TIME
-
-EXTRA_WARNS=
-#-Wextra 
-## -Wformat-nonliteral -Wcast-align -Wpointer-arith -Wbad-function-cast -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Winline -Wundef -Wnested-externs -Wcast-qual -Wshadow -Wwrite-strings -Wno-unused-parameter -Wfloat-equal
-
-ARGS= -g -Wall -pedantic $(EXTRA_WARNS)
-LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared 
+ARGS= -g -Wall
+LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 
 # COMP = icc
-#CC = icc $(ARGS)
-#CPP = icpc -std=c++11 $(ARGS)
+CC = icc $(ARGS)
+CPP = icpc -std=c++11 $(ARGS)
 #CPP = cpp 
-COMP = gcc
-CC = gcc $(ARGS)
-CXX ?= g++ 
+# COMP = gcc
+# CC = gcc $(ARGS)
+# CPP = g++ -std=c++0x $(ARGS)
 
 AR = ar
 RM = rm
@@ -40,7 +35,7 @@ distorm:
 #	  $(CC)  $@ $<
 
 .cpp.o:
-	$(CXX) -std=c++11 $(ARGS) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
+	$(CPP) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
 .c.o:
 	$(CC) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
 

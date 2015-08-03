@@ -2,24 +2,17 @@
 # CFLAGS += -DOVERHEAD_TIME_SERIES 
 # CFLAGS += -DNO_INIT 
 
-EXTRA_WARNS= 
-##-Wextra 
-## -Wformat-nonliteral -Wcast-align -Wpointer-arith -Wbad-function-cast -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Winline -Wundef -Wnested-externs -Wcast-qual -Wshadow -Wwrite-strings -Wno-unused-parameter -Wfloat-equal
-
-#Not being -fpermissive anymore 
-
-ARGS= -g -Wall -pedantic $(EXTRA_WARNS) 
+ARGS= -g -Wall -fpermissive 
 LIBS = -lpthread
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 
-#CCC = icc
-#CC = icc $(ARGS)
-#CPP = icpc -std=c++11 $(ARGS)
-CCC = gcc
-COMP = gcc
-CC = gcc $(ARGS)
-# Should be CXX
-CXX ?= g++ 
+CCC = icc
+CC = icc $(ARGS)
+CPP = icpc -std=c++11 $(ARGS)
+# COMP = gcc
+# CCC = gcc
+# CC = gcc $(ARGS)
+# CPP = g++ -std=c++0x $(ARGS)
 
 AR = ar
 RM = rm
@@ -51,11 +44,11 @@ INSTALL = ../../build
 .PHONY: all build install
 
 libubiprof.so: libubiprof.a 
-	$(CC) $(LIBS) -shared -Wl,-soname,libubiprof.so -o libubiprof.so $(OBJ) $(INST_OBJ) $(DEPS) -lc -lpapi -lrt -lm
+	$(CC) $(LIBS) -shared -Wl,-soname,libubiprof.so -o libubiprof.so $(OBJ) $(INST_OBJ) $(DEPS) -lc -lrt -lm
 
 noprof.so: noprof.a 
 	if [ -d libubiprof.so ]; then rm -f libubiprof.so; fi	
-	$(CC) $(LIBS) -shared -Wl,-soname,libubiprof.so -o libubiprof.so $(INST_OBJ_NO_PROF) $(DEPS) -lc -lpapi -lrt -lm
+	$(CC) $(LIBS) -shared -Wl,-soname,libubiprof.so -o libubiprof.so $(INST_OBJ_NO_PROF) $(DEPS) -lc -lrt -lm
 
 # TODO: Include lpapi.a in the static library
 libubiprof.a: build distorm
@@ -73,14 +66,13 @@ all: build
 build: $(OBJ) 
 
 install:
-	# something awkward here!  (should be part of clean?)
 	-rm -r $(INSTALL)
 	mkdir $(INSTALL)
 	mkdir $(INSTALL)/noprof
-	make libubiprof.so -f Makefile_GCC
+	make libubiprof.so
 	cp libubiprof.so $(INSTALL) 
 	cp libubiprof.a $(INSTALL) 
-	make noprof.so -f Makefile_GCC
+	make noprof.so
 	cp libubiprof.so $(INSTALL)/noprof
 	cp libubiprof.a $(INSTALL)/noprof
 
@@ -88,7 +80,7 @@ distorm:
 	cd ../../deps/distorm/make/linux;make clean;make CC=$(CCC) CFLAGS='-fPIC -c -Wall $(CFLAGS)' 
 
 .cpp.o:
-	  $(CXX) -std=c++11 $(ARGS) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
+	  $(CPP) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
 .c.o:
 	  $(CC) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
 

@@ -98,20 +98,23 @@ case $LIBCOMPILER in
 	module add intel 
 
 	make clean
-	make all
+	make lib CXX=icpc
 	;;
     gcc) 
 	module add gcc/4.9.2
 	
 	make clean 
-	make lib -f Makefile_GCC 
-	make run-benchmarks.exe 
+	make lib CXX=g++
 	;;
     *)
 	echo "No suitable compiler for the library chosen: ABORTING!"
         exit 1
-	
 esac
+
+# Compiling Ubiprof is done. 
+
+# separate out the benchmarking concerns. 
+make all -f Make_runbench
 
 
 # (2) Then benchmark:
