@@ -552,12 +552,12 @@ string Finstrumentor::getFunctionName(uint16_t func_id) {
 }
 */
 
-/*
-void printMap(FuncIDMappings* func_id_mappings) {
- for (std::map<uint16_t,FunctionInfo*>::iterator it=func_id_mappings->begin(); it!=func_id_mappings->end(); ++it)
-      std::cout << it->first << " => " << it->second->func_name << '\n'; 
-}
-*/
+
+// void printMap(FuncIDMappings* func_id_mappings) {
+//  for (std::map<uint16_t,FunctionInfo*>::iterator it=func_id_mappings->begin(); it!=func_id_mappings->end(); ++it)
+//       std::cout << it->first << " => " << it->second->func_name << '\n'; 
+// }
+
 
 void Finstrumentor::addFunction(uint64_t addr,string name) {
   FunctionInfo<FinsProbeInfo>* func_info = new FunctionInfo<FinsProbeInfo>;
@@ -598,6 +598,7 @@ void Finstrumentor::readFunctionInfo() {
       FunctionInfo<FinsProbeInfo>* func_info = new FunctionInfo<FinsProbeInfo>;
       func_info->func_addr = (uint64_t) strtoul(tokens[0].c_str(), NULL, 16);
       func_info->func_name = tokens[1];
+      fprintf(stderr,"adding func: %s \n",tokens[1].c_str());
       func_info->func_id = func_count++;
       func_info->lock = 0;
 
@@ -606,7 +607,7 @@ void Finstrumentor::readFunctionInfo() {
       func_name_mappings->insert(make_pair(func_info->func_name, func_info));
     }
     func_count++; // Hack to include calibrate_cache_effects
-    // printMap(func_id_mappings);
+    //printMap(func_id_mappings);
     fp.close();
   }
 
