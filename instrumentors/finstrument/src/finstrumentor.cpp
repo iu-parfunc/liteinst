@@ -598,7 +598,7 @@ void Finstrumentor::readFunctionInfo() {
       FunctionInfo<FinsProbeInfo>* func_info = new FunctionInfo<FinsProbeInfo>;
       func_info->func_addr = (uint64_t) strtoul(tokens[0].c_str(), NULL, 16);
       func_info->func_name = tokens[1];
-      fprintf(stderr,"adding func: %s \n",tokens[1].c_str());
+      //fprintf(stderr,"adding func: %s \n",tokens[1].c_str());
       func_info->func_id = func_count++;
       func_info->lock = 0;
 
