@@ -770,6 +770,17 @@ uint64_t Finstrumentor::getInstrumentorBackgroundOverhead() {
   return g_finstrumentor_overhead;
 }
 
+Instrumentor* Finstrumentor::configureInstance(InstrumentationFunc prolog,
+        InstrumentationFunc epilog) {
+  this->prologFunc = prolog; 
+  this->epilogFunc = epilog; 
+  prologFunction = prolog;
+  epilogFunction = epilog;
+
+  return this;
+ }
+
+
 Finstrumentor::~Finstrumentor() {
   fprintf(stderr, "[Finstrumentor] NUM_ACCESSED_PROBE_SITES: %lu\n", ((Finstrumentor*) INSTRUMENTOR_INSTANCE)->probe_info->size()); 
   fprintf(stderr, "[Finstrumentor] NUM_INTERRUPTS : %lu\n", g_int3_interrupt_count);

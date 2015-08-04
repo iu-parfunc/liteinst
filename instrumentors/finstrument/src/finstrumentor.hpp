@@ -95,6 +95,8 @@ class Finstrumentor : public Instrumentor {
 
     Finstrumentor(InstrumentationFunc prologFunc, InstrumentationFunc epilogFunc); 
     void initialize();
+    Instrumentor* configureInstance(InstrumentationFunc prolog,
+        InstrumentationFunc epilog);
 
     // Function granularity activation and deactivation
     bool activateFunction(std::string name);

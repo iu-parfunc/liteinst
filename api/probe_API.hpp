@@ -93,9 +93,11 @@ class Instrumentor {
 
   public :
 
-    /// Returns a handle of the instrumentor 
+    /// Creates a new Instrumentor instance 
     /** Instrumentor is a singleton. Hence all calls for getting a handle for
-     *  the instrumentor instance must go through getInstance.  
+     *  the instrumentor instance must go through getInstance. Repeated calling
+     *  of this function returns the existing instrumentor and will not create 
+     *  a new instrumentor instance.  
      *  \param type Specifies the instrumentor type as a constant integer.
      *              Current types as provided in constants.h are
      *              FINSTRUMENT  
@@ -104,71 +106,66 @@ class Instrumentor {
      *  \param epilog Epilog instrumentation function as provided by the calling
      *                profiler 
      */
-    static Instrumentor* newInstance(int type, InstrumentationFunc prolog, InstrumentationFunc epilog); 
+    static Instrumentor* newInstance(int type, InstrumentationFunc prolog, 
+        InstrumentationFunc epilog); 
 
+    /// Retrieves current instrumentor instance
+    /*  Returns NULL if not instrumentor is set yet
+     */
     static Instrumentor* getInstance(); 
+
+    /// Configures the current Instrumentor instance with new instrumentation 
+    /// functions
+    /**  \param prolog Prolog instrumentation function as provided by the calling
+     *                profiler 
+     *  \param epilog Epilog instrumentation function as provided by the calling
+     *                profiler 
+     */
+    virtual Instrumentor* configureInstance(InstrumentationFunc prolog,
+        InstrumentationFunc epilog) = 0;
 
     /// Initializes the instrumentor
     /** All instrumentor specific data can be intitialized here 
      */
     virtual void initialize() = 0;
 
-    // Function granularity activation and deactivation
-    // virtual bool activateFunction(string name) = 0;
-    // virtual bool deactivateFunction(string name) = 0;
-
-    /// Activates profiling for the probesite with given id.
-    /// As of now probesite == function
+    /// Activates profiling for the given function with given name.
     /** This method is mainly for use by profiler  
-     *  functions for toggling on probesites at runtime.  This 
-     *  method expects an integer id for uniquely identifying
-     *  the function instaed of a string representation for efficency resasons. 
-     *  The mapping from human readable function representation (e.g: name)
-     *  to function is maintained by the instrumentor.     
+     *  functions for toggling on functions at runtime.  This 
+     *  method expects a mangled function name for uniquely identifying
+     *  the function.     
+     *  This is the method which should be used for programatically
+     *  toggling functions using Instrumentor API since access to function ids 
+     *  is not available outside instrumentor functions. 
      *
-     *  \param id 16bit integer id uniquely identifying the function
-     *  \parame mask Specifies the nature of the probes to be enabled
-     *               Currently only following types are available as
-     *               provided in Constants.h
-     *               FUNC - For function entry and exit probes 
+     *  \param name  Mangled function name (According to C++ mangling rules) 
      */
     virtual bool activateFunction(std::string name) = 0;
 
-    /// Activates profiling for the probesite with given name 
-    /// As of now probesite == function
-    /** This is the method which should be used for programatically
-     *  toggling methods using Instrumentor API since access to function ids 
-     *  is not available outside instrumentor functions. 
-     *
-     *  \param id function name 
+    /// Activates profiling for the probesite with given id 
+    /** This is used within profilers for efficiency reasons where function name
+     *  to id mapping is available.     
+     *  \param id function id 
      */
     virtual bool activateFunction(uint16_t id) = 0;
 
-    /// Deactivates profiling for the probesite with given id.
-    /// As of now probesite == function
+    /// Deactivates profiling for the given function with given name.
     /** This method is mainly for use by profiler  
-     *  functions for toggling on probesites at runtime.  This 
-     *  method expects an integer id for uniquely identifying
-     *  the function instaed of a string representation for efficency resasons. 
-     *  The mapping from human readable function representation (e.g: name)
-     *  to function is maintained by the instrumentor.     
-     *
-     *  \param id 16bit integer id uniquely identifying the function
-     *  \parame mask Specifies the nature of the probes to be enabled
-     *               Currently only following types are available as
-     *               provided in Constants.h
-     *               FUNC - For function entry and exit probes 
-     */
-
-    virtual bool deactivateFunction(std::string name) = 0;
-
-    /// Deactivates profiling for the probesite with given name 
-    /// As of now probesite == function
-    /** This is the method which should be used for programatically
-     *  toggling methods using Instrumentor API since access to function ids 
+     *  functions for toggling off functions at runtime.  This 
+     *  method expects a mangled function name for uniquely identifying
+     *  the function.     
+     *  This is the method which should be used for programatically
+     *  toggling functions using Instrumentor API since access to function ids 
      *  is not available outside instrumentor functions. 
      *
-     *  \param id function name 
+     *  \param name  Mangled function name (According to C++ mangling rules) 
+     */
+    virtual bool deactivateFunction(std::string name) = 0;
+
+    /// Deactivates profiling for the probesite with given id 
+    /** This is used within profilers for efficiency reasons where function name
+     *  to id mapping is available.     
+     *  \param id function id 
      */
     virtual bool deactivateFunction(uint16_t id) = 0;
 
@@ -179,10 +176,6 @@ class Instrumentor {
     virtual std::string getFunctionName(uint16_t id) = 0;
 
     /// Explicitly adds function to the instrumentor meta data.
-    /// Currently this is needed to load information about 
-    /// shared library functions. Name is a char* instead of
-    /// std::string since this may be called within c within
-    /// application boostrap code.
     /**
      * \param addr function address
      * \param name function name

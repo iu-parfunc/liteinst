@@ -8,14 +8,15 @@ Instrumentor* Instrumentor::newInstance(int type, InstrumentationFunc prolog, In
   
   // Delete existing instance possibly with all the accumilated data up to now.
   if (INSTRUMENTOR_INSTANCE) {
-    fprintf(stderr, "WARNING : Deleting existing instrumentor instance. Data may be lost..\n");
-    delete INSTRUMENTOR_INSTANCE;
+    fprintf(stderr, "WARNING: Already initialized. Returning the existing instance..\n");
+    return INSTRUMENTOR_INSTANCE;
   }
 
   switch(type) {
     case FINSTRUMENT:
       INSTRUMENTOR_INSTANCE = new Finstrumentor(prolog, epilog);
       ((Finstrumentor*)INSTRUMENTOR_INSTANCE)->initialize();
+      break;
     default:
       INSTRUMENTOR_INSTANCE = new Finstrumentor(prolog, epilog);
       ((Finstrumentor*)INSTRUMENTOR_INSTANCE)->initialize();
@@ -29,3 +30,4 @@ Instrumentor* Instrumentor::getInstance() {
   return INSTRUMENTOR_INSTANCE;
 
 }
+

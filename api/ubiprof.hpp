@@ -32,15 +32,20 @@ class Profiler {
 
   public:
 
-    /// Returns a handle of the profiler
+    /// Creates a new profiler instance. 
     /** Profiler is a singleton. Hence all calls for getting a handle for
      *  the profiler instance must go through getInstance.  
+     *  Repeated calls will return the existing instance instead of 
+     *  returning a new instance.
      *  \param type Specifies the profiler type as a constant integer.
      *              Current types as provided in constants.h are
-     *              BACKOFF | SAMPLING | EMPTY 
+     *              BACKOFF | SAMPLING | EMPTY | ADAPTIVE | MINIMAL_ADAPTIVE
+     *              | MINIMAL_BACKOFF | MINIMAL_SAMPLING
      */
     static Profiler* newInstance(int type);
 
+    /// Retrieves the existing profiler instances. 
+    /// Returns NULL of it is not yet set
     static Profiler* getInstance();
 
     /// Initializes the profiler
@@ -72,7 +77,7 @@ class Profiler {
      *  toggling methods using Profiler API since access to function ids 
      *  is not available outside instrumentation functions. 
      *
-     *  \param id function name 
+     *  \param name Mangled function name (according to C++ mangling rules) 
      */
     virtual int activateFunction(std::string name);
 
@@ -95,7 +100,7 @@ class Profiler {
      *  toggling methods using Profiler API since access to function ids 
      *  is not available outside instrumentation functions. 
      *
-     *  \param id function name 
+     *  \param id Mangled function name (according to C++ mangling rules) 
      */
     virtual int deactivateFunction(std::string name);
 

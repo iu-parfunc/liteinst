@@ -17,8 +17,9 @@ void* g_ubiprof_stats = 0;
 Profiler* Profiler::newInstance(int type) {
 
   if (PROFILER_INSTANCE) {
-    fprintf(stderr, "[Ubiprof] WARNING : deleting the existing profiler possibly with accumilated data..\n");
-    delete PROFILER_INSTANCE;
+    fprintf(stderr, "[Ubiprof] WARNING : Profiler already instantiated. " 
+        "Returning existing one..\n");
+    return PROFILER_INSTANCE;
   }
 
   if (type == BACKOFF) {
