@@ -19,6 +19,7 @@
 #include "logger.hpp"
 #include "bitmap.hpp"
 
+// BJS: is this correct ??? 
 #define PROBESIZE 16
 
 inline int tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters = " ") {
