@@ -103,5 +103,5 @@ Profiler::~Profiler() {
   fprintf(stderr,"[Profiler.cpp] Executing Profiler instance destructor\n");
 #endif 
   
-  //delete ins;
+  // delete ins;
 }

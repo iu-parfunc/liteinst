@@ -205,6 +205,7 @@ bool Finstrumentor::activateFunction(uint16_t func_id) {
   uint64_t* lock = NULL;
 
   // BJS: Does this mean Straddlers are not profiled ?
+  
   // straddler check
   if (get_index(g_straddlers_bitmap, func_id)) {
     // fprintf(stderr, "Skip activating the straddler function %d\n", func_id);
@@ -799,6 +800,5 @@ Finstrumentor::~Finstrumentor() {
   delete this->functions;
   delete this->func_addr_mappings; // Delete individual entries as well 
   delete this->func_id_mappings; 
-// BJS: Don't know about this 
-  INSTRUMENTOR_INSTANCE = NULL; 
+  fprintf(stderr,"Finstrumentor destroyed!\n");
 }

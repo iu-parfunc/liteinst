@@ -737,6 +737,7 @@ AdaptiveProfiler::~AdaptiveProfiler() {
     delete tls_stats[i];
   }
 
-  delete tls_stats;
+  // The blow probably executes the destructors for all of the above ?
+  delete [] tls_stats;
 
 }
