@@ -1,0 +1,14 @@
+a.out
+.#*
+.DS_Store
+.stack-work
+.cabal-sandbox
+cabal.sandbox.config
+*.bak
+bench*.log
+*.exe
+*.dSYM
+dist/
+
+# A place to put junk
+not_tracked/
