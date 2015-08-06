@@ -1,3 +1,9 @@
+/**
+ * @file utils.hpp
+ * @author Buddhika Chamith, Bo Joel Svensson
+ * @brief patching related utilities 
+ *
+ */
 #ifndef _UTILS_HPP_
 #define _UTILS_HPP_
 
@@ -23,6 +29,12 @@
 // BJS: is this correct ??? 
 #define PROBESIZE 16
 
+/** 
+   * @brief BUDDHIKA DOCUMENT THIS
+   * @param 
+   * @param 
+   * @param 
+   */
 inline int tokenize(const std::string& str, std::vector<std::string>& tokens, const std::string& delimiters = " ") {
   std::string::size_type lastPos = str.find_first_not_of(delimiters, 0);
   std::string::size_type pos = str.find_first_of(delimiters, lastPos);
@@ -38,10 +50,20 @@ inline int tokenize(const std::string& str, std::vector<std::string>& tokens, co
   return count;
 }
 
+/** 
+   * @brief flush cache line 
+   * @param p address in cache line to flush 
+   */
 inline void clflush(volatile void *p) {
     asm volatile ("clflush (%0)" :: "r"(p));
 }
 
+/** 
+   * @brief make pages read,write,execute
+   * @param addr address within page to modify
+   * @details if addr + PROBESIZE spills into a second page 
+   * that page's protection level is also changed.
+   */
 inline bool modify_page_permissions(uint8_t* addr) {
 
   long page_size = sysconf(_SC_PAGESIZE);
@@ -70,6 +92,36 @@ inline bool modify_page_permissions(uint8_t* addr) {
 /* Checks if register type is equal (for 32 and 64 bit variants) for all general purpose registers */
 // 64bit - R_RAX, R_RCX, R_RDX, R_RBX, R_RSP, R_RBP, R_RSI, R_RDI, R_R8, R_R9, R_R10, R_R11, R_R12, R_R13, R_R14, R_R15,
 // 32 bit - R_EAX, R_ECX, R_EDX, R_EBX, R_ESP, R_EBP, R_ESI, R_EDI, R_R8D, R_R9D, R_R10D, R_R11D, R_R12D, R_R13D, R_R14D, R_R15D,
+
+
+/* BTW. I have a suggestion for an alternative implementation of this. 
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
+
+inline bool reg_equal(_RegisterType reg1, _RegisterType reg2) {
+  _RegisterType a1;
+  _RegisterType a2;
+
+  if (reg1 == reg2) return true; 
+
+  // I think you can subtract 16 from max(reg1,reg2) and 
+  //   then redo the simple check above.. to replace all of the below.
+  //   But it is a bit of a hack. 
+  
+  a1 = MAX(reg1,reg2);
+  a2 = MIN(reg1,reg2);
+  if (a1 - 16 == a2) return true;
+
+  return false; 
+}
+*/
+
+
+/** 
+   * @brief BUDDHIKA DOCUMENT THIS.
+   * @param reg1  BUDDHIKA DOCUMENT THIS
+   * @param reg2 BUDDHIKA DOCUMENT THIS
+   */
 inline bool reg_equal(uint8_t reg1, uint8_t reg2) {
 
   switch (reg1) {
@@ -178,6 +230,10 @@ inline bool reg_equal(uint8_t reg1, uint8_t reg2) {
 
 }
 
+/** 
+   * @brief BUDDHIKA DOCUMENT THIS.
+   * @param nbytes  BUDDHIKA DOCUMENT THIS
+   */
 inline uint64_t get_lsb_mask(int nbytes) {
   switch (nbytes) {
     case 1:
@@ -200,6 +256,10 @@ inline uint64_t get_lsb_mask(int nbytes) {
   }
 }
 
+/** 
+   * @brief BUDDHIKA DOCUMENT THIS.
+   * @param nbytes  BUDDHIKA DOCUMENT THIS
+   */
 inline uint64_t get_msb_mask(int nbytes) {
   switch (nbytes) {
     case 1:
@@ -222,6 +282,11 @@ inline uint64_t get_msb_mask(int nbytes) {
   }
 }
 
+/** 
+   * @brief BUDDHIKA DOCUMENT THIS.
+   * @param addr  BUDDHIKA DOCUMENT THIS
+   * @param func_id BUDDHIKA DOCUMENT THIS
+   */
 inline bool patch_with_value(uint8_t* addr, uint16_t func_id) {
 
   if (addr == NULL) return false; 
@@ -300,6 +365,13 @@ inline bool patch_with_value(uint8_t* addr, uint16_t func_id) {
 
 }
 
+
+// BJS: The function below is if i remmeber correctly unused!
+/** 
+   * @brief BUDDHIKA DOCUMENT THIS.
+   * @param start  BUDDHIKA DOCUMENT THIS
+   * @param length BUDDHIKA DOCUMENT THIS
+   */
 inline void print_decoded_output(uint8_t* start, uint64_t length) {
 
   _DecodeResult res;
@@ -336,7 +408,11 @@ inline void print_decoded_output(uint8_t* start, uint64_t length) {
   delete(disassembled);
 }
 
-
+/** 
+   * @brief BUDDHIKA DOCUMENT THIS.
+   * @param call_return_addr  BUDDHIKA DOCUMENT THIS
+   * @param start_addr BUDDHIKA DOCUMENT THIS
+   */
 inline uint8_t* get_edi_set_addr(uint8_t* call_return_addr, uint8_t* start_addr) {
   uint8_t* call_addr = (uint8_t*) call_return_addr - 5;
   uint64_t offset = (uint8_t*)call_addr - (uint8_t*)start_addr;
@@ -446,6 +522,13 @@ inline uint8_t* get_edi_set_addr(uint8_t* call_return_addr, uint8_t* start_addr)
 #define PARAMETER_PATCH_ERROR (-1)
 #define PARAMETER_PATCH_OK    1 
 
+/** 
+   * @brief BUDDHIKA DOCUMENT THIS.
+   * @param probe_info  BUDDHIKA DOCUMENT THIS
+   * @param call_return_addr BUDDHIKA DOCUMENT THIS
+   * @param start_addr BUDDHIKA DOCUMENT THIS
+   * @param func_id BUDDHIKA DOCUMENT THIS
+   */
 inline int patch_first_parameter(FinsProbeInfo* probe_info,uint64_t* call_return_addr, uint64_t* start_addr, uint16_t func_id) {
 
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
@@ -516,172 +599,5 @@ inline int patch_first_parameter(FinsProbeInfo* probe_info,uint64_t* call_return
     return PARAMETER_PATCH_OK;
   }
 }
-
-inline PatchResult* patch_first_parameter_old(uint64_t* call_return_addr, uint64_t* start_addr, uint16_t func_id) {
-
-  Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
-  uint64_t* lock = ins->getLock((uint64_t) start_addr);
-  int spin_counter = 0;
-  PatchResult* res = new PatchResult;
-  if (lock != NULL) {
-    if (__sync_bool_compare_and_swap(lock, 0 , 1)) {
-
-      uint8_t* call_addr = (uint8_t*) call_return_addr - 5;
-      uint64_t offset = (uint8_t*)call_addr - (uint8_t*)start_addr;
-
-  /*
-  Diagnostics
-    print_decoded_output((uint8_t*)start_addr, offset);
-  */
-
-  // Address where EDI/RDI is set last before the call
-      uint8_t* edi_set_addr = 0;
-      _DInst* result = (_DInst*) malloc(sizeof(_DInst) * 2 * offset);
-      unsigned int instructions_count = 0;
-
-      _DecodedInst inst;
-
-      _CodeInfo ci  = {0};
-      ci.code = (uint8_t*)start_addr;
-      ci.codeLen = offset;
-      ci.dt = Decode64Bits;
-      ci.codeOffset = 0x100000;
-
-      distorm_decompose(&ci, result, offset, &instructions_count);
-      uint64_t ptr_size = 0;
-      uint64_t edi_offset = 0;
-      uint8_t intermediate_reg = 0;
-
-      if (instructions_count > offset) {
-        fprintf(stderr, "[DEBUG] Instructions decoded : %d Offset : %lu\n", instructions_count, offset);
-        free(result);
-
-        res->success = false;
-        res->conflict = false;
-
-        while(!__sync_bool_compare_and_swap(lock, 1 , 0));
-        return res;
-      }
-
-      bool edi_setter_found = false;
-      int instruction_offset = 0;
-      for (int i = instructions_count - 1; i >= 0; i--) {
-        if (result[i].flags == FLAG_NOT_DECODABLE) {
-          printf("Bad decode attempt.. Call address : %p \n", call_addr);
-          free(result);
-
-          res->success = false;
-          res->conflict = false;
-
-          while(!__sync_bool_compare_and_swap(lock, 1 , 0));
-          return res;
-        }
-
-        distorm_format(&ci, &result[i], &inst);
-
-        ptr_size += result[i].size;
-        instruction_offset++;
-
-        if (result[i].opcode == I_MOV) {
-          if (!edi_setter_found && result[i].ops[0].type == O_REG && 
-              (result[i].ops[0].index == R_EDI || result[i].ops[0].index == R_RDI)) {
-            if (result[i].ops[1].type == O_IMM || result[i].ops[1].type == O_IMM1 || result[i].ops[1].type == O_IMM2) {
-              edi_offset = ptr_size;
-              break;
-            } else if (result[i].ops[1].type == O_REG) {
-              edi_setter_found = true;
-              intermediate_reg  = result[i].ops[1].index;
-            }
-          } else if(edi_setter_found && result[i].ops[0].type == O_REG && 
-              (reg_equal(intermediate_reg, result[i].ops[0].index))) {
-            if (result[i].ops[1].type == O_IMM || result[i].ops[1].type == O_IMM1 || result[i].ops[1].type == O_IMM2) {
-              edi_offset = ptr_size;
-              break;
-            } else if (result[i].ops[1].type == O_REG) {
-              intermediate_reg  = result[i].ops[1].index;
-            }
-          }
-        }
-      }
-
-      edi_set_addr = call_addr - edi_offset;
-
-      // fprintf(stderr, "[DEBUG] Call address : %p EDI offset : %lu EDI set address : %p \n", call_addr, edi_offset, edi_set_addr);
-
-  // Hack : If the edi setter and the call site are adjacent and edi setter straddles a cache line
-  // we handle it specifically to escape patching it
-  /*
-  if (instruction_offset == 1) {
-    size_t cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
-    int edi_setter_cache_line_offset = (uint64_t) edi_set_addr % cache_line_size;
-    int call_instruction_cache_line_offset = ((uint64_t) call_addr) % cache_line_size;
-    if (edi_setter_cache_line_offset >= 57 ||
-       call_instruction_cache_line_offset >= 57) {
-      free(result);
-      res->success = false;
-      res->conflict = true;
-      return res;
-    }
-  }
-  */
-
-      bool status = patch_with_value(edi_set_addr, func_id);
- 
-      free(result);
-
-      if (!status) {
-        res->success = false;
-        res->conflict = false;
-        return res;
-        while(!__sync_bool_compare_and_swap(lock, 1 , 0));
-       }
-
-       res->success = true;
-       res->conflict = false;
-       res->edi_set_addr = edi_set_addr;
-
-       while(!__sync_bool_compare_and_swap(lock, 1 , 0));
-       return res;
-
-    } else { // We failed. Wait until the other thread finish and just return
-      
-      //BJS: I dont understand this. 
-      
-#ifndef NDEBUG
-      ticks t0 = getticks(); 
-#endif 
-      while (*lock) {
-        if (spin_counter == INT_MAX) {
-          fprintf(stderr, "RESETTING the counter\n");
-          fprintf(stderr, "Returning without adding the probe since lock is : %lu\n", *lock);
-          break;
-        }
-        spin_counter += 1;
-      }
-#ifndef NDEBUG
-      pthread_t tid = pthread_self();
-      ticks t1 = getticks();
-      fprintf( stderr
-	     , "[utils.hpp ***OLD*** patch_first_parameter] ThreadID: %lu was busy-waiting for %d iterations.\nWait took %llu ticks while attempting to patch function %d.\n"
-	       , (unsigned long int)tid,spin_counter,(t1-t0),func_id);
-
-#endif 
-
-
-
-      res->success = true;
-      res->conflict = false;
-
-      return res;
-    }
-  }
-
-  res->success = false;
-  res->conflict = false;
-
-  return res;
-
-}
-
 
 #endif /* _UTILS_HPP_ */
