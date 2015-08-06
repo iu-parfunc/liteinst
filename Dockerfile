@@ -6,5 +6,5 @@ RUN apt-get update && apt-get install -y \
 
 ADD . ubiprof_src/
 
-RUN pwd && cd ubiprof_src && pwd && \
-    make -f Makefile_GCC lib
+RUN cd ubiprof_src &&  \
+    make lib
