@@ -14,8 +14,9 @@
 #include <assert.h> 
 
 #include "finstrumentor.hpp"
-#include "distorm.h"
-#include "mnemonics.h"
+//BJS: add to INCLUDE_DIR (or what its called) 
+#include "../../../deps/distorm/include/distorm.h"
+#include "../../../deps/distorm/include/mnemonics.h"
 #include "logger.hpp"
 #include "bitmap.hpp"
 
