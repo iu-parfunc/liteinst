@@ -4,6 +4,3 @@
 [submodule "HSBencher"]
 	path = HSBencher
 	url = git@github.com:rrnewton/HSBencher.git
-[submodule "Plotting/GraphPlotting"]
-	path = Plotting/GraphPlotting
-	url = git@github.com:svenssonjoel/GraphPlotting.git
