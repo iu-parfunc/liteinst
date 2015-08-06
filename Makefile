@@ -1,5 +1,5 @@
-
-.phony: all lib microbench bench doc devdoc docker clean FORCE
+# I have only ever seen it mentioned as .PHONY (does it matter ?) 
+.phony: all lib microbench bench doc devdoc docker clean 
 # ----------------------------------------
 
 # TODO: build everything before running/benchmarking:
@@ -31,15 +31,17 @@ libdebug:
 	(cd profilers/src/; make install)
 
 # Extracts all documentation from source files.
-devdoc:
+.PHONY: devdoc
+devdoc: 
 	doxygen scripts/Doxyfile_dev
 
 # Extracts only the exported interface.
-doc: FORCE
+.PHONY: doc
+doc: 
 	doxygen scripts/Doxyfile
 
 # .phony is not good enough for this:
-FORCE:
+# FORCE:
 
 docker:
 # Remove a previous image, if it exists:
