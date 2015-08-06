@@ -1,3 +1,13 @@
+### Aug 6 2015 ### 
+
+    Docker added: 
+    
+    Usage: 
+    
+    docker build -t iu-parfunc/ubiprof .
+
+    docker run -it iu-parfunc/ubiprof bash
+   
 
 ### Aug 3 2015 ###
    * New makefile setup. 
