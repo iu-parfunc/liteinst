@@ -1,5 +1,5 @@
 
-.phony: all lib bench FORCE
+.phony: all lib bench doc devdoc
 # ----------------------------------------
 
 # TODO: build everything before running/benchmarking:
@@ -17,24 +17,22 @@ lib:
 	(cd profilers/src/; \
 	make install CFLAGS='-DNDEBUG -O3')
 
-libdebug: 
+libdebug:
 	(cd instrumentors/finstrument/src/; make)
 	(cd profilers/src/; make install)
 
 # Extracts all documentation from source files.
-devdoc: FORCE
-	doxygen scripts/Doxyfile_dev 
+devdoc:
+	doxygen scripts/Doxyfile_dev
 
-# Extracts only the exported interface. 
-doc:    FORCE
+# Extracts only the exported interface.
+doc:
 	doxygen scripts/Doxyfile
 
 
-FORCE: 
-
-clean: 
+clean:
 	(cd instrumentors/finstrument/src/; \
-	make clean) 
+	make clean)
 	(cd profilers/src/; \
 	make clean)
-	rm -rf build 
+	rm -rf build
