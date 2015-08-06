@@ -14,7 +14,7 @@ typedef uint8_t* Bitmap;
 //BJS: Maybe also do: 
 
 /**
- * @brief Create a bitmap with num_bits number of bit posiitons 
+ * @brief Create a bitmap with num_bits number of bit positions 
  * @param num_bits
  * @return a Bitmap if successful, NULL otherwise
  */
