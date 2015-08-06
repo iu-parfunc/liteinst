@@ -25,6 +25,12 @@
 
 extern uint64_t g_TicksPerNanoSec;
 
+/**
+ * @brief check if function at addr func_addr has an initialized prolog. 
+ * @param func_addr address of function 
+ * @details This function performs a lookup in a map #probe_map via the 
+ * call Finstrumentor::hasProbeInfo().
+ */
 static bool is_prolog_initialized(uint64_t func_addr) {
 
   Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
@@ -34,7 +40,15 @@ static bool is_prolog_initialized(uint64_t func_addr) {
 #ifdef PROBE_HIST_ON
 char* md = getenv("MONITOR_DEAC");
 
-// Note : Calculations within this method is not thread safe
+
+/** 
+ * @brief  
+ * @param ts  
+ * @param overhead
+ * @param type 
+ * @details BUDDHIKA DOCUMENT THIS 
+ * Calculations within this method is not thread safe
+ */
 void update_overhead_histograms(TLStatistics* ts, uint64_t overhead, int type) {
   int bin;
   if (overhead > PROBE_HIST_MAX_VALUE) {
@@ -84,6 +98,12 @@ void update_overhead_histograms(TLStatistics* ts, uint64_t overhead, int type) {
 
 #ifdef PROBE_TRUE_EMPTY_ON
 
+/** 
+ * @brief  
+ * @param overhead
+ * @param type 
+ * @details BUDDHIKA DOCUMENT THIS 
+ */
 void update_empty_overheads(uint64_t overhead, int type) {
   int bin;
   if (overhead > PROBE_HIST_MAX_VALUE) {
@@ -103,11 +123,24 @@ void update_empty_overheads(uint64_t overhead, int type) {
 
 // BJS: START cyg func refactor attempt 
 
+/** 
+ * @brief check if x should be considered a function id.
+ * @param x a small integer identifying a function or an address of a function 
+ * @details 
+ */
 #define IS_FUNC_ID(x) ((x) < 0x400200)
 
 /* -----------------------------------------------------------------
    ENTER/Exit HELPERS 
    ----------------------------------------------------------------- */ 
+/** 
+ * @brief helper function that is called by __cyg_profile_func_enter() when 
+   when a function id has been established. 
+ * @param function a function id (that really should fit in 16 bits) 
+ * @param start a timestamp (in ticks) acquired upon entry into __cyg_profile_func_enter().
+ * @details This function calls the specified prolog function and then updates the 
+ * thread-local datastructure containing prolog overhead. 
+ */
 static inline void process_func_by_id_enter(uint64_t function, ticks start) {
   TLStatistics* tstats;
 
@@ -138,6 +171,14 @@ static inline void process_func_by_id_enter(uint64_t function, ticks start) {
   return;
 }
 
+/** 
+ * @brief helper function that is called by __cyg_profile_func_exit() when 
+   when a function id has been established. 
+ * @param function a function id (that really should fit in 16 bits) 
+ * @param start a timestamp (in ticks) acquired upon entry into __cyg_profile_func_exit().
+ * @details This function calls the specified epilog function and then updates the 
+ * thread-local datastructure containing epilog overhead. 
+ */
 static inline void process_func_by_id_exit(uint64_t function, ticks start) {
 
   TLStatistics* ts;
@@ -308,6 +349,13 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 /* -----------------------------------------------------------------
    FAKE CYG ENTER specifically for calibrate_cache_effects
    ----------------------------------------------------------------- */ 
+/** 
+   * @brief A fake variant of cyg_enter specifically for calibrate_cache_effects.
+   * @param this_fn   BUDDHIKA DOCUMENT THIS
+   * @param call_site BUDDHIKA DOCUMENT THIS
+   * @details Tries to emulate what a real cyg_enter function does in 
+   * order to estimate its impact on cache.
+   */
 void fake_cyg_profile_func_enter(void* func, void* caller) {
   
   //Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
@@ -359,7 +407,14 @@ void __cyg_profile_func_exit(void* func, void* caller) {
   return;
 }
 
-#else 
+#else
+/** 
+   * @brief A fake variant of cyg_exit specifically for calibrate_cache_effects.
+   * @param this_fn   BUDDHIKA DOCUMENT THIS
+   * @param call_site BUDDHIKA DOCUMENT THIS
+   * @details Tries to emulate what a real cyg_exit function does in 
+   * order to estimate its impact on cache.
+   */ 
 void __cyg_profile_func_exit(void* func, void* caller) {
 
   uint64_t function = (uint64_t)func;

@@ -18,8 +18,14 @@ libdebug:
 	(cd instrumentors/finstrument/src/; make)
 	(cd profilers/src/; make install)
 
+# Extracts all documentation from source files.
+devdoc: FORCE
+	doxygen scripts/Doxyfile_dev 
+
+# Extracts only the exported interface. 
 doc:    FORCE
 	doxygen scripts/Doxyfile
+
 
 FORCE: 
 
