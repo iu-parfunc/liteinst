@@ -72,6 +72,8 @@ TLStatistics* minimalAdaptiveEpilogFunction(uint16_t func_id) {
   // Somehow epilog got called without proper prolog execution. (e.g: Race
   // condition on deactivation etc). Just return in that case.
 
+  long function_count = INSTRUMENTOR_INSTANCE->getFunctionCount();
+
   // BJS: Need to return something and check for error in caller. 
 
   if (!allocated) {
@@ -84,6 +86,8 @@ TLStatistics* minimalAdaptiveEpilogFunction(uint16_t func_id) {
 
   ticks epilog_start = getticks();
 
+  
+  
   AdaptiveProfilerStat* global_func_stats = &((AdaptiveProfilerStat*) g_ubiprof_stats)[func_id];
   TLSAdaptiveProfilerStat* local_func_stats = &current_thread_func_stats_table[func_id];
 
