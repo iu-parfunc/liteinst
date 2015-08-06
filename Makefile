@@ -18,6 +18,10 @@ libdebug:
 	(cd instrumentors/finstrument/src/; make)
 	(cd profilers/src/; make install)
 
+doc: 
+	doxygen scripts/Doxyfile
+
+
 clean: 
 	(cd instrumentors/finstrument/src/; \
 	make clean) 

@@ -1,3 +1,9 @@
+/**
+ * @file cyg_functions.cpp
+ * @author Buddhika Chamith, Bo Joel Svensson, Ryan Newton 
+ * @brief cyg_profile_function_enter/exit and related definitions.
+ *
+ */
 
 #include <unistd.h>
 #include <inttypes.h>
