@@ -1,5 +1,5 @@
 
-.phony: all lib bench
+.phony: all lib bench FORCE
 # ----------------------------------------
 
 # TODO: build everything before running/benchmarking:
@@ -18,9 +18,10 @@ libdebug:
 	(cd instrumentors/finstrument/src/; make)
 	(cd profilers/src/; make install)
 
-doc: 
+doc:    FORCE
 	doxygen scripts/Doxyfile
 
+FORCE: 
 
 clean: 
 	(cd instrumentors/finstrument/src/; \

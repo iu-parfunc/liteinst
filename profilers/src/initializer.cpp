@@ -30,6 +30,13 @@ struct timespec g_diff;
 
 extern void print_probe_info();
 
+
+
+// BJS: This breakes the separation of profilers and instrumentors.
+//      as it relies on the cyg functions from finstrumentor. 
+//      I am guessing that calibrate_cache_effects is really 
+//      finstrumentor specific (however a similar function may 
+//      need to exist for zca). 
 #ifdef __cplusplus
 extern "C"
 {
