@@ -8,6 +8,9 @@ all: lib
 
 # INST_OBJS := $(patsubst %.cpp,%.o,$(wildcard ./instrumentors/finstrument/src/*.cpp))
 
+bench :
+	(cd microbenchmarks; make bench)
+
 lib:
 	(cd instrumentors/finstrument/src/; \
 	make CFLAGS='-DNDEBUG -O3')
