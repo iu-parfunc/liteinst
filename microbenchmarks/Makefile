@@ -36,6 +36,10 @@ all: lib run-benchmarks.exe
 lib:
 	(cd ..; make lib)
 
+# Run the benchmarks. Used in top level run-tests.sh to run tests without rebuilding ubiprof
+run: run-benchmarks.exe
+	./run-benchmarks.exe --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --name="Dynaprof_Benchmarks" --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
+
 # Run the benchmarks
 bench: lib run-benchmarks.exe
 	./run-benchmarks.exe --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --name="Dynaprof_Benchmarks" --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
@@ -49,7 +53,5 @@ run-benchmarks.exe: run-benchmarks.cabal run-benchmarks.hs
 	./run-benchmarks.exe --help
 	./run-benchmarks.exe -l
 
-
 clean:
 	rm -rf run-benchmarks.exe ./dist
-

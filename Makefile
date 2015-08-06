@@ -1,5 +1,5 @@
 
-.phony: all lib bench doc devdoc
+.phony: all lib microbench bench doc devdoc
 # ----------------------------------------
 
 # TODO: build everything before running/benchmarking:
@@ -8,8 +8,17 @@ all: lib
 
 # INST_OBJS := $(patsubst %.cpp,%.o,$(wildcard ./instrumentors/finstrument/src/*.cpp))
 
-bench :
-	(cd microbenchmarks; make bench)
+microbench : lib
+	(cd microbenchmarks; make run)
+
+bench: lib
+	(cd benchmarks; make run)
+
+tests: lib
+	(cd instrumentors/tests/unit;make check)
+	(cd instrumentors/tests/integration;make check)
+	(cd profilers/tests/unit;make check)
+	(cd profilers/tests/integration;make check)
 
 lib:
 	(cd instrumentors/finstrument/src/; \
