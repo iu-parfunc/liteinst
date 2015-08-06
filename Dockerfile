@@ -1,5 +1,6 @@
 FROM ubuntu:15.10
 RUN apt-get update && apt-get install -y \
+     doxygen \
      gcc g++ \
      libpapi-dev \
      make
@@ -7,4 +8,5 @@ RUN apt-get update && apt-get install -y \
 ADD . ubiprof_src/
 
 RUN cd ubiprof_src &&  \
-    make lib
+    make lib && \
+    make devdoc doc
