@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
 
 function run_microbenchs(){
-make microbench
+(cd ..;make microbench)
 }
 
 function run_tests(){
-make tests
+(cd ..;make tests)
 }
 
-function run_bench(){
-make bench
+function run_benchs(){
+(cd ..;make bench)
 }
 
 function run_all(){
-run_microbench;
+run_microbenchs;
 run_tests;
-run_bench;
+run_benchs;
 }
 
 if ! options=$(getopt -o mbta -l micro,bench,tests,all: -- "$@")
@@ -39,7 +39,7 @@ while [ $# -gt 0 ]
 do
   case $1 in
   -m|--micro) run_microbenchs;;
-  -b|--bench) run_bench;;
+  -b|--bench) run_benchs;;
   -t|--tests) run_tests;; 
   -a|--all)   run_all;;
   (--) shift; break;;
