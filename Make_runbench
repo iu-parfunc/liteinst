@@ -64,6 +64,8 @@ bench: run-benchmarks.exe
 	./run-benchmarks.exe --retry=10 --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --name=$(TABLE) --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
 
 run-benchmarks.exe: run-benchmarks.cabal run-benchmarks.hs
+	which -a $(STACK)
+	$(STACK) --version
 	(cd ./HSBencher/; $(STACK) build)
 	$(STACK) --stack-yaml=./HSBencher/stack.yaml ghc -- run-benchmarks.hs -o run-benchmarks.exe
 #	$(STACKRUN) run-benchmarks.hs -l
