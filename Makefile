@@ -1,5 +1,4 @@
-# I have only ever seen it mentioned as .PHONY (does it matter ?) 
-.phony: all lib microbench bench doc devdoc docker clean 
+.PHONY: all lib microbench bench doc devdoc docker clean
 # ----------------------------------------
 
 # TODO: build everything before running/benchmarking:
@@ -31,13 +30,11 @@ libdebug:
 	(cd profilers/src/; make install)
 
 # Extracts all documentation from source files.
-.PHONY: devdoc
-devdoc: 
+devdoc:
 	doxygen scripts/Doxyfile_dev
 
 # Extracts only the exported interface.
-.PHONY: doc
-doc: 
+doc:
 	doxygen scripts/Doxyfile
 
 # .phony is not good enough for this:
@@ -57,4 +54,5 @@ clean:
 	make clean)
 	(cd profilers/src/; \
 	make clean)
-	rm -rf build
+	rm -rf ./build run-benchmarks.hi run-benchmarks.exe run-benchmarks.o
+	rm -rf ./doc ./devdoc
