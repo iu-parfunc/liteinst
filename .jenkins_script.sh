@@ -3,11 +3,12 @@
 set -x
 set -e
 
-# Designed to run on SOIC RHEL machines:
-module add gcc/5.1.0
-
 make clean
-make all
 
-# Running the full benchmark takes too long for our regression testing build:
-# make bench
+# build run-benchmarks.exe via stack:
+make run-benchmarks.exe
+
+# Build the docker image:
+make docker
+
+# TODO: Run the tests!
