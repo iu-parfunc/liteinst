@@ -33,12 +33,10 @@ doc: FORCE
 FORCE:
 
 docker:
-# Remove a previous image, if it exists:
-	docker rmi iu-parfunc/ubiprof || echo ok
-# Remove any dangling as a general cleanup measure:
-	docker rmi $(docker images -q --filter "dangling=true") || echo ok
 # Then build our new one:
 	docker build -t iu-parfunc/ubiprof .
+# Remove any dangling ones as a general cleanup measure:
+	docker rmi $(docker images -q --filter "dangling=true") || echo ok
 
 # Finally, you can hop in the image with:
 # docker run -it iu-parfunc/ubiprof
