@@ -41,7 +41,8 @@ doc:
 # FORCE:
 
 docker:
-# Then build our new one:
+# Check what's there and build our new one:
+	docker images
 	docker build -t iu-parfunc/ubiprof .
 # Remove any dangling ones as a general cleanup measure:
 	docker rmi $(docker images -q --filter "dangling=true") || echo ok
