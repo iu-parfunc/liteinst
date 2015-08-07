@@ -67,7 +67,8 @@ run-benchmarks.exe: run-benchmarks.cabal run-benchmarks.hs
 	(cd ./HSBencher/; $(STACK) build)
 	$(STACK) --stack-yaml=./HSBencher/stack.yaml ghc -- run-benchmarks.hs -o run-benchmarks.exe
 #	$(STACKRUN) run-benchmarks.hs -l
-	./run-benchmarks.exe
+        echo "Listing available benchmarks."
+	./run-benchmarks.exe -l
 
 plotter: run-benchmarks.exe
 	(cd ./Plotting && $(CABAL) sandbox init --sandbox=$(TOP)/.cabal-sandbox/)
