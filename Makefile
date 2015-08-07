@@ -1,5 +1,5 @@
-
-.phony: all lib bench doc devdoc docker clean FORCE
+# I have only ever seen it mentioned as .PHONY (does it matter ?) 
+.phony: all lib microbench bench doc devdoc docker clean 
 # ----------------------------------------
 
 # TODO: build everything before running/benchmarking:
@@ -8,8 +8,17 @@ all: lib
 
 # INST_OBJS := $(patsubst %.cpp,%.o,$(wildcard ./instrumentors/finstrument/src/*.cpp))
 
-bench :
-	(cd microbenchmarks; make bench)
+microbench : lib
+	(cd microbenchmarks; make run)
+
+bench: lib
+	(cd benchmarks; make run)
+
+tests: lib
+	(cd instrumentors/tests/unit;make check)
+	(cd instrumentors/tests/integration;make check)
+	(cd profilers/tests/unit;make check)
+	(cd profilers/tests/integration;make check)
 
 lib:
 	(cd instrumentors/finstrument/src/; \
@@ -22,15 +31,17 @@ libdebug:
 	(cd profilers/src/; make install)
 
 # Extracts all documentation from source files.
-devdoc:
+.PHONY: devdoc
+devdoc: 
 	doxygen scripts/Doxyfile_dev
 
 # Extracts only the exported interface.
-doc: FORCE
+.PHONY: doc
+doc: 
 	doxygen scripts/Doxyfile
 
 # .phony is not good enough for this:
-FORCE:
+# FORCE:
 
 docker:
 # Then build our new one:
