@@ -29,11 +29,9 @@ void foo(int apa) {
     uint64_t  orig_call = *(uint64_t*)call_addr; // ((uint8_t*)addr - 5);
     
     uint64_t call_bar_patch = 0x00000000000000e8;
-    //uint64_t call_bar_patch = 0x000000fffffed6e8;
+   
     uint64_t bar_addr = ((uint64_t)bar - (uint64_t)addr); 
-    //bar_addr = (bar_addr & 0x0000FFFF) << 16 | (bar_addr & 0xFFFF0000) >> 16;
-    //bar_addr = (bar_addr & 0x00FF00FF) << 8 | (bar_addr & 0xFF00FF00) >> 8;
-
+   
 
     uint64_t keep_mask = 0xFFFFFF0000000000; 
     
