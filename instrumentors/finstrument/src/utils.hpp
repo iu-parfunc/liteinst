@@ -427,7 +427,8 @@ inline uint8_t* get_edi_set_addr(uint8_t* call_return_addr, uint8_t* start_addr)
   _DInst* result = (_DInst*) malloc(sizeof(_DInst) * 2 * offset);
   unsigned int instructions_count = 0;
   
-  _DecodedInst inst;
+  /* I think this is unused */ 
+  //_DecodedInst inst;
   
   _CodeInfo ci  = {0};
   ci.code = (uint8_t*)start_addr;
@@ -453,7 +454,7 @@ inline uint8_t* get_edi_set_addr(uint8_t* call_return_addr, uint8_t* start_addr)
   }
   
   bool edi_setter_found = false;
-  int instruction_offset = 0;
+  //int instruction_offset = 0;
   for (int i = instructions_count - 1; i >= 0; i--) {
     if (result[i].flags == FLAG_NOT_DECODABLE) {
       printf("Bad decode attempt.. Call address : %p \n", call_addr);
@@ -467,12 +468,15 @@ inline uint8_t* get_edi_set_addr(uint8_t* call_return_addr, uint8_t* start_addr)
       return NULL;
     }
     
-    distorm_format(&ci, &result[i], &inst);
+    /* The result of this is not used ??
+       I think it just creates a string based representation of the instruction */ 
+    //distorm_format(&ci, &result[i], &inst);
     
     ptr_size += result[i].size;
-    instruction_offset++;
+    //instruction_offset++;
     
     if (result[i].opcode == I_MOV) {
+
       if (!edi_setter_found && result[i].ops[0].type == O_REG && 
 	  (result[i].ops[0].index == R_EDI || result[i].ops[0].index == R_RDI)) {
 	if (result[i].ops[1].type == O_IMM || result[i].ops[1].type == O_IMM1 || result[i].ops[1].type == O_IMM2) {
@@ -482,6 +486,7 @@ inline uint8_t* get_edi_set_addr(uint8_t* call_return_addr, uint8_t* start_addr)
 	  edi_setter_found = true;
 	  intermediate_reg  = result[i].ops[1].index;
 	}
+
       } else if(edi_setter_found && result[i].ops[0].type == O_REG && 
 		(reg_equal(intermediate_reg, result[i].ops[0].index))) {
 	if (result[i].ops[1].type == O_IMM || result[i].ops[1].type == O_IMM1 || result[i].ops[1].type == O_IMM2) {

@@ -1,10 +1,13 @@
 
 #include "patcher.h" 
 
+#include <stdlib.h> 
+
 /* Just skip this part if ICC  */
 #if defined(__ICC) || defined(__INTEL_COMPILER) 
 /* Something else may be required here */ 
 #else 
+/* think this part also rules out __STRICT_ANSI__ */ 
   #ifndef __USE_GNU 
     #define __USE_GNU   
   #endif 
@@ -21,7 +24,12 @@ long g_page_size = 0;
 size_t g_cache_lvl3_line_size = 0; 
 uint64_t g_int3_interrupt_count = 0; 
 
-const uint64_t g_int3 = 0xcc;
+
+/* -----------------------------------------------------------------
+   Constants 
+   ----------------------------------------------------------------- */
+
+const uint64_t int3 = 0xcc;
 
 /* -----------------------------------------------------------------
    MACROES 
@@ -39,6 +47,10 @@ const uint64_t g_int3 = 0xcc;
 /* internally used min/max macros */ 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
+
+#define DECODED_OK(d)  ((d).decoded_instructions != NULL && (d).n_instructions != 0)
+
+#define IS_IMMEDIATE(t)  ((t) == O_IMM || (t) == O_IMM1 || (t) == O_IMM2)
 
 
 /* -----------------------------------------------------------------
@@ -194,7 +206,7 @@ void patch_64(void *addr, uint64_t patch_value){
     int shift_size = 8 * (8 - cutoff_point); 
 
     uint64_t ormask = 0xFF << shift_size;  
-    uint64_t int3mask = g_int3 << shift_size; 
+    uint64_t int3mask = int3 << shift_size; 
     
     uint64_t int3_sequence = (before & ~ormask) | int3mask; 
 
@@ -223,7 +235,117 @@ void patch_64(void *addr, uint64_t patch_value){
   WRITE((uint64_t*)addr,patch_value);
 }
 
+/* ----------------------------------------------------------------- 
+   Parameter patching. 
+   ----------------------------------------------------------------- */ 
+typedef struct { 
+  _DInst *decoded_instructions; 
+  unsigned int n_instructions; 
+} Decoded; 
+   
 
+/* Maybe should take a pointer to a Decoded */ 
+void destroy_decoded(Decoded d) {
+  free(d.decoded_instructions); 
+} 
+
+Decoded decode_range(void* start_addr, void* end_addr){
+  uint64_t n_decode_bytes = (uint64_t)((uint64_t)end_addr - (uint64_t)start_addr); 
+  
+  Decoded d; 
+
+  /* why * 2 * n_decode_bytes */ 
+  _DInst* result = (_DInst*)malloc(sizeof(_DInst) * 2 * n_decode_bytes); 
+  unsigned int instruction_count = 0; 
+  
+  _CodeInfo ci = {0}; /* another modernity */ 
+  ci.code = (uint8_t*)start_addr; 
+  ci.codeLen = n_decode_bytes; 
+  ci.dt = Decode64Bits;   /* here we make this AMD64 specific ? */ 
+  ci.codeOffset = 0x100000; 
+
+  _DecodeResult res = distorm_decompose(&ci, result, n_decode_bytes, &instruction_count); 
+  if (res != DECRES_SUCCESS) { 
+    free(result); 
+    result = NULL;
+    
+    d.decoded_instructions = NULL; 
+    d.n_instructions = 0; 
+
+    return d; 
+  }
+ 
+  d.decoded_instructions = result; 
+  d.n_instructions = instruction_count; 
+  return d; 
+
+}
+
+
+/* find the closest point to "end_addr" where the register reg is set 
+   via a mov instruction or return NULL if no such point found*/ 
+int64_t find_reg_setter(_RegisterType reg, Decoded d){ 
+
+  
+  _DInst* decoded = d.decoded_instructions; 
+  unsigned int instruction_count = d.n_instructions;
+
+  uint64_t ptr_size = 0;
+  int64_t setter_offset = 0; /* very unlikely that this is a 64bit quantity */ 
+  _RegisterType intermediate_reg = 0;
+  
+  bool setter_found = false; 
+  bool set_by_intermediate = false; 
+ 
+ 
+  /* Search through instructions from the end */ 
+  for (int i = instruction_count - 1; i >= 0; i --) {
+    /* skip non-decodable */
+    if (decoded[i].flags == FLAG_NOT_DECODABLE) continue;
+    
+    /* increment a ptr, the size of the current instruction in memory */ 
+    ptr_size += decoded[i].size; 
+    
+    if (decoded[i].opcode == I_MOV) {
+      
+      if (!set_by_intermediate && 
+	  decoded[i].ops[0].type == O_REG && 
+	  decoded[i].ops[0].index == reg) {
+	if (IS_IMMEDIATE(decoded[i].ops[1].type)) { 
+	    /* an mov-immediate to reg was found here */ 
+	    setter_offset = ptr_size; 
+	    setter_found = true; 
+	    break; 
+	} else if (decoded[i].ops[1].type == O_REG) { 
+	  /* reg is set to the contents of another register */
+	  /* DANGER ZONE!!!! */ 
+	  set_by_intermediate = true; 
+	  intermediate_reg = decoded[i].ops[1].index;
+	}
+	
+      } else if (set_by_intermediate && 
+		 decoded[i].ops[0].type == O_REG && 
+		 intermediate_reg == decoded[i].ops[0].index) { 
+	if (IS_IMMEDIATE(decoded[i].ops[1].type)) { 
+	  setter_offset = ptr_size; 
+	  setter_found = true; 
+	  break;
+	}  else if (decoded[i].ops[1].type == O_REG) { 
+	  /* yet another level of intermediate register assignment */ 
+	  /* MEGA DANGER ZONE */ 
+	  intermediate_reg = decoded[i].ops[1].index;
+	}
+      }
+    }
+  }
+  
+  if (setter_found)
+    return setter_offset; 
+  else 
+    return -1; 
+
+
+} 
 
 
 /* ----------------------------------------------------------------- 
