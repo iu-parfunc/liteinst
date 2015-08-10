@@ -31,8 +31,17 @@
 
 #include "distorm/distorm.h" 
 #include "distorm/mnemonics.h" 
+
+/* -----------------------------------------------------------------
+   Types 
+   ----------------------------------------------------------------- */ 
  
- 
+typedef struct { 
+  _DInst *decoded_instructions; 
+  unsigned int n_instructions; 
+} Decoded; 
+
+
 /* ----------------------------------------------------------------- 
    Interface 
    ----------------------------------------------------------------- */ 
@@ -43,6 +52,10 @@ extern bool init_patch_site(void*, size_t);
 /* write 8 bytes to a location.. */ 
 extern void patch_64(void*, uint64_t); 
 
+Decoded decode_range(void*, void*);
+void destroy_decoded(Decoded);
+
+int64_t find_reg_setter(_RegisterType, Decoded);
 
 /* -----------------------------------------------------------------
    unsafe replacements for patch code 

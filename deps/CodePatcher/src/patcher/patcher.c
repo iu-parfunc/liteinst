@@ -56,7 +56,7 @@ const uint64_t int3 = 0xcc;
 /* -----------------------------------------------------------------
    local helpers
    ----------------------------------------------------------------- */
-bool set_page_rwe(void *addr);
+bool set_page_rwe(void *addr, size_t nBytes);
 uint64_t get_msb_mask(int nbytes);
 
 
@@ -156,9 +156,12 @@ static void int3_handler(int signo, siginfo_t *inf, void* ptr) {
    ----------------------------------------------------------------- */ 
 
 /* Inline this function when possible */ 
-inline bool set_page_rwe(void *addr) { 
+inline bool set_page_rwe(void *addr,size_t nbytes) { 
 
-  int r = mprotect((void*)((uint64_t)addr - (((uint64_t)addr)%g_page_size)), g_page_size, 
+  uint64_t start = (uint64_t)addr - (((uint64_t)addr)%g_page_size); 
+  size_t bytes = (size_t)((uint64_t)addr - start) + nbytes;
+  
+  int r = mprotect((void*)((uint64_t)addr - (((uint64_t)addr)%g_page_size)), bytes, 
 		   PROT_READ | PROT_WRITE | PROT_EXEC);
   /* need to be more sophisticated here */ 
   if (r == 0) return true; 
@@ -170,14 +173,19 @@ inline bool set_page_rwe(void *addr) {
 bool init_patch_site(void *addr, size_t nbytes){ 
   uint64_t start = 0; 
   long nb = (long)nbytes;
-  bool status = true; 
-
-  while(nb > 0) {
-    status = status && set_page_rwe((void*)((uint64_t)addr + start));
+  bool status = false; 
+  
+  status = set_page_rwe(addr,nbytes); 
+  
+  /* /\* check that this makes any sense!  *\/  */
+  /* while(nb > 0) { */
+  /*   status = status && set_page_rwe((void*)((uint64_t)addr + start)); */
     
-    start = start+4096; 
-    nb = nb-4096; 
-  }
+  /*   uint64_t page_offset = g_page_size - (((uint64_t)addr + start) % g_page_size);  */
+    
+  /*   start = start+g_page_size;  */
+  /*   nb = nb-page_offset;  */
+  /* } */
   return status; 
 }
  
@@ -237,12 +245,7 @@ void patch_64(void *addr, uint64_t patch_value){
 
 /* ----------------------------------------------------------------- 
    Parameter patching. 
-   ----------------------------------------------------------------- */ 
-typedef struct { 
-  _DInst *decoded_instructions; 
-  unsigned int n_instructions; 
-} Decoded; 
-   
+   ----------------------------------------------------------------- */    
 
 /* Maybe should take a pointer to a Decoded */ 
 void destroy_decoded(Decoded d) {
