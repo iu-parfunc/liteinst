@@ -31,19 +31,25 @@ class Instrumentor {
 
   public :
 
+    /// Instrumentor constructor.
+    /* Initialises with the callback
+     * \param callback The callback function invoked at each probe discovery
+     * */
+    Instrumentor(Callback callback);
+
     /// Activates profiling for the probe with given probe id.
     /** Opaque probe id obtained via the callback registered at init time
      *  or by doing a getProbes() call needs to be passed here.
      *  \param probe_id Probe id of the given probe 
      */
-    virtual bool activateProbe(ProbeId probe_id, ) = 0;
+    virtual bool activateProbe(ProbeId probe_id, Instrumentation_func func) = 0;
 
     /// Deactivates profiling for the probe with given probe id.
     /** Opaque probe id obtained via the callback registered at init time
      *  or by doing a getProbes() call needs to be passed here.
      *  \param probe_id Probe id of the given probe 
      */
-    virtual bool deactivateProbe(ProbeId probe_id) = 0;
+    virtual bool deactivateProbe(ProbeId probe_id, Instrumentation_func func) = 0;
 
     /// Gets the estimate of overhead induced by the instrumentation mechanism.
     /* This still needs some thinking over.. Tricky to expose overhead of various
@@ -68,7 +74,7 @@ class Instrumentor {
      */
     virtual uint64_t getFunctionCount();
 
-    virtual ~Instrumentor() {}
+    ~Instrumentor();
 
   protected:
     long func_count = 0; ///< Total number of functions being profiled
