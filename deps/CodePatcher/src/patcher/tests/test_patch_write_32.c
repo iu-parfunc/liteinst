@@ -13,7 +13,7 @@ int main(void) {
 
   printf("Testing patch writes and straddling writes for correctness of value\n"); 
 
-  data = (uint64_t*)malloc((sizeof(uint32_t) * 10) + 64); 
+  data = (uint32_t*)malloc((sizeof(uint32_t) * 10) + 64); 
   memset(data, 0, (sizeof(uint32_t) * 10) + 64); 
   
   if (!init_patch_site((void*)data,10 * 4 + 64)) { 
