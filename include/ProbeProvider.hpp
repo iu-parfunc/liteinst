@@ -21,7 +21,7 @@ typedef uint64_t ProbeLoc;
 /// Probes are a three-state finite automata, and all transitions
 /// between states must be atomic (i.e. have serialization points in
 /// the code).
-enum ProbeState { ACTIVE, INACTIVE, INITIALIZING }
+enum ProbeState { ACTIVE, INACTIVE, INITIALIZING };
 
 /// An opaque, unique probe identifier.  Do not depend on the
 /// representation of this value.
@@ -33,7 +33,7 @@ typedef uint64_t FuncId;
 
 /// Everything we need to know about a newly discovered probe.
 typedef struct ProbeMetaData {
-  FuncId func_id
+  FuncId func_id;
   ProbeId probe_id;
   uint8_t* probe_addr;
   ProbeType type;
@@ -110,7 +110,7 @@ class ProbeProvider {
      * for that before the control transfers to the instrumentation function.
      */
 
-}
+};
 
 
 #endif /* _PROBE_PROVIDER_HPP_ */
