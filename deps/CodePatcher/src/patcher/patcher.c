@@ -55,8 +55,8 @@ const uint64_t int3 = 0xcc;
    local helpers
    ----------------------------------------------------------------- */
 bool set_page_rwe(void *addr, size_t nBytes);
-uint64_t get_msb_mask(int nbytes);
-
+uint64_t get_msb_mask_64(int nbytes);
+uint32_t get_msb_mask_32(int nbytes); 
 
 /* -----------------------------------------------------------------
    CODE Internal 
@@ -106,23 +106,23 @@ void init_patcher() {
 
 
 /* This needs another name, when I understand what its for */ 
-inline bool reg_equal(_RegisterType reg1, _RegisterType reg2) {
-  _RegisterType a1;
-  _RegisterType a2;
+/* inline bool reg_equal(_RegisterType reg1, _RegisterType reg2) { */
+/*   _RegisterType a1; */
+/*   _RegisterType a2; */
 
-  if (reg1 == reg2) return true; 
+/*   if (reg1 == reg2) return true;  */
 
-  /* I think you can subtract 16 from max(reg1,reg2) and 
-     then redo the simple check above.. to replace all of the below.
-     But it is a bit of a hack. */
+/*   /\* I think you can subtract 16 from max(reg1,reg2) and  */
+/*      then redo the simple check above.. to replace all of the below. */
+/*      But it is a bit of a hack. *\/ */
   
-  a1 = MAX(reg1,reg2);
-  a2 = MIN(reg1,reg2);
-  if (a1 - 16 == a2) return true;
+/*   a1 = MAX(reg1,reg2); */
+/*   a2 = MIN(reg1,reg2); */
+/*   if (a1 - 16 == a2) return true; */
 
-  return false; 
+/*   return false;  */
 
-}
+/* } */
 
 /* -----------------------------------------------------------------
    Interrupt handlers 
@@ -145,8 +145,9 @@ static void int3_handler(int signo, siginfo_t *inf, void* ptr) {
   g_int3_interrupt_count++;
   //ticks end = getticks();
   //g_finstrumentor_overhead += (g_int3_interrupt_overhead + end - start);
-
 }
+
+/* need to register these! */
 
 
 /* -----------------------------------------------------------------
@@ -203,7 +204,7 @@ void patch_64(void *addr, uint64_t patch_value){
     uint64_t* straddle_point = (uint64_t*)((uint8_t*)addr + cutoff_point);
     
     // uint64_t lsb_mask = get_lsb_mask(cutoff_point);
-    uint64_t msb_mask = get_msb_mask(cutoff_point); 
+    uint64_t msb_mask = get_msb_mask_64(cutoff_point); 
 
     /* read in 8 bytes before and after the straddle point */
     uint64_t before = *(straddle_point - 1);
@@ -240,6 +241,62 @@ void patch_64(void *addr, uint64_t patch_value){
   /* if not a straddler perform a single write */
   WRITE((uint64_t*)addr,patch_value);
 }
+
+
+/* patch 4 bytes (32 bits) in a safe way. 
+   automatically applying patcher protocol in patch_site is a straddler. */
+void patch_32(void *addr, uint32_t patch_value){  
+  
+  int offset = (uint64_t)addr % g_cache_lvl3_line_size; 
+
+  /* Is this a straddler patch ? */ 
+  if (offset > g_cache_lvl3_line_size - 4) { 
+    fprintf(stderr,"Straddler update\n");
+    /* Here the patch site straddles a cache line and all atomicity 
+       guarantees in relation to instruction fetch seems to go out the window */ 
+
+    unsigned int cutoff_point = g_cache_lvl3_line_size - offset; 
+    uint32_t* straddle_point = (uint32_t*)((uint8_t*)addr + cutoff_point);
+    
+    // uint64_t lsb_mask = get_lsb_mask(cutoff_point);
+    uint32_t msb_mask = get_msb_mask_32(cutoff_point); 
+
+    /* read in 8 bytes before and after the straddle point */
+    uint32_t before = *(straddle_point - 1);
+    uint32_t after  = *straddle_point;
+
+    int shift_size = 8 * (4 - cutoff_point); 
+
+    uint32_t ormask = 0xFF << shift_size;  
+    uint32_t int3mask = int3 << shift_size; 
+    
+    uint32_t int3_sequence = (before & ~ormask) | int3mask; 
+
+    /* this is the parts to keep from what was originally in memory */
+    uint32_t patch_keep_before = before & (~msb_mask);
+    uint32_t patch_keep_after  = after & msb_mask;
+    
+                                                    /*  & lsb_mask */ 
+    uint32_t patch_before = patch_keep_before | ((patch_value) << shift_size);
+                                                   /*  & ~lsb_mask */ 
+    uint32_t patch_after =  patch_keep_after | ((patch_value) >> (8 * cutoff_point));
+    /* commented out masking that becomes "shifted out" */ 
+
+    /* implement the straddler protocol */ 
+    WRITE((straddle_point - 1), int3_sequence);
+    
+    /* An empty delay loop that is unlikely to be optimized out 
+       due to the magic asm inside */ 
+    for(long i = 0; i < 1000; i++) { asm(""); }
+    WRITE(straddle_point,patch_after); 
+    WRITE(straddle_point-1, patch_before); 
+    
+  } else 
+    
+  /* if not a straddler perform a single write */
+  WRITE((uint32_t*)addr,patch_value);
+}
+
 
 /* ----------------------------------------------------------------- 
    Parameter patching. 
@@ -357,7 +414,7 @@ int64_t find_reg_setter(_RegisterType reg, Decoded d){
    ----------------------------------------------------------------- */    
 
 /* Inline this when possible */ 
-inline uint64_t get_msb_mask(int nbytes) {
+inline uint64_t get_msb_mask_64(int nbytes) {
   switch (nbytes) {
     case 1:
       return 0xFF00000000000000;
@@ -373,6 +430,20 @@ inline uint64_t get_msb_mask(int nbytes) {
       return 0xFFFFFFFFFFFF0000;
     case 7:
       return 0xFFFFFFFFFFFFFF00;
+    default:
+      printf("ERROR : Invalid input to get_msb_mask\n");
+      return 0;
+  }
+}
+
+inline uint32_t get_msb_mask_32(int nbytes) {
+  switch (nbytes) {
+    case 1:
+      return 0xFF000000;
+    case 2:
+      return 0xFFFF0000;
+    case 3:
+      return 0xFFFFFF00;
     default:
       printf("ERROR : Invalid input to get_msb_mask\n");
       return 0;
