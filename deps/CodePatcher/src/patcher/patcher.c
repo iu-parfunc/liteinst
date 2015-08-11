@@ -2,6 +2,7 @@
 #include "patcher.h" 
 
 #include <stdlib.h> 
+#include <memory.h> 
 
 /* Just skip this part if ICC  */
 #if defined(__ICC) || defined(__INTEL_COMPILER) 
@@ -23,6 +24,9 @@
 long g_page_size = 0; 
 size_t g_cache_lvl3_line_size = 0; 
 uint64_t g_int3_interrupt_count = 0; 
+
+struct sigaction g_newact; 
+struct sigaction g_oldact; 
 
 
 /* -----------------------------------------------------------------
@@ -52,16 +56,18 @@ const uint64_t int3 = 0xcc;
 
 
 /* -----------------------------------------------------------------
-   local helpers
+   internally used 
    ----------------------------------------------------------------- */
 bool set_page_rwe(void *addr, size_t nBytes);
 uint64_t get_msb_mask_64(int nbytes);
 uint32_t get_msb_mask_32(int nbytes); 
 
+static void int3_handler(int signo, siginfo_t *inf, void* ptr);
+
+
 /* -----------------------------------------------------------------
    CODE Internal 
    ----------------------------------------------------------------- */
- 
 
 /* Constructor function that intializes constants */ 
 __attribute__((constructor))
@@ -71,9 +77,28 @@ void init_patcher() {
      Then no need for this init phase */ 
   g_page_size=sysconf(_SC_PAGESIZE);
   g_cache_lvl3_line_size=sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
+
+
+  /* setup signal handling for straddler protocol */ 
+  memset( &g_newact, 0, sizeof g_newact);
+  g_newact.sa_sigaction = & int3_handler;
+  g_newact.sa_flags = SA_SIGINFO;
+  sigemptyset(& (g_newact.sa_mask));
+
+  
+  sigaction(SIGTRAP, &g_newact, &g_oldact);
+
 }
 
-
+__attribute__((destructor)) 
+void destroy_patcher() {
+  
+  /* potentially do something here */ 
+  
+  
+  return; 
+}
+ 
   
 /* Should be even stricter about use of compiler.. 
    Not much of this will be __STRICT_ANSI__ and maybe 
@@ -127,10 +152,6 @@ void init_patcher() {
 /* -----------------------------------------------------------------
    Interrupt handlers 
    ----------------------------------------------------------------- */ 
-static void empty_int3_handler(int signo, siginfo_t *inf, void* ptr) {
-  return;
-}
-
 
 static void int3_handler(int signo, siginfo_t *inf, void* ptr) {
 
@@ -175,16 +196,7 @@ bool init_patch_site(void *addr, size_t nbytes){
   bool status = false; 
   
   status = set_page_rwe(addr,nbytes); 
-  
-  /* /\* check that this makes any sense!  *\/  */
-  /* while(nb > 0) { */
-  /*   status = status && set_page_rwe((void*)((uint64_t)addr + start)); */
-    
-  /*   uint64_t page_offset = g_page_size - (((uint64_t)addr + start) % g_page_size);  */
-    
-  /*   start = start+g_page_size;  */
-  /*   nb = nb-page_offset;  */
-  /* } */
+ 
   return status; 
 }
  
