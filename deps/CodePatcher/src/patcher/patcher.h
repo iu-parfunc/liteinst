@@ -52,9 +52,9 @@ typedef struct {
 /* Allow READ, WRITE and EXEC on pages touched by patch site */ 
 extern bool init_patch_site(void*, size_t);
 
-/* write 8 bytes to a location in a straddler safe way */ 
+/* Patch up to 8 byte instructions in a straddler safe way */ 
 extern void patch_64(void*, uint64_t); 
-/* write 4 bytes to a location in a straddler safe way */
+/* Patch up to 4 byte instructions in a straddler safe way */
 extern void patch_32(void*, uint32_t); 
 
 Decoded decode_range(void*, void*);
@@ -65,7 +65,7 @@ int64_t find_reg_setter(_RegisterType, Decoded);
 /* -----------------------------------------------------------------
    unsafe replacements for patch code 
    ----------------------------------------------------------------- */ 
-#define PATCH_64_UNSAFE(addr,x) = (((uint64_t*)addr)[0]) = x) 
-#define PATCH_32_UNSAFE(addr,x) = (((uint32_t*)addr)[0]) = x)
+#define PATCH_64_UNSAFE(addr,x)  (((uint64_t*)addr)[0]) = x 
+#define PATCH_32_UNSAFE(addr,x)  (((uint32_t*)addr)[0]) = x
 
 #endif 

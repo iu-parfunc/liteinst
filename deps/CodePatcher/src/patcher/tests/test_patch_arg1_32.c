@@ -52,12 +52,12 @@ void foo(int apa) {
     printf("setter found at offset %ld\n",setter);
     
     /* plus one byt to step past the mov inst */ 
-    void *patch_site = (void*)((uint32_t)call_addr - setter + 1);
+    void *patch_site = (void*)((uint64_t)call_addr - setter + 1);
  
     uint32_t patch = PATCH_HEX;
     
     init_patch_site(patch_site, 8);
-    patch_32(patch_site, patch);
+    PATCH_32_UNSAFE(patch_site, patch);
 
 
     destroy_decoded(d); 
