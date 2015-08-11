@@ -9,9 +9,9 @@
 /* Something else may be required here */ 
 #else 
 /* think this part also rules out __STRICT_ANSI__ */ 
-  #ifndef __USE_GNU 
-    #define __USE_GNU   
-  #endif 
+#ifndef __USE_GNU 
+#define __USE_GNU   
+#endif 
 #endif 
 #include <signal.h>
 
@@ -87,7 +87,7 @@ void init_patcher() {
 
   
   sigaction(SIGTRAP, &g_newact, &g_oldact);
-
+  
 }
 
 __attribute__((destructor)) 
@@ -208,7 +208,7 @@ void patch_64(void *addr, uint64_t patch_value){
 
   /* Is this a straddler patch ? */ 
   if (offset > g_cache_lvl3_line_size - 8) { 
-    fprintf(stderr,"Straddler update\n");
+    //fprintf(stderr,"Straddler update\n");
     /* Here the patch site straddles a cache line and all atomicity 
        guarantees in relation to instruction fetch seems to go out the window */ 
 
@@ -263,7 +263,7 @@ void patch_32(void *addr, uint32_t patch_value){
 
   /* Is this a straddler patch ? */ 
   if (offset > g_cache_lvl3_line_size - 4) { 
-    fprintf(stderr,"Straddler update\n");
+    //fprintf(stderr,"Straddler update\n");
     /* Here the patch site straddles a cache line and all atomicity 
        guarantees in relation to instruction fetch seems to go out the window */ 
 
@@ -353,7 +353,10 @@ Decoded decode_range(void* start_addr, void* end_addr){
 
 
 /* find the closest point to "end_addr" where the register reg is set 
-   via a mov instruction or return NULL if no such point found*/ 
+   via a mov instruction or return -1 if no such point found. 
+   returning the distance if a setter is found. 
+   This distance should be subtracted from the return address of the call 
+   to arrive at the setter. */ 
 int64_t find_reg_setter(_RegisterType reg, Decoded d){ 
 
   
@@ -428,36 +431,36 @@ int64_t find_reg_setter(_RegisterType reg, Decoded d){
 /* Inline this when possible */ 
 inline uint64_t get_msb_mask_64(int nbytes) {
   switch (nbytes) {
-    case 1:
-      return 0xFF00000000000000;
-    case 2:
-      return 0xFFFF000000000000;
-    case 3:
-      return 0xFFFFFF0000000000;
-    case 4:
-      return 0xFFFFFFFF00000000;
-    case 5:
-      return 0xFFFFFFFFFF000000;
-    case 6:
-      return 0xFFFFFFFFFFFF0000;
-    case 7:
-      return 0xFFFFFFFFFFFFFF00;
-    default:
-      printf("ERROR : Invalid input to get_msb_mask\n");
-      return 0;
+  case 1:
+    return 0xFF00000000000000;
+  case 2:
+    return 0xFFFF000000000000;
+  case 3:
+    return 0xFFFFFF0000000000;
+  case 4:
+    return 0xFFFFFFFF00000000;
+  case 5:
+    return 0xFFFFFFFFFF000000;
+  case 6:
+    return 0xFFFFFFFFFFFF0000;
+  case 7:
+    return 0xFFFFFFFFFFFFFF00;
+  default:
+    printf("ERROR : Invalid input to get_msb_mask\n");
+    return 0;
   }
 }
 
 inline uint32_t get_msb_mask_32(int nbytes) {
   switch (nbytes) {
-    case 1:
-      return 0xFF000000;
-    case 2:
-      return 0xFFFF0000;
-    case 3:
-      return 0xFFFFFF00;
-    default:
-      printf("ERROR : Invalid input to get_msb_mask\n");
-      return 0;
+  case 1:
+    return 0xFF000000;
+  case 2:
+    return 0xFFFF0000;
+  case 3:
+    return 0xFFFFFF00;
+  default:
+    printf("ERROR : Invalid input to get_msb_mask\n");
+    return 0;
   }
 }
