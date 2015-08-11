@@ -3,7 +3,7 @@
   Breaking out the patching tool-set. Make it completely standalone in 
   relation to finstrumentor.
 
-  Aug-4-2015 Bo Joel Svensson 
+  Authors: Buddhika Chamith,  Bo Joel Svensson 
 
   Should compile with: 
     icpc [-std=c++11]

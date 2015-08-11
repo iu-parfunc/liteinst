@@ -13,7 +13,6 @@ all: $(EXES)
 
 %.exe: %.c
 
-       # gcc --verbose -std=gnu99 -pedantic -Wall -I../ ../patcher.c -o $@ $< 
 	gcc --std=gnu99 -I../ ../patcher.c $< -o $@ $(DEPS)
 
 
