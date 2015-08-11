@@ -48,8 +48,6 @@ const uint64_t int3 = 0xcc;
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
-#define DECODED_OK(d)  ((d).decoded_instructions != NULL && (d).n_instructions != 0)
-
 #define IS_IMMEDIATE(t)  ((t) == O_IMM || (t) == O_IMM1 || (t) == O_IMM2)
 
 

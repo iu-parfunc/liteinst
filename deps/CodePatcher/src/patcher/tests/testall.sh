@@ -27,7 +27,7 @@ for f in *.exe ; do
 	echo '****************************'
 	echo "$f FAILED! "
 	echo '****************************'
-	FAILURES+=$f
+	#FAILURES+="$f"
 	failed=$((failed+1))
     fi
 done; 

@@ -42,6 +42,9 @@ typedef struct {
 } Decoded; 
 
 
+
+#define DECODED_OK(d)  ((d).decoded_instructions != NULL && (d).n_instructions != 0)
+
 /* ----------------------------------------------------------------- 
    Interface 
    ----------------------------------------------------------------- */ 
