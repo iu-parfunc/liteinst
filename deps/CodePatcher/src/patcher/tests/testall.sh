@@ -32,7 +32,9 @@ for f in *.exe ; do
 	failed=$((failed+1))
     fi
 done; 
-
+echo "" 
+echo "" 
+echo "***** Test summary *****"
 echo "Num passed tests: " $success
 echo "Num failed tests: " $failed
 echo "Failed tests: " $fails

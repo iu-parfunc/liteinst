@@ -64,6 +64,9 @@ void foo(int apa) {
     
     init_patch_site(patch_site, 8);
     patch_64(patch_site, patch);
+
+
+    destroy_decoded(d); 
     
   }  
 
