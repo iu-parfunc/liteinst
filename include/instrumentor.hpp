@@ -34,13 +34,16 @@ class Instrumentor {
     /// Instrumentor constructor.
     /* Initialises with the callback
      * \param callback The callback function invoked at each probe discovery
-     * */
+     */
     Instrumentor(Callback callback);
 
     /// Activates profiling for the probe with given probe id.
     /** Opaque probe id obtained via the callback registered at init time
      *  or by doing a getProbes() call needs to be passed here.
      *  \param probe_id Probe id of the given probe 
+     *  \param func Instrumentation function to be associated with this probe site.
+     *              If one is already associated with the current site returns false
+     *              to indicate that modification was skipped.
      */
     virtual bool activateProbe(ProbeId probe_id, Instrumentation_func func) = 0;
 
@@ -49,7 +52,7 @@ class Instrumentor {
      *  or by doing a getProbes() call needs to be passed here.
      *  \param probe_id Probe id of the given probe 
      */
-    virtual bool deactivateProbe(ProbeId probe_id, Instrumentation_func func) = 0;
+    virtual bool deactivateProbe(ProbeId probe_id) = 0;
 
     /// Gets the estimate of overhead induced by the instrumentation mechanism.
     /* This still needs some thinking over.. Tricky to expose overhead of various
@@ -59,6 +62,11 @@ class Instrumentor {
     virtual uint64_t getInstrumentationOverheadEstimate(uint64_t num_invocations) = 0;
 
     /// Registers probe with the instrumentor 
+    /* Probe providers would use this function to register the probes discovered
+     * with the Instrumentor
+     * \param type Type of the probe. Currently one of ZCA| FINSTRUMENT.
+     * \param pmd  Meta data about the probe
+     * */
     virtual void registerProbe(ProbeType type, ProbeMetaData* pmd) = 0;
 
     /// Gets the registered probes 
