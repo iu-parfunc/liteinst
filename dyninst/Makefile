@@ -27,3 +27,7 @@ run:
 
 ryan:
 	 CPLUS_INCLUDE_PATH=$(HOME)/opt/dyninst/include LIBRARY_PATH=$(HOME)/opt/dyninst/lib $(MAKE)
+
+
+clean:
+	rm -f *.o *.exe

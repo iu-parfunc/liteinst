@@ -24,18 +24,20 @@ int main (int argc, const char* argv[])  {
   printf("Hello from mutator\n");
 
   BPatch bpatch;
+  pid_t pid;
 
-  if (fork()) {
+  if (pid = fork()) {
     // Parent
-    printf("In parent process, serving as mutator.\n");
+    printf(" # In parent process, serving as mutator, child pid = %d\n", pid);
 
     // // BPatch_process *proc = bpatch.processCreate(argv[1], argv + 2, NULL, stdin, stdout, stderr);
     // BPatch_process *proc = bpatch.processCreate(argv[1], argv + 2);
 
-    auto procs = bpatch.getProcesses();
-    printf("GOT Processes! %d\n", (int)procs->size());
+    // auto procs = bpatch.getProcesses();
+    // printf("GOT Processes! %d\n", (int)procs->size());
 
-    /*
+    BPatch_process *proc = bpatch.processAttach("child", pid);
+
     //bpatch.setTrampRecursive(true);
     //bpatch.setSaveFPR(false);
     //bpatch.setInstrStackFrames(false);
@@ -57,7 +59,9 @@ int main (int argc, const char* argv[])  {
 
 
     // ------------------------------------------------------------
-    printf("Is process stopped? %d\n", proc->isStopped());
+    printf(" # Is child process stopped? %d\n", proc->isStopped());
+    fflush(stdout);
+
     proc->continueExecution();
     // proc->detach(true);
 
@@ -66,15 +70,16 @@ int main (int argc, const char* argv[])  {
     while (!proc->isTerminated()) {
         bpatch.waitForStatusChange();
     }
-    printf("Child finished.  Mutator/parent exiting.\n");
+    printf(" # Child finished.  Mutator/parent exiting.\n");
     return 0;
-*/
+
   } else {
-    printf("  -> In child process... calling foo\n");
+    printf("  -> In child process... sleeping \n"); sleep(1);
 
-    auto procs = bpatch.getProcesses();
-    printf("  Child process sees, #processes = %d\n", (int)procs->size());
+    // auto procs = bpatch.getProcesses();
+    // printf("  Child process sees, #processes = %d\n", (int)procs->size());
 
+    printf("  -> In child process... calling foo \n");
     foo();
     printf("  -> Child exiting \n");
   }
