@@ -50,9 +50,10 @@ int main(void) {
   }
   
 
-  printf("Test is a %s\n", (i == 10 && g_foo_val == 6) ? "Success" : "Failure");
-
-  
-
-  return 0;  
+  if (i == 10 && g_foo_val == 6) { 
+    printf("Success\n");
+    return 0;
+  }
+  printf("Test failed!\n"); 
+  return 1;  
 }

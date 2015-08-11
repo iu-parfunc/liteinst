@@ -7,10 +7,12 @@
 #include "patcher.h"  
 
 int g_foo_val = 0; 
+int g_bar_val = 0; 
 
 void bar(int apa){ 
 
   printf("Running bar %d\n", apa); 
+  g_bar_val++; 
 
 }
 
@@ -20,7 +22,7 @@ void foo(int apa) {
   
   printf("Running foo %d\n", apa); 
   
-  if (g_foo_val >= 5) {
+  if (g_foo_val >= 4) {
     /* this is the address that foo returns too, 
        so the call_site is a few bytes before that */ 
     uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
@@ -51,10 +53,9 @@ void foo(int apa) {
     printf("%lx  \n", patch);
     patch_64((void*)call_addr, patch); 
     
-    return; 
   }  
-
   g_foo_val++;
+  
 } 
 
 
@@ -72,9 +73,13 @@ int main(void) {
   }
   
 
-  printf("Test is a %s\n", (i == 10 && g_foo_val == 5) ? "Success" : "Failure");
-
+  if (i == 10 && g_foo_val == 5 && g_bar_val == 5) { 
+    printf("Success\n");
+    return 0;  
+  } 
+  printf("Test failed!\n"); 
+  return 1; 
   
 
-  return 0;  
+
 }
