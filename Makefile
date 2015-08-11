@@ -40,7 +40,7 @@ doc:
 # .phony is not good enough for this:
 # FORCE:
 
-docker:
+docker: clean
 # Check what's there and build our new one:
 	docker images
 	docker build -t iu-parfunc/ubiprof .
