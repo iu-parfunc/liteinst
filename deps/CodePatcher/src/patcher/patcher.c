@@ -154,7 +154,7 @@ void destroy_patcher() {
    ----------------------------------------------------------------- */ 
 
 static void int3_handler(int signo, siginfo_t *inf, void* ptr) {
-
+  
   //ticks start = getticks();
   ucontext_t *ucontext = (ucontext_t*)ptr;
 

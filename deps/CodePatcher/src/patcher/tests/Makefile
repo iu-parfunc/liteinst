@@ -1,19 +1,16 @@
 .PHONY: clean all
-# TODO: Rewrite completely when more done 
-
-
 
 SRCS = $(wildcard *.c)
 
 EXES = $(patsubst %.c,%.exe,$(SRCS))
 
-DEPS = ../../../../../deps/distorm/distorm3.a
+DEPS = ../../../../../deps/distorm/distorm3.a -lpthread
 
 all: $(EXES)
 
 %.exe: %.c
 
-	gcc --std=gnu99 -I../ ../patcher.c $< -o $@ $(DEPS)
+	gcc --std=gnu99 -g -I../ ../patcher.c $< -o $@ $(DEPS) 
 
 
 test: $(EXES)
