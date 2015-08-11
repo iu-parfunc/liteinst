@@ -2,7 +2,7 @@
 success=0; 
 failed=0; 
 
-FAILURES=
+fails=""
 
 for f in *.exe ; do 
     if [ $f  =  '*.exe' ] ; 
@@ -27,11 +27,12 @@ for f in *.exe ; do
 	echo '****************************'
 	echo "$f FAILED! "
 	echo '****************************'
-	#FAILURES+="$f"
+
+	fails="$fails $f" 
 	failed=$((failed+1))
     fi
 done; 
 
-echo "Passed tests: " $success
-echo "Failed tests: " $failed
-echo $FAILURES
+echo "Num passed tests: " $success
+echo "Num failed tests: " $failed
+echo "Failed tests: " $fails

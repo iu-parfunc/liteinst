@@ -86,7 +86,6 @@ int main(void) {
     
     printf("Loop %d\n",i);
   }
-  
 
   if (i == 10 && g_foo_val == 10) { 
     printf("Success\n");
