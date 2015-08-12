@@ -57,13 +57,13 @@ typedef struct ProbeMetaData {
 ///
 typedef void (*Callback) (const ProbeMetaData* pmd);
 
-/// This is the type of function pointers for dynamically injected
-/// function calls.  The job of the ProbeProvider
-typedef void (*Instrumentation_func) (FuncId func_id);
-
 /// The argument passed at runtime to the Instrumentation_func.
 /// Very often, this is the FuncId.
 typedef uint64_t ProbeArg;
+
+/// This is the type of function pointers for dynamically injected
+/// function calls.  The job of the ProbeProvider
+typedef void (*Instrumentation_func) (ProbeArg context_id);
 
 /// Implements an object which discovers probes and subsequently
 /// provides the ability to toggle those probes.
