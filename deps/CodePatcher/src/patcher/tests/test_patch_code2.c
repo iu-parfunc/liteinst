@@ -1,3 +1,17 @@
+/* 
+   Test desc: 
+   Single threaded code patching test. 
+   
+   A call site is replaced with a call to another function . 
+   
+   Function foo is executed in a loop 10 times. 
+   On the 5th run it patches its own call site with a call to bar 
+   foo increments a foo_val. 
+   bar increments a bar_val.
+   
+   Test is considererd a success if after running foo 10 times in a loop foo_val = 5 and bar_val = 5
+   
+ */
 
 #include <stdio.h> 
 #include <memory.h>

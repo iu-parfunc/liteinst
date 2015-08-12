@@ -1,3 +1,24 @@
+/* 
+   Test desc: 
+   
+   Tests patching functions for correctness of value. 
+   exercises both the straddler patch and the "normal" path of the patch function. 
+   
+   an array of 10 elements all containing zero is updated at index 2 
+   using the patch_32 function. 
+   
+   The array is moved around in memory so that all variants of cache line boundary 
+   straddlers occur (that is it is moved in a window 64 bytes larger than the array). 
+   
+   Test is considered a success if all writes into the array using patch_32 
+   results in the correct value manifesting in memory. 
+
+   # info: 
+    - should add condition that no other element of array changes its value. 
+   
+
+*/ 
+
 
 #include <stdio.h> 
 #include <memory.h>

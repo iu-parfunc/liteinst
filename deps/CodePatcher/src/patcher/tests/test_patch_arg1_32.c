@@ -1,3 +1,28 @@
+/* 
+   Test desc: 
+
+   Tests to set an argument via a 32 bit regular write rather than 
+   an instruction patch. This type of update should be perfectly fine 
+   in a single threaded mode of operation. 
+   
+   Test of the decoding and setter finding functionality: 
+      - decode_range
+      - find_reg_setter
+   
+   Function "void foo(int apa)" is executed 10 times in a loop. 
+   Argument BEFORE_ARG_PATCH is always passed to foo. 
+   
+   when foo runs for the 5th time, it patches its own argument setter site 
+   with with AFTER_ARG_PATCH. 
+
+   Test is a success if for iteration <= 5 arg to foo is BEFORE_ARG_PATCH 
+   and at iteration > 5 arg to foo is AFTER_ARG_PATCH 
+   and foo has been in total executed 10 times. 
+
+   NOTE: 
+    Methods used in this test is not applicable to parallel settings.
+    
+*/ 
 
 #include <stdio.h> 
 #include <memory.h>

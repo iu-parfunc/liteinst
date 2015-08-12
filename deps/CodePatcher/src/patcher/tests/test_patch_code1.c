@@ -1,3 +1,20 @@
+/* 
+   Test desc: 
+   Single threaded code patching test. 
+   
+   A call site is replaced with a sequence of 5 nops. 
+   (In a single threaded setting patching with 5 nops is ok, 
+    since there is no other that that could potentially be in the 
+    middle of this sequence as a change occurs) 
+   
+   Function foo is executed in a loop 10 times. 
+   On the 5th run it patches its own call site with nops. 
+   foo increments a foo_val. 
+   
+   Test is considererd a success if after running foo 10 times in a loop foo_val = 5
+   
+ */
+
 
 #include <stdio.h> 
 #include <memory.h>
@@ -12,7 +29,7 @@ void foo(int apa) {
   
   printf("Running foo %d\n", apa); 
   
-  if (g_foo_val >= 5) {
+  if (g_foo_val >= 4) {
     /* this is the address that foo returns too, 
        so the call_site is a few bytes before that */ 
     uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
@@ -50,7 +67,7 @@ int main(void) {
   }
   
 
-  if (i == 10 && g_foo_val == 6) { 
+  if (i == 10 && g_foo_val == 5) { 
     printf("Success\n");
     return 0;
   }

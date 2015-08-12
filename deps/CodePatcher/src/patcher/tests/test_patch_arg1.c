@@ -1,3 +1,23 @@
+/* 
+   Test desc: 
+   
+   Test of the decoding and setter finding functionality: 
+      - decode_range
+      - find_reg_setter
+   as well as the patching functionality. 
+ 
+   Function "void foo(int apa)" is executed 10 times in a loop. 
+   Argument BEFORE_ARG_PATCH is always passed to foo. 
+   
+   when foo runs for the 5th time, it patches its own argument setter site 
+   with with AFTER_ARG_PATCH. 
+
+   Test is a success if for iteration <= 5 arg to foo is BEFORE_ARG_PATCH 
+   and at iteration > 5 arg to foo is AFTER_ARG_PATCH 
+   and foo has been in total executed 10 times. 
+    
+*/ 
+
 
 #include <stdio.h> 
 #include <memory.h>

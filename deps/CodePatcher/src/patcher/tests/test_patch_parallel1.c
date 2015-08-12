@@ -1,3 +1,16 @@
+/* 
+    Test desc: 
+    tests parallel updates of a call site. 
+     - One thread repeatedly writes the original call site code (call to foo). 
+     - One thread repeatedly writes a 5 byte nop instruction. 
+     
+    Test is considered a success if it does not crash. 
+   
+    info: 
+    Patching with a single 5byte nop or 5 x 1 byte nops make a big difference. 
+    using 1byte nops is incorrect and crashes. 
+  
+*/ 
 
 #include <stdio.h> 
 #include <memory.h>
