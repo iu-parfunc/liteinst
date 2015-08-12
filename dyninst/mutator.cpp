@@ -1,5 +1,3 @@
-
-
 #include "BPatch.h"
 #include "BPatch_point.h"
 #include "BPatch_function.h"
@@ -7,6 +5,9 @@
 #include <vector>
 #include "ProbeProvider.hpp"
 #include <unistd.h>
+
+#include <sys/types.h>
+#include <signal.h>
 
 
 void foo() {
@@ -24,11 +25,11 @@ int main (int argc, const char* argv[])  {
   printf("Hello from mutator\n");
 
   BPatch bpatch;
-  pid_t pid;
+  pid_t child_pid;
 
-  if (pid = fork()) {
+  if (child_pid = fork()) {
     // Parent
-    printf(" # In parent process, serving as mutator, child pid = %d\n", pid);
+    printf(" # In parent process, serving as mutator, child pid = %d\n", child_pid);
 
     // // BPatch_process *proc = bpatch.processCreate(argv[1], argv + 2, NULL, stdin, stdout, stderr);
     // BPatch_process *proc = bpatch.processCreate(argv[1], argv + 2);
@@ -36,7 +37,7 @@ int main (int argc, const char* argv[])  {
     // auto procs = bpatch.getProcesses();
     // printf("GOT Processes! %d\n", (int)procs->size());
 
-    BPatch_process *proc = bpatch.processAttach("child", pid);
+    BPatch_process *proc = bpatch.processAttach("child", child_pid);
 
     //bpatch.setTrampRecursive(true);
     //bpatch.setSaveFPR(false);
@@ -59,22 +60,24 @@ int main (int argc, const char* argv[])  {
 
 
     // ------------------------------------------------------------
-    printf(" # Is child process stopped? %d\n", proc->isStopped());
-    fflush(stdout);
 
+    printf(" # Is child process stopped? %d\n", proc->isStopped()); fflush(stdout);
     proc->continueExecution();
+    printf(" # After continueExecution, child process stopped? %d\n", proc->isStopped()); fflush(stdout);
     // proc->detach(true);
 
-    // sleep(20);
-
+    long long spin = 0;
     while (!proc->isTerminated()) {
         bpatch.waitForStatusChange();
+        spin++;
     }
-    printf(" # Child finished.  Mutator/parent exiting.\n");
+    printf(" # Child finished after %lld waits.  Mutator/parent exiting.\n", spin);
     return 0;
 
   } else {
-    printf("  -> In child process... sleeping \n"); sleep(1);
+    child_pid = getpid();
+    printf("  -> In child process... sending STOP to self \n");
+    kill(child_pid, SIGSTOP);
 
     // auto procs = bpatch.getProcesses();
     // printf("  Child process sees, #processes = %d\n", (int)procs->size());
@@ -82,6 +85,7 @@ int main (int argc, const char* argv[])  {
     printf("  -> In child process... calling foo \n");
     foo();
     printf("  -> Child exiting \n");
+    return 0;
   }
 }
 
