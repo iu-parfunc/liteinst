@@ -1,8 +1,12 @@
 /* 
     Test desc: 
     tests parallel updates of a argument setter site. 
-     - One thread repeatedly writes . 
-     - One thread repeatedly writes . 
+     - One thread repeatedly writes ARG1. 
+     - One thread repeatedly writes ARG2.
+
+    test is successful if loop runs to completion 
+    and only ARG1 and ARG2 are ever observed as arguments to foo. 
+    
      
 
 */ 
