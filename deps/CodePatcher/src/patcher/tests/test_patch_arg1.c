@@ -59,6 +59,7 @@ void foo(int apa) {
     
     if (!DECODED_OK(d)) {
       printf("decode_range did not work\n");
+      exit(EXIT_FAILURE);
     }
       
     

@@ -28,7 +28,7 @@
 #endif 
 #include <pthread.h> 
 
-int g_foo_val = 0; 
+unsigned long  g_foo_val = 0; 
 
 /* control */
 volatile int g_running = true; 
