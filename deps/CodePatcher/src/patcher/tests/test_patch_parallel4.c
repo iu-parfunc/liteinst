@@ -162,7 +162,7 @@ int main(void) {
   addr[0] = (uint32_t)((uint64_t)( (uint64_t)foo - (uint64_t)&fun[start_addr + 9]) );
   
 
-
+  /* generate some code containing a call at a straddling location */ 
   fun[start_addr] = 0x55;     /* push %rbp */
   fun[start_addr + 1] = 0x48; /* mov %rsp, %rbp */
   fun[start_addr + 2] = 0x89; 
