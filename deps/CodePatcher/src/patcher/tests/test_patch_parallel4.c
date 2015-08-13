@@ -91,10 +91,17 @@ void foo(void) {
     uint64_t bar_addr = ((uint64_t)bar - (uint64_t)addr); 
    
     uint64_t keep_mask = 0xFFFFFF0000000000; 
-    
+
+    printf("call_instr: %lx\n",tmp);
+    printf("bar_addr:   %lx\n",bar_addr); 
+	   
     tmp = (tmp | (bar_addr << 8)) & ~keep_mask;
+    printf("call_bar: %lx\n",tmp);
+	   
     
     g_call_bar_patch = (g_orig_call & keep_mask) | tmp;
+    printf("call_bar_patch: %lx\n",g_call_bar_patch);
+    
 
     g_first_run = false; 
   }
@@ -171,7 +178,10 @@ int main(void) {
   
   for (it = 0; it < ITERS; it ++) { 
     /*    foo(); */
+
+    //pthread_mutex_lock(&patch_lock);
     ((void (*)(void ))&fun[start_addr])(); 
+    //pthread_mutex_unlock(&patch_lock);
   }
   g_running = false; 
   
@@ -186,7 +196,8 @@ int main(void) {
 	 g_foo_val + g_bar_val,
 	 ITERS);
  
-  if (g_foo_val + g_bar_val == ITERS) { 
+  /* if (g_foo_val + g_bar_val == ITERS) { */ 
+  if (g_foo_val > 0 && g_bar_val > 0) {
     printf("Success\n");
     return 0; 
   } else { 

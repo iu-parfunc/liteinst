@@ -165,7 +165,7 @@ void patch_64(void *addr, uint64_t patch_value){
 
   /* Is this a straddler patch ? */ 
   if (offset > g_cache_lvl3_line_size - 8) { 
-    fprintf(stderr,"Straddler update\n");
+    /* fprintf(stderr,"Straddler update\n"); */ 
     /* Here the patch site straddles a cache line and all atomicity 
        guarantees in relation to instruction fetch seems to go out the window */ 
 
@@ -194,16 +194,17 @@ void patch_64(void *addr, uint64_t patch_value){
     uint64_t patch_before = patch_keep_before | ((patch_value  & lsb_mask) << shift_size);
                                                    /*  */ 
     uint64_t patch_after =  patch_keep_after | ((patch_value  & ~lsb_mask) >> (8 * cutoff_point));
-    /* commented out masking that becomes "shifted out" */ 
+
 
     /* implement the straddler protocol */ 
-    WRITE((straddle_point - 1), int3_sequence);
+    ((uint8_t*)addr)[0] = int3; 
+    //WRITE((straddle_point - 1), int3_sequence);
     
     /* An empty delay loop that is unlikely to be optimized out 
        due to the magic asm inside */ 
     for(long i = 0; i < 1000; i++) { asm(""); }
     WRITE(straddle_point,patch_after); 
-    WRITE(straddle_point-1, patch_before); 
+    WRITE((straddle_point-1), patch_before); 
     
   } else 
     
@@ -256,7 +257,8 @@ void patch_32(void *addr, uint32_t patch_value){
     
     /* An empty delay loop that is unlikely to be optimized out 
        due to the magic asm inside */ 
-    for(long i = 0; i < 1000; i++) { asm(""); }
+    for(long i = 0; i < 1000; i++) {__asm__ __volatile__("")/* asm("") */; }
+
     WRITE(straddle_point,patch_after); 
     WRITE(straddle_point-1, patch_before); 
     
