@@ -3,6 +3,14 @@
    Multiple threads executes a call site, while it is being 
    changed. 
 
+   NUM_RUNNERS threads execute a loop running foo ITERS times 
+   1  thread replaces foo call site with a bar call.  
+   1  thread replaces foo call site with a foo call. 
+   
+   Test is considered successful if the sum of number of 
+   times foo and bar is invoked is equal to the 
+   ITERS * NUM_RUNNERS. 
+
    
 */ 
 #include <stdio.h> 
