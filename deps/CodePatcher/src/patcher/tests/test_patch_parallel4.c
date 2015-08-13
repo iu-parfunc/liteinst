@@ -24,7 +24,7 @@
 #endif 
 #include <pthread.h> 
 
-#define ITERS 10000000
+#define ITERS 1000000
 
 unsigned long g_foo_val = 0; 
 unsigned long  g_bar_val = 0; 
@@ -39,7 +39,6 @@ uint64_t g_call_addr = 0;
 uint64_t g_orig_call = 0;  /* original instr */
 uint64_t g_call_bar_patch = 0;      /* replacement isntr sequence */
 
-pthread_mutex_t patch_lock;
 
 void bar(void) {
   
@@ -53,9 +52,7 @@ void activator(int *arg) {
   while (g_first_run); /* wait until setup phase is done */ 
   
   while(g_running) { 
-    pthread_mutex_lock(&patch_lock);
     patch_64((void*)g_call_addr, g_orig_call);
-    pthread_mutex_unlock(&patch_lock);
     pthread_yield(); 
   }  
 } 
@@ -66,9 +63,7 @@ void deactivator(int *arg) {
   
   while (g_running) { 
 
-    pthread_mutex_lock(&patch_lock);
     patch_64((void*)g_call_addr, g_call_bar_patch);
-    pthread_mutex_unlock(&patch_lock);
     pthread_yield(); 
   }
 } 
@@ -119,8 +114,6 @@ int main(void) {
   
   unsigned long it = 0; 
 
-  pthread_mutex_init(&patch_lock, NULL);
-
   pthread_create(&thread1,
 		 NULL, 
 		 (void *) activator, 
@@ -132,7 +125,7 @@ int main(void) {
 		 (void *) &r2); 
 
    
-  printf("Testing parallel updates to a call_site as it is being executed.\n"); 
+  printf("Testing parallel updates to a STRADDLING call_site as it is being executed.\n"); 
   
  
   uint8_t* fun=(uint8_t*)malloc(1024); 
