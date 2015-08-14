@@ -159,69 +159,83 @@ bool init_patch_site(void *addr, size_t nbytes){
  
 /* patch 8 bytes (64 bits) in a safe way. 
    automatically applying patcher protocol in patch_site is a straddler. */
-void patch_64(void *addr, uint64_t patch_value){  
+bool patch_64(void *addr, uint64_t patch_value){  
   
   int offset = (uint64_t)addr % g_cache_lvl3_line_size; 
-
+  
   /* Is this a straddler patch ? */ 
   if (offset > g_cache_lvl3_line_size - 8) { 
     /* fprintf(stderr,"Straddler update\n"); */ 
     /* Here the patch site straddles a cache line and all atomicity 
        guarantees in relation to instruction fetch seems to go out the window */ 
-
+    
     unsigned int cutoff_point = g_cache_lvl3_line_size - offset; 
     uint64_t* straddle_point = (uint64_t*)((uint8_t*)addr + cutoff_point);
     
     uint64_t lsb_mask = get_lsb_mask_64(cutoff_point);
     uint64_t msb_mask = get_msb_mask_64(cutoff_point); 
-
+    
     /* read in 8 bytes before and after the straddle point */
     uint64_t before = *(straddle_point - 1);
     uint64_t after  = *straddle_point;
-
+    
     int shift_size = 8 * (8 - cutoff_point); 
-
+    
     uint64_t ormask = 0xFF << shift_size;  
     uint64_t int3mask = int3 << shift_size; 
     
     uint64_t int3_sequence = (before & ~ormask) | int3mask; 
-
+    
     /* this is the parts to keep from what was originally in memory */
     uint64_t patch_keep_before = before & (~msb_mask);
     uint64_t patch_keep_after  = after & msb_mask;
     
-                                                    /*  */ 
+    /*  */ 
     uint64_t patch_before = patch_keep_before | ((patch_value  & lsb_mask) << shift_size);
-                                                   /*  */ 
+    /*  */ 
     uint64_t patch_after =  patch_keep_after | ((patch_value  & ~lsb_mask) >> (8 * cutoff_point));
 
 
+#ifdef THREADSAFE_PATCHING 
+    uint8_t oldFR = ((uint8_t*)addr)[0]; 
+
+    if (oldFR == int3) return false; 
+    else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {
+      for(long i = 0; i < 1000; i++) {__asm__ __volatile__(""); } 
+      WRITE(straddle_point,patch_after); 
+      WRITE((straddle_point-1), patch_before); 
+    }
+    else return false; 
+    
+#else /* racy patching */      
     /* implement the straddler protocol */ 
     ((uint8_t*)addr)[0] = int3; 
-    //WRITE((straddle_point - 1), int3_sequence);
+    /*WRITE((straddle_point - 1), int3_sequence); */
     
     /* An empty delay loop that is unlikely to be optimized out 
        due to the magic asm inside */ 
-    for(long i = 0; i < 1000; i++) { asm(""); }
+    for(long i = 0; i < 1000; i++) {__asm__ __volatile__(""); }
     WRITE(straddle_point,patch_after); 
     WRITE((straddle_point-1), patch_before); 
-    
-  } else 
-    
+    return true; 
+#endif     
+  } 
+  
   /* if not a straddler perform a single write */
   WRITE((uint64_t*)addr,patch_value);
+  return true; 
+  
 }
-
-
+    
 /* patch 4 bytes (32 bits) in a safe way. 
-   automatically applying patcher protocol in patch_site is a straddler. */
-void patch_32(void *addr, uint32_t patch_value){  
+       automatically applying patcher protocol in patch_site is a straddler. */
+bool patch_32(void *addr, uint32_t patch_value){  
   
   int offset = (uint64_t)addr % g_cache_lvl3_line_size; 
 
   /* Is this a straddler patch ? */ 
   if (offset > g_cache_lvl3_line_size - 4) { 
-    //fprintf(stderr,"Straddler update\n");
+    /* fprintf(stderr,"Straddler update\n"); */ 
     /* Here the patch site straddles a cache line and all atomicity 
        guarantees in relation to instruction fetch seems to go out the window */ 
 
@@ -261,11 +275,12 @@ void patch_32(void *addr, uint32_t patch_value){
 
     WRITE(straddle_point,patch_after); 
     WRITE(straddle_point-1, patch_before); 
-    
-  } else 
+    return true; 
+  } 
     
   /* if not a straddler perform a single write */
   WRITE((uint32_t*)addr,patch_value);
+  return true; 
 }
 
 

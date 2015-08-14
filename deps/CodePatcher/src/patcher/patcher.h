@@ -53,9 +53,9 @@ typedef struct {
 extern bool init_patch_site(void*, size_t);
 
 /* Patch up to 8 byte instructions in a straddler safe way */ 
-extern void patch_64(void*, uint64_t); 
+extern bool patch_64(void*, uint64_t); 
 /* Patch up to 4 byte instructions in a straddler safe way */
-extern void patch_32(void*, uint32_t); 
+extern bool patch_32(void*, uint32_t); 
 
 Decoded decode_range(void*, void*);
 void destroy_decoded(Decoded);
