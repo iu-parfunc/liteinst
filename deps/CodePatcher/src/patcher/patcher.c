@@ -267,15 +267,28 @@ bool patch_32(void *addr, uint32_t patch_value){
     /* commented out masking that becomes "shifted out" */ 
 
     /* implement the straddler protocol */ 
+#ifdef THREADSAFE_PATCHING 
+    uint8_t oldFR = ((uint8_t*)addr)[0]; 
+
+    if (oldFR == int3) return false; 
+    else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {
+      for(long i = 0; i < 1000; i++) {__asm__ __volatile__(""); } 
+      WRITE(straddle_point,patch_after); 
+      WRITE((straddle_point-1), patch_before); 
+    }
+    else return false; 
+    
+#else
     WRITE((straddle_point - 1), int3_sequence);
     
     /* An empty delay loop that is unlikely to be optimized out 
        due to the magic asm inside */ 
-    for(long i = 0; i < 1000; i++) {__asm__ __volatile__("")/* asm("") */; }
+    for(long i = 0; i < 1000; i++) {__asm__ __volatile__(""); }
 
     WRITE(straddle_point,patch_after); 
     WRITE(straddle_point-1, patch_before); 
     return true; 
+#endif
   } 
     
   /* if not a straddler perform a single write */
