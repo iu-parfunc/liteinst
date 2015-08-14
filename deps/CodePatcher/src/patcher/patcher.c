@@ -180,12 +180,7 @@ bool patch_64(void *addr, uint64_t patch_value){
     uint64_t after  = *straddle_point;
     
     int shift_size = 8 * (8 - cutoff_point); 
-    
-    uint64_t ormask = 0xFF << shift_size;  
-    uint64_t int3mask = int3 << shift_size; 
-    
-    uint64_t int3_sequence = (before & ~ormask) | int3mask; 
-    
+      
     /* this is the parts to keep from what was originally in memory */
     uint64_t patch_keep_before = before & (~msb_mask);
     uint64_t patch_keep_after  = after & msb_mask;
@@ -251,11 +246,6 @@ bool patch_32(void *addr, uint32_t patch_value){
 
     int shift_size = 8 * (4 - cutoff_point); 
 
-    uint32_t ormask = 0xFF << shift_size;  
-    uint32_t int3mask = int3 << shift_size; 
-    
-    uint32_t int3_sequence = (before & ~ormask) | int3mask; 
-
     /* this is the parts to keep from what was originally in memory */
     uint32_t patch_keep_before = before & (~msb_mask);
     uint32_t patch_keep_after  = after & msb_mask;
@@ -279,8 +269,7 @@ bool patch_32(void *addr, uint32_t patch_value){
     else return false; 
     
 #else
-    WRITE((straddle_point - 1), int3_sequence);
-    
+    ((uint8_t*)addr)[0] = int3;     
     /* An empty delay loop that is unlikely to be optimized out 
        due to the magic asm inside */ 
     for(long i = 0; i < 1000; i++) {__asm__ __volatile__(""); }
