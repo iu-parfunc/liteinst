@@ -55,12 +55,10 @@ docker: clean
 # MUCH bigger.
 #
 # TODO: This should eventually turn into the benchmarking image.
-docker2:
+docker2: clean
 # I know of no principled way to parameterize Dockerfiles.  Hence *this* hackery:
-#	echo "FROM rrnewton/dyninst_temp" > dockerfiles/Dockerfile_wdyninst
-#	cat dockerfiles/Dockerfile_default | grep -v FROM >> dockerfiles/Dockerfile_wdyninst
-	cp -f dockerfiles/Dockerfile_wdyninst ./Dockerfile
-	docker build -t iu-parfunc/ubiprof_dyninst .
+	cp -f dockerfiles/Dockerfile_wdyninst_14.10 ./Dockerfile
+	docker build -t iu-parfunc/ubiprof_dyninst:14.10 .
 	rm -f ./Dockerfile
 
 # Finally, you can hop in the image with:
