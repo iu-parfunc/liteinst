@@ -20,6 +20,7 @@ tests: lib
 	(cd profilers/tests/integration;make check)
 
 lib:
+	g++ --version || echo ok
 	(cd instrumentors/finstrument/src/; \
 	make CFLAGS='-DNDEBUG -O3')
 	(cd profilers/src/; \
@@ -40,12 +41,27 @@ doc:
 # .phony is not good enough for this:
 # FORCE:
 
+
 docker: clean
 # Check what's there and build our new one:
 	docker images
+# Dockerfile's "build -f" seems basically broken in 1.8.  Hence this hackery:
+	cp -f dockerfiles/Dockerfile_default ./Dockerfile
 	docker build -t iu-parfunc/ubiprof .
 # Remove any dangling ones as a general cleanup measure:
 	docker rmi $(docker images -q --filter "dangling=true") || echo ok
+
+# This verison builds on top of an image that includes DynInst.  It's
+# MUCH bigger.
+#
+# TODO: This should eventually turn into the benchmarking image.
+docker2:
+# I know of no principled way to parameterize Dockerfiles.  Hence *this* hackery:
+#	echo "FROM rrnewton/dyninst_temp" > dockerfiles/Dockerfile_wdyninst
+#	cat dockerfiles/Dockerfile_default | grep -v FROM >> dockerfiles/Dockerfile_wdyninst
+	cp -f dockerfiles/Dockerfile_wdyninst ./Dockerfile
+	docker build -t iu-parfunc/ubiprof_dyninst .
+	rm -f ./Dockerfile
 
 # Finally, you can hop in the image with:
 # docker run -it iu-parfunc/ubiprof

@@ -3,3 +3,12 @@ HSBencher
 benchmarks
 dist
 ./run-benchmarks.exe
+./dyninst
+.cabal-sandbox
+.stack-work
+cabal.sandbox.config
+*.bak
+bench*.log
+*.exe
+*.dSYM
+not_tracked/
