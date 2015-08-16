@@ -6,8 +6,9 @@ EXTRA_WARNS=
 #-Wextra 
 ## -Wformat-nonliteral -Wcast-align -Wpointer-arith -Wbad-function-cast -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Winline -Wundef -Wnested-externs -Wcast-qual -Wshadow -Wwrite-strings -Wno-unused-parameter -Wfloat-equal
 
-ARGS= -g -Wall -pedantic $(EXTRA_WARNS) -I../../include
+ARGS= -g -Wall -pedantic $(EXTRA_WARNS) -I../../include -I../../deps/distorm/include -I.
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared 
+LIBS = -L../../build -lpointpatch
 
 COMP = icc
 CC = icc $(ARGS)
@@ -21,7 +22,7 @@ AR = ar
 RM = rm
 OPTS = 
 
-CODE = finstrument_probe_provider.cpp lock.cpp cyg_functions.cpp 
+CODE = finstrument_probe_provider.cpp lock.cpp cyg_functions.cpp globals.cpp 
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 
@@ -31,18 +32,13 @@ all: build
 
 build: $(OBJ) 
 
-distorm: 
-	cd ../../../deps/distorm/make/linux;make clean;make CC=$(COMP)
-
-#.cpp.cpp:
-#	  $(CPP) $@ $<
-#.c.c:
-#	  $(CC)  $@ $<
+libfastinst.so: build
+	$(CXX) $(LIBS) -shared -Wl,-soname,libfastinst.so -o libfastinst.so $(OBJ) 
 
 .cpp.o:
 	$(CXX) -std=c++11 $(ARGS) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
 .c.o:
-	$(CC) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
+	$(CC) $(ARGS) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
 
 clean:
 	$(RM) -f $(OBJ) 

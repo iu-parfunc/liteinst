@@ -16,6 +16,7 @@
 
 #include "finstrument_probe_provider.hpp"
 #include "cyg_functions.hpp"
+#include "utils.hpp"
 
 #include "../../common/include/cycle.h"
 
@@ -24,6 +25,7 @@
 #endif
 
 using namespace std;
+using namespace utils;
 
 extern uint64_t g_TicksPerNanoSec;
 extern bool g_ubiprof_initialized;
@@ -224,9 +226,14 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 void __cyg_profile_func_enter(void* func_addr, void* call_site_addr) {
   
   FinstrumentProbeProvider* ins = (FinstrumentProbeProvider*) PROBE_PROVIDER;
+  if (ins == NULL) { // ProbeProvider hasn't been set. Skip instrumentation.
+    return;
+  }
+
   int64_t flag = (int64_t) call_site_addr;
   uint64_t function = (uint64_t) func_addr; // this is either an address or an ID
 
+  // TODO: This breaks the abstraction. Get rid of this.
   // If not initialized, just exit. 
   if (!g_ubiprof_initialized) { 
     return; 
@@ -240,6 +247,7 @@ void __cyg_profile_func_enter(void* func_addr, void* call_site_addr) {
   ticks start = getticks();
 #endif
   
+  // TODO: This breaks the abstraction. Get rid of this.
   // NOW AT THIS POINT WE KNOW THAT UBIPROF IS INITIALIZED 
   assert(g_ubiprof_initialized == true); 
   // I WANT THE ASSERT BELOW TO PASS 
@@ -261,6 +269,7 @@ void __cyg_profile_func_enter(void* func_addr, void* call_site_addr) {
 
   uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(
       __builtin_return_address(0));
+  uint8_t* call_addr = (uint8_t*) addr - 5;
 
   ProbeMetaData* pmd = ins->getNewProbeMetaDataContainer((Address) addr - 5);
 
@@ -278,7 +287,7 @@ void __cyg_profile_func_enter(void* func_addr, void* call_site_addr) {
   str.append(pmd->func_name).append("$").append("enter");
   pmd->probe_name = str;
 
-  pmd->probe_addr = (uint8_t*) addr - 5;
+  pmd->probe_addr = call_addr;
   pmd->type = ProbeType::FINSTRUMENT;
   pmd->state = ProbeState::UNINITIALIZED; //??
   pmd->probe_context = ProbeContext::ENTRY;
@@ -302,8 +311,9 @@ void __cyg_profile_func_enter(void* func_addr, void* call_site_addr) {
   }
 
   // NOW PATCH ARGUMENTS (Set up for next run to enter the efficient branch) 
-  // TBD with new libcodeswap library 
-  // Finish off by using the normal process_func_by_id 
+  patch_first_argument(func_addr, (void*) call_addr, (uint32_t) pmd->probe_id);
+
+  // Finish off by using the normal process_func_enter
   process_func_enter(pmd->instrumentation_func, pmd->probe_arg); 
 }
 #endif
@@ -387,6 +397,10 @@ void __cyg_profile_func_exit(void* func_addr, void* call_site_addr) {
   #endif
 
   FinstrumentProbeProvider* ins = (FinstrumentProbeProvider*) PROBE_PROVIDER;
+  if (ins == NULL) { // ProbeProvider hasn't been set. Skip instrumentation.
+    return;
+  }
+
   int64_t flag = (int64_t) call_site_addr;
   uint64_t function = (uint64_t) func_addr; // this is either an address or an ID
 
@@ -402,6 +416,7 @@ void __cyg_profile_func_exit(void* func_addr, void* call_site_addr) {
 
   
   uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
+  uint8_t* call_addr = (uint8_t*) addr - 5;
 
   ProbeMetaData* pmd = ins->getNewProbeMetaDataContainer((Address) addr - 5);
 
@@ -453,7 +468,8 @@ void __cyg_profile_func_exit(void* func_addr, void* call_site_addr) {
   */
  
   // NOW PATCH ARGUMENTS (Set up for next run to enter the efficient branch)
-  // TBD with new libcodeswap library
+  patch_first_argument(func_addr, (void*) call_addr, (uint32_t) pmd->probe_id);
+
   // Finish off by using the normal process_func_by_id 
   process_func_exit(pmd->instrumentation_func, pmd->probe_arg); 
 

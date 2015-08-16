@@ -14,10 +14,6 @@ using namespace std;
 using namespace lock;
 using namespace utils;
 
-/*
-FinstrumentProbeProvider():ProbeProvider(Callback cb) {
-} */
-
 void FinstrumentProbeProvider::initialize(ProbeId probe_id, ProbeArg arg) {
   ProbeMetaData* pmd = probe_meta_data[probe_id];
   pmd->probe_arg = arg;
@@ -45,7 +41,8 @@ bool FinstrumentProbeProvider::activate(ProbeId probe_id, InstrumentationFunc fu
 
   probe_meta_data[probe_id]->instrumentation_func.store(func, std::memory_order_seq_cst);
 
-  // Patch the probe site using libcodeswap
+  // Patch the probe site 
+  patch_64((void*) pmd->probe_addr, pmd->active_seq);
   return true;
 }
 
@@ -61,7 +58,8 @@ bool FinstrumentProbeProvider::deactivate(ProbeId probe_id) {
     return false;
   }
 
-  // Patch the probe site using libcodeswap
+  // Patch the probe site 
+  patch_64((void*) pmd->probe_addr, pmd->inactive_seq);
   return true;
 }
 

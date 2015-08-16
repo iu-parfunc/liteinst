@@ -3,16 +3,19 @@
 #define _PROBE_PROVIDER_HPP_
 
 #include <cstdint>
+#include <vector>
+#include <atomic>
+#include <string>
 
 /// In the future we will aim to support an open universe of probe
 /// providers.  In the short term, we explicitly enumerate the probe
 /// providers.  Any use of this field violates the abstraction of the
 /// ProbeProvider by depending on implementation details.
-enum ProbeType { ZCA, FINSTRUMENT, DTRACE, DYNINST };
+enum class ProbeType { ZCA, FINSTRUMENT, DTRACE, DYNINST };
 
 /// What is context of a particular probe location?  This is used by
 /// profilers to assign some semantic meaning to probe.
-enum ProbeContext { ENTRY, EXIT, LINE_NUM };
+enum class ProbeContext { ENTRY, EXIT, LINE_NUM };
 
 /// Currently ProbLoc is set to a line number (if context=LINE_NUM)
 /// and to null otherwise.
@@ -21,7 +24,7 @@ typedef uint64_t ProbeLoc;
 /// Probes are a four-state finite automata, and all transitions
 /// between states must be atomic (i.e. have serialization points in
 /// the code).
-enum ProbeState { UNINITIALIZED, INITIALIZING, ACTIVE, DEACTIVATED };
+enum class ProbeState { UNINITIALIZED, INITIALIZING, ACTIVE, DEACTIVATED };
 
 /// An opaque, unique probe identifier.  Do not depend on the
 /// representation of this value.
@@ -31,17 +34,42 @@ typedef uint64_t ProbeId;
 /// representation of this value.
 typedef uint64_t FuncId;
 
+/// A byte addressible data type
+typedef uint8_t* Address;
+
+/// The argument passed at runtime to the Instrumentation_func.
+/// Very often, this is the FuncId.
+typedef uint64_t ProbeArg;
+
+/// A byte sequence of 8 bytes
+typedef uint64_t Sequence;
+
+/// This is the type of function pointers for dynamically injected
+/// function calls.  The job of the ProbeProvider
+typedef void (*InstrumentationFunc) (ProbeArg context_id);
+
+/// Atomic reference to an InstrumentationFunc function pointer
+typedef std::atomic<InstrumentationFunc> InstrumentationFuncAtomic;
+
 /// Everything we need to know about a newly discovered probe.
 typedef struct ProbeMetaData {
   FuncId func_id;
+  std::string func_name;
   ProbeId probe_id;
-  uint8_t* probe_addr;
+  std::string probe_name;
+  Address probe_addr;
   ProbeType type;
   ProbeState state;
   ProbeContext probe_context;
   ProbeLoc     probe_loc;
+  ProbeArg     probe_arg;
+  Sequence active_seq;
+  Sequence inactive_seq;
+  InstrumentationFuncAtomic instrumentation_func;
 } ProbeMetaData;
 
+/// Probe meta data vector data type
+typedef std::vector<ProbeMetaData*> ProbeVec;
 
 /// The signature for a callback that registers a newly discovered
 /// probe.  The ProbeProvider owns the ProbeMetadata record, so the
@@ -57,20 +85,14 @@ typedef struct ProbeMetaData {
 ///
 typedef void (*Callback) (const ProbeMetaData* pmd);
 
-/// The argument passed at runtime to the Instrumentation_func.
-/// Very often, this is the FuncId.
-typedef uint64_t ProbeArg;
-
-/// This is the type of function pointers for dynamically injected
-/// function calls.  The job of the ProbeProvider
-typedef void (*Instrumentation_func) (ProbeArg context_id);
 
 /// Implements an object which discovers probes and subsequently
 /// provides the ability to toggle those probes.
 class ProbeProvider {
 
-  private:
-    Callback* callback;
+  protected:
+    Callback callback;
+    ProbeVec probe_meta_data;
 
   public:
     /// Probe provider constructor
@@ -96,7 +118,7 @@ class ProbeProvider {
      * Instrumentation_func which the probe is activated with.
      *
      */
-    virtual void initialize(ProbeArg probe_arg);
+    virtual void initialize(ProbeId probe_id, ProbeArg probe_arg);
 
     /// Activates the given probe.
     /* Activates the probe with given instrumentation function.
@@ -119,7 +141,7 @@ class ProbeProvider {
      * \param probe_id The probe id opaque identifier
      * \param func The instrumentation function
      */
-    virtual bool activate(ProbeId probe_id, Instrumentation_func func) = 0;
+    virtual bool activate(ProbeId probe_id, InstrumentationFunc func) = 0;
 
     /// Deactivates the given probe
     /* Deactivate the probe, restoring the original functioality of
@@ -153,5 +175,8 @@ class ProbeProvider {
 
 };
 
+/// Global probe provider instance. Allows plain C functions to accesss instrumentor
+/// functions at runtime.
+extern ProbeProvider* PROBE_PROVIDER;
 
 #endif /* _PROBE_PROVIDER_HPP_ */
