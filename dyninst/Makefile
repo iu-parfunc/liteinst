@@ -23,7 +23,7 @@ mutator.exe: mutator.cpp
 	$(CXX) mutator.o -L$(DYNINST_LIB) $(LIBS) -o mutator.exe
 
 run:
-	DYNINSTAPI_RT_LIB=$(DYNINST_LIB)/libdyninstAPI_RT.so ./mutator.exe ./mutatee.exe
+	DYNINSTAPI_RT_LIB=$(DYNINST_LIB)/libdyninstAPI_RT.so time ./mutator.exe ./mutatee.exe
 
 ryan:
 	 CPLUS_INCLUDE_PATH=$(HOME)/opt/dyninst/include LIBRARY_PATH=$(HOME)/opt/dyninst/lib $(MAKE)

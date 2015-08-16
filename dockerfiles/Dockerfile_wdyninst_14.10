@@ -1,0 +1,21 @@
+# This is built against an older version of ubuntu that our default Dockerfile.
+
+# BUT with 14.10 it's at least new enough to have the GCC 4.9 that we need:
+FROM rrnewton/dyninst_temp:v8.2_14.10
+
+# For reasons to do with Docker limitations this script is written
+# from the perspective of its parent directory and must be copied
+# there.
+
+RUN apt-get install --force-yes -y \
+     doxygen \
+     gcc-4.9 g++-4.9 \
+     libpapi-dev \
+     make \
+     time
+
+ADD . ubiprof_src/
+
+RUN cd ubiprof_src &&  \
+    make lib && \
+    make devdoc doc

@@ -1,0 +1,20 @@
+# This is built against an older version of ubuntu.
+FROM rrnewton/dyninst_temp
+
+# 14.04 LTS is so old we need a different repository to get GCC 4.9:
+RUN (echo "deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu trusty main" \
+     | tee -a /etc/apt/sources.list.d/ubuntu-toolchain-r-test-trusty.list ) && \
+    apt-get update
+RUN apt-get purge g++-4.8 --force-yes -y && \
+    apt-get install --force-yes -y \
+     doxygen \
+     gcc-4.9 g++-4.9 \
+     libpapi-dev \
+     make \
+     time
+
+ADD . ubiprof_src/
+
+RUN cd ubiprof_src &&  \
+    make lib && \
+    make devdoc doc
