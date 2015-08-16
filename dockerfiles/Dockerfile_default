@@ -1,0 +1,18 @@
+# By default we use a recent ubuntu.  For one thing we need g++ >= 4.9
+FROM ubuntu:15.10
+
+# For reasons to do with Docker limitations this script is written
+# from the perspective of its parent directory and must be copied
+# there.
+
+RUN apt-get update && apt-get install -y \
+     doxygen \
+     gcc g++ \
+     libpapi-dev \
+     make
+
+ADD . ubiprof_src/
+
+RUN cd ubiprof_src &&  \
+    make lib && \
+    make devdoc doc
