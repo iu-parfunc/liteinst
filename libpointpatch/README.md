@@ -14,4 +14,4 @@ Info
 
 flags (#define at compile time) : 
  * NO_WAIT - Disables the wait loop in patching protocol.
- * THREADSAFE_PATCHING - Use threadsafe patching protocol.
+ * NON_THREADSAFE_PATCHING - Use non threadsafe patching protocol.
