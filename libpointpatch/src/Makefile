@@ -20,6 +20,8 @@ DEPS = ../../deps/distorm/distorm3.a
 BUILD = ../../build
 INSTALL = $(BUILD)/lib
 
+RM = rm
+
 .PHONY: test build distorm libpointpatch install
 
 build: $(OBJ)
@@ -40,5 +42,8 @@ distorm:
 
 test: 
 	(cd ../tests; make test)
+
+clean:
+	$(RM) -f *.o *.exe *.so
 
 
