@@ -208,6 +208,7 @@ bool patch_64(void *addr, uint64_t patch_value){
   #endif 
       WRITE(straddle_point,patch_after); 
       WRITE((straddle_point-1), patch_before); 
+      return true; 
     }
     else return false; 
 #endif     
@@ -275,6 +276,7 @@ bool patch_32(void *addr, uint32_t patch_value){
   #endif
       WRITE(straddle_point,patch_after); 
       WRITE((straddle_point-1), patch_before); 
+      return true;
     }
     else return false; 
 

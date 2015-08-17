@@ -43,7 +43,7 @@ install: libpointpatch.so libpointpatch.a
 	(cp libpointpatch.a $(INSTALL))
 
 .c.o:
-	  $(CC) -std=gnu99 $(INCLUDES) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
+	  $(CC) -std=gnu99 $(INCLUDES) $(CFLAGS) $(OPTS) -fPIC -c -Wall  -o $@ $<
 
 distorm:
 	(cd ../../deps/distorm/make/linux/;make clean;make CC=$(CC));
