@@ -8,7 +8,7 @@ typedef std::unordered_map<Address, std::string> FuncAddrMapping;
 typedef std::unordered_map<Address, uint32_t> ProbeLookupMap; 
 // typedef std::unordered_map<uint64_t, lock::CASLock> FuncRWLocks;
 
-class FinstrumentProbeProvider : ProbeProvider {
+class FinstrumentProbeProvider : public ProbeProvider {
 
   private:
     FuncAddrMapping func_addr_mappings; //!< Function adress to name mapping.

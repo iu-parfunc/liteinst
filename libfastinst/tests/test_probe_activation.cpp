@@ -1,16 +1,15 @@
 
 #include "fastinst.hpp"
 
-#include <assert>
+#include <cassert>
 #include <cstdlib>
 
-ProbeProvider p;
 int foo_count;
 int foo_entry_probe_id;
 int foo_exit_probe_id;
 
 __attribute__((no_instrument_function))
-void instrumenation(ProbeArg func_id) {
+void instrumentation(ProbeArg func_id) {
 
   assert(func_id == 0);
 
@@ -18,7 +17,7 @@ void instrumenation(ProbeArg func_id) {
 }
 
 __attribute__((no_instrument_function))
-void callback(ProbeMetaData* pmd) {
+void callback(const ProbeMetaData* pmd) {
 
   if (pmd->probe_context == ProbeContext::ENTRY) {
     foo_entry_probe_id = pmd->probe_id;
@@ -26,8 +25,8 @@ void callback(ProbeMetaData* pmd) {
     foo_exit_probe_id = pmd->probe_id;
   }
 
-  p->initialize(pmd->probe_id, 0);
-  p->activate(pmd->probe_id, instrumentation);
+  PROBE_PROVIDER->initialize(pmd->probe_id, 0);
+  PROBE_PROVIDER->activate(pmd->probe_id, instrumentation);
 
 }
 
@@ -39,11 +38,22 @@ int foo(int x) {
 
 int main() {
 
-  p = new FinstrumentProbeProvider(callback);
+  ProbeProvider* p;
+  try {
+    p = ProbeProvider::initializeProbeProvider(ProviderType::FINSTRUMENT, callback);
+  } catch (int e) {
+    fprintf(stderr, "ProbeProvider already initialized. Getting the existing one..\n");
+    p = ProbeProvider::getProbeProvider();
+  }
+
+  if (p == NULL) {
+    fprintf(stderr, "Unable to intialize probe provider..\n");
+    exit(-1);
+  }
   
   foo_count = 0;
   for (int i=0; i<100; i++) {
-    foo();
+    foo(i);
   }
 
   assert(foo_count == 100);
@@ -52,7 +62,7 @@ int main() {
   p->deactivate(foo_exit_probe_id);
 
   for (int i=0; i<100; i++) {
-    foo();
+    foo(i);
   }
 
   assert(foo_count == 100);
@@ -61,7 +71,7 @@ int main() {
   p->activate(foo_exit_probe_id, instrumentation);
 
   for (int i=0; i<100; i++) {
-    foo();
+    foo(i);
   }
 
   assert(foo_count == 200);

@@ -7,6 +7,10 @@
 #include <atomic>
 #include <string>
 
+/// This is used to specify whichprovider needs to be selected
+/// at initialization time.  
+enum class ProviderType { ZCA, FINSTRUMENT, DTRACE, DYNINST };
+
 /// In the future we will aim to support an open universe of probe
 /// providers.  In the short term, we explicitly enumerate the probe
 /// providers.  Any use of this field violates the abstraction of the
@@ -101,6 +105,18 @@ class ProbeProvider {
      */
     ProbeProvider(Callback callback);
 
+    /// Initializes the ProbeProvider instance of requested type
+    /*  It's an error to call this method more than once. 
+     *  \param type The type of the ProbeProvider needed.
+     *  \param callback The probe discovery callback.
+     *  \return A reference to initialized ProbeProvider instance.
+     */
+    static ProbeProvider* initializeProbeProvider(ProviderType type, Callback callback);
+    
+    /// Gets the reference to ProbeProvider instance.
+    /*  \return A reference to ProbeProvider instance.
+     */
+    static ProbeProvider* getProbeProvider();
 
     /// Move from UNINITIALIZED to INITIALIZING state.
     /* Begin initializing the probe, moving from UNINITIALIZED to

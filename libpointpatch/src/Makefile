@@ -20,19 +20,27 @@ DEPS = ../../deps/distorm/distorm3.a
 BUILD = ../../build
 INSTALL = $(BUILD)/lib
 
+AR = ar
 RM = rm
 
-.PHONY: test build distorm libpointpatch install
+.PHONY: test build distorm install
 
 build: $(OBJ)
 
-libpointpatch: build distorm
+libpointpatch.a: build distorm
+	if [ -d libpointpatch.a ]; then $(RM) -f libpointpatch.a; fi
+	mkdir temp;cd temp; $(AR) -x ../$(DEPS)
+	$(AR) rc libpointpatch.a  $(OBJ) temp/*.o
+	$(RM) -rf temp
+
+libpointpatch.so: build distorm
 	$(CXX) $(LIBS) -shared -Wl,-soname,libpointpatch.so -o libpointpatch.so $(OBJ) $(DEPS)
 
-install: libpointpatch
+install: libpointpatch.so libpointpatch.a
 	if [ ! -d $(BUILD) ]; then mkdir $(BUILD); fi
 	if [ ! -d $(INSTALL) ]; then mkdir $(INSTALL); fi
 	(cp libpointpatch.so $(INSTALL))
+	(cp libpointpatch.a $(INSTALL))
 
 .c.o:
 	  $(CC) -std=gnu99 $(INCLUDES) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<

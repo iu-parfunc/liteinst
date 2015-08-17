@@ -2,6 +2,7 @@
 #include "finstrument_probe_provider.hpp"
 #include "calibrate.hpp"
 #include "utils.hpp"
+#include "patcher.h"
 
 #include <cstdio>
 #include <vector>
