@@ -1,4 +1,7 @@
 
+#ifndef _FINSTRUMENT_PROBE_PROVIDER_HPP_
+#define _FINSTRUMENT_PROBE_PROVIDER_HPP_
+
 #include <unordered_map>
 
 #include "fastinst.hpp"
@@ -76,3 +79,5 @@ class FinstrumentProbeProvider : public ProbeProvider {
     std::string getFunctionName(Address func_addr);
 
 };
+
+#endif /* _FINSTRUMENT_PROBE_PROVIDER_HPP_ */

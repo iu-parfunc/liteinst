@@ -52,6 +52,6 @@ test:
 	(cd ../tests; make test)
 
 clean:
-	$(RM) -f *.o *.exe *.so
+	$(RM) -f *.o *.exe *.so $(INSTALL)/libpointpatch.*
 
 

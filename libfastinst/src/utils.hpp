@@ -1,4 +1,8 @@
 
+#ifndef _UTILS_HPP_
+#define _UTILS_HPP_
+
+#include <cstdint>
 #include <string>
 #include <vector>
 #include "patcher.h"
@@ -58,3 +62,5 @@ namespace utils {
   }
 
 }
+
+#endif /* _UTILS_HPP_ */

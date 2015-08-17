@@ -1,4 +1,7 @@
 
+#ifndef _LOCk_HPP_
+#define _LOCK_HPP_
+
 #include <atomic>
 
 namespace lock {
@@ -14,3 +17,5 @@ namespace lock {
       void unlock();
   };
 }
+
+#endif /* _LOCK_HPP_ */

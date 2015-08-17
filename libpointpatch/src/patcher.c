@@ -193,7 +193,7 @@ bool patch_64(void *addr, uint64_t patch_value){
        due to the magic asm inside */ 
 #ifndef NO_WAIT 
     for(long i = 0; i < 1000; i++) { asm (""); }
-#endif NO_WAIT 
+#endif 
     WRITE(straddle_point,patch_after); 
     WRITE((straddle_point-1), patch_before); 
     return true; 

@@ -1,4 +1,7 @@
 
+#ifndef _CALIBRATE_HPP_
+#define _CALIBRATE_HPP_
+
 namespace calibrate {
 
   void __fake_cyg_enter_function(void* func_addr, void* call_site);
@@ -86,3 +89,5 @@ namespace calibrate {
 */
 
 }
+
+#endif /* _CALIBRATE_HPP_ */
