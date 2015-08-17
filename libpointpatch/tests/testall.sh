@@ -1,19 +1,20 @@
+#!/bin/bash
 
-success=0; 
-failed=0; 
+success=0;
+failed=0;
 
 fails=""
 
-for f in *.exe ; do 
-    if [ $f  =  '*.exe' ] ; 
-	then echo "Build tests first" 
+for f in *.exe ; do
+    if [ $f  =  '*.exe' ] ;
+	then echo "Build tests first"
 	exit;
-    fi; 
+    fi;
     echo ""
     echo ""
 
     echo '****************************'
-    echo 'RUNNING TEST' 
+    echo 'RUNNING TEST'
     echo '****************************'
 
 
@@ -28,13 +29,20 @@ for f in *.exe ; do
 	echo "$f FAILED! "
 	echo '****************************'
 
-	fails="$fails $f" 
+	fails="$fails $f"
 	failed=$((failed+1))
     fi
-done; 
-echo "" 
-echo "" 
+done;
+echo ""
+echo ""
 echo "***** Test summary *****"
 echo "Num passed tests: " $success
 echo "Num failed tests: " $failed
 echo "Failed tests: " $fails
+
+if [ "$failed" == "0" ];
+then
+    exit 0;
+else
+    exit 1;
+fi
