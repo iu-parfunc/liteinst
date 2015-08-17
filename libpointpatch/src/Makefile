@@ -28,8 +28,8 @@ libpointpatch: build distorm
 	$(CXX) $(LIBS) -shared -Wl,-soname,libpointpatch.so -o libpointpatch.so $(OBJ) $(DEPS)
 
 install: libpointpatch
-	if [ ! -d $(BUILD) ]; then mkdir $(BUILD) fi
-	if [ ! -d $(INSTALL) ]; then mkdir $(INSTALL) fi
+	if [ ! -d $(BUILD) ]; then mkdir $(BUILD); fi
+	if [ ! -d $(INSTALL) ]; then mkdir $(INSTALL); fi
 	(cp libpointpatch.so $(INSTALL));
 
 # I do not see the point of having both of these ? what does it mean ? 
