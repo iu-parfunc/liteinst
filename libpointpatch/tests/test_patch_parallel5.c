@@ -82,7 +82,6 @@ void deactivator(int *arg) {
 void foo(void) { 
   
   if (g_first_run) { 
-    printf("HELLO FROM INSIDE OF GENERATED CODE\n"); 
     /* do init stuff */ 
     uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
     g_call_addr = (uint64_t)((uint8_t*)addr - 5);
@@ -135,7 +134,7 @@ void runner(int *arg) {
 } 
 
 
-int main(void) {
+int main(int argc, char** argv) {
 
   pthread_t thread1, thread2; 
   int r1,r2; 
@@ -163,6 +162,11 @@ int main(void) {
   /* where within the call should the straddler occur */ 
   int call_straddler_point = 1;
   
+  if (argc == 2){ /* if there is an argument */
+    call_straddler_point = atoi(argv[1]);
+  } 
+  printf("Setting straddler point at %d (distance in byte into the patch site)\n",call_straddler_point); 
+
 
   /* find a straddling position within fun */
   uint64_t fun_address = (uint64_t)fun; 
@@ -176,6 +180,7 @@ int main(void) {
 
   start_addr = (closest_straddler_offset - 4) - call_straddler_point;
   printf("start_addr = %d\n",start_addr);
+  printf("call_instr_offset = %d\n",start_addr + fun_offset + 4);
   printf("cache_line_offset = %d\n",start_addr + fun_offset);
    
 
