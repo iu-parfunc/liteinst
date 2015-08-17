@@ -1,4 +1,10 @@
 
+# using icc requires some extra flags. 
+# these flags are probably different from when using gcc
+# since a lot of what we do is not standard-c (asm, REG_RIP, etc not standard!)
+#  gcc --std=gnu99 
+#  icc -- ?????
+# it seems that icc also accepts the flag std=gnu99, good. 
 CC=icc
 CXX=icpc
 
@@ -26,10 +32,11 @@ install: libpointpatch
 	if [ ! -d $(INSTALL) ]; then mkdir $(INSTALL) fi
 	(cp libpointpatch.so $(INSTALL));
 
+# I do not see the point of having both of these ? what does it mean ? 
 .cpp.o:
 	  $(CXX) -std=c++11 $(INCLUDES) $(CFLAGS) -fPIC -c -Wall -o $@ $<
 .c.o:
-	  $(CC) $(INCLUDES) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
+	  $(CC) -std=gnu99 $(INCLUDES) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
 
 distorm:
 	(cd ../../deps/distorm/make/linux/;make clean;make CC=$(CC));
