@@ -4,15 +4,8 @@
 #include <stdlib.h> 
 #include <memory.h> 
 
-/* Just skip this part if ICC  */
-#if defined(__ICC) || defined(__INTEL_COMPILER) 
-/* Something else may be required here */ 
-#else 
-/* think this part also rules out __STRICT_ANSI__ */ 
-#ifndef __USE_GNU 
-#define __USE_GNU   
-#endif 
-#endif 
+
+#define __USE_GNU  
 #include <signal.h>
 
 
@@ -148,8 +141,8 @@ inline bool set_page_rwe(void *addr,size_t nbytes) {
 /* initialize a patch site, make pages read/write/exec.
    if addr + nbytes touches more than one page, all of those are modified */ 
 bool init_patch_site(void *addr, size_t nbytes){ 
-  uint64_t start = 0; 
-  long nb = (long)nbytes;
+  /* uint64_t start = 0;  */
+  /* long nb = (long)nbytes; */
   bool status = false; 
   
   status = set_page_rwe(addr,nbytes); 
@@ -196,7 +189,7 @@ bool patch_64(void *addr, uint64_t patch_value){
 
     if (oldFR == int3) return false; 
     else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {
-      for(long i = 0; i < 1000; i++) {__asm__ __volatile__(""); } 
+      for(long i = 0; i < 1000; i++) { asm (""); } 
       WRITE(straddle_point,patch_after); 
       WRITE((straddle_point-1), patch_before); 
     }
@@ -209,7 +202,7 @@ bool patch_64(void *addr, uint64_t patch_value){
     
     /* An empty delay loop that is unlikely to be optimized out 
        due to the magic asm inside */ 
-    for(long i = 0; i < 1000; i++) {__asm__ __volatile__(""); }
+    for(long i = 0; i < 1000; i++) { asm (""); }
     WRITE(straddle_point,patch_after); 
     WRITE((straddle_point-1), patch_before); 
     return true; 
@@ -262,7 +255,7 @@ bool patch_32(void *addr, uint32_t patch_value){
 
     if (oldFR == int3) return false; 
     else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {
-      for(long i = 0; i < 1000; i++) {__asm__ __volatile__(""); } 
+      for(long i = 0; i < 1000; i++) { asm (""); } 
       WRITE(straddle_point,patch_after); 
       WRITE((straddle_point-1), patch_before); 
     }
@@ -272,7 +265,7 @@ bool patch_32(void *addr, uint32_t patch_value){
     ((uint8_t*)addr)[0] = int3;     
     /* An empty delay loop that is unlikely to be optimized out 
        due to the magic asm inside */ 
-    for(long i = 0; i < 1000; i++) {__asm__ __volatile__(""); }
+    for(long i = 0; i < 1000; i++) { asm (""); }
 
     WRITE(straddle_point,patch_after); 
     WRITE(straddle_point-1, patch_before); 
