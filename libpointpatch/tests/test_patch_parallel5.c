@@ -135,7 +135,7 @@ void runner(int *arg) {
 } 
 
 
-int main(void) {
+int main(int argc, char** argv) {
 
   pthread_t thread1, thread2; 
   int r1,r2; 
@@ -163,6 +163,11 @@ int main(void) {
   /* where within the call should the straddler occur */ 
   int call_straddler_point = 1;
   
+  if (argc == 2){ /* if there is an argument */
+    call_straddler_point = atoi(argv[1]);
+  } 
+  printf("Setting straddler point at %d (distance in byte into the patch site)\n",call_straddler_point); 
+
 
   /* find a straddling position within fun */
   uint64_t fun_address = (uint64_t)fun; 
