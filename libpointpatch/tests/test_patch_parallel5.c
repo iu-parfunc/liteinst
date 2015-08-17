@@ -82,7 +82,6 @@ void deactivator(int *arg) {
 void foo(void) { 
   
   if (g_first_run) { 
-    printf("HELLO FROM INSIDE OF GENERATED CODE\n"); 
     /* do init stuff */ 
     uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
     g_call_addr = (uint64_t)((uint8_t*)addr - 5);
@@ -181,6 +180,7 @@ int main(int argc, char** argv) {
 
   start_addr = (closest_straddler_offset - 4) - call_straddler_point;
   printf("start_addr = %d\n",start_addr);
+  printf("call_instr_offset = %d\n",start_addr + fun_offset + 4);
   printf("cache_line_offset = %d\n",start_addr + fun_offset);
    
 
