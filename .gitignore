@@ -9,6 +9,8 @@ cabal.sandbox.config
 bench*.log
 dist/
 
+# Don't check in build products:
+*.a
 *.so
 *.o
 *.hi
