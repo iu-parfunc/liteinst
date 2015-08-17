@@ -4,13 +4,15 @@ SRCS = $(wildcard *.cpp)
 
 EXES = $(patsubst %.cpp,%.exe,$(SRCS))
 
-LIBS = -L../../build/lib -lfastinst
+LIBS = -L../../build/lib -lfastinst -lpointpatch -ldl
  
+CXX=icpc
+
 all: $(EXES)
 
 %.exe: %.cpp
 
-	icpc --std=c++11 -g $(CFLAGS) -I../../include $< -o $@ $(LIBS) 
+	$(CXX) --std=c++11 -g $(CFLAGS) -I../../include $< -o $@ $(LIBS) 
 
 
 test: $(EXES)
