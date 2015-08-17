@@ -13,13 +13,15 @@ microbench : lib
 bench: lib
 	(cd benchmarks; make run)
 
-tests: lib
+test: lib
 	(cd instrumentors/tests/unit;make check)
 	(cd instrumentors/tests/integration;make check)
 	(cd profilers/tests/unit;make check)
 	(cd profilers/tests/integration;make check)
+	(cd libpointpatch/tests && make test )
 
 # Build the 3rd-party dependencies for the core libs:
+# This is currently implied-by/redundant with the "lib" target.
 deps:
 # Distorm is an in-place build:
 	(cd deps/distorm/make/linux; make)
@@ -55,6 +57,7 @@ docker: clean
 	docker build -t iu-parfunc/ubiprof .
 # Remove any dangling ones as a general cleanup measure:
 	docker rmi $(docker images -q --filter "dangling=true") || echo ok
+	rm -f Dockerfile
 
 # This verison builds on top of an image that includes DynInst.  It's
 # MUCH bigger.
@@ -72,9 +75,16 @@ docker2: clean
 # --------------------------------------------------------------------------------
 
 clean:
-	(cd instrumentors/finstrument/src/; \
-	make clean)
-	(cd profilers/src/; \
-	make clean)
+	(cd instrumentors/finstrument/src/; make clean)
+	(cd profilers/src/; make clean)
+	(cd libpointpatch/src/; make clean)
+	(cd libpointpatch/tests/; make clean)
 	rm -rf ./build run-benchmarks.hi run-benchmarks.exe run-benchmarks.o
 	rm -rf ./doc ./devdoc
+
+	(cd deps/distorm/make/linux; make clean)
+
+distclean: clean
+# Here is a harsher option for the deps.  We can't trust them to have
+# good Makefiles:
+#	git clean -fx deps/
