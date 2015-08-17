@@ -1,4 +1,4 @@
-.PHONY: all lib microbench bench doc devdoc docker clean
+.PHONY: all lib microbench bench doc devdoc docker clean deps
 # ----------------------------------------
 
 # TODO: build everything before running/benchmarking:
@@ -19,6 +19,12 @@ tests: lib
 	(cd profilers/tests/unit;make check)
 	(cd profilers/tests/integration;make check)
 
+# Build the 3rd-party dependencies for the core libs:
+deps:
+# Distorm is an in-place build:
+	(cd deps/distorm/make/linux; make)
+
+
 lib:
 	g++ --version || echo ok
 	(cd instrumentors/finstrument/src/; \
@@ -38,9 +44,8 @@ devdoc:
 doc:
 	doxygen scripts/Doxyfile
 
-# .phony is not good enough for this:
-# FORCE:
-
+# --------------------------------------------------------------------------------
+# Docker concerns:
 
 docker: clean
 # Check what's there and build our new one:
@@ -63,6 +68,8 @@ docker2: clean
 
 # Finally, you can hop in the image with:
 # docker run -it iu-parfunc/ubiprof
+
+# --------------------------------------------------------------------------------
 
 clean:
 	(cd instrumentors/finstrument/src/; \
