@@ -20,6 +20,8 @@ DEPS = ../../deps/distorm/distorm3.a
 BUILD = ../../build
 INSTALL = $(BUILD)/lib
 
+RM = rm
+
 .PHONY: test build distorm libpointpatch install
 
 build: $(OBJ)
@@ -28,13 +30,10 @@ libpointpatch: build distorm
 	$(CXX) $(LIBS) -shared -Wl,-soname,libpointpatch.so -o libpointpatch.so $(OBJ) $(DEPS)
 
 install: libpointpatch
-	if [ ! -d $(BUILD) ]; then mkdir $(BUILD) fi
-	if [ ! -d $(INSTALL) ]; then mkdir $(INSTALL) fi
-	(cp libpointpatch.so $(INSTALL));
+	if [ ! -d $(BUILD) ]; then mkdir $(BUILD); fi
+	if [ ! -d $(INSTALL) ]; then mkdir $(INSTALL); fi
+	(cp libpointpatch.so $(INSTALL))
 
-# I do not see the point of having both of these ? what does it mean ? 
-.cpp.o:
-	  $(CXX) -std=c++11 $(INCLUDES) $(CFLAGS) -fPIC -c -Wall -o $@ $<
 .c.o:
 	  $(CC) -std=gnu99 $(INCLUDES) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
 
@@ -43,5 +42,8 @@ distorm:
 
 test: 
 	(cd ../tests; make test)
+
+clean:
+	$(RM) -f *.o *.exe *.so
 
 
