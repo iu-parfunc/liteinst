@@ -31,6 +31,7 @@ int main (int argc, const char* argv[])  {
     // Parent
     printf(" # In parent process, serving as mutator, child pid = %d\n", child_pid);
 
+    // Option 1: mutating a subprocess:
     // // BPatch_process *proc = bpatch.processCreate(argv[1], argv + 2, NULL, stdin, stdout, stderr);
     // BPatch_process *proc = bpatch.processCreate(argv[1], argv + 2);
 

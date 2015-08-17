@@ -13,20 +13,21 @@ CXX=g++
 
 # -ldyninstAPI_RT
 
-all: mutatee.exe mutator.exe
+all: mutator.exe
 
-mutatee.exe: mutatee.c
-	$(CC) -std=c99 -g -lrt mutatee.c -o mutatee.exe
-
+# The mutator is also the mutatee in the current test:
 mutator.exe: mutator.cpp
 	$(CXX) -std=c++11 -I$(DYNINST_INCLUDE) mutator.cpp -c -o mutator.o
 	$(CXX) mutator.o -L$(DYNINST_LIB) $(LIBS) -o mutator.exe
 
 run:
-	DYNINSTAPI_RT_LIB=$(DYNINST_LIB)/libdyninstAPI_RT.so time ./mutator.exe ./mutatee.exe
+	DYNINSTAPI_RT_LIB=$(DYNINST_LIB)/libdyninstAPI_RT.so time ./mutator.exe
 
 ryan:
 	 CPLUS_INCLUDE_PATH=$(HOME)/opt/dyninst/include LIBRARY_PATH=$(HOME)/opt/dyninst/lib $(MAKE)
+
+docker:
+	docker build -t dyninst_test .
 
 
 clean:
