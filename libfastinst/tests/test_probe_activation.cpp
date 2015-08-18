@@ -40,17 +40,17 @@ int main() {
 
   ProbeProvider* p;
   try {
-    p = ProbeProvider::initializeProbeProvider(ProviderType::FINSTRUMENT, callback);
+    p = initializeGlobalProbeProvider(ProviderType::FINSTRUMENT, callback);
   } catch (int e) {
     fprintf(stderr, "ProbeProvider already initialized. Getting the existing one..\n");
-    p = ProbeProvider::getProbeProvider();
+    p = getGlobalProbeProvider();
   }
 
   if (p == NULL) {
     fprintf(stderr, "Unable to intialize probe provider..\n");
     exit(-1);
   }
-  
+
   foo_count = 0;
   for (int i=0; i<100; i++) {
     foo(i);
@@ -77,7 +77,7 @@ int main() {
   assert(foo_count == 200);
 
   delete(p);
-  
+
   exit(EXIT_SUCCESS);
 
 }

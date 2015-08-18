@@ -7,8 +7,8 @@
 #include <atomic>
 #include <string>
 
-/// This is used to specify whichprovider needs to be selected
-/// at initialization time.  
+/// This is used to specify which provider needs to be selected
+/// at initialization time.
 enum class ProviderType { ZCA, FINSTRUMENT, DTRACE, DYNINST };
 
 /// In the future we will aim to support an open universe of probe
@@ -90,8 +90,9 @@ typedef std::vector<ProbeMetaData*> ProbeVec;
 typedef void (*Callback) (const ProbeMetaData* pmd);
 
 
-/// Implements an object which discovers probes and subsequently
-/// provides the ability to toggle those probes.
+/// Implements an object that discovers probes and subsequently
+/// provides the ability to toggle those probes.  When active, a
+/// client-provided function-pointer is called from the probe site.
 class ProbeProvider {
 
   protected:
@@ -104,19 +105,6 @@ class ProbeProvider {
      * \param callback The callback function invoked at each probe discovery
      */
     // ProbeProvider(Callback callback);
-
-    /// Initializes the ProbeProvider instance of requested type
-    /*  It's an error to call this method more than once. 
-     *  \param type The type of the ProbeProvider needed.
-     *  \param callback The probe discovery callback.
-     *  \return A reference to initialized ProbeProvider instance.
-     */
-    static ProbeProvider* initializeProbeProvider(ProviderType type, Callback callback);
-    
-    /// Gets the reference to ProbeProvider instance.
-    /*  \return A reference to ProbeProvider instance.
-     */
-    static ProbeProvider* getProbeProvider();
 
     /// Move from UNINITIALIZED to INITIALIZING state.
     /* Begin initializing the probe, moving from UNINITIALIZED to
@@ -190,6 +178,30 @@ class ProbeProvider {
      */
 
 };
+
+// ================================================================================
+// Global probe provider object for profiling libraries and other use cases.
+
+/// Initializes a global ProbeProvider instance of requested type.
+/*  This implements one possible policy for creating a probe provider
+ *  at application startup time.  This approach is limited because it
+ *  recognized only a closed set of probe provider implementations.
+ *
+ *  It's an error to call this method more than once.
+ *
+ *  \param type The type of the ProbeProvider needed.
+ *  \param callback The probe discovery callback.
+ *  \return A reference to initialized ProbeProvider instance.
+ */
+extern ProbeProvider* initializeGlobalProbeProvider(ProviderType type, Callback callback);
+
+/// Accessor function
+/*  Gets the reference to ProbeProvider instance.
+ *  \return A reference to ProbeProvider instance.
+ *          The reference will be NULL if initializeGlobalProbeProvider has not been called.
+ */
+extern ProbeProvider* getGlobalProbeProvider();
+
 
 /// Global probe provider instance. Allows plain C functions to accesss instrumentor
 /// functions at runtime.

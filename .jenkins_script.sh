@@ -12,4 +12,4 @@ make -f Make_runbench run-benchmarks.exe
 make docker
 
 # Run the tests inside the docker image:
-docker run iu-parfunc/ubiprof bash -c 'cd ubiprof_src && make test'
+make testdocker

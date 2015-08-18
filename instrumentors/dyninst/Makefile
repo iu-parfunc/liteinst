@@ -29,6 +29,12 @@ ryan:
 docker:
 	docker build -t dyninst_test .
 
+rundock:
+	docker run -it dyninst_test
+
+
+test:
+	docker run -it dyninst_test bash -c 'cd ubiprof_src/instrumentors/dyninst/'
 
 clean:
 	rm -f *.o *.exe

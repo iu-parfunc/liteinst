@@ -58,6 +58,9 @@ docker: clean
 # Remove any dangling ones as a general cleanup measure:
 	docker rmi $(docker images -q --filter "dangling=true") || echo ok
 	rm -f Dockerfile
+# Finally, you can hop in the image with:
+# docker run -it iu-parfunc/ubiprof
+
 
 # This verison builds on top of an image that includes DynInst.  It's
 # MUCH bigger.
@@ -69,8 +72,9 @@ docker2: clean
 	docker build -t iu-parfunc/ubiprof_dyninst:14.10 .
 	rm -f ./Dockerfile
 
-# Finally, you can hop in the image with:
-# docker run -it iu-parfunc/ubiprof
+
+testdocker:
+	docker run iu-parfunc/ubiprof bash -c 'cd ubiprof_src && make test'
 
 # --------------------------------------------------------------------------------
 

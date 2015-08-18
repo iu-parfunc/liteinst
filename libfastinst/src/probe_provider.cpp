@@ -2,9 +2,9 @@
 #include "fastinst.hpp"
 #include "finstrument_probe_provider.hpp"
 
-ProbeProvider* PROBE_PROVIDER;
+ProbeProvider* PROBE_PROVIDER = NULL;
 
-ProbeProvider* ProbeProvider::initializeProbeProvider(ProviderType type, Callback callback) {
+ProbeProvider* initializeGlobalProbeProvider(ProviderType type, Callback callback) {
   if (PROBE_PROVIDER != NULL) {
     switch(type) {
       case ProviderType::FINSTRUMENT:
@@ -28,6 +28,6 @@ ProbeProvider* ProbeProvider::initializeProbeProvider(ProviderType type, Callbac
   }
 }
 
-ProbeProvider* ProbeProvider::getProbeProvider() {
+ProbeProvider* getGlobalProbeProvider() {
   return PROBE_PROVIDER;
 }
