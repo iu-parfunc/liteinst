@@ -9,7 +9,6 @@
 #include <signal.h>
 
 
-
 /* -----------------------------------------------------------------
    Globals 
    ----------------------------------------------------------------- */
@@ -184,16 +183,16 @@ bool patch_64(void *addr, uint64_t patch_value){
     uint64_t patch_after =  patch_keep_after | ((patch_value  & ~lsb_mask) >> (8 * cutoff_point));
 
 
-#ifdef THREADSAFE_PATCHING /* racy patching */      
+#ifdef NON_THREADSAFE_PATCHING /* racy patching */      
     /* implement the straddler protocol */ 
     ((uint8_t*)addr)[0] = int3; 
     /*WRITE((straddle_point - 1), int3_sequence); */
     
     /* An empty delay loop that is unlikely to be optimized out 
        due to the magic asm inside */ 
-#ifndef NO_WAIT 
+  #ifndef NO_WAIT 
     for(long i = 0; i < 1000; i++) { asm (""); }
-#endif 
+  #endif 
     WRITE(straddle_point,patch_after); 
     WRITE((straddle_point-1), patch_before); 
     return true; 
@@ -204,11 +203,12 @@ bool patch_64(void *addr, uint64_t patch_value){
     
     if (oldFR == int3) return false; 
     else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {
-#ifndef NO_WAIT 
+  #ifndef NO_WAIT 
       for(long i = 0; i < 1000; i++) { asm (""); } 
-#endif 
+  #endif 
       WRITE(straddle_point,patch_after); 
       WRITE((straddle_point-1), patch_before); 
+      return true; 
     }
     else return false; 
 #endif     
@@ -259,9 +259,9 @@ bool patch_32(void *addr, uint32_t patch_value){
     ((uint8_t*)addr)[0] = int3;     
     /* An empty delay loop that is unlikely to be optimized out 
        due to the magic asm inside */ 
-#ifndef NO_WAIT 
+  #ifndef NO_WAIT 
     for(long i = 0; i < 1000; i++) { asm (""); }
-#endif
+  #endif
     WRITE(straddle_point,patch_after); 
     WRITE(straddle_point-1, patch_before); 
     return true; 
@@ -271,11 +271,12 @@ bool patch_32(void *addr, uint32_t patch_value){
 
     if (oldFR == int3) return false; 
     else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {
-#ifndef NO_WAIT 
+  #ifndef NO_WAIT 
       for(long i = 0; i < 1000; i++) { asm (""); } 
-#endif
+  #endif
       WRITE(straddle_point,patch_after); 
       WRITE((straddle_point-1), patch_before); 
+      return true;
     }
     else return false; 
 

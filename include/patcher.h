@@ -42,6 +42,10 @@ typedef struct {
 } Decoded; 
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 
 #define DECODED_OK(d)  ((d).decoded_instructions != NULL && (d).n_instructions != 0)
 
@@ -50,12 +54,12 @@ typedef struct {
    ----------------------------------------------------------------- */ 
 
 /* Allow READ, WRITE and EXEC on pages touched by patch site */ 
-extern bool init_patch_site(void*, size_t);
+bool init_patch_site(void*, size_t);
 
 /* Patch up to 8 byte instructions in a straddler safe way */ 
-extern bool patch_64(void*, uint64_t); 
+bool patch_64(void*, uint64_t); 
 /* Patch up to 4 byte instructions in a straddler safe way */
-extern bool patch_32(void*, uint32_t); 
+bool patch_32(void*, uint32_t); 
 
 Decoded decode_range(void*, void*);
 void destroy_decoded(Decoded);
@@ -73,5 +77,9 @@ int64_t find_reg_setter(_RegisterType, Decoded);
 inline void patch_8(void *addr, uint8_t patch){ 
   ((uint8_t*)addr)[0] = patch; 
 }
+
+#ifdef __cplusplus
+} /* End Of Extern */
+#endif
 
 #endif 

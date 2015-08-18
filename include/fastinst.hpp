@@ -103,7 +103,7 @@ class ProbeProvider {
     /* Initialises with the callback
      * \param callback The callback function invoked at each probe discovery
      */
-    ProbeProvider(Callback callback);
+    // ProbeProvider(Callback callback);
 
     /// Initializes the ProbeProvider instance of requested type
     /*  It's an error to call this method more than once. 
@@ -134,7 +134,7 @@ class ProbeProvider {
      * Instrumentation_func which the probe is activated with.
      *
      */
-    virtual void initialize(ProbeId probe_id, ProbeArg probe_arg);
+    virtual void initialize(ProbeId probe_id, ProbeArg probe_arg) = 0;
 
     /// Activates the given probe.
     /* Activates the probe with given instrumentation function.

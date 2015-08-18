@@ -40,9 +40,10 @@ class FinstrumentProbeProvider : public ProbeProvider {
      *  meta data.
      *  \param callback Probe discovery callback
      */
-    FinstrumentProbeProvider(Callback cb):ProbeProvider(cb) {
+    FinstrumentProbeProvider(Callback cb) {
+      callback = cb;
       readFunctionInfo();
-      PROBE_PROVIDER = this;
+      // PROBE_PROVIDER = this;
       probe_lock = new lock::CASLock;
     }
 
