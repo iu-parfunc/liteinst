@@ -54,6 +54,7 @@ bool set_page_rwe(void *addr, size_t nBytes);
 uint64_t get_msb_mask_64(int nbytes);
 uint64_t get_lsb_mask_64(int nbytes);
 uint32_t get_msb_mask_32(int nbytes); 
+uint32_t get_lsb_mask_32(int nbytes);
 
 static void int3_handler(int signo, siginfo_t *inf, void* ptr);
 
@@ -177,9 +178,7 @@ bool patch_64(void *addr, uint64_t patch_value){
     uint64_t patch_keep_before = before & (~msb_mask);
     uint64_t patch_keep_after  = after & msb_mask;
     
-    /*  */ 
     uint64_t patch_before = patch_keep_before | ((patch_value  & lsb_mask) << shift_size);
-    /*  */ 
     uint64_t patch_after =  patch_keep_after | ((patch_value  & ~lsb_mask) >> (8 * cutoff_point));
 
 
@@ -235,7 +234,7 @@ bool patch_32(void *addr, uint32_t patch_value){
     unsigned int cutoff_point = g_cache_lvl3_line_size - offset; 
     uint32_t* straddle_point = (uint32_t*)((uint8_t*)addr + cutoff_point);
     
-    // uint64_t lsb_mask = get_lsb_mask(cutoff_point);
+    uint32_t lsb_mask = get_lsb_mask_32(cutoff_point);
     uint32_t msb_mask = get_msb_mask_32(cutoff_point); 
 
     /* read in 8 bytes before and after the straddle point */
@@ -248,11 +247,9 @@ bool patch_32(void *addr, uint32_t patch_value){
     uint32_t patch_keep_before = before & (~msb_mask);
     uint32_t patch_keep_after  = after & msb_mask;
     
-                                                    /*  & lsb_mask */ 
-    uint32_t patch_before = patch_keep_before | ((patch_value) << shift_size);
-                                                   /*  & ~lsb_mask */ 
-    uint32_t patch_after =  patch_keep_after | ((patch_value) >> (8 * cutoff_point));
-    /* commented out masking that becomes "shifted out" */ 
+    uint32_t patch_before = patch_keep_before | ((patch_value  & lsb_mask) << shift_size);
+    uint32_t patch_after =  patch_keep_after | ((patch_value & ~lsb_mask) >> (8 * cutoff_point));
+
 
     /* implement the straddler protocol */ 
 #ifdef NON_THREADSAFE_PATCHING 
@@ -465,5 +462,19 @@ inline uint32_t get_msb_mask_32(int nbytes) {
   default:
     printf("ERROR : Invalid input to get_msb_mask\n");
     return 0;
+  }
+}
+
+inline uint32_t get_lsb_mask_32(int nbytes) {
+  switch (nbytes) {
+    case 1:
+      return 0xFF;
+    case 2:
+      return 0xFFFF;
+    case 3:
+      return 0xFFFFFF;
+    default:
+      printf("ERROR : Invalid input to get_lsb_mask_32\n");
+      return 0;
   }
 }
