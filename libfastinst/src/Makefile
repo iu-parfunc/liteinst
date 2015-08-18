@@ -5,25 +5,25 @@ INSTALL= $(ROOT)/build/lib
 # CFLAGS=-DPROBE_HIST_ON -DPROBE_CPU_TIME
 
 EXTRA_WARNS=
-#-Wextra 
+#-Wextra
 ## -Wformat-nonliteral -Wcast-align -Wpointer-arith -Wbad-function-cast -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Winline -Wundef -Wnested-externs -Wcast-qual -Wshadow -Wwrite-strings -Wno-unused-parameter -Wfloat-equal
 
 ARGS= -g -Wall -pedantic $(EXTRA_WARNS) -I$(ROOT)/include -I$(ROOT)/deps/distorm/include -I.
-LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared 
+LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 DEPS = $(INSTALL)/libpointpatch.a
-LIBS = 
+LIBS =
 
-CC = icc $(ARGS)
-CXX= icpc -std=c++11 $(ARGS)
-# COMP = gcc
-# CC = gcc $(ARGS)
-# CXX ?= g++ 
+CC  ?= icc
+CXX ?= icpc
+
+CC+  = $(CC) $(ARGS)
+CXX+ = $(CC) -std=c++11 $(ARGS)
 
 AR = ar
 RM = rm
-OPTS = 
+OPTS =
 
-CODE = finstrument_probe_provider.cpp probe_provider.cpp lock.cpp cyg_functions.cpp globals.cpp 
+CODE = finstrument_probe_provider.cpp probe_provider.cpp lock.cpp cyg_functions.cpp globals.cpp
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 
@@ -31,7 +31,7 @@ OBJ  = $(OBJ0:.c=.o)
 
 all: build
 
-build: $(OBJ) 
+build: $(OBJ)
 
 libfastinst.a: build
 	if [ -d libfastinst.a ]; then $(RM) -f libfastinst.a; fi
@@ -40,14 +40,14 @@ libfastinst.a: build
 	$(RM) -rf temp
 
 libfastinst.so: build
-	$(CC) $(LIBS) -shared -Wl,-soname,libfastinst.so -o libfastinst.so $(OBJ) $(DEPS)
+	$(CC+) $(LIBS) -shared -Wl,-soname,libfastinst.so -o libfastinst.so $(OBJ) $(DEPS)
 
 install: libfastinst.a libfastinst.so
 	(cp libfastinst.so $(INSTALL))
 	(cp libfastinst.a $(INSTALL))
 
 .cpp.o:
-	$(CXX) -std=c++11 $(ARGS) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
+	$(CXX+) -std=c++11 $(ARGS) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
 
 clean:
 	$(RM) -f $(OBJ) *.so $(INSTALL)/libfastinst.*

@@ -1,12 +1,12 @@
 
-# using icc requires some extra flags. 
+# using icc requires some extra flags.
 # these flags are probably different from when using gcc
 # since a lot of what we do is not standard-c (asm, REG_RIP, etc not standard!)
-#  gcc --std=gnu99 
+#  gcc --std=gnu99
 #  icc -- ?????
-# it seems that icc also accepts the flag std=gnu99, good. 
-CC=icc
-CXX=icpc
+# it seems that icc also accepts the flag std=gnu99, good.
+CC ?= icc
+CXX ?= icpc
 
 CODE = patcher.c
 OBJ0 = $(CODE:.cpp=.o)
@@ -48,10 +48,8 @@ install: libpointpatch.so libpointpatch.a
 distorm:
 	(cd ../../deps/distorm/make/linux/;make clean;make CC=$(CC));
 
-test: 
+test:
 	(cd ../tests; make test)
 
 clean:
 	$(RM) -f *.o *.exe *.so $(INSTALL)/libpointpatch.*
-
-

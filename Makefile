@@ -1,4 +1,5 @@
 .PHONY: all lib microbench bench doc devdoc docker clean deps
+.PHONY: docker docker2 rundock rundock2 testdocker
 # ----------------------------------------
 
 # TODO: build everything before running/benchmarking:
@@ -18,7 +19,8 @@ test: lib
 	(cd instrumentors/tests/integration;make check)
 	(cd profilers/tests/unit;make check)
 	(cd profilers/tests/integration;make check)
-	(cd libpointpatch/tests && make test )
+
+
 
 # Build the 3rd-party dependencies for the core libs:
 # This is currently implied-by/redundant with the "lib" target.
@@ -28,11 +30,13 @@ deps:
 
 
 lib:
-	g++ --version || echo ok
-	(cd instrumentors/finstrument/src/; \
-	make CFLAGS='-DNDEBUG -O3')
-	(cd profilers/src/; \
-	make install CFLAGS='-DNDEBUG -O3')
+	$(CXX) --version || echo ok
+	$(CC) --version || echo ok
+	(cd libpointpatch/src && make CFLAGS='-DNDEBUG -O3' && make install )
+	(cd libfastinst/src   && make CFLAGS='-DNDEBUG -O3' && make install )
+
+	(cd instrumentors/finstrument/src/; make CFLAGS='-DNDEBUG -O3')
+	(cd profilers/src/; make install CFLAGS='-DNDEBUG -O3')
 
 libdebug:
 	(cd instrumentors/finstrument/src/; make)
@@ -64,14 +68,21 @@ docker: clean
 
 # This verison builds on top of an image that includes DynInst.  It's
 # MUCH bigger.
+WDYNINST_TAG=iu-parfunc/ubiprof_dyninst:14.10
 #
 # TODO: This should eventually turn into the benchmarking image.
 docker2: clean
 # I know of no principled way to parameterize Dockerfiles.  Hence *this* hackery:
 	cp -f dockerfiles/Dockerfile_wdyninst_14.10 ./Dockerfile
-	docker build -t iu-parfunc/ubiprof_dyninst:14.10 .
+	docker build -t $(WDYNINST_TAG) .
 	rm -f ./Dockerfile
 
+# Sheer laziness:
+rundock:
+	docker run -it iu-parfunc/ubiprof bash
+
+rundock2:
+	docker run -it $(WDYNINST_TAG) bash
 
 testdocker:
 	docker run iu-parfunc/ubiprof bash -c 'cd ubiprof_src && make test'
