@@ -46,6 +46,22 @@ int main (int argc, const char* argv[])  {
     //BPatch_process *proc = bpatch.processAttach(argv[1], atoi(argv[2]));
     BPatch_image *image = proc->getImage();
 
+    std::vector<BPatch_sourceObj*> children;
+    image->getSourceObj(children);
+
+    for(BPatch_sourceObj* m : children) {
+      std::vector<BPatch_sourceObj*> funs;
+      m->getSourceObj(funs);
+      char buf[256];
+      char* modname = ((BPatch_module*)m)->getName(buf,256);
+      if (! strcmp(modname, "DEFAULT_MODULE")) {
+        printf("  GOT Module: %s, %d funs inside\n", modname, (int)funs.size());
+        for(BPatch_sourceObj* f : funs)
+          // printf("    Got function: %p\n", f);
+          std::cout << "    Got function: " << ((BPatch_function*)f)->getName() << std::endl;
+      }
+    }
+
     std::vector<BPatch_function *> foo_fns, bar_fns;
     image->findFunction("foo", foo_fns);
     image->findFunction("bar", bar_fns);
