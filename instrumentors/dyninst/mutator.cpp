@@ -22,17 +22,67 @@ void bar() {
 }
 
 void registerProbeCallback (const ProbeMetaData* pmd) {
-  printf("Register probe %p\n", pmd);
+  printf("     Register probe %p\n", pmd);
 }
+
+
+/// This captures the concept of a probe provider where the
+/// instrumentation itself must happen in a separate (forked) process.
+/// Thus all calls to change probe state must incur inter-process
+/// communication.
+///
+/// This particular implementation uses named-pipes to communicate
+/// between instrumentor and instrumentee threads.
+///
+/// This class is abstract and must be subclassed and implemented
+/// using a particular binary instrumentation library, but reusing the
+/// inter-process communication framework.
+class OutOfProcessProvider : ProbeProvider {
+private:
+
+public:
+
+  /// For out-of-process instrumentors initialization is usually a NOOP.
+  void initialize(ProbeId probe_id, ProbeArg probe_arg) { }
+
+  /// Send a request to the instrumentor process to activate the probe.
+  bool activate(ProbeId probe_id, InstrumentationFunc func) {
+  }
+
+  /// Send a request to the instrumentor process to deactivate the probe.
+  bool deactivate(ProbeId probe_id) {
+  }
+
+  /// Call this inside the instrumentor process to perform a remote
+  /// invocation of the callback within the instrumentee process.
+  ///
+  /// This must serialize and communicate the probe metadata.
+  void instrumentor_invoke_callback(const ProbeMetaData* pmd) {
+    // FINISHME
+  }
+
+  /// Called within the instrumentor process to mutate the
+  /// instrumentee process.
+  virtual void instrumentor_activate() = 0;
+
+  virtual void instrumentor_deactivate() = 0;
+
+};
 
 
 class DyninstProbeProvider : ProbeProvider {
 
 private:
-  Callback callback;
+  BPatch_process * proc;
+  BPatch_image * image;
+
+  BPatch_point * codeLoc;
 
 public:
-  DyninstProbeProvider(Callback c) : callback(c) {
+  DyninstProbeProvider(Callback c) // : callback(c)
+  {
+    callback = c;
+
     BPatch bpatch;
     pid_t child_pid;
     printf("Constructing DyninstProbeProvider... forking process %p\n", callback);
@@ -47,13 +97,13 @@ public:
       // auto procs = bpatch.getProcesses();
       // printf("GOT Processes! %d\n", (int)procs->size());
 
-      BPatch_process *proc = bpatch.processAttach("child", child_pid);
+      proc = bpatch.processAttach("child", child_pid);
 
       //bpatch.setTrampRecursive(true);
       //bpatch.setSaveFPR(false);
       //bpatch.setInstrStackFrames(false);
       //BPatch_process *proc = bpatch.processAttach(argv[1], atoi(argv[2]));
-      BPatch_image *image = proc->getImage();
+      image = proc->getImage();
 
       std::vector<BPatch_sourceObj*> children;
       image->getSourceObj(children);
@@ -65,49 +115,66 @@ public:
         char* modname = ((BPatch_module*)m)->getName(buf,256);
         if (! strcmp(modname, "DEFAULT_MODULE")) {
           printf("  GOT Module: %s, %d funs inside\n", modname, (int)funs.size());
-          for(BPatch_sourceObj* f : funs)
-            // printf("    Got function: %p\n", f);
-            std::cout << "    Got function: " << ((BPatch_function*)f)->getName() << std::endl;
+          for(BPatch_sourceObj* f : funs) {
+            BPatch_function* fptr = dynamic_cast<BPatch_function *>(f);
+
+            const std::string name = fptr->getName();
+
+            std::cout << "    Got function: " << name << std::endl;
+
+            std::vector<BPatch_point*>* entries = fptr->findPoint(BPatch_entry);
+            std::vector<BPatch_point*>* exits   = fptr->findPoint(BPatch_exit);
+
+            assert (entries->size() == 1);
+
+            // UGH: this will need to be serialized across processes:
+
+            // TODO: Move some of this initialization to a proper constructor or
+            // construction function:
+            for ( BPatch_point* entry : *entries) {
+              ProbeMetaData* pmd1 = new ProbeMetaData();
+              pmd1->func_name = name;
+              pmd1->probe_name = "";
+              pmd1->state = ProbeState::DEACTIVATED;
+              pmd1->probe_context = ProbeContext::ENTRY;
+              pmd1->probe_loc = (ProbeLoc)entry; // Point directly to the BPatch_point.
+              callback(pmd1);
+            }
+
+            for ( BPatch_point* exit : *exits) {
+              ProbeMetaData* pmd2 = new ProbeMetaData();
+
+              pmd2->func_name = std::string(name);
+              pmd2->probe_name = "";
+              pmd2->state = ProbeState::DEACTIVATED;
+              pmd2->probe_context = ProbeContext::EXIT;
+              pmd2->probe_loc = (ProbeLoc)exit;
+              callback(pmd2);
+            }
+          }
         }
       }
 
-      std::vector<BPatch_function *> foo_fns, bar_fns;
-      image->findFunction("foo", foo_fns);
-      image->findFunction("bar", bar_fns);
-
-      std::vector<BPatch_snippet*> args;
-      BPatch_funcCallExpr call_bar(*bar_fns[0], args);
-
-      //    unsigned long insert_timings[N];
-      //    unsigned long deletion_timings[N];
-
-      BPatchSnippetHandle* handle =
-        proc->insertSnippet(call_bar, (foo_fns[0]->findPoint(BPatch_entry))[0]);
-
-
       // ------------------------------------------------------------
 
-      printf(" # Is child process stopped? %d\n", proc->isStopped()); fflush(stdout);
+      // printf(" # Is child process stopped? %d\n", proc->isStopped()); fflush(stdout);
       proc->continueExecution();
-      printf(" # After continueExecution, child process stopped? %d\n", proc->isStopped()); fflush(stdout);
-      // proc->detach(true);
+      // printf(" # After continueExecution, child process stopped? %d\n", proc->isStopped()); fflush(stdout);
 
       long long spin = 0;
       while (!proc->isTerminated()) {
           bpatch.waitForStatusChange();
           spin++;
       }
-      printf(" # Child finished after %lld waits.  Mutator/parent exiting.\n", spin);
+      // printf(" # Child finished after %lld waits.  Mutator/parent exiting.\n", spin);
       exit(0); // Exit the whole process.
     } else {
       child_pid = getpid();
-      printf("  -> In child process... sending STOP to self \n");
+      // printf("  -> In child process... sending STOP to self \n");
       kill(child_pid, SIGSTOP);
-
       // auto procs = bpatch.getProcesses();
       // printf("  Child process sees, #processes = %d\n", (int)procs->size());
-
-      printf("  -> DyninstProbeProvider constructor finished... \n");
+      // printf("  -> DyninstProbeProvider constructor finished... \n");
     }
   }
 
@@ -119,8 +186,28 @@ public:
   }
 
   bool activate(ProbeId probe_id, InstrumentationFunc func) {
+    printf("in-process activate... %d\n", (int)probe_id);
+  }
 
-    printf("activate... %d\n", (int)probe_id);
+  bool instrumentor_activate(ProbeId probe_id, InstrumentationFunc func) {
+
+    printf("out-of-process activate... %d\n", (int)probe_id);
+
+    std::vector<BPatch_function *> probeFuns;
+    Dyninst::Address addr = (Dyninst::Address)func;
+    image->findFunction(addr, probeFuns);
+
+// FIXME: this is bogus:
+
+    assert (probeFuns.size() == 1);
+    std::vector<BPatch_snippet*> args;
+    BPatch_funcCallExpr call_fun(*probeFuns[0], args);
+
+    // Instrument entry and exit...
+    BPatchSnippetHandle* handle =
+      proc->insertSnippet(call_fun, (probeFuns[0]->findPoint(BPatch_entry))[0]);
+
+    printf("INSERTED TEST FUNCTION:");
   }
 
   bool deactivate(ProbeId probe_id) {
@@ -138,91 +225,3 @@ int main (int argc, const char* argv[])  {
 
   return 0;
 }
-
-
-#if 0
-int main (int argc, const char* argv[]) {
-
-
-    for (int i=0; i< N; i++) {
-
-      ticks start = getticks();
-      BPatchSnippetHandle* handle =
-        proc->insertSnippet(call_bar, (foo_fns[0]->findPoint(BPatch_entry))[0]);
-      ticks end = getticks();
-
-      ticks elapsed1 = end - start;
-
-      start = getticks();
-      proc->deleteSnippet(handle);
-      end = getticks();
-
-      ticks elapsed2 = end - start;
-
-      insert_timings[i] = elapsed1;
-      deletion_timings[i] = elapsed2;
-
-    }
-
-    for (int i=0; i< N; i++) {
-      fprintf(stderr, "Instrumentation %d cost : %lu percentage : %lf\n", i, insert_timings[i],
-          ((double)insert_timings[i] / insert_timings[0]) * 100);
-    }
-
-    fprintf(stderr, "\n\n");
-
-    for (int i=0; i< N; i++) {
-      fprintf(stderr, "Instrumentation  deletion %d cost : %lu percentage : %lf\n", i, deletion_timings[i],
-          ((double)deletion_timings[i] / deletion_timings[0]) * 100);
-    }
-
-
-    /*
-    ticks start = getticks();
-    BPatchSnippetHandle* handle =
-      proc->insertSnippet(call_bar, (foo_fns[0]->findPoint(BPatch_entry))[0]);
-    ticks end = getticks();
-
-    ticks elapsed1 = end - start;
-
-    start = getticks();
-    proc->deleteSnippet(handle);
-    end = getticks();
-
-    ticks elapsed2 = end - start;
-
-    start = getticks();
-    handle =
-      proc->insertSnippet(call_bar, (foo_fns[0]->findPoint(BPatch_entry))[0]);
-    end = getticks();
-
-    ticks elapsed3 = end - start;
-
-    start = getticks();
-    proc->deleteSnippet(handle);
-    end = getticks();
-
-    ticks elapsed4 = end - start;
-
-    start = getticks();
-    handle =
-      proc->insertSnippet(call_bar, (foo_fns[0]->findPoint(BPatch_entry))[0]);
-    end = getticks();
-
-    ticks elapsed5 = end - start;
-
-    fprintf(stderr, "First instrumentation cost : %lu\n", elapsed1);
-    fprintf(stderr, "Second instrumentation cost : %lu percentage : %lf \n", elapsed3, ((double)elapsed3/elapsed1) * 100);
-    fprintf(stderr, "Third instrumentation cost : %lu percentage : %lf\n\n", elapsed5, ((double)elapsed5/elapsed1) * 100);
-
-    fprintf(stderr, "First instrumentation removal cost : %lu\n", elapsed2);
-    fprintf(stderr, "Second instrumentation removal cost : %lu percentage : %lf\n", elapsed4, ((double)elapsed4/elapsed2) * 100);
-
-    */
-
-    // bpatch.setInstrStackFrames(false);
-    // proc->insertSnippet(BPatch_nullExpr(), (foo_fns[0]->findPoint(BPatch_entry))[0]);
-    // proc->insertSnippet(BPatch_nullExpr(), (foo_fns[0]->findPoint(BPatch_entry))[0]);
-
-}
-#endif
