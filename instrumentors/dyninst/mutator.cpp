@@ -38,9 +38,16 @@ void registerProbeCallback (const ProbeMetaData* pmd) {
 /// using a particular binary instrumentation library, but reusing the
 /// inter-process communication framework.
 class OutOfProcessProvider : ProbeProvider {
+
 private:
+protected:
+  pid_t child_pid;
 
 public:
+
+  OutOfProcessProvider () {
+    //    callback = c;
+  }
 
   /// For out-of-process instrumentors initialization is usually a NOOP.
   void initialize(ProbeId probe_id, ProbeArg probe_arg) { }
@@ -53,6 +60,27 @@ public:
   bool deactivate(ProbeId probe_id) {
   }
 
+  // --------------------------------------------------------------
+
+  virtual void instrumentee_stop() {
+    // The child process (instrumentee) waits for the parent before proceeding:
+    // It is the responsibility of the parent process to continue it.
+    child_pid = getpid();
+    kill(child_pid, SIGSTOP);
+  }
+
+
+  // --------------------------------------------------------------
+  // All functions beginning with "instrumentor_" are called in the
+  // instrumentor process:
+
+  virtual void instrumentor_initialize();
+
+  // TODO: provide a default implementation of this:
+  virtual void instrumentor_continue_instrumentee() = 0;
+
+  virtual void wait_for_instrumentee_completion() = 0;
+
   /// Call this inside the instrumentor process to perform a remote
   /// invocation of the callback within the instrumentee process.
   ///
@@ -63,31 +91,43 @@ public:
 
   /// Called within the instrumentor process to mutate the
   /// instrumentee process.
-  virtual void instrumentor_activate() = 0;
+  virtual bool instrumentor_activate(ProbeId probe_id, InstrumentationFunc func) = 0;
 
-  virtual void instrumentor_deactivate() = 0;
+  virtual bool instrumentor_deactivate(ProbeId probe_id) = 0;
+
+  // ------------------------------------------------------------
+
+  void fork_instrumentor() {
+    printf("Constructing OutOfProcess... forking process %p\n", callback);
+    if (child_pid = fork()) {
+      instrumentor_initialize();
+      instrumentor_continue_instrumentee();
+      wait_for_instrumentee_completion();
+      exit(0); // Exit the whole process.
+    } else {
+      instrumentee_stop();
+    }
+  }
 
 };
 
 
-class DyninstProbeProvider : ProbeProvider {
+class DyninstProbeProvider : OutOfProcessProvider {
 
 private:
+  BPatch bpatch;
   BPatch_process * proc;
   BPatch_image * image;
 
   BPatch_point * codeLoc;
 
 public:
-  DyninstProbeProvider(Callback c) // : callback(c)
+  DyninstProbeProvider(Callback c) : OutOfProcessProvider()
   {
     callback = c;
+  }
 
-    BPatch bpatch;
-    pid_t child_pid;
-    printf("Constructing DyninstProbeProvider... forking process %p\n", callback);
-    if (child_pid = fork()) {
-      // Parent
+  void instrumentor_initialize() {
       printf(" # In parent process, serving as mutator, child pid = %d\n", child_pid);
 
       // Option 1: mutating a subprocess:
@@ -154,28 +194,22 @@ public:
           }
         }
       }
+  }
 
-      // ------------------------------------------------------------
+  void instrumentor_continue_instrumentee() {
+    // ------------------------------------------------------------
+    // printf(" # Is child process stopped? %d\n", proc->isStopped()); fflush(stdout);
+    proc->continueExecution();
+    // printf(" # After continueExecution, child process stopped? %d\n", proc->isStopped()); fflush(stdout);
+  }
 
-      // printf(" # Is child process stopped? %d\n", proc->isStopped()); fflush(stdout);
-      proc->continueExecution();
-      // printf(" # After continueExecution, child process stopped? %d\n", proc->isStopped()); fflush(stdout);
-
+  void wait_for_instrumentee_completion() {
       long long spin = 0;
       while (!proc->isTerminated()) {
           bpatch.waitForStatusChange();
           spin++;
       }
       // printf(" # Child finished after %lld waits.  Mutator/parent exiting.\n", spin);
-      exit(0); // Exit the whole process.
-    } else {
-      child_pid = getpid();
-      // printf("  -> In child process... sending STOP to self \n");
-      kill(child_pid, SIGSTOP);
-      // auto procs = bpatch.getProcesses();
-      // printf("  Child process sees, #processes = %d\n", (int)procs->size());
-      // printf("  -> DyninstProbeProvider constructor finished... \n");
-    }
   }
 
   void initialize(ProbeId probe_id, ProbeArg probe_arg) {
@@ -210,7 +244,7 @@ public:
     printf("INSERTED TEST FUNCTION:");
   }
 
-  bool deactivate(ProbeId probe_id) {
+  bool instrumentor_deactivate(ProbeId probe_id) {
     printf("deactivate... %d\n", (int)probe_id);
   }
 };
