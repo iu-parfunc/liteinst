@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <cstdlib>
+#include "patcher.h"
 
 int foo_count;
 int foo_entry_probe_id;
@@ -12,6 +13,8 @@ __attribute__((no_instrument_function))
 void instrumentation(ProbeArg func_id) {
 
   assert(func_id == 0);
+
+  printf("Came here..\n");
 
   foo_count++;
 }
@@ -32,11 +35,18 @@ void callback(const ProbeMetaData* pmd) {
 
 int foo(int x) {
   // Do some calculation.
-  int y = rand() % x + 3;
+  int y = 0;
+  if (x != 0) {
+    y = rand() % x + 3;
+  }
   return x+y;
 }
 
 int main() {
+
+  patch_64((void*) foo, 0xFF);
+
+  fprintf(stderr, "Patched the program\n");
 
   ProbeProvider* p;
   try {
@@ -47,7 +57,7 @@ int main() {
   }
 
   if (p == NULL) {
-    fprintf(stderr, "Unable to intialize probe provider..\n");
+    fprintf(stderr, "Unable to initialize probe provider..\n");
     exit(-1);
   }
 

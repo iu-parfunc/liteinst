@@ -97,9 +97,14 @@ class ProbeProvider {
 
   protected:
     Callback callback;
-    ProbeVec probe_meta_data;
+    ProbeVec* probe_meta_data;
 
   public:
+
+    ProbeProvider(Callback cb) : callback(cb) {
+      probe_meta_data = new ProbeVec;
+    }
+
     /// Probe provider constructor
     /* Initialises with the callback
      * \param callback The callback function invoked at each probe discovery

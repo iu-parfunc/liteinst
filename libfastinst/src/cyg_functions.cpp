@@ -224,6 +224,8 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 }
 #else
 void __cyg_profile_func_enter(void* func_addr, void* call_site_addr) {
+
+  // printf("Inside cyg_enter\n");
   
   FinstrumentProbeProvider* ins = (FinstrumentProbeProvider*) PROBE_PROVIDER;
   if (ins == NULL) { // ProbeProvider hasn't been set. Skip instrumentation.
@@ -387,6 +389,8 @@ void __cyg_profile_func_exit(void* func, void* caller) {
    * cyg_exit. 
    */ 
 void __cyg_profile_func_exit(void* func_addr, void* call_site_addr) {
+
+  printf("Inside cyg_exit\n");
 
   #ifdef PROBE_CPU_TIME
     struct timespec ts0;
