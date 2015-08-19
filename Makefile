@@ -92,8 +92,12 @@ testdocker:
 clean:
 	(cd instrumentors/finstrument/src/; make clean)
 	(cd profilers/src/; make clean)
+
 	(cd libpointpatch/src/; make clean)
 	(cd libpointpatch/tests/; make clean)
+	(cd libfastinst/tests/; make clean)
+	(cd libfastinst/src/; make clean)
+
 	rm -rf ./build run-benchmarks.hi run-benchmarks.exe run-benchmarks.o
 	rm -rf ./doc ./devdoc
 
