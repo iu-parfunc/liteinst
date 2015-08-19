@@ -291,7 +291,7 @@ void __cyg_profile_func_enter(void* func_addr, void* call_site_addr) {
 
   pmd->probe_addr = call_addr;
   pmd->type = ProbeType::FINSTRUMENT;
-  pmd->state = ProbeState::UNINITIALIZED; //??
+  pmd->state = ProbeState::UNINITIALIZED; 
   pmd->probe_context = ProbeContext::ENTRY;
 
   ins->registerProbe(pmd);

@@ -16,7 +16,6 @@ using namespace lock;
 using namespace utils;
 
 void FinstrumentProbeProvider::initialize(ProbeId probe_id, ProbeArg arg) {
-  printf("Initializing..\n");
   ProbeMetaData* pmd = (*probe_meta_data)[probe_id];
   pmd->probe_arg = arg;
   
@@ -29,10 +28,12 @@ void FinstrumentProbeProvider::initialize(ProbeId probe_id, ProbeArg arg) {
   pmd->active_seq = original;
   pmd->inactive_seq = (call_masked | nop_mask); 
   pmd->state = ProbeState::INITIALIZING;
+
+  init_patch_site((void*) pmd->probe_addr, 8);
+
 }
 
 bool FinstrumentProbeProvider::activate(ProbeId probe_id, InstrumentationFunc func) {
-  printf("Activating.\n");
   ProbeMetaData* pmd =  (*probe_meta_data)[probe_id];
 
   if (pmd->state == ProbeState::UNINITIALIZED) {

@@ -55,7 +55,6 @@ namespace utils {
 
     // Caculate the patch site and patch it
     void* patch_site = (void*)((uint64_t)call_addr - setter);
-    init_patch_site(call_addr, 8);
     init_patch_site(patch_site, 8);
     patch_64(patch_site, patch); 
 

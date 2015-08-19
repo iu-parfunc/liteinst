@@ -227,7 +227,7 @@ static __inline__ ticks getticks(void)
      return ((ticks)a) | (((ticks)d) << 32); 
 }
 
-__attribute__((no_instrument_function))
+// __attribute__((no_instrument_function))
 static __inline__ ticks getstart(void) {
   unsigned cycles_high = 0, cycles_low = 0; 
     asm volatile ("CPUID\n\t"
@@ -238,7 +238,7 @@ static __inline__ ticks getstart(void) {
   return ((ticks)cycles_high << 32) | (((ticks)cycles_low)); 
 }
 
-__attribute__((no_instrument_function))
+// __attribute__((no_instrument_function))
 static __inline__ ticks getend(void) {
   unsigned cycles_high = 0, cycles_low = 0; 
   asm volatile("RDTSCP\n\t"

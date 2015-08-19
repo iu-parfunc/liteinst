@@ -3,13 +3,16 @@
 
 #include <cassert>
 #include <cstdlib>
-#include "patcher.h"
 
 int foo_count;
 int foo_entry_probe_id;
 int foo_exit_probe_id;
 
-__attribute__((no_instrument_function))
+void instrumentation(ProbeArg func_id)
+  __attribute__((no_instrument_function));
+void callback(const ProbeMetaData* pmd)
+  __attribute__((no_instrument_function));
+
 void instrumentation(ProbeArg func_id) {
 
   assert(func_id == 0);
@@ -19,7 +22,6 @@ void instrumentation(ProbeArg func_id) {
   foo_count++;
 }
 
-__attribute__((no_instrument_function))
 void callback(const ProbeMetaData* pmd) {
 
   if (pmd->probe_context == ProbeContext::ENTRY) {
@@ -43,10 +45,6 @@ int foo(int x) {
 }
 
 int main() {
-
-  patch_64((void*) foo, 0xFF);
-
-  fprintf(stderr, "Patched the program\n");
 
   ProbeProvider* p;
   try {
