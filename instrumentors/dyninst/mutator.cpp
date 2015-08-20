@@ -37,7 +37,7 @@ void registerProbeCallback (const ProbeMetaData* pmd) {
 /// This class is abstract and must be subclassed and implemented
 /// using a particular binary instrumentation library, but reusing the
 /// inter-process communication framework.
-class OutOfProcessProvider : ProbeProvider {
+class OutOfProcessProvider : protected ProbeProvider {
 
 private:
 protected:
@@ -45,9 +45,7 @@ protected:
 
 public:
 
-  OutOfProcessProvider () {
-    //    callback = c;
-  }
+  OutOfProcessProvider () { }
 
   /// For out-of-process instrumentors initialization is usually a NOOP.
   void initialize(ProbeId probe_id, ProbeArg probe_arg) { }
@@ -74,7 +72,7 @@ public:
   // All functions beginning with "instrumentor_" are called in the
   // instrumentor process:
 
-  virtual void instrumentor_initialize();
+  virtual void instrumentor_initialize() = 0;
 
   // TODO: provide a default implementation of this:
   virtual void instrumentor_continue_instrumentee() = 0;
