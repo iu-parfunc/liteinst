@@ -24,7 +24,7 @@
 #endif 
 #include <pthread.h> 
 
-#define ITERS 1000000
+#define ITERS 10000000
 
 unsigned long g_foo_val = 0; 
 unsigned long  g_bar_val = 0; 
@@ -53,7 +53,7 @@ void activator(int *arg) {
   
   while(g_running) { 
     patch_64((void*)g_call_addr, g_orig_call);
-    pthread_yield(); 
+    /* pthread_yield(); */
   }  
 } 
 
@@ -64,7 +64,7 @@ void deactivator(int *arg) {
   while (g_running) { 
 
     patch_64((void*)g_call_addr, g_call_bar_patch);
-    pthread_yield(); 
+    /* pthread_yield(); */
   }
 } 
 

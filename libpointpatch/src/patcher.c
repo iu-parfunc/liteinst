@@ -85,6 +85,9 @@ void init_patcher() {
   #ifdef NO_CAS 
   printf("NO_CAS VERSION OF PATCHER CODE\n"); 
   #endif
+  #ifdef NO_WAIT
+  printf("NO_WAIT VERSION OF PATCHER CODE\n");
+  #endif 
   
 }
 
