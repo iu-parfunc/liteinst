@@ -5,7 +5,7 @@
 ProbeProvider* PROBE_PROVIDER = NULL;
 
 ProbeProvider* initializeGlobalProbeProvider(ProviderType type, Callback callback) {
-  if (PROBE_PROVIDER != NULL) {
+  if (PROBE_PROVIDER == NULL) {
     switch(type) {
       case ProviderType::FINSTRUMENT:
         PROBE_PROVIDER = new FinstrumentProbeProvider(callback);

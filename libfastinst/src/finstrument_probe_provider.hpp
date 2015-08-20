@@ -40,11 +40,11 @@ class FinstrumentProbeProvider : public ProbeProvider {
      *  meta data.
      *  \param callback Probe discovery callback
      */
-    FinstrumentProbeProvider(Callback cb) {
-      callback = cb;
+    FinstrumentProbeProvider(Callback cb) : ProbeProvider(cb) {
       readFunctionInfo();
       // PROBE_PROVIDER = this;
       probe_lock = new lock::CASLock;
+      // probe_meta_data = new ProbeVec;
     }
 
     /// Overriden initialize method from ProbeProvider

@@ -96,10 +96,14 @@ typedef void (*Callback) (const ProbeMetaData* pmd);
 class ProbeProvider {
 
   protected:
-    ProbeVec probe_meta_data;
+    Callback callback;
+    ProbeVec* probe_meta_data;
 
   public:
-    Callback callback;
+
+    ProbeProvider(Callback cb) : callback(cb) {
+      probe_meta_data = new ProbeVec;
+    }
 
     /// Probe provider constructor
     /* Initialises with the callback

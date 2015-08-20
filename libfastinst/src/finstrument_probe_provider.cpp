@@ -16,7 +16,7 @@ using namespace lock;
 using namespace utils;
 
 void FinstrumentProbeProvider::initialize(ProbeId probe_id, ProbeArg arg) {
-  ProbeMetaData* pmd = probe_meta_data[probe_id];
+  ProbeMetaData* pmd = (*probe_meta_data)[probe_id];
   pmd->probe_arg = arg;
   
   // Initialize with active and deactive sequences
@@ -27,10 +27,14 @@ void FinstrumentProbeProvider::initialize(ProbeId probe_id, ProbeArg arg) {
 
   pmd->active_seq = original;
   pmd->inactive_seq = (call_masked | nop_mask); 
+  pmd->state = ProbeState::INITIALIZING;
+
+  init_patch_site((void*) pmd->probe_addr, 8);
+
 }
 
 bool FinstrumentProbeProvider::activate(ProbeId probe_id, InstrumentationFunc func) {
-  ProbeMetaData* pmd =  probe_meta_data[probe_id];
+  ProbeMetaData* pmd =  (*probe_meta_data)[probe_id];
 
   if (pmd->state == ProbeState::UNINITIALIZED) {
     throw -1; 
@@ -40,7 +44,7 @@ bool FinstrumentProbeProvider::activate(ProbeId probe_id, InstrumentationFunc fu
     return false;
   }
 
-  probe_meta_data[probe_id]->instrumentation_func.store(func, std::memory_order_seq_cst);
+  (*probe_meta_data)[probe_id]->instrumentation_func.store(func, std::memory_order_seq_cst);
 
   // Patch the probe site 
   patch_64((void*) pmd->probe_addr, pmd->active_seq);
@@ -49,7 +53,7 @@ bool FinstrumentProbeProvider::activate(ProbeId probe_id, InstrumentationFunc fu
 
 bool FinstrumentProbeProvider::deactivate(ProbeId probe_id) {
 
-  ProbeMetaData* pmd =  probe_meta_data[probe_id];
+  ProbeMetaData* pmd =  (*probe_meta_data)[probe_id];
 
   if (pmd->state == ProbeState::UNINITIALIZED) {
     throw -1; 
@@ -86,6 +90,8 @@ void FinstrumentProbeProvider::readFunctionInfo() {
       Address func_addr = (Address) strtoul(tokens[0].c_str(), NULL, 16);
       string func_name = tokens[1];
 
+      fprintf(stderr, "Adding function %s at address : %p\n", func_name.c_str(), func_addr);
+
       func_addr_mappings.insert(make_pair(func_addr, func_name));
       // func_rw_locks.insert(make_pair(func_addr, new CASLock));
     }
@@ -105,10 +111,10 @@ uint64_t FinstrumentProbeProvider::estimateInstrumentationOverhead() {
 
 string FinstrumentProbeProvider::getFunctionName(Address func_addr) {
   auto val = func_addr_mappings.find(func_addr); 
-  if (val != func_addr_mappings.end()) {
-    return val->second; 
-  } else {
+  if (val == func_addr_mappings.end()) {
     throw -1;
+  } else {
+    return val->second; 
   }
 }
 
@@ -124,8 +130,8 @@ ProbeMetaData* FinstrumentProbeProvider::getNewProbeMetaDataContainer(
   // probe initialization phase. 
   if (probe_lookup.find(probe_addr) == probe_lookup.end()) {
     probe_lock->lock();
-    probe_meta_data.push_back(pmd);
-    pmd->probe_id = probe_meta_data.size();
+    probe_meta_data->push_back(pmd);
+    pmd->probe_id = probe_meta_data->size()-1;
     probe_lookup.insert(make_pair(probe_addr, 1)); // Value we put is 
                                                    // inconsequentail
     probe_lock->unlock();
@@ -142,5 +148,5 @@ void FinstrumentProbeProvider::registerProbe(ProbeMetaData* pmd) {
 }
 
 ProbeMetaData* FinstrumentProbeProvider::getProbeMetaData(ProbeId probe_id) {
-  return probe_meta_data[probe_id];
+  return (*probe_meta_data)[probe_id];
 }
