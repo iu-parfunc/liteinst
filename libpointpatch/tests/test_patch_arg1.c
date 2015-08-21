@@ -30,8 +30,8 @@ int main(void);
 
 int g_foo_val = 0; 
 
-#define AFTER_ARG_PATCH 1337
-#define PATCH_HEX       0x00000000000539bf
+#define AFTER_ARG_PATCH 1337            
+#define PATCH_HEX       0x0000000000053900 /*first byte should be OPCODE */
 #define BEFORE_ARG_PATCH 10
 
 __attribute__((noinline))
@@ -80,7 +80,8 @@ void foo(int apa) {
     
     void *patch_site = (void*)((uint64_t)call_addr - setter);
     uint64_t orig =  *(uint64_t*)patch_site;
-    uint64_t keep_mask = 0xFFFFFF0000000000; 
+    /* Also keep the opcode, its not always mov-edi */
+    uint64_t keep_mask = 0xFFFFFF00000000FF; 
 
     uint64_t patch = (orig & keep_mask) | PATCH_HEX;
     
