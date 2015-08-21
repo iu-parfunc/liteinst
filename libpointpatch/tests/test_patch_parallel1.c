@@ -72,7 +72,7 @@ void activator(int *arg) {
     
     patch_64((void*)g_call_addr, g_orig_call);
     
-    pthread_yield(); 
+    /*pthread_yield(); */
   }
       
   activator_done = true; 
@@ -87,7 +87,7 @@ void deactivator(int *arg) {
 
     patch_64((void*)g_call_addr, g_patch);
     
-    pthread_yield(); 
+    /* pthread_yield(); */
   }
   
   while (!activator_done); 

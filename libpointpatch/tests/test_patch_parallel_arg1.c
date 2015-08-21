@@ -29,7 +29,6 @@
 #define ITERS 1000000
 
 unsigned long g_foo_val = 0; 
-unsigned long  g_bar_val = 0; 
 
 /* control */
 volatile int g_running = true; 
@@ -50,13 +49,14 @@ unsigned long g_arg2_counter = 0;
 /* This one is set at call site and copied into g_orig_arg_setter at init */
 
 #define ARG2       1337
-#define ARG2_PATCH 0x00000000000539bf 
+#define ARG2_PATCH 0x0000000000053900 /*First byt is for opcode */ 
 /* arg2 is 1337  bf is the mov opcode*/
 
 /* proto */ 
 int main(void);
 
 /* ----------------------------------------------------------------- */
+__attribute__((noinline))
 void foo(int apa) { 
   
   /* Test for correctness */ 
@@ -99,7 +99,9 @@ void foo(int apa) {
     void *patch_site = (void*)((uint64_t)call_addr - setter);
     g_setter_addr = (uint64_t)patch_site;
     g_orig_arg_setter = *(uint64_t*)patch_site;
-    uint64_t keep_mask = 0xFFFFFF0000000000; 
+
+    /* also keep the original opcode byte */
+    uint64_t keep_mask = 0xFFFFFF00000000FF; 
 
     g_alt_arg_setter = (g_orig_arg_setter & keep_mask) | ARG2_PATCH;
     
@@ -123,7 +125,7 @@ void activator(int *arg) {
     
     patch_64((void*)g_setter_addr, g_orig_arg_setter);
     
-    pthread_yield(); 
+    /* pthread_yield(); */
   }  
 } 
 
@@ -135,7 +137,7 @@ void deactivator(int *arg) {
 
     patch_64((void*)g_setter_addr, g_alt_arg_setter);
     
-    pthread_yield(); 
+    /* pthread_yield(); */ 
   }
 } 
 
