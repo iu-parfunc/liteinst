@@ -123,7 +123,7 @@ void activator(int *arg) {
     
     patch_64((void*)g_setter_addr, g_orig_arg_setter);
     
-    pthread_yield(); 
+    /* pthread_yield(); */
   }  
 } 
 
@@ -135,7 +135,7 @@ void deactivator(int *arg) {
 
     patch_64((void*)g_setter_addr, g_alt_arg_setter);
     
-    pthread_yield(); 
+    /* pthread_yield(); */ 
   }
 } 
 

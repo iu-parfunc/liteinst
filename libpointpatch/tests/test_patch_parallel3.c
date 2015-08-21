@@ -101,7 +101,7 @@ void activator(int *arg) {
     
     patch_64((void*)g_call_addr, g_orig_call);
     
-    pthread_yield(); 
+    /* pthread_yield(); */ 
   }  
 } 
 
@@ -113,7 +113,7 @@ void deactivator(int *arg) {
 
     patch_64((void*)g_call_addr, g_call_bar_patch);
     
-    pthread_yield(); 
+    /* pthread_yield(); */
   }
 } 
 
