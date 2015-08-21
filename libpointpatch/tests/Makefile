@@ -24,7 +24,7 @@ DEPS =  $(UBIROOT)/deps/distorm/distorm3.a $(LIBDIR)/libpointpatch.a -lpthread
 all: $(EXES) 
 
 %.exe: %.c
-	gcc  --std=gnu99 -g $(CFLAGS) -I../../deps/distorm/include -I../../include  $< -o $@ -L$(LIBDIR) $(DEPS) 
+	$(CC)  --std=gnu99 -g $(CFLAGS) -I../../deps/distorm/include -I../../include  $< -o $@ -L$(LIBDIR) $(DEPS) 
 
 
 test: $(EXES)
