@@ -55,7 +55,7 @@ namespace utils {
     }
 
     // Calculate the patch site content
-    uint64_t patch_site = ((uint64_t)call_addr - setter);
+    uint64_t patch_site = (uint64_t)((uint8_t*)call_addr - setter);
     uint64_t sequence = *((uint64_t*)patch_site);
     uint64_t mask = 0xFFFFFF0000000000;
     uint64_t patch = (uint64_t) (sequence & mask);

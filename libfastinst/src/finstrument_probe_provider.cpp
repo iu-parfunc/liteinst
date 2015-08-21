@@ -70,7 +70,7 @@ bool FinstrumentProbeProvider::deactivate(ProbeId probe_id) {
 
 void FinstrumentProbeProvider::readFunctionInfo() {
 
-  fprintf(stderr, "Initializing mappings data structure..\n");
+  fprintf(stderr, "[Finstrument Probe Provider] Initializing mappings data structure..\n");
 
   string line;
   ifstream fp ("functions.txt");
@@ -89,8 +89,6 @@ void FinstrumentProbeProvider::readFunctionInfo() {
 
       Address func_addr = (Address) strtoul(tokens[0].c_str(), NULL, 16);
       string func_name = tokens[1];
-
-      fprintf(stderr, "Adding function %s at address : %p\n", func_name.c_str(), func_addr);
 
       func_addr_mappings.insert(make_pair(func_addr, func_name));
       // func_rw_locks.insert(make_pair(func_addr, new CASLock));

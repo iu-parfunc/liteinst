@@ -17,8 +17,6 @@ void instrumentation(ProbeArg func_id) {
 
   assert(func_id == 0);
 
-  printf("Came here..\n");
-
   foo_count++;
 }
 
@@ -64,7 +62,7 @@ int main() {
     foo(i);
   }
 
-  assert(foo_count == 100);
+  assert(foo_count == 200);
 
   p->deactivate(foo_entry_probe_id);
   p->deactivate(foo_exit_probe_id);
@@ -73,7 +71,7 @@ int main() {
     foo(i);
   }
 
-  assert(foo_count == 100);
+  assert(foo_count == 200);
 
   p->activate(foo_entry_probe_id, instrumentation);
   p->activate(foo_exit_probe_id, instrumentation);
@@ -82,9 +80,11 @@ int main() {
     foo(i);
   }
 
-  assert(foo_count == 200);
+  assert(foo_count == 400);
 
   delete(p);
+
+  fprintf(stderr, "Test passed..\n");
 
   exit(EXIT_SUCCESS);
 
