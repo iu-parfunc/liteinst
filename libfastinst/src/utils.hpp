@@ -28,7 +28,16 @@ namespace utils {
     return count;
   } 
 
-  inline void patch_first_argument(void* func_addr, void* call_addr, uint32_t probe_id) {
+  /// Patches the first argument of the given __cyg_* function call to be the 
+  /// given probe_id
+  /* \param func_addr The starting address of the function the cyg_* call 
+   * belongs to
+   * \param call_addr The address of the __cyg_* function call
+   * \param probe_id  The probe_id to be patched as the first argument to the 
+   *    __cyg_* function
+   */
+  inline void patch_first_argument(void* func_addr, void* call_addr, 
+      uint32_t probe_id) {
     Decoded d = decode_range(func_addr, call_addr);
     if (!DECODED_OK(d)) {
       fprintf(stderr, "Decode range did not work\n");
@@ -46,17 +55,17 @@ namespace utils {
     }
 
     // Calculate the patch site content
-    uint64_t sequence = *((uint64_t*)call_addr);
+    uint64_t patch_site = ((uint64_t)call_addr - setter);
+    uint64_t sequence = *((uint64_t*)patch_site);
     uint64_t mask = 0xFFFFFF0000000000;
     uint64_t patch = (uint64_t) (sequence & mask);
     uint8_t* patch_ptr = (uint8_t*) (&patch);
-    patch_ptr[0] = ((uint8_t*)call_addr)[0]; // MOV REG opcode
+    patch_ptr[0] = ((uint8_t*)patch_site)[0]; // MOV REG opcode
     *(uint32_t*)(patch_ptr+1) = probe_id; 
 
     // Caculate the patch site and patch it
-    void* patch_site = (void*)((uint64_t)call_addr - setter);
-    init_patch_site(patch_site, 8);
-    patch_64(patch_site, patch); 
+    init_patch_site((void*)patch_site, 8);
+    patch_64((void*)patch_site, patch); 
 
   }
 
