@@ -29,7 +29,6 @@
 #define ITERS 1000000
 
 unsigned long g_foo_val = 0; 
-unsigned long  g_bar_val = 0; 
 
 /* control */
 volatile int g_running = true; 
@@ -57,6 +56,7 @@ unsigned long g_arg2_counter = 0;
 int main(void);
 
 /* ----------------------------------------------------------------- */
+__attribute__((noinline))
 void foo(int apa) { 
   
   /* Test for correctness */ 

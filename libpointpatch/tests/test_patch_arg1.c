@@ -34,6 +34,7 @@ int g_foo_val = 0;
 #define PATCH_HEX       0x00000000000539bf
 #define BEFORE_ARG_PATCH 10
 
+__attribute__((noinline))
 void foo(int apa) { 
   
   printf("Running foo %d\n", apa); 
