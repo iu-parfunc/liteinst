@@ -55,6 +55,7 @@ uint64_t get_msb_mask_64(int nbytes);
 uint64_t get_lsb_mask_64(int nbytes);
 uint32_t get_msb_mask_32(int nbytes); 
 uint32_t get_lsb_mask_32(int nbytes);
+bool reg_equal(_RegisterType reg1, _RegisterType reg2);
 
 static void int3_handler(int signo, siginfo_t *inf, void* ptr);
 
@@ -330,6 +331,24 @@ Decoded decode_range(void* start_addr, void* end_addr){
 
 }
 
+/* Check if one register is a sub-part of another (EAX/RAX for example) */ 
+
+inline bool reg_equal(_RegisterType reg1, _RegisterType reg2) {
+  _RegisterType a1;
+  _RegisterType a2;
+
+  if (reg1 == reg2) return true; 
+
+  // I think you can subtract 16 from max(reg1,reg2) and 
+  //   then redo the simple check above.. to replace all of the below.
+  //   But it is a bit of a hack. 
+  
+  a1 = MAX(reg1,reg2);
+  a2 = MIN(reg1,reg2);
+  if (a1 - 16 == a2) return true;
+
+  return false; 
+}
 
 /* find the closest point to "end_addr" where the register reg is set 
    via a mov instruction or return -1 if no such point found. 
@@ -377,7 +396,7 @@ int64_t find_reg_setter(_RegisterType reg, Decoded d){
 	
       } else if (set_by_intermediate && 
 		 decoded[i].ops[0].type == O_REG && 
-		 intermediate_reg == decoded[i].ops[0].index) { 
+		 (reg_equal(intermediate_reg,decoded[i].ops[0].index))) { 
 	if (IS_IMMEDIATE(decoded[i].ops[1].type)) { 
 	  setter_offset = ptr_size; 
 	  setter_found = true; 
