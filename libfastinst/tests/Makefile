@@ -18,7 +18,7 @@ all: $(EXES)
 
 
 test: $(EXES)
-	LD_LIBRARY_PATH=../../build/lib:$(LD_LIBRARY_PATH) ./test_probe_activation.exe
-
+	./testall.sh
+	
 clean:
 	rm -f *.o *.exe
