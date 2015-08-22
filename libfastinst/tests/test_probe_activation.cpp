@@ -71,6 +71,8 @@ int foo(int x) {
 
 int main() {
 
+  fprintf(stderr, "Test probe activation and deactivation..\n");
+
   ProbeProvider* p;
   try {
     p = initializeGlobalProbeProvider(ProviderType::FINSTRUMENT, callback);
@@ -117,8 +119,6 @@ int main() {
   assert(foo_count == 400);
 
   delete(p);
-
-  fprintf(stderr, "Test passed..\n");
 
   exit(EXIT_SUCCESS);
 
