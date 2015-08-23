@@ -138,70 +138,6 @@ void update_empty_overheads(uint64_t overhead, int type) {
 #define IS_PROBE_ID(x) ((x) < 0x400200)
 
 /* -----------------------------------------------------------------
-   ENTER/Exit HELPERS 
-   ----------------------------------------------------------------- */ 
-/** 
- * @brief helper function that is called by __cyg_profile_func_enter() when 
-   when a function id has been established. 
- * @param function a function id (that really should fit in 16 bits) 
- * @param start a timestamp (in ticks) acquired upon entry into __cyg_profile_func_enter().
- * @details This function calls the specified prolog function and then updates the 
- * thread-local datastructure containing prolog overhead. 
- */
-static inline void process_func_enter(InstrumentationFunc func, ProbeArg probe_arg) {
-
-  func(probe_arg);
-  
-#ifdef PROBE_CPU_TIME
-  struct timespec ts1;
-  clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts1);
-  ticks end= (ticks)((ts1.tv_sec * 1000000000LL + ts1.tv_nsec) * g_TicksPerNanoSec);
-#else 
-  ticks end = getticks();
-#endif
-  
-  // uint64_t prolog_overhead = (end - start);
-  
-#ifdef PROBE_HIST_ON
-  update_overhead_histograms(tstats, prolog_overhead, PROLOG); 
-#endif
-  
-  return;
-}
-
-/** 
- * @brief helper function that is called by __cyg_profile_func_exit() when 
-   when a function id has been established. 
- * @param function a function id (that really should fit in 16 bits) 
- * @param start a timestamp (in ticks) acquired upon entry into __cyg_profile_func_exit().
- * @details This function calls the specified epilog function and then updates the 
- * thread-local datastructure containing epilog overhead. 
- */
-static inline void process_func_exit(InstrumentationFunc func, ProbeArg probe_arg) {
-
-  func(probe_arg);
-
-#ifdef PROBE_CPU_TIME
-  struct timespec ts1;
-  clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts1);
-  ticks end= (ticks)((ts1.tv_sec * 1000000000LL + ts1.tv_nsec) * g_TicksPerNanoSec);
-#else 
-  ticks end = getticks();
-#endif
-
-  // uint64_t epilog_overhead = (end - start);
-  //#ifndef NDEBUG 
-  //fprintf(stderr,"Added %ld to thread_local_overhead\n", epilog_overhead);
-  //#endif 
-  
-#ifdef PROBE_HIST_ON
-  update_overhead_histograms(ts, epilog_overhead, EPILOG); 
-#endif
-
-  return;
-}
-
-/* -----------------------------------------------------------------
    ENTER FUNCTIONS 
    ----------------------------------------------------------------- */
 #ifdef PROBE_TRUE_EMPTY_ON 
@@ -238,31 +174,24 @@ void __cyg_profile_func_enter(void* func_addr, void* call_site_addr) {
   if (!g_ubiprof_initialized) { 
     return; 
   }
-
-#ifdef PROBE_CPU_TIME
-  struct timespec ts0;
-  clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts0);
-  ticks start = (ticks)((ts0.tv_sec * 1000000000LL + ts0.tv_nsec) * g_TicksPerNanoSec);
-#else
-  ticks start = getticks();
-#endif
   
   // TODO: This breaks the abstraction. Get rid of this.
   // NOW AT THIS POINT WE KNOW THAT UBIPROF IS INITIALIZED 
   assert(g_ubiprof_initialized == true); 
   // I WANT THE ASSERT BELOW TO PASS 
-  assert(flag >= 0); 
+  // assert(flag >= 0); 
 
   // This is the branch probably taken most often. 
   if (IS_PROBE_ID(function)) { 
     ProbeMetaData* pmd = ins->getProbeMetaData(function);
-    process_func_enter(pmd->instrumentation_func.load(), pmd->probe_arg); 
+
+    pmd->instrumentation_func.load()(pmd->probe_arg);
     
     // At this point we should be done with a completely initialized function 
     // and can EXIT
     return; 
   }
-  
+
   // NOW DEAL WITH FUNCTIONS THAT YET DO NOT HAVE AN ID: 
   // This is part of "system-start-up" (one-time initialization, first time run)
   assert(IS_PROBE_ID(function) == false); 
@@ -272,6 +201,7 @@ void __cyg_profile_func_enter(void* func_addr, void* call_site_addr) {
   uint8_t* call_addr = (uint8_t*) addr - 5;
 
   ProbeMetaData* pmd = ins->getNewProbeMetaDataContainer((Address) addr - 5);
+
 
   // Some other thread is executing initialization profotocl for this probe 
   // site already and this thread lost it. Just return without trying to wait.
@@ -294,6 +224,7 @@ void __cyg_profile_func_enter(void* func_addr, void* call_site_addr) {
 
   ins->registerProbe(pmd);
 
+
   if ((uint64_t)addr < function) { 
     //fprintf(stderr, "ENTER_ERR: What does this mean!? %llx < %llx\n",(uint64_t)addr,function); 
 #ifdef _GNU_SOURCE
@@ -313,8 +244,10 @@ void __cyg_profile_func_enter(void* func_addr, void* call_site_addr) {
   // NOW PATCH ARGUMENTS (Set up for next run to enter the efficient branch) 
   patch_first_argument(func_addr, (void*) call_addr, (uint32_t) pmd->probe_id);
 
-  // Finish off by using the normal process_func_enter
-  process_func_enter(pmd->instrumentation_func, pmd->probe_arg); 
+
+  // Finish off by calling instrumentation function 
+  pmd->instrumentation_func.load()(pmd->probe_arg);
+
 }
 #endif
 
@@ -388,14 +321,6 @@ void __cyg_profile_func_exit(void* func, void* caller) {
    */ 
 void __cyg_profile_func_exit(void* func_addr, void* call_site_addr) {
 
-  #ifdef PROBE_CPU_TIME
-    struct timespec ts0;
-    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts0);
-    ticks start = (ticks)((ts0.tv_sec * 1000000000LL + ts0.tv_nsec) * g_TicksPerNanoSec);
-  #else
-    ticks start = getticks();
-  #endif
-
   FinstrumentProbeProvider* ins = (FinstrumentProbeProvider*) PROBE_PROVIDER;
   if (ins == NULL) { // ProbeProvider hasn't been set. Skip instrumentation.
     return;
@@ -410,7 +335,7 @@ void __cyg_profile_func_exit(void* func_addr, void* call_site_addr) {
 
   if (IS_PROBE_ID(function)) { 
     ProbeMetaData* pmd = ins->getProbeMetaData(function);
-    process_func_exit(pmd->instrumentation_func.load(), pmd->probe_arg); 
+    pmd->instrumentation_func.load()(pmd->probe_arg);
     return; 
   }
 
@@ -470,8 +395,8 @@ void __cyg_profile_func_exit(void* func_addr, void* call_site_addr) {
   // NOW PATCH ARGUMENTS (Set up for next run to enter the efficient branch)
   patch_first_argument(func_addr, (void*) call_addr, (uint32_t) pmd->probe_id);
 
-  // Finish off by using the normal process_func_by_id 
-  process_func_exit(pmd->instrumentation_func, pmd->probe_arg); 
+  // Finish off by calling instrumentation function 
+  pmd->instrumentation_func.load()(pmd->probe_arg);
 
 }
 #endif

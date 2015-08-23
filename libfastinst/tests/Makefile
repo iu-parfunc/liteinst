@@ -6,7 +6,7 @@ EXES = $(patsubst %.cpp,%.exe,$(SRCS))
 
 CFLAGS = -finstrument-functions -fno-inline -fno-optimize-sibling-calls
 
-LIBS = -L../../build/lib -lfastinst -lpointpatch -ldl
+LIBS = -L../../build/lib -lfastinst -lpointpatch -ldl -lpthread
 
 CXX=icpc
 

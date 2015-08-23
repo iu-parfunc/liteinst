@@ -35,9 +35,11 @@ for f in *.exe ; do
     fails="$fails $f"
     failed=$((failed+1))
   fi
+
+  rm -f functions.txt
 done;
 
-echo "***** Test summary *****"
+echo -e "\n***** Test summary *****"
 echo "Num passed tests: " $success
 echo "Num failed tests: " $failed
 echo "Failed tests: " $fails
