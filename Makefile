@@ -58,7 +58,7 @@ bench: lib
 test: quicktest pointpatch_tests
 
 # Only the fast-running tests:
-quicktest: lib inst_tests prof_tests dyninst_inst_test
+quicktest: lib inst_tests prof_tests
 
 inst_tests:
 	(cd instrumentors/tests/unit && make check)
@@ -71,6 +71,7 @@ prof_tests:
 pointpatch_tests:
 	(cd libpointpatch/tests && make test )
 
+# Not running this from the default `make test` above due to Dyninst dependency.
 dyninst_inst_test:
 #       This isn't done yet but make sure it builds:
 	(cd instrumentors/dyninst && make )
