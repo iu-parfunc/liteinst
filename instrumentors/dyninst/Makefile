@@ -8,20 +8,20 @@ DYNINST_INCLUDE = $(DYNINST_ROOT)/include
 # Assume dyninst installed and available in appropriate paths.
 LIBS= -ldyninstAPI  -lrt
 
-CC=gcc
-CXX=g++
+CC  ?= gcc
+CXX ?= g++
 
 # -ldyninstAPI_RT
 
-all: mutator.exe
+all: main.exe
 
 # The mutator is also the mutatee in the current test:
-mutator.exe: mutator.cpp
-	$(CXX) -std=c++11 -I$(DYNINST_INCLUDE) mutator.cpp -c -o mutator.o
-	$(CXX) mutator.o -L$(DYNINST_LIB) $(LIBS) -o mutator.exe
+main.exe: main.cpp
+	$(CXX) -std=c++11 -I$(DYNINST_INCLUDE) main.cpp -c -o main.o
+	$(CXX) main.o -L$(DYNINST_LIB) $(LIBS) -o main.exe
 
 run:
-	DYNINSTAPI_RT_LIB=$(DYNINST_LIB)/libdyninstAPI_RT.so time ./mutator.exe
+	DYNINSTAPI_RT_LIB=$(DYNINST_LIB)/libdyninstAPI_RT.so time ./main.exe
 
 ryan:
 	 CPLUS_INCLUDE_PATH=$(HOME)/opt/dyninst/include LIBRARY_PATH=$(HOME)/opt/dyninst/lib $(MAKE)

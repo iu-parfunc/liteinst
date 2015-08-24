@@ -45,7 +45,7 @@ protected:
 
 public:
 
-  OutOfProcessProvider () { }
+  OutOfProcessProvider (Callback cb) : ProbeProvider(cb) { }
 
   /// For out-of-process instrumentors initialization is usually a NOOP.
   void initialize(ProbeId probe_id, ProbeArg probe_arg) { }
@@ -120,9 +120,10 @@ private:
   BPatch_point * codeLoc;
 
 public:
-  DyninstProbeProvider(Callback c) : OutOfProcessProvider()
+  DyninstProbeProvider(Callback c) : OutOfProcessProvider(c)
   {
-    callback = c;
+    // Most of the initialization work doesn't happen until we fork
+    // into a different process.
   }
 
   void instrumentor_initialize() {
