@@ -14,11 +14,10 @@ for f in *.exe ; do
     echo ""
 
     echo '****************************'
-    echo 'RUNNING TEST'
+    echo "RUNNING TEST $f"
     echo '****************************'
 
-
-    ./${f}
+    time ./${f}
     if [ $? -eq 0 ]; then
 	echo '****************************'
 	echo "$f PASSED"
@@ -45,10 +44,10 @@ for f in test_patch_parallel4.exe test_patch_parallel5.exe; do
 	echo ""
 
 	echo '****************************'
-	echo 'RUNNING TEST'
+	echo "RUNNING TEST $f"
 	echo '****************************'
 
-	./${f} $i
+	time ./${f} $i
 	if [ $? -eq 0 ]; then
 	    echo '****************************'
 	    echo "$f PASSED"

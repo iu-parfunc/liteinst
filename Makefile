@@ -1,5 +1,6 @@
-.PHONY: all lib microbench bench doc devdoc docker clean deps
+.PHONY: all lib microbench bench doc devdoc docker clean deps test quicktest
 .PHONY: docker docker2 rundock rundock2 testdocker
+.PHONY: inst_tests prof_tests pointpatch_tests dyninst_inst_test
 # ----------------------------------------
 
 # TODO: build everything before running/benchmarking:
@@ -8,39 +9,31 @@ all: lib
 
 # INST_OBJS := $(patsubst %.cpp,%.o,$(wildcard ./instrumentors/finstrument/src/*.cpp))
 
-microbench : lib
-	(cd microbenchmarks; make run)
-
-bench: lib
-	(cd benchmarks; make run)
-
-test: lib
-	(cd instrumentors/tests/unit;make check)
-	(cd instrumentors/tests/integration;make check)
-	(cd profilers/tests/unit;make check)
-	(cd profilers/tests/integration;make check)
-
-
+# --------------------------------------------------------------------------------
+# Building
+# --------------------------------------------------------------------------------
 
 # Build the 3rd-party dependencies for the core libs:
 # This is currently implied-by/redundant with the "lib" target.
 deps:
 # Distorm is an in-place build:
-	(cd deps/distorm/make/linux; make)
-
+	(cd deps/distorm/make/linux && make)
 
 lib:
 	$(CXX) --version || echo ok
 	$(CC) --version || echo ok
+
+	(cd instrumentors/finstrument/src/ && make CFLAGS='-DNDEBUG -O3')
+	(cd profilers/src/ && make install CFLAGS='-DNDEBUG -O3')
+
+#       Ugh, something above wipes the build/ directory... FIXME
 	(cd libpointpatch/src && make CFLAGS='-DNDEBUG -O3' && make install )
 	(cd libfastinst/src   && make CFLAGS='-DNDEBUG -O3' && make install )
 
-	(cd instrumentors/finstrument/src/; make CFLAGS='-DNDEBUG -O3')
-	(cd profilers/src/; make install CFLAGS='-DNDEBUG -O3')
 
 libdebug:
-	(cd instrumentors/finstrument/src/; make)
-	(cd profilers/src/; make install)
+	(cd instrumentors/finstrument/src/ && make)
+	(cd profilers/src/ && make install)
 
 # Extracts all documentation from source files.
 devdoc:
@@ -51,7 +44,40 @@ doc:
 	doxygen scripts/Doxyfile
 
 # --------------------------------------------------------------------------------
+# Test and benchmark
+# --------------------------------------------------------------------------------
+
+microbench : lib
+	(cd microbenchmarks && make run)
+
+bench: lib
+	(cd benchmarks && make run)
+
+# Run all available tests, this is our regression testing / continuous
+# integration target:
+test: quicktest pointpatch_tests
+
+# Only the fast-running tests:
+quicktest: lib inst_tests prof_tests dyninst_inst_test
+
+inst_tests:
+	(cd instrumentors/tests/unit && make check)
+	(cd instrumentors/tests/integration && make check)
+
+prof_tests:
+	(cd profilers/tests/unit && make check)
+	(cd profilers/tests/integration && make check)
+
+pointpatch_tests:
+	(cd libpointpatch/tests && make test )
+
+dyninst_inst_test:
+#       This isn't done yet but make sure it builds:
+	(cd instrumentors/dyninst && make )
+
+# --------------------------------------------------------------------------------
 # Docker concerns:
+# --------------------------------------------------------------------------------
 
 docker: clean
 # Check what's there and build our new one:
@@ -84,24 +110,25 @@ rundock:
 rundock2:
 	docker run -it $(WDYNINST_TAG) bash
 
+# The same as `make test` except inside the docker container resulting from `make docker`:
 testdocker:
 	docker run iu-parfunc/ubiprof bash -c 'cd ubiprof_src && make test'
 
 # --------------------------------------------------------------------------------
 
 clean:
-	(cd instrumentors/finstrument/src/; make clean)
-	(cd profilers/src/; make clean)
+	(cd instrumentors/finstrument/src/ && make clean)
+	(cd profilers/src/ && make clean)
 
-	(cd libpointpatch/src/; make clean)
-	(cd libpointpatch/tests/; make clean)
-	(cd libfastinst/tests/; make clean)
-	(cd libfastinst/src/; make clean)
+	(cd libpointpatch/src/ && make clean)
+	(cd libpointpatch/tests/ && make clean)
+	(cd libfastinst/tests/ && make clean)
+	(cd libfastinst/src/ && make clean)
 
 	rm -rf ./build run-benchmarks.hi run-benchmarks.exe run-benchmarks.o
 	rm -rf ./doc ./devdoc
 
-	(cd deps/distorm/make/linux; make clean)
+	(cd deps/distorm/make/linux && make clean)
 
 distclean: clean
 # Here is a harsher option for the deps.  We can't trust them to have
