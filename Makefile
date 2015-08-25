@@ -48,14 +48,15 @@ doc:
 # --------------------------------------------------------------------------------
 
 microbench : lib
-	(cd microbenchmarks && make run)
+	# (cd microbenchmarks && make run)
+	(cd libfastinst/microbenchmarks && make run) 
 
 bench: lib
 	(cd benchmarks && make run)
 
 # Run all available tests, this is our regression testing / continuous
 # integration target:
-test: quicktest pointpatch_tests
+test: quicktest pointpatch_tests fastinst_tests
 
 # Only the fast-running tests:
 quicktest: lib inst_tests prof_tests
@@ -70,6 +71,9 @@ prof_tests:
 
 pointpatch_tests:
 	(cd libpointpatch/tests && make test )
+
+fastinst_tests:
+	(cd libfastinst/tests && make test)
 
 # Not running this from the default `make test` above due to Dyninst dependency.
 dyninst_inst_test:
