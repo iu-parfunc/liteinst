@@ -2,10 +2,34 @@
 #ifndef _CALIBRATE_HPP_
 #define _CALIBRATE_HPP_
 
+#include "fastinst.hpp"
+#include "cycle.h"
+
+extern "C" {
+
+  inline ticks calibrationFunction() {
+
+    ticks start, end;
+    start = getticks();
+    // Simulating cyg call
+    __cyg_profile_func_enter((void*)(calibrationFunction), &&enter_return); // Label as value here 
+    enter_return:
+
+    // Simulating cyg call
+    __cyg_profile_func_exit((void*)(calibrationFunction), &&exit_return); // Label as value here 
+    exit_return:
+    end = getticks();
+
+    return (end - start);
+
+  }
+}
+
 namespace calibrate {
 
-  void __fake_cyg_enter_function(void* func_addr, void* call_site);
-  void __fake_cyg_exit_function(void* func_addr, void* call_site);
+  uint64_t getInstrumentationOverheadPerFunction(); 
+  void emptyInstrumentation(ProbeArg func_id);
+  void calibrationCallback(const ProbeMetaData* pmd);
 
   /*
   void __fake_cyg_enter_function() {

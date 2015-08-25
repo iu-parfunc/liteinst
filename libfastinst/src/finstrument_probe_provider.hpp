@@ -6,6 +6,7 @@
 
 #include "fastinst.hpp"
 #include "lock.hpp"
+#include "calibrate.hpp"
 
 typedef std::unordered_map<Address, std::string> FuncAddrMapping;
 typedef std::unordered_map<Address, uint32_t> ProbeLookupMap; 
@@ -21,6 +22,14 @@ class FinstrumentProbeProvider : public ProbeProvider {
                                  //!< address has already been discovered. Value
                                  //!< is not really important. 
 
+    uint64_t per_function_instrumentation_overhead; //!< Estimated 
+      //!< instrumentation overhead for a single function call. Includes both
+      //!< cyg_profile_enter and cyg_profile_exit call overheads. Measures 
+      //!< overhead until the call to the actual instrumentation function and
+      //!< the return to the application code. Doesn't include the overhead 
+      //!< incurred by the actual instrumentation. If needed the 
+      //!< instrumentation needs to keep track of that.
+
     /// Reads the function related meta data from debug tables.
     /*  The information gathered are function addresses and their names.
      *  Call at initialization time.
@@ -28,9 +37,9 @@ class FinstrumentProbeProvider : public ProbeProvider {
     void readFunctionInfo();
 
     /// Estimates the overhead induced by the mechanism used by this probe 
-    /// provider (via indirect jumps, trampolines etc.) to get to  and return
+    /// provider (via cyg_* calls) to get to  and return
     //  from the actual instrumentation function. 
-    uint64_t estimateInstrumentationOverhead();
+    void calibrateInstrumentationOverhead();
 
   public:
 
@@ -42,10 +51,14 @@ class FinstrumentProbeProvider : public ProbeProvider {
      */
     FinstrumentProbeProvider(Callback cb) : ProbeProvider(cb) {
       readFunctionInfo();
-      // PROBE_PROVIDER = this;
+      calibrateInstrumentationOverhead();
       probe_lock = new lock::CASLock;
       // probe_meta_data = new ProbeVec;
     }
+
+    /// Get estimated the per function call instrumentation overhead incurred
+    /// by cyg_* calls
+    uint64_t getEstimatedInstrumentationOverhead();
 
     /// Overriden initialize method from ProbeProvider
     void initialize(ProbeId probe_id, ProbeArg probe_arg);

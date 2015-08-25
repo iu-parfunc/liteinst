@@ -166,7 +166,6 @@ void __cyg_profile_func_enter(void* func_addr, void* call_site_addr) {
     return;
   }
 
-  int64_t flag = (int64_t) call_site_addr;
   uint64_t function = (uint64_t) func_addr; // this is either an address or an ID
 
   // TODO: This breaks the abstraction. Get rid of this.
@@ -250,44 +249,6 @@ void __cyg_profile_func_enter(void* func_addr, void* call_site_addr) {
 
 }
 #endif
-
-/* -----------------------------------------------------------------
-   FAKE CYG ENTER specifically for calibrate_cache_effects
-   ----------------------------------------------------------------- */ 
-/** 
-   * @brief A fake variant of cyg_enter specifically for calibrate_cache_effects.
-   * @param this_fn   BUDDHIKA DOCUMENT THIS
-   * @param call_site BUDDHIKA DOCUMENT THIS
-   * @details Tries to emulate what a real cyg_enter function does in 
-   * order to estimate its impact on cache.
-   */
-void fake_cyg_profile_func_enter(void* func, void* caller) {
-  
-  //Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
-  //int64_t flag = (int64_t) caller;
-  uint64_t function = (uint64_t) func; // this is either an address or an ID
-  // BJS: moved some decls to top. I think the compiler will put 
-  //  these here anywhere. 
-
-#ifdef PROBE_CPU_TIME
-  struct timespec ts0;
-  clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts0);
-  ticks start = (ticks)((ts0.tv_sec * 1000000000LL + ts0.tv_nsec) * g_TicksPerNanoSec);
-#else
-  ticks start = getticks();
-#endif
-  
-  if (!g_ubiprof_initialized) { 
-    // calibrate_cache_effects is expected to take place before initialization (during) 
-    // At least if I read the code correctly (initializer.cpp and minimal_adaptive_profiler.cpp)
-    // g_ubiprof_initialized is set = true after the call to calibrate_cache_effects. 
-    
-    // process_func_by_id_enter(function,start);
-    return; 
-  } else { 
-    fprintf(stderr,"fake_cyg_profile_func_enter is called after initialization!\n");
-  }
-}
 
 /* ----------------------------------------------------------------- 
    PROFILE EXIT FUNC 
@@ -400,33 +361,3 @@ void __cyg_profile_func_exit(void* func_addr, void* call_site_addr) {
 
 }
 #endif
-
-void fake_cyg_profile_func_exit(void* func, void* caller) {
-  uint64_t function = (uint64_t)func;
-  
-  #ifdef PROBE_CPU_TIME
-    struct timespec ts0;
-    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &ts0);
-    ticks start = (ticks)((ts0.tv_sec * 1000000000LL + ts0.tv_nsec) * g_TicksPerNanoSec);
-  #else
-    ticks start = getticks();
-  #endif
-
-    //Finstrumentor* ins = (Finstrumentor*) INSTRUMENTOR_INSTANCE;
-
-  // If the Ubiprof library has not yet been properly initialized return.
-  // But caller parameter being -1 signals a special explicit invocation
-  // of the instrumentation which is done for calibration purposes at 
-  // the library init time. If that's the case we atually want to continue
-  // executing.
-  //int64_t flag = (int64_t) caller;
-
-  if (!g_ubiprof_initialized) {
-  
-    // process_func_by_id_exit(function, start); 
-    return; 
-  } else {
-    fprintf(stderr,"fake_cyg_profile_func_enter is called after initialization!\n");
-  }
-
-}

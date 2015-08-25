@@ -4,7 +4,7 @@ SRCS = $(wildcard *.cpp)
 
 EXES = $(patsubst %.cpp,%.exe,$(SRCS))
 
-CFLAGS = 
+CFLAGS =  
 
 LIBS = -L../../build/lib -lfastinst -lrt -ldl
 

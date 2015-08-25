@@ -4,11 +4,11 @@ INSTALL= $(ROOT)/build/lib
 # CFLAGS=-DPROBE_TRUE_EMPTY_ON -DPROBE_CPU_TIME
 # CFLAGS=-DPROBE_HIST_ON -DPROBE_CPU_TIME
 
-EXTRA_WARNS=
+EXTRA_WARNS= -pedantic 
 #-Wextra
 ## -Wformat-nonliteral -Wcast-align -Wpointer-arith -Wbad-function-cast -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Winline -Wundef -Wnested-externs -Wcast-qual -Wshadow -Wwrite-strings -Wno-unused-parameter -Wfloat-equal
 
-ARGS= -g -Wall -pedantic $(EXTRA_WARNS) -I$(ROOT)/include -I$(ROOT)/deps/distorm/include -I.
+ARGS= -g -Wall $(EXTRA_WARNS)-I$(ROOT)/include -I$(ROOT)/deps/distorm/include -I$(ROOT)/common/include -I.
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 DEPS = $(INSTALL)/libpointpatch.a
 LIBS =
@@ -23,7 +23,7 @@ AR = ar
 RM = rm
 OPTS =
 
-CODE = finstrument_probe_provider.cpp probe_provider.cpp lock.cpp cyg_functions.cpp globals.cpp
+CODE = finstrument_probe_provider.cpp probe_provider.cpp lock.cpp cyg_functions.cpp globals.cpp calibrate.cpp
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 

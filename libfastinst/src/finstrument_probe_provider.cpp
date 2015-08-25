@@ -14,6 +14,20 @@
 using namespace std;
 using namespace lock;
 using namespace utils;
+using namespace calibrate;
+
+void FinstrumentProbeProvider::calibrateInstrumentationOverhead() {
+  Callback temp = this->callback; // Backup the current callback function
+  this->callback = calibrationCallback; // Sets a temporary callback to 
+    // initialize the special calibration function 
+  this->per_function_instrumentation_overhead = 
+    getInstrumentationOverheadPerFunction();  
+  this->callback = temp; // Restore the original callback
+}
+
+uint64_t FinstrumentProbeProvider::getEstimatedInstrumentationOverhead() {
+  return per_function_instrumentation_overhead;
+}
 
 void FinstrumentProbeProvider::initialize(ProbeId probe_id, ProbeArg arg) {
   ProbeMetaData* pmd = (*probe_meta_data)[probe_id];
@@ -101,10 +115,6 @@ void FinstrumentProbeProvider::readFunctionInfo() {
     fprintf(stderr, "[Ubiprof] ERROR : functions.txt not present. Ubiprof will" 
                     " not profile this application...\n");
   }*/
-}
-
-uint64_t FinstrumentProbeProvider::estimateInstrumentationOverhead() {
-  return 0;
 }
 
 string FinstrumentProbeProvider::getFunctionName(Address func_addr) {
