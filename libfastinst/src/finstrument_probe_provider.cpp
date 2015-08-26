@@ -137,12 +137,17 @@ ProbeMetaData* FinstrumentProbeProvider::getNewProbeMetaDataContainer(
   // will be locking on this lock to gain access to probe meta data during
   // probe initialization phase. 
   if (probe_lookup.find(probe_addr) == probe_lookup.end()) {
-    probe_lock->lock();
-    probe_meta_data->push_back(pmd);
-    pmd->probe_id = probe_meta_data->size()-1;
-    probe_lookup.insert(make_pair(probe_addr, 1)); // Value we put is 
+    probe_lock->lock(); // Double check locking
+    if (probe_lookup.find(probe_addr) == probe_lookup.end()) { 
+      probe_meta_data->push_back(pmd);
+      pmd->probe_id = probe_meta_data->size()-1;
+      probe_lookup.insert(make_pair(probe_addr, 1)); // Value we put is 
                                                    // inconsequentail
-    probe_lock->unlock();
+      probe_lock->unlock();
+    } else {
+      probe_lock->unlock();
+      return NULL;
+    }
   } else {
     probe_lock->unlock();
     return NULL;

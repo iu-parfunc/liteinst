@@ -202,7 +202,7 @@ void __cyg_profile_func_enter(void* func_addr, void* call_site_addr) {
   ProbeMetaData* pmd = ins->getNewProbeMetaDataContainer((Address) addr - 5);
 
 
-  // Some other thread is executing initialization profotocl for this probe 
+  // Some other thread is executing initialization protocol for this probe 
   // site already and this thread lost it. Just return without trying to wait.
   // We may drop a few samples. But it should be a good tradeoff in terms of 
   // performance.

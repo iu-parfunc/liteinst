@@ -11,6 +11,13 @@ namespace lock {
     cas_lock = 0;
   }
 
+  bool CASLock::tryLock() {
+    if(cas_lock.compare_exchange_weak(UNLOCKED_VAL, LOCKED_VAL)) {
+      return true;
+    }
+    return false;
+  }
+
   void CASLock::lock() {
     while(!cas_lock.compare_exchange_weak(UNLOCKED_VAL, LOCKED_VAL));
     return;

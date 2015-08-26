@@ -13,6 +13,7 @@ namespace lock {
 
     public:
       CASLock();
+      bool tryLock();
       void lock();
       void unlock();
   };

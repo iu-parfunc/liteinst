@@ -23,7 +23,11 @@ AR = ar
 RM = rm
 OPTS =
 
-CODE = finstrument_probe_provider.cpp probe_provider.cpp lock.cpp cyg_functions.cpp globals.cpp calibrate.cpp
+COMMON = $(wildcard $(ROOT)/common/src/*.cpp)
+COMMON_OBJ0 = $(COMMON:.cpp=.o)
+COMMON_OBJ  = $(COMMON_OBJ0:.c=.o)
+
+CODE = finstrument_probe_provider.cpp probe_provider.cpp cyg_functions.cpp globals.cpp calibrate.cpp
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 
@@ -31,16 +35,16 @@ OBJ  = $(OBJ0:.c=.o)
 
 all: build
 
-build: $(OBJ)
+build: $(OBJ) $(COMMON_OBJ)
 
 libfastinst.a: build
 	if [ -d libfastinst.a ]; then $(RM) -f libfastinst.a; fi
 	mkdir temp;cd temp; $(AR) -x ../$(DEPS)
-	$(AR) rc libfastinst.a  $(OBJ) temp/*.o
+	$(AR) rc libfastinst.a  $(OBJ) $(COMMON_OBJ) temp/*.o
 	$(RM) -rf temp
 
 libfastinst.so: build
-	$(CC+) $(LIBS) -shared -Wl,-soname,libfastinst.so -o libfastinst.so $(OBJ) $(DEPS)
+	$(CC+) $(LIBS) -shared -Wl,-soname,libfastinst.so -o libfastinst.so $(OBJ) $(COMMON_OBJ) $(DEPS)
 
 install: libfastinst.a libfastinst.so
 	(cp libfastinst.so $(INSTALL))
