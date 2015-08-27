@@ -31,7 +31,9 @@
 #endif 
 #include <pthread.h> 
 
+#ifndef ITERS
 #define ITERS 10000000
+#endif 
 #define NUM_RUNNERS 10 
 
 unsigned long g_foo_val = 0; 
@@ -135,7 +137,7 @@ void runner(int *arg) {
 
 
 int main(int argc, char** argv) {
-
+  
   pthread_t thread1, thread2; 
   int r1,r2; 
   pthread_t runners[NUM_RUNNERS]; 
@@ -154,6 +156,7 @@ int main(int argc, char** argv) {
 
    
   printf("Testing parallel updates to a STRADDLING call_site as it is being executed by multiple threads.\n"); 
+  printf("Number of iterations: %d\n",ITERS);
   
  
   fun=(uint8_t*)malloc(1024); 

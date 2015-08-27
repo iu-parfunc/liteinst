@@ -25,7 +25,11 @@ struct sigaction g_oldact;
    Constants 
    ----------------------------------------------------------------- */
 
-const uint64_t int3 = 0xcc;
+const uint8_t int3 = 0xCC;
+
+#ifndef WAIT_ITERS
+#define WAIT_ITERS 1000 
+#endif 
 
 /* -----------------------------------------------------------------
    MACROES 
@@ -89,7 +93,8 @@ void init_patcher() {
   #ifdef NO_WAIT
   printf("NO_WAIT VERSION OF PATCHER CODE\n");
   #endif 
-  
+  printf("*** WAIT *** : %d\n", WAIT_ITERS);
+
 }
 
 __attribute__((destructor)) 
@@ -194,7 +199,7 @@ bool patch_64(void *addr, uint64_t patch_value){
     /* An empty delay loop that is unlikely to be optimized out 
        due to the magic asm inside */ 
   #ifndef NO_WAIT 
-    for(long i = 0; i < 1000; i++) { asm (""); }
+    for(long i = 0; i < WAIT_ITERS; i++) { asm (""); }
   #endif 
     WRITE(straddle_point,patch_after); 
     WRITE((straddle_point-1), patch_before); 
@@ -207,7 +212,7 @@ bool patch_64(void *addr, uint64_t patch_value){
     if (oldFR == int3) return false; 
     else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {
   #ifndef NO_WAIT 
-      for(long i = 0; i < 1000; i++) { asm (""); } 
+      for(long i = 0; i < WAIT_ITERS; i++) { asm (""); } 
   #endif 
       WRITE(straddle_point,patch_after); 
       WRITE((straddle_point-1), patch_before); 
@@ -223,6 +228,10 @@ bool patch_64(void *addr, uint64_t patch_value){
   
 }
     
+/* -----------------------------------------------------------------
+   Patching
+   ----------------------------------------------------------------- */
+
 /* patch 4 bytes (32 bits) in a safe way. 
        automatically applying patcher protocol in patch_site is a straddler. */
 bool patch_32(void *addr, uint32_t patch_value){  
@@ -256,24 +265,27 @@ bool patch_32(void *addr, uint32_t patch_value){
 
 
     /* implement the straddler protocol */ 
-#ifdef NON_THREADSAFE_PATCHING 
+#if defined(NON_THREADSAFE_PATCHING)
     ((uint8_t*)addr)[0] = int3;     
     /* An empty delay loop that is unlikely to be optimized out 
        due to the magic asm inside */ 
   #ifndef NO_WAIT 
-    for(long i = 0; i < 1000; i++) { asm (""); }
+    for(long i = 0; i < WAIT_ITERS; i++) { asm (""); }
   #endif
     WRITE(straddle_point,patch_after); 
     WRITE(straddle_point-1, patch_before); 
     return true; 
-#else
-    /* Threadsafe variant */
+#elif defined(PATCH_SIGILL)
+    /* Threadsafe variant using illegal instruction */ 
+
+#else  
+    /* Threadsafe variant using trap*/
     uint8_t oldFR = ((uint8_t*)addr)[0]; 
 
     if (oldFR == int3) return false; 
     else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {
   #ifndef NO_WAIT 
-      for(long i = 0; i < 1000; i++) { asm (""); } 
+      for(long i = 0; i < WAIT_ITERS; i++) { asm (""); } 
   #endif
       WRITE(straddle_point,patch_after); 
       WRITE((straddle_point-1), patch_before); 
