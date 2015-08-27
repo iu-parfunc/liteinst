@@ -43,6 +43,8 @@ private:
 protected:
   pid_t child_pid;
 
+  uint64_t cached_num_funs = -1;
+
 public:
 
   OutOfProcessProvider (Callback cb) : ProbeProvider(cb) { }
@@ -59,12 +61,25 @@ public:
   }
 
   // --------------------------------------------------------------
+  // All functions beginning with "instrumentee_" are called in the
+  // original, instrumentee process:
 
+  /// The child process (instrumentee) waits for the parent before proceeding:
+  /// It is the responsibility of the parent process to continue it.
   virtual void instrumentee_stop() {
-    // The child process (instrumentee) waits for the parent before proceeding:
-    // It is the responsibility of the parent process to continue it.
     child_pid = getpid();
     kill(child_pid, SIGSTOP);
+  }
+
+  /// Only the instrumentor process can determine the number of threads.
+  /// Thus, this method communicates with the instrumentor thread
+  uint64_t getNumberOfFunctions() {
+    if (cached_num_funs == -1 ) {
+      // FINISHME:
+      return -1;
+    } else {
+      return cached_num_funs;
+    }
   }
 
 
@@ -73,6 +88,8 @@ public:
   // instrumentor process:
 
   virtual void instrumentor_initialize() = 0;
+
+  virtual uint64_t instrumentor_getNumberOfFunctions() = 0;
 
   // TODO: provide a default implementation of this:
   virtual void instrumentor_continue_instrumentee() = 0;
@@ -125,8 +142,6 @@ public:
     // Most of the initialization work doesn't happen until we fork
     // into a different process.
   }
-
-  uint64_t getNumberOfFunctions() { return -1; }
 
   void instrumentor_initialize() {
       printf(" # In parent process, serving as mutator, child pid = %d\n", child_pid);
@@ -195,6 +210,12 @@ public:
           }
         }
       }
+  }
+
+  // This is called instrumentor-side and then communicated inter-process.
+  uint64_t instrumentor_getNumberOfFunctions() {
+    // FINISHME: iterate over functions in image, counting them.
+    return -1;
   }
 
   void instrumentor_continue_instrumentee() {
