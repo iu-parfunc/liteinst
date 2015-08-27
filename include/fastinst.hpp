@@ -166,6 +166,20 @@ class ProbeProvider {
      */
     virtual bool deactivate(ProbeId probe_id) = 0;
 
+    /// Gets the number of functions in the application
+    /*  Usually probe providers are privy to this information by reading 
+     *  ELF tables during the processing of probe sites. This method 
+     *  exposes the number of functions found during such initialization
+     *  to the client. This can be really useful for initialization of 
+     *  client data structures for gathering statistics related to each 
+     *  function in more efficient manner (e.g: array instead
+     *  of list) since the size of the data structure is known before hand. 
+     *  \return The number of functions discovered durig probe provider 
+     *  initialization. Returns -1 if the particular provider isn't capable
+     *  of enumerating functions.
+     */
+    virtual uint64_t getNumberOfFunctions() = 0;
+
     /// Gets the estimate of overhead induced by the instrumentation mechanism.
     /* This represents a current estimate of the time (in cycles)
      * required to get to and from the Instrumentation_func from the

@@ -19,14 +19,13 @@ using namespace calibrate;
 void FinstrumentProbeProvider::calibrateInstrumentationOverhead() {
   Callback temp = this->callback; // Backup the current callback function
   this->callback = calibrationCallback; // Sets a temporary callback to 
-    // initialize the special calibration function 
-  this->per_function_instrumentation_overhead = 
-    getInstrumentationOverheadPerFunction();  
+    // initialize the special calibration function probes 
+  this->instrumentationOverheadEstimate = getInstrumentationOverheadPerProbe();  
   this->callback = temp; // Restore the original callback
 }
 
-uint64_t FinstrumentProbeProvider::getEstimatedInstrumentationOverhead() {
-  return per_function_instrumentation_overhead;
+uint64_t FinstrumentProbeProvider::getNumberOfFunctions() {
+  return func_addr_mappings.size();
 }
 
 void FinstrumentProbeProvider::initialize(ProbeId probe_id, ProbeArg arg) {

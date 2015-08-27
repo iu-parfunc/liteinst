@@ -30,16 +30,15 @@ namespace calibrate {
 
   const int NUM_INVOCATIONS = 100000;
 
-  uint64_t getInstrumentationOverheadPerFunction() {
+  uint64_t getInstrumentationOverheadPerProbe() {
   
     uint64_t total_overhead = 0;
     for (int i = 0; i < NUM_INVOCATIONS; i++) {
       total_overhead += calibrationFunction();
     } 
 
-    return  total_overhead / NUM_INVOCATIONS; // We round since decimal cycles
-                                     //  doesn't make much sense
-
+    // We round since decimal cycles doesn't make much sense
+    return  total_overhead /(2 * NUM_INVOCATIONS);  
   }
 
 }

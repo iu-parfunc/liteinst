@@ -22,14 +22,6 @@ class FinstrumentProbeProvider : public ProbeProvider {
                                  //!< address has already been discovered. Value
                                  //!< is not really important. 
 
-    uint64_t per_function_instrumentation_overhead; //!< Estimated 
-      //!< instrumentation overhead for a single function call. Includes both
-      //!< cyg_profile_enter and cyg_profile_exit call overheads. Measures 
-      //!< overhead until the call to the actual instrumentation function and
-      //!< the return to the application code. Doesn't include the overhead 
-      //!< incurred by the actual instrumentation. If needed the 
-      //!< instrumentation needs to keep track of that.
-
     /// Reads the function related meta data from debug tables.
     /*  The information gathered are function addresses and their names.
      *  Call at initialization time.
@@ -54,9 +46,8 @@ class FinstrumentProbeProvider : public ProbeProvider {
       calibrateInstrumentationOverhead();
     }
 
-    /// Get estimated the per function call instrumentation overhead incurred
-    /// by cyg_* calls
-    uint64_t getEstimatedInstrumentationOverhead();
+    /// Get the number of functions 
+    uint64_t getNumberOfFunctions();
 
     /// Overriden initialize method from ProbeProvider
     void initialize(ProbeId probe_id, ProbeArg probe_arg);
