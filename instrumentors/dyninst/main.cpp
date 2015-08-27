@@ -126,6 +126,8 @@ public:
     // into a different process.
   }
 
+  uint64_t getNumberOfFunctions() { return -1; }
+
   void instrumentor_initialize() {
       printf(" # In parent process, serving as mutator, child pid = %d\n", child_pid);
 
@@ -246,6 +248,7 @@ public:
   bool instrumentor_deactivate(ProbeId probe_id) {
     printf("deactivate... %d\n", (int)probe_id);
   }
+
 };
 
 
