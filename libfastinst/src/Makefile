@@ -8,7 +8,7 @@ EXTRA_WARNS= -pedantic
 #-Wextra
 ## -Wformat-nonliteral -Wcast-align -Wpointer-arith -Wbad-function-cast -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Winline -Wundef -Wnested-externs -Wcast-qual -Wshadow -Wwrite-strings -Wno-unused-parameter -Wfloat-equal
 
-ARGS= -g -Wall $(EXTRA_WARNS)-I$(ROOT)/include -I$(ROOT)/deps/distorm/include -I$(ROOT)/common/include -I.
+ARGS= -g -Wall $(EXTRA_WARNS) -I$(ROOT)/include -I$(ROOT)/deps/distorm/include -I$(ROOT)/common/include -I.
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 DEPS = $(INSTALL)/libpointpatch.a
 LIBS =

@@ -16,7 +16,7 @@ class FinstrumentProbeProvider : public ProbeProvider {
 
   private:
     FuncAddrMapping func_addr_mappings; //!< Function adress to name mapping.
-    lock::CASLock* probe_lock; //!< Global lock protecting to updates to probe
+    lock::CASLock probe_lock; //!< Global lock protecting to updates to probe
                                //!<  meta data vector.
     ProbeLookupMap probe_lookup; //!< Looks up currently if a probe with given 
                                  //!< address has already been discovered. Value
@@ -52,8 +52,6 @@ class FinstrumentProbeProvider : public ProbeProvider {
     FinstrumentProbeProvider(Callback cb) : ProbeProvider(cb) {
       readFunctionInfo();
       calibrateInstrumentationOverhead();
-      probe_lock = new lock::CASLock;
-      // probe_meta_data = new ProbeVec;
     }
 
     /// Get estimated the per function call instrumentation overhead incurred
