@@ -43,9 +43,20 @@ private:
 protected:
   pid_t child_pid;
 
+  uint64_t cached_num_funs = -1;
+
+  // After the fork this is set to 1 for child, 0 for parent:
+  int am_child = -1;
+
 public:
 
-  OutOfProcessProvider (Callback cb) : ProbeProvider(cb) { }
+  OutOfProcessProvider (Callback cb) : ProbeProvider(cb) {
+    printf(" * Constructing OutOfProcess... forking process %p\n", callback);
+    // fork_instrumentor();
+  }
+
+  // --------------------------------------------------------------
+  // Probe state transitions:
 
   /// For out-of-process instrumentors initialization is usually a NOOP.
   void initialize(ProbeId probe_id, ProbeArg probe_arg) { }
@@ -59,12 +70,25 @@ public:
   }
 
   // --------------------------------------------------------------
+  // All functions beginning with "instrumentee_" are called in the
+  // original, instrumentee process:
 
+  /// The child process (instrumentee) waits for the parent before proceeding:
+  /// It is the responsibility of the parent process to continue it.
   virtual void instrumentee_stop() {
-    // The child process (instrumentee) waits for the parent before proceeding:
-    // It is the responsibility of the parent process to continue it.
     child_pid = getpid();
     kill(child_pid, SIGSTOP);
+  }
+
+  /// Only the instrumentor process can determine the number of threads.
+  /// Thus, this method communicates with the instrumentor thread
+  uint64_t getNumberOfFunctions() {
+    if (cached_num_funs == -1 ) {
+      // FINISHME:
+      return -1;
+    } else {
+      return cached_num_funs;
+    }
   }
 
 
@@ -73,6 +97,8 @@ public:
   // instrumentor process:
 
   virtual void instrumentor_initialize() = 0;
+
+  virtual uint64_t instrumentor_getNumberOfFunctions() = 0;
 
   // TODO: provide a default implementation of this:
   virtual void instrumentor_continue_instrumentee() = 0;
@@ -95,14 +121,22 @@ public:
 
   // ------------------------------------------------------------
 
+  /// This must be called in the constructor of our subclass.  It
+  /// cannot be called in the OutOfProcess constructor, because the
+  /// child class is not fully initialized yet.
   void fork_instrumentor() {
-    printf("Constructing OutOfProcess... forking process %p\n", callback);
     if (child_pid = fork()) {
+      am_child = 0; // Hit that copy-on-write early!
+      // printf("About to call initialize\n");
       instrumentor_initialize();
+      // printf("About to call continue instrumentee\n");
       instrumentor_continue_instrumentee();
+      // printf("About to call continue completion\n");
       wait_for_instrumentee_completion();
+      // printf("About to exit\n");
       exit(0); // Exit the whole process.
     } else {
+      am_child = 1;
       instrumentee_stop();
     }
   }
@@ -124,6 +158,7 @@ public:
   {
     // Most of the initialization work doesn't happen until we fork
     // into a different process.
+    fork_instrumentor();
   }
 
   void instrumentor_initialize() {
@@ -195,6 +230,12 @@ public:
       }
   }
 
+  // This is called instrumentor-side and then communicated inter-process.
+  uint64_t instrumentor_getNumberOfFunctions() {
+    // FINISHME: iterate over functions in image, counting them.
+    return -1;
+  }
+
   void instrumentor_continue_instrumentee() {
     // ------------------------------------------------------------
     // printf(" # Is child process stopped? %d\n", proc->isStopped()); fflush(stdout);
@@ -246,14 +287,16 @@ public:
   bool instrumentor_deactivate(ProbeId probe_id) {
     printf("deactivate... %d\n", (int)probe_id);
   }
+
 };
 
 
 int main (int argc, const char* argv[])  {
-  printf("Hello from mutator\n");
+  printf(" * Hello from main function\n");
   DyninstProbeProvider dpp( & registerProbeCallback );
+  printf(" * DyninstProbeProvider created.\n");
 
-  printf("  -> In main function... calling foo \n");
+  printf("  -> In main function... calling foo, which MAY call bar. \n");
   foo();
 
   return 0;
