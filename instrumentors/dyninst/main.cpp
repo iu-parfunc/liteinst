@@ -45,9 +45,18 @@ protected:
 
   uint64_t cached_num_funs = -1;
 
+  // After the fork this is set to 1 for child, 0 for parent:
+  int am_child = -1;
+
 public:
 
-  OutOfProcessProvider (Callback cb) : ProbeProvider(cb) { }
+  OutOfProcessProvider (Callback cb) : ProbeProvider(cb) {
+    printf(" * Constructing OutOfProcess... forking process %p\n", callback);
+    // fork_instrumentor();
+  }
+
+  // --------------------------------------------------------------
+  // Probe state transitions:
 
   /// For out-of-process instrumentors initialization is usually a NOOP.
   void initialize(ProbeId probe_id, ProbeArg probe_arg) { }
@@ -112,14 +121,22 @@ public:
 
   // ------------------------------------------------------------
 
+  /// This must be called in the constructor of our subclass.  It
+  /// cannot be called in the OutOfProcess constructor, because the
+  /// child class is not fully initialized yet.
   void fork_instrumentor() {
-    printf("Constructing OutOfProcess... forking process %p\n", callback);
     if (child_pid = fork()) {
+      am_child = 0; // Hit that copy-on-write early!
+      // printf("About to call initialize\n");
       instrumentor_initialize();
+      // printf("About to call continue instrumentee\n");
       instrumentor_continue_instrumentee();
+      // printf("About to call continue completion\n");
       wait_for_instrumentee_completion();
+      // printf("About to exit\n");
       exit(0); // Exit the whole process.
     } else {
+      am_child = 1;
       instrumentee_stop();
     }
   }
@@ -141,6 +158,7 @@ public:
   {
     // Most of the initialization work doesn't happen until we fork
     // into a different process.
+    fork_instrumentor();
   }
 
   void instrumentor_initialize() {
@@ -274,10 +292,11 @@ public:
 
 
 int main (int argc, const char* argv[])  {
-  printf("Hello from mutator\n");
+  printf(" * Hello from main function\n");
   DyninstProbeProvider dpp( & registerProbeCallback );
+  printf(" * DyninstProbeProvider created.\n");
 
-  printf("  -> In main function... calling foo \n");
+  printf("  -> In main function... calling foo, which MAY call bar. \n");
   foo();
 
   return 0;
