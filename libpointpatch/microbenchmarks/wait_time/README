@@ -1,0 +1,12 @@
+
+
+* wait_time.sh 
+  Script runs test_patch_parallel5.exe with different wait trip counts
+  to find the passing setting. 
+  TODO: Tweak ranges of trip counts and run on more machines. 
+
+* time_wait.c 
+  Tries to estimate the time a wait loop takes at different trip counts. 
+  This is an artificial "benchmark" 
+
+ 
