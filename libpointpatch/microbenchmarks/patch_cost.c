@@ -1,4 +1,7 @@
 
+/* Benchmark description : Measures costs of patching for probe activation and
+ * deactivation */
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
