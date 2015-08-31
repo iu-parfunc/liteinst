@@ -41,7 +41,10 @@ for (( i=0;i<=N_TESTS;i++ )); do
     
     for straddle_point in {1..7}; do 
 	fail=0; 
-	
+	echo "**********************"
+	echo "Straddle point: $straddle_point"
+	echo "**********************"
+	 
 	for (( run=1;run<=N_RUNS;run++ )) ; do 
 	    echo "RUN NUM: $run"
 	    $EXEC $straddle_point
