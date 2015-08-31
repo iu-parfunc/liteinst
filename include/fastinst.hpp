@@ -101,15 +101,23 @@ class ProbeProvider {
 
   public:
 
-    ProbeProvider(Callback cb) : callback(cb) {
-      probe_meta_data = new ProbeVec;
-    }
-
     /// Probe provider constructor
     /* Initialises with the callback
      * \param callback The callback function invoked at each probe discovery
      */
-    // ProbeProvider(Callback callback);
+    ProbeProvider(Callback cb) : callback(cb) {
+      probe_meta_data = new ProbeVec;
+    }
+
+    /// This method can be used to do probe provider specific further 
+    /// intializations. 
+    /* Specially any initialization which might require the
+     * ProbeProvider instance to have been fully constructed. The default 
+     * implementation is empty. 
+     *
+     */
+    virtual void initializeProvider() {
+    };
 
     /// Move from UNINITIALIZED to INITIALIZING state.
     /* Begin initializing the probe, moving from UNINITIALIZED to

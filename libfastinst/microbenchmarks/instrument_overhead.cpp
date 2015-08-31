@@ -83,6 +83,8 @@ int foo(int x) {
   ticks prolog_start, prolog_end;
   prolog_start = getticks();
   // Simulating cyg call
+  // Not using -finstrument since then we don't have control to place
+  // timing code before the generated __cyg_ function
   __cyg_profile_func_enter((void*)foo, &&enter_return); // Label as value here 
   enter_return:
   prolog_end = getticks();
@@ -106,6 +108,8 @@ int foo(int x) {
   ticks epilog_start, epilog_end;
   epilog_start = getticks();
   // Simulating cyg call
+  // Not using -finstrument since then we don't have control to place
+  // timing code after the generated __cyg_ function
   __cyg_profile_func_exit((void*)foo, &&exit_return); // Label as value here 
   exit_return:
   epilog_end = getticks();
@@ -122,7 +126,7 @@ int foo(int x) {
   total_overhead += prolog_elapsed_ns + epilog_elapsed_ns; 
 
   return 0;
- }
+}
 
 int main() {
 

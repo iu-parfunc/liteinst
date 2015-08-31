@@ -8,13 +8,12 @@ using namespace std;
 namespace calibrate { 
 
   void emptyInstrumentation(ProbeArg func_id) {
-
   }
 
   void calibrationCallback(const ProbeMetaData* pmd) {
     // If this callback related to the calibration function probes we activate 
     // them
-    std::string func_name = "calibrationFunction"; 
+    string func_name = "calibrationFunction"; 
     if (func_name.compare(pmd->func_name) == 0) {
       int CALIBRATION_FUNC_ID = 0;
 

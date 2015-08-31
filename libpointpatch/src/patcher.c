@@ -396,32 +396,32 @@ int64_t find_reg_setter(_RegisterType reg, Decoded d){
     if (decoded[i].opcode == I_MOV) {
       
       if (!set_by_intermediate && 
-	  decoded[i].ops[0].type == O_REG && 
-	  decoded[i].ops[0].index == reg) {
-	if (IS_IMMEDIATE(decoded[i].ops[1].type)) { 
-	    /* an mov-immediate to reg was found here */ 
-	    setter_offset = ptr_size; 
-	    setter_found = true; 
-	    break; 
-	} else if (decoded[i].ops[1].type == O_REG) { 
-	  /* reg is set to the contents of another register */
-	  /* DANGER ZONE!!!! */ 
-	  set_by_intermediate = true; 
-	  intermediate_reg = decoded[i].ops[1].index;
-	}
+	        decoded[i].ops[0].type == O_REG && 
+	        decoded[i].ops[0].index == reg) {
+	        if (IS_IMMEDIATE(decoded[i].ops[1].type)) { 
+	          /* an mov-immediate to reg was found here */ 
+	          setter_offset = ptr_size; 
+	          setter_found = true; 
+	          break; 
+	        } else if (decoded[i].ops[1].type == O_REG) { 
+	          /* reg is set to the contents of another register */
+	          /* DANGER ZONE!!!! */ 
+	          set_by_intermediate = true; 
+	          intermediate_reg = decoded[i].ops[1].index;
+	        }
 	
       } else if (set_by_intermediate && 
-		 decoded[i].ops[0].type == O_REG && 
-		 (reg_equal(intermediate_reg,decoded[i].ops[0].index))) { 
-	if (IS_IMMEDIATE(decoded[i].ops[1].type)) { 
-	  setter_offset = ptr_size; 
-	  setter_found = true; 
-	  break;
-	}  else if (decoded[i].ops[1].type == O_REG) { 
-	  /* yet another level of intermediate register assignment */ 
-	  /* MEGA DANGER ZONE */ 
-	  intermediate_reg = decoded[i].ops[1].index;
-	}
+		    decoded[i].ops[0].type == O_REG && 
+		    (reg_equal(intermediate_reg,decoded[i].ops[0].index))) { 
+	      if (IS_IMMEDIATE(decoded[i].ops[1].type)) { 
+	        setter_offset = ptr_size; 
+	        setter_found = true; 
+	        break;
+	      }  else if (decoded[i].ops[1].type == O_REG) { 
+	        /* yet another level of intermediate register assignment */ 
+	        /* MEGA DANGER ZONE */ 
+	        intermediate_reg = decoded[i].ops[1].index;
+	      }
       }
     }
   }
