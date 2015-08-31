@@ -42,6 +42,7 @@ for (( i=0;i<=N_TESTS;i++ )); do
     for straddle_point in {1..7}; do 
 	fail=0; 
 	echo "**********************"
+	echo "wait time iters: $it"
 	echo "Straddle point: $straddle_point"
 	echo "**********************"
 	 
