@@ -16,12 +16,19 @@ using namespace lock;
 using namespace utils;
 using namespace calibrate;
 
+void FinstrumentProbeProvider::initializeProvider() {
+  calibrateInstrumentationOverhead();
+}
+
 void FinstrumentProbeProvider::calibrateInstrumentationOverhead() {
   Callback temp = this->callback; // Backup the current callback function
   this->callback = calibrationCallback; // Sets a temporary callback to 
-    // initialize the special calibration function probes 
+  // initialize the special calibration function probes 
+
   this->instrumentationOverheadEstimate = getInstrumentationOverheadPerProbe();  
+
   this->callback = temp; // Restore the original callback
+
 }
 
 uint64_t FinstrumentProbeProvider::getNumberOfFunctions() {
@@ -46,18 +53,21 @@ void FinstrumentProbeProvider::initialize(ProbeId probe_id, ProbeArg arg) {
 
 }
 
-bool FinstrumentProbeProvider::activate(const ProbeId probe_id, InstrumentationFunc func) {
+bool FinstrumentProbeProvider::activate(const ProbeId probe_id, 
+    InstrumentationFunc func) {
   ProbeMetaData* pmd =  (*probe_meta_data)[probe_id];
 
   if (pmd->state == ProbeState::UNINITIALIZED) {
     throw -1; 
   }
 
-  if (pmd->state != ProbeState::DEACTIVATED && pmd->state != ProbeState::INITIALIZING) {
+  if (pmd->state != ProbeState::DEACTIVATED && 
+      pmd->state != ProbeState::INITIALIZING) {
     return false;
   }
 
-  (*probe_meta_data)[probe_id]->instrumentation_func.store(func, std::memory_order_seq_cst);
+  (*probe_meta_data)[probe_id]->instrumentation_func.store(func,
+      std::memory_order_seq_cst);
 
   // Patch the probe site 
   patch_64((void*) pmd->probe_addr, pmd->active_seq);
@@ -72,7 +82,8 @@ bool FinstrumentProbeProvider::deactivate(const ProbeId probe_id) {
     throw -1; 
   }
 
-  if (pmd->state != ProbeState::ACTIVE && pmd->state != ProbeState::INITIALIZING) {
+  if (pmd->state != ProbeState::ACTIVE && 
+      pmd->state != ProbeState::INITIALIZING) {
     return false;
   }
 
@@ -83,7 +94,8 @@ bool FinstrumentProbeProvider::deactivate(const ProbeId probe_id) {
 
 void FinstrumentProbeProvider::readFunctionInfo() {
 
-  fprintf(stderr, "[Finstrument Probe Provider] Initializing mappings data structure..\n");
+  fprintf(stderr, "[Finstrument Probe Provider] Initializing mappings data"
+      " structure..\n");
 
   string line;
   ifstream fp ("functions.txt");
@@ -105,7 +117,13 @@ void FinstrumentProbeProvider::readFunctionInfo() {
 
       func_addr_mappings.insert(make_pair(func_addr, func_name));
       // func_rw_locks.insert(make_pair(func_addr, new CASLock));
-    }
+    } 
+
+    // For now explicitly add calibrationFunction contributed by our library to
+    // the mappings. In future we should read ELF entries for all the loaded
+    // libraries for the application and include that in the mapping.
+    func_addr_mappings.insert(make_pair((Address) calibrationFunction, 
+          string("calibrationFunction")));
     fp.close();
   }
 

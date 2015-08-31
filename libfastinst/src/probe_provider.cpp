@@ -9,23 +9,26 @@ ProbeProvider* initializeGlobalProbeProvider(ProviderType type, Callback callbac
     switch(type) {
       case ProviderType::FINSTRUMENT:
         PROBE_PROVIDER = new FinstrumentProbeProvider(callback);
+        // PROBE_PROVIDER->initializeProvider();
         return PROBE_PROVIDER;
       case ProviderType::ZCA:
         fprintf(stderr, "ZCAProbeProvider not yet supported..\n");
-        return NULL;
+        throw -1;
       case ProviderType::DTRACE:
         fprintf(stderr, "DtraceProbeProvider not yet supported..\n");
-        return NULL;
+        throw -1;
       case ProviderType::DYNINST:
         fprintf(stderr, "DyninstProbeProvider not yet supported..\n");
-        return NULL;
+        throw -1;
       default:
         fprintf(stderr, "Unknown provider type.\n");
-        return NULL;
+        throw -1;
     }
   } else {
     throw -1;
   }
+
+  throw -1;
 }
 
 ProbeProvider* getGlobalProbeProvider() {

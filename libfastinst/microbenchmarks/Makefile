@@ -1,23 +1,26 @@
 .PHONY: clean all
 
-SRCS = $(wildcard *.cpp)
+SRCS = $(filter-out instrument_overhead.cpp, $(wildcard *.cpp))
 
 EXES = $(patsubst %.cpp,%.exe,$(SRCS))
 
-CFLAGS =  
+CFLAGS = -finstrument-functions -fno-inline -fno-optimize-sibling-calls
 
 LIBS = -L../../build/lib -lfastinst -lrt -ldl
 
 CXX=icpc
 
-all: $(EXES)
+all: $(EXES) instrument_overhead.exe
 
-%.exe: %.cpp
+# Handle this one separately since we don't use -finstrument in the microbench
+instrument_overhead.exe: instrument_overhead.cpp
+	$(CXX) --std=c++11 -g -I../../include -I../../common/include instrument_overhead.cpp -o instrument_overhead.exe $(LIBS)
 
+$(EXES): $(SRCS)
 	$(CXX) --std=c++11 -g $(CFLAGS) -I../../include -I../../common/include $< -o $@ $(LIBS)
 
 
-run: $(EXES)
+run: $(EXES) instrument_overhead.exe
 	./runall.sh
 	
 clean:

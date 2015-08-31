@@ -43,8 +43,10 @@ class FinstrumentProbeProvider : public ProbeProvider {
      */
     FinstrumentProbeProvider(Callback cb) : ProbeProvider(cb) {
       readFunctionInfo();
-      calibrateInstrumentationOverhead();
+      // calibrateInstrumentationOverhead();
     }
+
+    void initializeProvider();
 
     /// Get the number of functions 
     uint64_t getNumberOfFunctions();
