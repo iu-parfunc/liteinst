@@ -93,7 +93,7 @@ void init_patcher() {
   #ifdef NO_WAIT
   printf("NO_WAIT VERSION OF PATCHER CODE\n");
   #endif 
-  printf("*** WAIT *** : %d\n", WAIT_ITERS);
+  /* printf("*** WAIT *** : %d\n", WAIT_ITERS); */
 
 }
 
@@ -157,6 +157,10 @@ bool init_patch_site(void *addr, size_t nbytes){
   status = set_page_rwe(addr,nbytes); 
  
   return status; 
+}
+
+int patch_get_wait(){ 
+  return WAIT_ITERS;
 }
  
 /* patch 8 bytes (64 bits) in a safe way. 

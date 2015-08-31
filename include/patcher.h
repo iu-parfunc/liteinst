@@ -56,6 +56,9 @@ extern "C" {
 /* Allow READ, WRITE and EXEC on pages touched by patch site */ 
 bool init_patch_site(void*, size_t);
 
+/* see what the wait setting is (DEBUG) */ 
+int patch_get_wait();
+
 /* Patch up to 8 byte instructions in a straddler safe way */ 
 bool patch_64(void*, uint64_t); 
 /* Patch up to 4 byte instructions in a straddler safe way */
