@@ -1,3 +1,17 @@
+/* 
+   
+  libpointpatch
+  
+  Authors: Buddhika Chamith,  Bo Joel Svensson 
+  year: 2015
+
+  Should compile with: 
+    icpc [-std=c++11]
+    icc 
+    gcc -std=gnu99   (because of inline assembly, stdbool) 
+    g++ [-std=c++11]
+  
+*/ 
 
 #include "patcher.h" 
 
@@ -28,7 +42,7 @@ struct sigaction g_oldact;
 const uint8_t int3 = 0xCC;
 
 #ifndef WAIT_ITERS
-#define WAIT_ITERS 1000 
+#define WAIT_ITERS 100
 #endif 
 
 /* -----------------------------------------------------------------
@@ -159,10 +173,28 @@ bool init_patch_site(void *addr, size_t nbytes){
   return status; 
 }
 
+/* Get the set wait time for the patching protocol */ 
 int patch_get_wait(){ 
   return WAIT_ITERS;
 }
- 
+
+/* is this location a straddler ? */ 
+inline bool is_straddler_64(void *addr){ 
+
+  int offset = (uint64_t)addr % g_cache_lvl3_line_size; 
+
+  return (offset > g_cache_lvl3_line_size - 8); 
+}
+
+/* If it is a straddler, where does it straddle */
+/* TODO Optimize */
+inline int straddle_point_64(void *addr){ 
+  if (is_straddler_64(addr)) 
+    return  (uint64_t)addr % g_cache_lvl3_line_size;
+  else 
+    return 0; 
+}
+
 /* patch 8 bytes (64 bits) in a safe way. 
    automatically applying patcher protocol in patch_site is a straddler. */
 bool patch_64(void *addr, uint64_t patch_value){  
