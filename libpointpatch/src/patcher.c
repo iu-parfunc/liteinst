@@ -17,7 +17,7 @@
 
 #include <stdlib.h> 
 #include <memory.h> 
-
+#include <time.h> 
 
 #define __USE_GNU  
 #include <signal.h>
@@ -34,6 +34,9 @@ uint64_t g_int3_interrupt_count = 0;
 struct sigaction g_newact; 
 struct sigaction g_oldact; 
 
+#if defined(WAIT_NANOSLEEP)
+struct timespec g_wait_time; 
+#endif
 
 /* -----------------------------------------------------------------
    Constants 
@@ -41,9 +44,22 @@ struct sigaction g_oldact;
 
 const uint8_t int3 = 0xCC;
 
+/* -----------------------------------------------------------------
+   WAIT
+   ----------------------------------------------------------------- */
+
 #ifndef WAIT_ITERS
 #define WAIT_ITERS 100
 #endif 
+
+#if defined(NO_WAIT) 
+#define WAIT() 
+#elseif defined(WAIT_NANOSLEEP)
+#define WAIT() clock_nanosleep(CLOCK_MONOTONIC,0, g_wait_time,NULL)
+#else 
+#define WAIT() for(long i = 0; i < WAIT_ITERS; i++) { asm (""); } 
+#endif
+
 
 /* -----------------------------------------------------------------
    MACROES 
@@ -109,6 +125,24 @@ void init_patcher() {
   #endif 
   /* printf("*** WAIT *** : %d\n", WAIT_ITERS); */
 
+  #ifdef WAIT_NANOSLEEP
+  printf("Using NANOSLEEP for wait\n"); 
+  
+  struct timespec res; 
+  clock_getres(CLOCK_MONOTONIC,&res); 
+  if (res.tv_sec > 0) { 
+    printf("BAD!\n"); 
+    exit(EXIT_FAILURE); 
+  }
+  printf("Clock resolution ns: %ld\n", res.tv_nsec);
+  
+  g_wait_time.tv_nsec = res.tv_nsec * WAIT_ITERS; 
+  g_wait_time.tv_sec = 0; 
+
+  printf("Wait time is set to: %ld ns\n", g_wait_time.tv_nsec);
+  
+  
+  #endif
 }
 
 __attribute__((destructor)) 
@@ -174,8 +208,12 @@ bool init_patch_site(void *addr, size_t nbytes){
 }
 
 /* Get the set wait time for the patching protocol */ 
-int patch_get_wait(){ 
+long patch_get_wait(){ 
+#ifdef WAIT_NANOSLEEP
+  return(g_wait_time.tv_nsec * WAIT_ITERS);
+#else
   return WAIT_ITERS;
+#endif 
 }
 
 /* is this location a straddler ? */ 
@@ -234,9 +272,10 @@ bool patch_64(void *addr, uint64_t patch_value){
     
     /* An empty delay loop that is unlikely to be optimized out 
        due to the magic asm inside */ 
-  #ifndef NO_WAIT 
-    for(long i = 0; i < WAIT_ITERS; i++) { asm (""); }
-  #endif 
+  /* #ifndef NO_WAIT  */
+  /*   for(long i = 0; i < WAIT_ITERS; i++) { asm (""); } */
+  /* #endif  */
+    WAIT(); 
     WRITE(straddle_point,patch_after); 
     WRITE((straddle_point-1), patch_before); 
     return true; 
@@ -247,9 +286,10 @@ bool patch_64(void *addr, uint64_t patch_value){
     
     if (oldFR == int3) return false; 
     else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {
-  #ifndef NO_WAIT 
-      for(long i = 0; i < WAIT_ITERS; i++) { asm (""); } 
-  #endif 
+  /* #ifndef NO_WAIT  */
+  /*     for(long i = 0; i < WAIT_ITERS; i++) { asm (""); }  */
+  /* #endif  */
+      WAIT();
       WRITE(straddle_point,patch_after); 
       WRITE((straddle_point-1), patch_before); 
       return true; 
@@ -305,9 +345,10 @@ bool patch_32(void *addr, uint32_t patch_value){
     ((uint8_t*)addr)[0] = int3;     
     /* An empty delay loop that is unlikely to be optimized out 
        due to the magic asm inside */ 
-  #ifndef NO_WAIT 
-    for(long i = 0; i < WAIT_ITERS; i++) { asm (""); }
-  #endif
+  /* #ifndef NO_WAIT  */
+  /*   for(long i = 0; i < WAIT_ITERS; i++) { asm (""); } */
+  /* #endif */
+    WAIT();
     WRITE(straddle_point,patch_after); 
     WRITE(straddle_point-1, patch_before); 
     return true; 
@@ -320,9 +361,10 @@ bool patch_32(void *addr, uint32_t patch_value){
 
     if (oldFR == int3) return false; 
     else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {
-  #ifndef NO_WAIT 
-      for(long i = 0; i < WAIT_ITERS; i++) { asm (""); } 
-  #endif
+  /* #ifndef NO_WAIT  */
+  /*     for(long i = 0; i < WAIT_ITERS; i++) { asm (""); }  */
+  /* #endif */
+      WAIT();
       WRITE(straddle_point,patch_after); 
       WRITE((straddle_point-1), patch_before); 
       return true;

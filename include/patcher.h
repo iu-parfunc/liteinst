@@ -57,7 +57,7 @@ extern "C" {
 bool init_patch_site(void*, size_t);
 
 /* see what the wait setting is (DEBUG) */ 
-int patch_get_wait();
+long patch_get_wait();
 
 /* does the patch point straddle a cache line */
 bool is_straddler_64(void *addr);
