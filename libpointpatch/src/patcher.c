@@ -56,6 +56,8 @@ const uint8_t int3 = 0xCC;
 #define WAIT() 
 #elseif defined(WAIT_NANOSLEEP)
 #define WAIT() clock_nanosleep(CLOCK_MONOTONIC,0, g_wait_time,NULL)
+#elseif defined(WAIT_CPUID) 
+#define WAIT() asm volatile ( "cpuid" ) 
 #else 
 #define WAIT() for(long i = 0; i < WAIT_ITERS; i++) { asm (""); } 
 #endif
@@ -124,6 +126,9 @@ void init_patcher() {
   printf("NO_WAIT VERSION OF PATCHER CODE\n");
   #endif 
   /* printf("*** WAIT *** : %d\n", WAIT_ITERS); */
+  #ifdef PATCH_FLUSH_CACHE 
+  printf("FLUSH_CACHE VERSION OF PATCHER CODE\n"); 
+  #endif
 
   #ifdef WAIT_NANOSLEEP
   printf("Using NANOSLEEP for wait\n"); 
@@ -153,6 +158,14 @@ void destroy_patcher() {
   
   return; 
 }
+
+/* flush cacheline */
+inline void
+clflush(volatile void *p)
+{
+    asm volatile ("clflush (%0)" :: "r"(p));
+}
+
    
 /* -----------------------------------------------------------------
    Interrupt handlers 
@@ -209,9 +222,11 @@ bool init_patch_site(void *addr, size_t nbytes){
 
 /* Get the set wait time for the patching protocol */ 
 long patch_get_wait(){ 
-#ifdef WAIT_NANOSLEEP
+#if defined(WAIT_NANOSLEEP)
   return(g_wait_time.tv_nsec * WAIT_ITERS);
-#else
+#elseif defined (WAIT_CPUID)
+  return -1;
+#else 
   return WAIT_ITERS;
 #endif 
 }
@@ -265,7 +280,7 @@ bool patch_64(void *addr, uint64_t patch_value){
     uint64_t patch_after =  patch_keep_after | ((patch_value  & ~lsb_mask) >> (8 * cutoff_point));
 
 
-#ifdef NON_THREADSAFE_PATCHING /* racy patching */      
+#if defined(NON_THREADSAFE_PATCHING) /* racy patching */      
     /* implement the straddler protocol */ 
     ((uint8_t*)addr)[0] = int3; 
     /*WRITE((straddle_point - 1), int3_sequence); */
@@ -279,7 +294,19 @@ bool patch_64(void *addr, uint64_t patch_value){
     WRITE(straddle_point,patch_after); 
     WRITE((straddle_point-1), patch_before); 
     return true; 
+#elseif defined(PATCH_FLUSH_CACHE) 
+    uint8_t oldFR = ((uint8_t*)addr)[0]; 
     
+    if (oldFR == int3) return false; 
+    else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {
+
+      clflush((void*)addr);
+      WRITE(straddle_point,patch_after);  
+      WRITE((straddle_point-1), patch_before); 
+  
+      return true; 
+    }
+    else return false; 
 #else /* Threadsafe patching */
 
     uint8_t oldFR = ((uint8_t*)addr)[0]; 
