@@ -54,9 +54,9 @@ const uint8_t int3 = 0xCC;
 
 #if defined(NO_WAIT) 
 #define WAIT() 
-#elseif defined(WAIT_NANOSLEEP)
-#define WAIT() clock_nanosleep(CLOCK_MONOTONIC,0, g_wait_time,NULL)
-#elseif defined(WAIT_CPUID) 
+#elif defined(WAIT_NANOSLEEP)
+#define WAIT() clock_nanosleep(CLOCK_MONOTONIC,0, &g_wait_time,NULL)
+#elif defined(WAIT_CPUID) 
 #define WAIT() asm volatile ( "cpuid" ) 
 #else 
 #define WAIT() for(long i = 0; i < WAIT_ITERS; i++) { asm (""); } 
@@ -94,7 +94,7 @@ uint32_t get_lsb_mask_32(int nbytes);
 bool reg_equal(_RegisterType reg1, _RegisterType reg2);
 
 static void int3_handler(int signo, siginfo_t *inf, void* ptr);
-
+void clflush(volatile void *p);
 
 /* -----------------------------------------------------------------
    CODE Internal 
@@ -119,18 +119,18 @@ void init_patcher() {
   
   sigaction(SIGTRAP, &g_newact, &g_oldact);
 
-  #ifdef NO_CAS 
+#ifdef NO_CAS 
   printf("NO_CAS VERSION OF PATCHER CODE\n"); 
-  #endif
-  #ifdef NO_WAIT
+#endif
+#ifdef NO_WAIT
   printf("NO_WAIT VERSION OF PATCHER CODE\n");
-  #endif 
+#endif 
   /* printf("*** WAIT *** : %d\n", WAIT_ITERS); */
-  #ifdef PATCH_FLUSH_CACHE 
+#if defined( PATCH_FLUSH_CACHE )
   printf("FLUSH_CACHE VERSION OF PATCHER CODE\n"); 
-  #endif
+#endif
 
-  #ifdef WAIT_NANOSLEEP
+#ifdef WAIT_NANOSLEEP
   printf("Using NANOSLEEP for wait\n"); 
   
   struct timespec res; 
@@ -147,7 +147,7 @@ void init_patcher() {
   printf("Wait time is set to: %ld ns\n", g_wait_time.tv_nsec);
   
   
-  #endif
+#endif
 }
 
 __attribute__((destructor)) 
@@ -224,7 +224,7 @@ bool init_patch_site(void *addr, size_t nbytes){
 long patch_get_wait(){ 
 #if defined(WAIT_NANOSLEEP)
   return(g_wait_time.tv_nsec * WAIT_ITERS);
-#elseif defined (WAIT_CPUID)
+#elif defined (WAIT_CPUID)
   return -1;
 #else 
   return WAIT_ITERS;
@@ -294,7 +294,7 @@ bool patch_64(void *addr, uint64_t patch_value){
     WRITE(straddle_point,patch_after); 
     WRITE((straddle_point-1), patch_before); 
     return true; 
-#elseif defined(PATCH_FLUSH_CACHE) 
+#elif defined(PATCH_FLUSH_CACHE) 
     uint8_t oldFR = ((uint8_t*)addr)[0]; 
     
     if (oldFR == int3) return false; 
@@ -302,7 +302,9 @@ bool patch_64(void *addr, uint64_t patch_value){
 
       clflush((void*)addr);
       WRITE(straddle_point,patch_after);  
+      clflush((void*)straddle_point);
       WRITE((straddle_point-1), patch_before); 
+      clflush((void*)(straddle_point-1));
   
       return true; 
     }
