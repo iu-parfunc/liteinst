@@ -6,8 +6,11 @@ ProbeProvider* PROBE_PROVIDER = NULL;
 
 ProbeProvider* initializeGlobalProbeProvider(ProviderType type, Callback callback) {
   if (PROBE_PROVIDER == NULL) {
+
     switch(type) {
       case ProviderType::FINSTRUMENT:
+        fprintf(stderr, "[Probe Provider] Initializing -finstrument-functions " 
+            "based probe provider..\n");
         PROBE_PROVIDER = new FinstrumentProbeProvider(callback);
         // PROBE_PROVIDER->initializeProvider();
         return PROBE_PROVIDER;

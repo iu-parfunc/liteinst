@@ -1,5 +1,6 @@
 
 #include <string>
+#include "string.h"
 #include "ubiprof.hpp"
 #include "backoff_profiler.hpp"
 #include "sampling_profiler.hpp"
@@ -48,9 +49,29 @@ Profiler* initializeGlobalProfiler(ProfilerType type) {
 Profiler::Profiler(InstrumentationFunc prolog, InstrumentationFunc epilog) : 
   prolog_(prolog), epilog_(epilog) {
 
+    // Get the env setting for the probe provider
+    char* provider_type_str = getenv("PROBE_PROVIDER_TYPE");
+    ProviderType provider_type;
+    if (provider_type_str != NULL) {
+      if (!strcmp(provider_type_str, "FINSTRUMENT")) {
+        provider_type = ProviderType::FINSTRUMENT;
+      } else if (!strcmp(provider_type_str, "ZCA")) {
+        provider_type = ProviderType::ZCA;
+      } else if (!strcmp(provider_type_str, "DYNINST")) {
+        provider_type = ProviderType::DYNINST;
+      } else if (!strcmp(provider_type_str, "DTRACE")) {
+        provider_type = ProviderType::DTRACE;
+      } else { 
+        provider_type = ProviderType::FINSTRUMENT;
+      } 
+    } else {
+      provider_type = ProviderType::FINSTRUMENT;
+    }
+
     ProbeProvider* p;
     try {
-      p = initializeGlobalProbeProvider(ProviderType::FINSTRUMENT, callback);
+
+      p = initializeGlobalProbeProvider(provider_type, callback);
     } catch (int e) {
       fprintf(stderr, "ProbeProvider already initialized. Getting the existing one..\n");
     }

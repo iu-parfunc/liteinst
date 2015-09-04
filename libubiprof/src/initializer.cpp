@@ -201,7 +201,6 @@ __attribute__((constructor, no_instrument_function)) void initProfiler();
 
     clock_gettime(CLOCK_MONOTONIC, &g_begints);
 
-
     char* profiler_type_str = getenv("PROFILER_TYPE");
     if (profiler_type_str != NULL) {
       if (!strcmp(profiler_type_str, "FIXED_BACKOFF")) {
