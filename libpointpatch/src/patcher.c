@@ -1,9 +1,23 @@
+/* 
+   
+  libpointpatch
+  
+  Authors: Buddhika Chamith,  Bo Joel Svensson 
+  year: 2015
+
+  Should compile with: 
+    icpc [-std=c++11]
+    icc 
+    gcc -std=gnu99   (because of inline assembly, stdbool) 
+    g++ [-std=c++11]
+  
+*/ 
 
 #include "patcher.h" 
 
 #include <stdlib.h> 
 #include <memory.h> 
-
+#include <time.h> 
 
 #define __USE_GNU  
 #include <signal.h>
@@ -20,6 +34,9 @@ uint64_t g_int3_interrupt_count = 0;
 struct sigaction g_newact; 
 struct sigaction g_oldact; 
 
+#if defined(WAIT_NANOSLEEP)
+struct timespec g_wait_time; 
+#endif
 
 /* -----------------------------------------------------------------
    Constants 
@@ -27,9 +44,24 @@ struct sigaction g_oldact;
 
 const uint8_t int3 = 0xCC;
 
+/* -----------------------------------------------------------------
+   WAIT
+   ----------------------------------------------------------------- */
+
 #ifndef WAIT_ITERS
-#define WAIT_ITERS 1000 
+#define WAIT_ITERS 100
 #endif 
+
+#if defined(NO_WAIT) 
+#define WAIT() 
+#elif defined(WAIT_NANOSLEEP)
+#define WAIT() clock_nanosleep(CLOCK_MONOTONIC,0, &g_wait_time,NULL)
+#elif defined(WAIT_CPUID) 
+#define WAIT() asm volatile ( "cpuid" ) 
+#else 
+#define WAIT() for(long i = 0; i < WAIT_ITERS; i++) { asm (""); } 
+#endif
+
 
 /* -----------------------------------------------------------------
    MACROES 
@@ -62,7 +94,7 @@ uint32_t get_lsb_mask_32(int nbytes);
 bool reg_equal(_RegisterType reg1, _RegisterType reg2);
 
 static void int3_handler(int signo, siginfo_t *inf, void* ptr);
-
+void clflush(volatile void *p);
 
 /* -----------------------------------------------------------------
    CODE Internal 
@@ -87,14 +119,35 @@ void init_patcher() {
   
   sigaction(SIGTRAP, &g_newact, &g_oldact);
 
-  #ifdef NO_CAS 
+#ifdef NO_CAS 
   printf("NO_CAS VERSION OF PATCHER CODE\n"); 
-  #endif
-  #ifdef NO_WAIT
+#endif
+#ifdef NO_WAIT
   printf("NO_WAIT VERSION OF PATCHER CODE\n");
-  #endif 
+#endif 
   /* printf("*** WAIT *** : %d\n", WAIT_ITERS); */
+#if defined( PATCH_FLUSH_CACHE )
+  printf("FLUSH_CACHE VERSION OF PATCHER CODE\n"); 
+#endif
 
+#ifdef WAIT_NANOSLEEP
+  printf("Using NANOSLEEP for wait\n"); 
+  
+  struct timespec res; 
+  clock_getres(CLOCK_MONOTONIC,&res); 
+  if (res.tv_sec > 0) { 
+    printf("BAD!\n"); 
+    exit(EXIT_FAILURE); 
+  }
+  printf("Clock resolution ns: %ld\n", res.tv_nsec);
+  
+  g_wait_time.tv_nsec = res.tv_nsec * WAIT_ITERS; 
+  g_wait_time.tv_sec = 0; 
+
+  printf("Wait time is set to: %ld ns\n", g_wait_time.tv_nsec);
+  
+  
+#endif
 }
 
 __attribute__((destructor)) 
@@ -105,6 +158,14 @@ void destroy_patcher() {
   
   return; 
 }
+
+/* flush cacheline */
+inline void
+clflush(volatile void *p)
+{
+    asm volatile ("clflush (%0)" :: "r"(p));
+}
+
    
 /* -----------------------------------------------------------------
    Interrupt handlers 
@@ -159,10 +220,34 @@ bool init_patch_site(void *addr, size_t nbytes){
   return status; 
 }
 
-int patch_get_wait(){ 
+/* Get the set wait time for the patching protocol */ 
+long patch_get_wait(){ 
+#if defined(WAIT_NANOSLEEP)
+  return(g_wait_time.tv_nsec * WAIT_ITERS);
+#elif defined (WAIT_CPUID)
+  return -1;
+#else 
   return WAIT_ITERS;
+#endif 
 }
- 
+
+/* is this location a straddler ? */ 
+inline bool is_straddler_64(void *addr){ 
+
+  int offset = (uint64_t)addr % g_cache_lvl3_line_size; 
+
+  return (offset > g_cache_lvl3_line_size - 8); 
+}
+
+/* If it is a straddler, where does it straddle */
+/* TODO Optimize */
+inline int straddle_point_64(void *addr){ 
+  if (is_straddler_64(addr)) 
+    return  (uint64_t)addr % g_cache_lvl3_line_size;
+  else 
+    return 0; 
+}
+
 /* patch 8 bytes (64 bits) in a safe way. 
    automatically applying patcher protocol in patch_site is a straddler. */
 bool patch_64(void *addr, uint64_t patch_value){  
@@ -195,29 +280,45 @@ bool patch_64(void *addr, uint64_t patch_value){
     uint64_t patch_after =  patch_keep_after | ((patch_value  & ~lsb_mask) >> (8 * cutoff_point));
 
 
-#ifdef NON_THREADSAFE_PATCHING /* racy patching */      
+#if defined(NON_THREADSAFE_PATCHING) /* racy patching */      
     /* implement the straddler protocol */ 
     ((uint8_t*)addr)[0] = int3; 
     /*WRITE((straddle_point - 1), int3_sequence); */
     
     /* An empty delay loop that is unlikely to be optimized out 
        due to the magic asm inside */ 
-  #ifndef NO_WAIT 
-    for(long i = 0; i < WAIT_ITERS; i++) { asm (""); }
-  #endif 
+  /* #ifndef NO_WAIT  */
+  /*   for(long i = 0; i < WAIT_ITERS; i++) { asm (""); } */
+  /* #endif  */
+    WAIT(); 
     WRITE(straddle_point,patch_after); 
     WRITE((straddle_point-1), patch_before); 
     return true; 
+#elif defined(PATCH_FLUSH_CACHE) 
+    uint8_t oldFR = ((uint8_t*)addr)[0]; 
     
+    if (oldFR == int3) return false; 
+    else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {
+
+      clflush((void*)addr);
+      WRITE(straddle_point,patch_after);  
+      clflush((void*)straddle_point);
+      WRITE((straddle_point-1), patch_before); 
+      clflush((void*)(straddle_point-1));
+  
+      return true; 
+    }
+    else return false; 
 #else /* Threadsafe patching */
 
     uint8_t oldFR = ((uint8_t*)addr)[0]; 
     
     if (oldFR == int3) return false; 
     else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {
-  #ifndef NO_WAIT 
-      for(long i = 0; i < WAIT_ITERS; i++) { asm (""); } 
-  #endif 
+  /* #ifndef NO_WAIT  */
+  /*     for(long i = 0; i < WAIT_ITERS; i++) { asm (""); }  */
+  /* #endif  */
+      WAIT();
       WRITE(straddle_point,patch_after); 
       WRITE((straddle_point-1), patch_before); 
       return true; 
@@ -273,9 +374,10 @@ bool patch_32(void *addr, uint32_t patch_value){
     ((uint8_t*)addr)[0] = int3;     
     /* An empty delay loop that is unlikely to be optimized out 
        due to the magic asm inside */ 
-  #ifndef NO_WAIT 
-    for(long i = 0; i < WAIT_ITERS; i++) { asm (""); }
-  #endif
+  /* #ifndef NO_WAIT  */
+  /*   for(long i = 0; i < WAIT_ITERS; i++) { asm (""); } */
+  /* #endif */
+    WAIT();
     WRITE(straddle_point,patch_after); 
     WRITE(straddle_point-1, patch_before); 
     return true; 
@@ -288,9 +390,10 @@ bool patch_32(void *addr, uint32_t patch_value){
 
     if (oldFR == int3) return false; 
     else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {
-  #ifndef NO_WAIT 
-      for(long i = 0; i < WAIT_ITERS; i++) { asm (""); } 
-  #endif
+  /* #ifndef NO_WAIT  */
+  /*     for(long i = 0; i < WAIT_ITERS; i++) { asm (""); }  */
+  /* #endif */
+      WAIT();
       WRITE(straddle_point,patch_after); 
       WRITE((straddle_point-1), patch_before); 
       return true;

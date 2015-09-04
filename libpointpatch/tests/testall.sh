@@ -38,7 +38,7 @@ done;
 # unparameterised tests above.
 
 #test all straddling points
-for f in test_patch_parallel4.exe test_patch_parallel5.exe; do
+for f in test_patch_parallel4.exe test_patch_parallel5.exe test_patch_parallel6.exe; do
     for i in 2 3 4 5 6 7 ; do   # one is tested above
 	echo ""
 	echo ""

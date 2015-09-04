@@ -1,9 +1,9 @@
 /* 
   
-  Breaking out the patching tool-set. Make it completely standalone in 
-  relation to finstrumentor.
-
+  libpointpatch
+  
   Authors: Buddhika Chamith,  Bo Joel Svensson 
+  year: 2015
 
   Should compile with: 
     icpc [-std=c++11]
@@ -57,7 +57,13 @@ extern "C" {
 bool init_patch_site(void*, size_t);
 
 /* see what the wait setting is (DEBUG) */ 
-int patch_get_wait();
+long patch_get_wait();
+
+/* does the patch point straddle a cache line */
+bool is_straddler_64(void *addr);
+
+/* returns 0 on non-straddlers, otherwise an offset into the patch */
+int straddle_point_64(void *addr);
 
 /* Patch up to 8 byte instructions in a straddler safe way */ 
 bool patch_64(void*, uint64_t); 

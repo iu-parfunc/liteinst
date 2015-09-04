@@ -8,12 +8,12 @@ USE_CXX=$2
 
 #MAX_WAIT=1500
 STEP_SIZE=10
-N_TESTS=10
+N_TESTS=30
 N_RUNS=5
 
 declare -a stats
 
-EXEC=../../tests/test_patch_parallel5.exe 
+EXEC=./test_patch_parallel5_modified.exe 
 
 
 
@@ -37,30 +37,26 @@ for (( i=0;i<=N_TESTS;i++ )); do
       compileit $it
     # There is static linking going on ! 
     make clean
-    make CC=$USE_CC CXX=$USE_CXX CFLAGS=-DITERS=1000000
+    make CC=$USE_CC CXX=$USE_CXX 
     
-    for straddle_point in {1..7}; do 
-	fail=0; 
-	echo "**********************"
-	echo "wait time iters: $it"
-	echo "Straddle point: $straddle_point"
-	echo "**********************"
+  
+    echo "**********************"
+    echo "wait time iters: $it"
+    echo "Straddle point: 2"
+    echo "**********************"
 	 
-	for (( run=1;run<=N_RUNS;run++ )) ; do 
-	    echo "RUN NUM: $run"
-	    $EXEC $straddle_point
-	    if [ $? -eq 0 ]; then 
-		echo "OK"
-	    else 
-		fail=1;
-		echo "FAILURE"
-	    fi; 
-	done; 
-	if [ $fail -eq 1 ]; then 
+    for (( run=1;run<=N_RUNS;run++ )) ; do 
+	echo "RUN NUM: $run"
+	$EXEC 10000000 8 2
+	if [ $? -eq 0 ]; then 
+	    echo "OK"
+	else 
 	    (( stats[$i]++ )); 
+	    echo "FAILURE"
 	fi; 
     done; 
-done;  
+    
+done; 
 
 echo ${stats[@]}
 
