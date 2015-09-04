@@ -1,8 +1,12 @@
 
 #include <string>
 #include "ubiprof.hpp"
+#include "backoff_profiler.hpp"
+#include "sampling_profiler.hpp"
 
 using namespace std;
+
+Profiler* PROFILER;
 
 Profiler* initializeGlobalProfiler(ProfilerType type) {
 
@@ -11,14 +15,22 @@ Profiler* initializeGlobalProfiler(ProfilerType type) {
     throw -1;
   }
 
-  /*
-  if (type == BACKOFF) {
+  if (type == ProfilerType::BACKOFF) {
     PROFILER = new BackoffProfiler();
     PROFILER->initialize();
-  } else if (type == SAMPLING) {
+  } else if (type == ProfilerType::SAMPLING) {
     PROFILER = new SamplingProfiler();
     PROFILER->initialize();
-  } else if (type == EMPTY) {
+  } else if (type == ProfilerType::MINIMAL_BACKOFF) {
+    PROFILER = new MinimalBackoffProfiler();
+    PROFILER->initialize();
+  } else if (type == ProfilerType::MINIMAL_SAMPLING) {
+    PROFILER = new MinimalSamplingProfiler();
+    PROFILER->initialize();
+  } 
+  
+  /*
+  else if (type == EMPTY) {
     PROFILER = new EmptyProfiler();
     PROFILER->initialize();
   } else if (type == ADAPTIVE) {
@@ -27,13 +39,7 @@ Profiler* initializeGlobalProfiler(ProfilerType type) {
   } else if (type == MINIMAL_ADAPTIVE) {
     PROFILER = new MinimalAdaptiveProfiler();
     PROFILER->initialize();
-  } else if (type == MINIMAL_BACKOFF) {
-    PROFILER = new MinimalBackoffProfiler();
-    PROFILER->initialize();
-  } else if (type == MINIMAL_SAMPLING) {
-    PROFILER = new MinimalSamplingProfiler();
-    PROFILER->initialize();
-  }
+
   */
 
   return PROFILER;
@@ -54,12 +60,14 @@ Profiler::Profiler(InstrumentationFunc prolog, InstrumentationFunc epilog) :
       exit(EXIT_FAILURE);
     }
 
+    profiler_ = this;
 }
 
 void Profiler::callback(const ProbeMetaData* pmd) {
 
   // Profiler hasn't yet been initialized properly
   if (!profiler_ || !PROBE_PROVIDER) {
+    // return;
     throw -1; // Make the failure signalable without terminating
   }
 
@@ -67,27 +75,19 @@ void Profiler::callback(const ProbeMetaData* pmd) {
   // Future improvement should include using concurrent data structures
   profiler_->func_lock_.lock(); 
 
-  FuncId func_id = profiler_->getFunctionId(pmd->func_name); 
+  FuncId func_id;
+  try {
+    func_id = profiler_->getFunctionId(pmd->func_name); 
+    profiler_->addProbeMetaDataEntry(func_id, pmd);
+  } catch (int e) {
+    // Function is not yet registed with Ubiprof. Do that now.
+    FuncMetaData* fmd = new FuncMetaData;
+    fmd->func_name = pmd->func_name; 
+    fmd->probe_meta_data = new vector<const ProbeMetaData*>();
+    fmd->probe_meta_data->push_back(pmd);
 
-  // Populate meta data
-  auto it1 = profiler_->meta_data_by_id_.find(func_id);
-  if (it1 != profiler_->meta_data_by_id_.end()) {
-    vector<const ProbeMetaData*>* plist = it1->second;
-    plist->push_back(pmd);
-  } else {
-    vector<const ProbeMetaData*>* plist = new vector<const ProbeMetaData*>();
-    plist->push_back(pmd);
-    profiler_->meta_data_by_id_.insert(make_pair(func_id, plist));
-  }
-
-  auto it2 = profiler_->meta_data_by_name_.find(pmd->func_name);
-  if (it2 != profiler_->meta_data_by_name_.end()) {
-    vector<const ProbeMetaData*>* plist = it2->second;
-    plist->push_back(pmd);
-  } else {
-    vector<const ProbeMetaData*>* plist = new vector<const ProbeMetaData*>();
-    plist->push_back(pmd);
-    profiler_->meta_data_by_name_.insert(make_pair(pmd->func_name, plist));
+    profiler_->addFunctionMetaDataEntry(fmd);
+    func_id = fmd->func_id;
   }
 
   profiler_->func_lock_.unlock(); 
@@ -105,14 +105,58 @@ void Profiler::callback(const ProbeMetaData* pmd) {
         pmd->func_name.c_str());
     throw -1; // Make the faliure signalable without terminating
   }
+}
 
+FuncId Profiler::getFunctionId(string name) {
+  auto it = meta_data_by_name_.find(name);
+  if (it != meta_data_by_name_.end()) {
+    return it->second->func_id;
+  } else {
+    throw -1;
+  }
+}
+
+string Profiler::getFunctionName(FuncId id) {
+  auto it = meta_data_by_id_.find(id);
+  if (it != meta_data_by_id_.end()) {
+    return it->second->func_name;
+  } else {
+    throw -1;
+  }
+}
+
+void Profiler::addFunctionMetaDataEntry(FuncMetaData* fmd) {
+  auto it = meta_data_by_id_.find(fmd->func_id);
+  if (it != meta_data_by_id_.end()) {
+    throw -1;
+  } else {
+    if (fmd->func_name.empty()) {
+      throw -1;
+    }
+
+    fmd->func_id = func_id_counter_.fetch_add(1);
+    meta_data_by_id_.insert(make_pair(fmd->func_id, fmd));
+    meta_data_by_name_.insert(make_pair(fmd->func_name, fmd));
+  }
+}
+
+void Profiler::addProbeMetaDataEntry(FuncId id, const ProbeMetaData* pmd) {
+  auto it = meta_data_by_id_.find(id);
+  if (it != meta_data_by_id_.end()) {
+    FuncMetaData* fmd = it->second;
+    vector<const ProbeMetaData*>* plist = fmd->probe_meta_data;
+    plist->push_back(pmd);
+  } else {
+    throw -1;
+  }
 }
 
 bool Profiler::profileFunction(string func_name) {
   bool result = true;
-  auto pair = meta_data_by_name_.find(func_name);
-  if (pair != meta_data_by_name_.end()) {
-    vector<const ProbeMetaData*>* plist = pair->second;
+  auto it = meta_data_by_name_.find(func_name);
+  if (it != meta_data_by_name_.end()) {
+    FuncMetaData* fmd = it->second;
+    vector<const ProbeMetaData*>* plist = fmd->probe_meta_data;
     // Returns false if not all probe activations failed
     // It would be really nice to have some form of transactionality in this
     // if some of the activations fail so that probes are not left in an
@@ -132,9 +176,10 @@ bool Profiler::profileFunction(string func_name) {
 
 bool Profiler::profileFunction(FuncId func_id) {
   bool result = false;
-  auto pair = meta_data_by_id_.find(func_id);
-  if (pair != meta_data_by_id_.end()) {
-    vector<const ProbeMetaData*>* plist = pair->second;
+  auto it = meta_data_by_id_.find(func_id);
+  if (it != meta_data_by_id_.end()) {
+    FuncMetaData* fmd = it->second;
+    vector<const ProbeMetaData*>* plist = fmd->probe_meta_data;
     // Returns false if not all probe activations failed
     // It would be really nice to have some form of transactionality in this
     // if some of the activations fail so that probes are not left in an
@@ -154,9 +199,10 @@ bool Profiler::profileFunction(FuncId func_id) {
 
 bool Profiler::unprofileFunction(string func_name) {
   bool result = true;
-  auto pair = meta_data_by_name_.find(func_name);
-  if (pair != meta_data_by_name_.end()) {
-    vector<const ProbeMetaData*>* plist = pair->second;
+  auto it = meta_data_by_name_.find(func_name);
+  if (it != meta_data_by_name_.end()) {
+    FuncMetaData* fmd = it->second;
+    vector<const ProbeMetaData*>* plist = fmd->probe_meta_data;
     // Returns false if not all probe activations failed
     // It would be really nice to have some form of transactionality in this
     // if some of the activations fail so that probes are not left in an
@@ -172,9 +218,10 @@ bool Profiler::unprofileFunction(string func_name) {
 
 bool Profiler::unprofileFunction(FuncId func_id) {
   bool result = false;
-  auto pair = meta_data_by_id_.find(func_id);
-  if (pair != meta_data_by_id_.end()) {
-    vector<const ProbeMetaData*>* plist = pair->second;
+  auto it = meta_data_by_id_.find(func_id);
+  if (it != meta_data_by_id_.end()) {
+    FuncMetaData* fmd = it->second;
+    vector<const ProbeMetaData*>* plist = fmd->probe_meta_data;
     // Returns false if not all probe activations failed
     // It would be really nice to have some form of transactionality in this
     // if some of the activations fail so that probes are not left in an
@@ -186,4 +233,8 @@ bool Profiler::unprofileFunction(FuncId func_id) {
   }
 
   return result;
+}
+
+Profiler::~Profiler() {
+  delete PROBE_PROVIDER;
 }

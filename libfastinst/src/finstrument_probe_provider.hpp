@@ -83,6 +83,10 @@ class FinstrumentProbeProvider : public ProbeProvider {
      */
     std::string getFunctionName(Address func_addr);
 
+    ~FinstrumentProbeProvider() {
+
+    }
+
 };
 
 #endif /* _FINSTRUMENT_PROBE_PROVIDER_HPP_ */

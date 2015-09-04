@@ -27,7 +27,7 @@ COMMON = $(wildcard $(ROOT)/common/src/*.cpp)
 COMMON_OBJ0 = $(COMMON:.cpp=.o)
 COMMON_OBJ  = $(COMMON_OBJ0:.c=.o)
 
-CODE = profiler.cpp 
+CODE = profiler.cpp backoff_profiler.cpp minimal_backoff_profiler.cpp sampling_profiler.cpp minimal_sampling_profiler.cpp initializer.cpp globals.cpp
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 

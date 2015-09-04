@@ -7,6 +7,7 @@
 
 #include <unordered_map>
 #include <vector>
+#include <atomic>
 
 /// This is used to specify which profiler needs to be selected at 
 /// intialization time.
@@ -23,13 +24,20 @@ typedef uint64_t FuncId;
 /// the same as function id
 typedef ProbeArg FuncId;
 
+/// Holds function related meta data 
+typedef struct FuncMetaData {
+  FuncId func_id;
+  std::string func_name;
+  std::vector<const ProbeMetaData*>* probe_meta_data;
+} FuncMetaData;
+
 /// Mapping of function to probe meta data by function id
 typedef 
-  std::unordered_map<FuncId, std::vector<const ProbeMetaData*>*> FuncMetaDataById;
+  std::unordered_map<FuncId, FuncMetaData*> FuncMetaDataById;
 
 /// Mapping of function to probe meta data by function name
 typedef 
-  std::unordered_map<std::string, std::vector<const ProbeMetaData*>*> 
+  std::unordered_map<std::string, FuncMetaData*> 
   FuncMetaDataByName;
 
 
@@ -37,18 +45,22 @@ class Profiler {
 
   public:
     static Profiler* profiler_;
+    std::atomic_ulong func_id_counter_; // Used to generate new function 
+                                            // ids 
+    // Meta data structures
     FuncMetaDataById meta_data_by_id_;
     FuncMetaDataByName meta_data_by_name_;  
+
+    // Instrumentation functions associated with this profiler
     InstrumentationFunc prolog_;
     InstrumentationFunc epilog_;
-    lock::CASLock func_lock_;
 
-    static Profiler* newInstance(ProfilerType type);
+    lock::CASLock func_lock_; // Global lock used to protect function meta data
+                // structures during mutations
 
     /// Initializes the profiler. It is an error to call this repeatedly since
     /// Profiler is meant to be a singleton.  
     Profiler(InstrumentationFunc prolog, InstrumentationFunc epilog);
-
 
     /// This can be used to initialize internal statistics related data 
     /// structures. At the point of calling of this function Profiler and the 
@@ -75,14 +87,6 @@ class Profiler {
      */
     virtual bool unprofileFunction(std::string name);
 
-    /// Gets the function id given its name
-    /* \param name Mangled name of the function
-     * \return Whether operation succeeded
-     */
-    virtual FuncId getFunctionId(std::string name);
-
-  protected:
-
     // Enable profiling for the given function 
     /* This is the version which is being used internally with 
      * instrumentation functions for efficiency reasons.
@@ -98,6 +102,52 @@ class Profiler {
      * \return Whether operation succeeded
      */
     virtual bool unprofileFunction(FuncId func_id);
+
+    /// Gets the function id given its name
+    /* \param name Mangled name of the function
+     * \return The function id associated with given function name 
+     *  
+     *  This will throw an error if there is no function by given name as yet
+     *  discovered by Ubiprof.
+     */
+    virtual FuncId getFunctionId(std::string name);
+
+    /// Gets the function name given its id
+    /* \param id Opaque function identifier
+     * \return Name of the function associated with the given id
+     *
+     * This will throw an error if there is no function by given id as yet
+     * mapped by Ubiprof.
+     */
+    virtual std::string getFunctionName(FuncId id);
+
+    virtual ~Profiler();
+
+  private:
+
+    // Methods follows are used internally by the probe discovery callback to 
+    // register function and probe related meta data with Ubiprof.
+
+    /// Adds a function meta data entry. Used by the probe discovery callback
+    /// to register a new function. 
+    /* \param fmd New function meta data entry with func_name filled in
+     *            Associated function id would be generated and set within
+     *            this function and is accessible after this call returns.
+     *
+     * This will throw an error if new meta data entry is added to an already
+     * discovered function or the given entry doesn't contain a valid 
+     * func_name.
+     */
+    void addFunctionMetaDataEntry(FuncMetaData* fmd); 
+
+    /// Adds a probe meta data entry. Used by the probe discovery callback
+    /// to register a new probe associated with the function given by the id. 
+    /* \param id The opaque function identifier  
+     * \param fmd New function meta data entry
+     *
+     * This will throw an error if no such function exists with given id
+     */
+    void addProbeMetaDataEntry(FuncId id,const ProbeMetaData* pmd);
 
 };
 

@@ -188,6 +188,8 @@ class ProbeProvider {
      */
     virtual uint64_t getNumberOfFunctions() = 0;
 
+    virtual ~ProbeProvider() {};
+
     /// Gets the estimate of overhead induced by the instrumentation mechanism.
     /* This represents a current estimate of the time (in cycles)
      * required to get to and from the Instrumentation_func from the
