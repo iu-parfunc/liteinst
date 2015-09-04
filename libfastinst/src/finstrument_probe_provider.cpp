@@ -49,6 +49,9 @@ void FinstrumentProbeProvider::initialize(ProbeId probe_id, ProbeArg arg) {
   pmd->inactive_seq = (call_masked | nop_mask); 
   pmd->state = ProbeState::INITIALIZING;
 
+  pmd->is_straddler = is_straddler_64((void*)pmd->probe_addr); 
+  pmd->straddle_point = straddle_point_64((void*)pmd->probe_addr);
+
   init_patch_site((void*) pmd->probe_addr, 8);
 
 }

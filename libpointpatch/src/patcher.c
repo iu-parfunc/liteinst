@@ -243,7 +243,7 @@ inline bool is_straddler_64(void *addr){
 /* TODO Optimize */
 inline int straddle_point_64(void *addr){ 
   if (is_straddler_64(addr)) 
-    return  (uint64_t)addr % g_cache_lvl3_line_size;
+    return  g_cache_lvl3_line_size - (uint64_t)addr % g_cache_lvl3_line_size;
   else 
     return 0; 
 }

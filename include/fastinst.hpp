@@ -6,6 +6,7 @@
 #include <vector>
 #include <atomic>
 #include <string>
+#include <cstdio>
 
 /// This is used to specify which provider needs to be selected
 /// at initialization time.
@@ -70,6 +71,8 @@ typedef struct ProbeMetaData {
   Sequence active_seq;
   Sequence inactive_seq;
   InstrumentationFuncAtomic instrumentation_func;
+  bool is_straddler;
+  int  straddle_point;
 } ProbeMetaData;
 
 /// Probe meta data vector data type
@@ -188,7 +191,49 @@ class ProbeProvider {
      */
     virtual uint64_t getNumberOfFunctions() = 0;
 
-    virtual ~ProbeProvider() {};
+    virtual ~ProbeProvider() {
+#ifdef AUDIT_PROBES
+      uint64_t num_straddlers = 0;
+      uint64_t num_probes     = probe_meta_data->size();
+      uint64_t straddler_hist[8] = {0};
+      uint64_t entry_straddlers = 0;
+      uint64_t exit_straddlers  = 0;
+      for (auto it = probe_meta_data->begin(); it != probe_meta_data->end(); 
+          ++it) {
+        ProbeMetaData* pmd = *it;
+        if (pmd->is_straddler) {
+          num_straddlers++;
+          straddler_hist[pmd->straddle_point]++;
+
+          if (pmd->probe_context == ProbeContext::ENTRY) {
+            entry_straddlers++;
+          } else if (pmd->probe_context == ProbeContext::EXIT) {
+            exit_straddlers++;
+          }
+        }
+      }
+
+      FILE* fp = fopen("probe.audit", "a");
+
+      fprintf(fp, "Straddler Report \n");
+      fprintf(fp, "================ \n");
+      fprintf(fp, "Straddlers (out of total probes)  : %lu/%lu\n", 
+          num_straddlers, num_probes);
+      fprintf(fp, "Straddlers % (out of total probes) : %.2lf\n", 
+          (double) num_straddlers * 100/ num_probes);
+      fprintf(fp, "Entry straddlers : %lu\n", entry_straddlers);
+      fprintf(fp, "Exit straddlers : %lu\n", exit_straddlers);
+      fprintf(fp, "Straddler histogram by straddle point\n");
+      fprintf(fp, "-------------------------------------\n");
+      for (int i=1; i < 8; i++) {
+        fprintf(fp, "%d  :  %lu\n", i, straddler_hist[i]);
+      }
+
+      fclose(fp); 
+#endif
+
+      delete probe_meta_data;
+    };
 
     /// Gets the estimate of overhead induced by the instrumentation mechanism.
     /* This represents a current estimate of the time (in cycles)
