@@ -73,6 +73,7 @@ Profiler::Profiler(InstrumentationFunc prolog, InstrumentationFunc epilog) :
 
       p = initializeGlobalProbeProvider(provider_type, callback);
     } catch (int e) {
+      p = getGlobalProbeProvider();
       fprintf(stderr, "ProbeProvider already initialized. Getting the existing one..\n");
     }
 
@@ -82,6 +83,7 @@ Profiler::Profiler(InstrumentationFunc prolog, InstrumentationFunc epilog) :
     }
 
     profiler_ = this;
+    func_id_counter_ = 0;
 }
 
 void Profiler::callback(const ProbeMetaData* pmd) {
@@ -104,6 +106,7 @@ void Profiler::callback(const ProbeMetaData* pmd) {
     // Function is not yet registed with Ubiprof. Do that now.
     FuncMetaData* fmd = new FuncMetaData;
     fmd->func_name = pmd->func_name; 
+    fmd->func_id = -1;
     fmd->probe_meta_data = new vector<const ProbeMetaData*>();
     fmd->probe_meta_data->push_back(pmd);
 

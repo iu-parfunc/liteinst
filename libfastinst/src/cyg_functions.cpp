@@ -317,7 +317,7 @@ void __cyg_profile_func_exit(void* func_addr, void* call_site_addr) {
   pmd->func_name = ins->getFunctionName((Address) func_addr);
 
   string str;
-  str.append(pmd->func_name).append("$").append("enter");
+  str.append(pmd->func_name).append("$").append("exit");
   pmd->probe_name = str;
 
   pmd->probe_addr = (uint8_t*) addr - 5;
