@@ -23,12 +23,13 @@ lib:
 	$(CXX) --version || echo ok
 	$(CC) --version || echo ok
 
-	(cd instrumentors/finstrument/src/ && make CFLAGS='-DNDEBUG -O3')
-	(cd profilers/src/ && make install CFLAGS='-DNDEBUG -O3')
+	# (cd instrumentors/finstrument/src/ && make CFLAGS='-DNDEBUG -O3')
+	# (cd profilers/src/ && make install CFLAGS='-DNDEBUG -O3')
 
 #       Ugh, something above wipes the build/ directory... FIXME
 	(cd libpointpatch/src && make CFLAGS='-DNDEBUG -O3' && make install )
 	(cd libfastinst/src   && make CFLAGS='-DNDEBUG -O3' && make install )
+	(cd libubiprof/src   && make CFLAGS='-DNDEBUG -O3' && make install )
 
 
 libdebug:
@@ -122,13 +123,14 @@ testdocker:
 # --------------------------------------------------------------------------------
 
 clean:
-	(cd instrumentors/finstrument/src/ && make clean)
-	(cd profilers/src/ && make clean)
-
+	# (cd instrumentors/finstrument/src/ && make clean)
+	# (cd profilers/src/ && make clean)
 	(cd libpointpatch/src/ && make clean)
 	(cd libpointpatch/tests/ && make clean)
 	(cd libfastinst/tests/ && make clean)
 	(cd libfastinst/src/ && make clean)
+	# (cd libubiprof/tests/ && make clean)
+	(cd libubiprof/src/ && make clean)
 
 	rm -rf ./build run-benchmarks.hi run-benchmarks.exe run-benchmarks.o
 	rm -rf ./doc ./devdoc
