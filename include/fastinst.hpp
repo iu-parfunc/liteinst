@@ -232,6 +232,13 @@ class ProbeProvider {
       fclose(fp); 
 #endif
 
+      // Release probe meta data entries
+      for (auto it = probe_meta_data->begin(); it != probe_meta_data->end(); 
+          ++it) {
+        ProbeMetaData* pmd = *it;
+        delete pmd;
+      }
+
       delete probe_meta_data;
     };
 
