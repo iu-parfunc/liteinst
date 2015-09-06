@@ -89,7 +89,8 @@ int main() {
     fprintf(stderr, "Unable to initialize probe provider..\n");
     exit(EXIT_FAILURE);
   }
-
+  
+  // why this call ?  (it is a different call site, right·)
   foo(0);
 
   for (int i=0; i<INVOCATION_COUNT; i++) {

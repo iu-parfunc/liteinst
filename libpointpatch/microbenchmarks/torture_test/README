@@ -1,0 +1,9 @@
+
+
+With a wait loop of 300 iterations, the inifite loop program 
+ran for 4 hours (and was then killed, timeout) without crashing. 
+
+real	240m0.002s
+user	427m15.386s
+sys	1441m34.883s
+CPU: Intel(R) Core(TM) i7 CPU 930 @ 2.80GHz
