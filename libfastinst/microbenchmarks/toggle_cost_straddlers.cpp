@@ -181,6 +181,7 @@ int main() {
     exit(EXIT_FAILURE);
   }
 
+  /* I dont know yet */ 
   foo(0);
 
   for (int i=0; i<INVOCATION_COUNT; i++) {
@@ -191,8 +192,8 @@ int main() {
 
     deactivate_cost += (end - start);
 
-    foo(i);
-
+    // foo(i);
+    ((void (*)(void ))&fun[start_offset])();
     start = getticks();
     p->activate(foo_entry_probe_id, instrumentation);
     p->activate(foo_exit_probe_id, instrumentation);
