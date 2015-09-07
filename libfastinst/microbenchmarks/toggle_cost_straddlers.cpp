@@ -12,7 +12,19 @@
 #include <cassert>
 #include <cstdlib>
 
+// sysconf 
+#include <unistd.h>
+
+#include <memory.h> 
+
 using namespace std;
+
+// ermm
+void _cyg_profile_func_enter(void*,void*) { }
+void _cyg_profile_func_exit(void*,void*)  { }
+
+  
+
 
 const uint64_t INVOCATION_COUNT = 10000;
 const uint64_t FOO_FUNC_ID = 0;
@@ -41,6 +53,8 @@ void instrumentation(ProbeArg func_id) {
 void callback(const ProbeMetaData* pmd) {
 
   // If this callback related to foo probes we activate them
+  // The made-up function does not really have a name... 
+
   string func_name = "_Z3fooi"; 
   if (func_name.compare(pmd->func_name) == 0) {
     if (pmd->probe_context == ProbeContext::ENTRY) {
@@ -63,14 +77,14 @@ void callback(const ProbeMetaData* pmd) {
 
 }
 
-int foo(int x) {
-  // Do some calculation.
-  int y = 2;
-  if (x != 0) {
-    return x;
-  }
-  return x+y;
-}
+// int foo(int x) {
+//   // Do some calculation.
+//   int y = 2;
+//   if (x != 0) {
+//     return x;
+//   }
+//   return x+y;
+// }
 
 int main() {
 
@@ -83,12 +97,12 @@ int main() {
   int cyg_enter_straddling_point = 1; 
 
   uint64_t fun_address=(uint64_t)fun; 
-  size_t cache_line_size=syscont(_SC_LEVEL#_CACHE_LINESIZE); 
+  size_t cache_line_size=sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
 
   /* how far from a cache-line boundary is our fun memory */ 
   unsigned int fun_offset = fun_address  % cache_line_size; 
   
-  unsigned int closes_straddler_offset = cache_line_size - fun_offset; 
+  unsigned int closest_straddler_offset = cache_line_size - fun_offset; 
   
   unsigned int start_offset = cache_line_size + (closest_straddler_offset - 30) -
     cyg_enter_straddling_point;
@@ -106,8 +120,8 @@ int main() {
   cyg_enter_addr[0] = (uint32_t)((uint64_t)_cyg_profile_func_enter - (uint64_t)&fun[enter_call_address_offset+4]);
   cyg_exit_addr[0]  = (uint32_t)((uint64_t)_cyg_profile_func_exit - (uint64_t)&fun[exit_call_address_offset+4]);
   
-  edi_arg1[0] = &fun[start_offset]; 
-  edi_arg2[0] = &fun[start_offset];
+  edi_arg1[0] = (uint32_t)((uint64_t)&(fun[start_offset])); 
+  edi_arg2[0] = (uint32_t)((uint64_t)&(fun[start_offset]));
   
   // do stuff here 
 
@@ -155,8 +169,8 @@ int main() {
   /* danger.. here all of a sudden cache line size is a hardcoded number */ 
   fun[start_offset + 64 + 29] = 0xe8;
   /* 4 BYTES ADDRESS */ 
-  fun[start_offset + 64 + 34] = c9; /* leaveq */ 
-  fun[start_offset + 64 + 35] = c3; /* retq */ 
+  fun[start_offset + 64 + 34] = 0xc9; /* leaveq */ 
+  fun[start_offset + 64 + 35] = 0xc3; /* retq */ 
 				     
    
   
@@ -182,31 +196,34 @@ int main() {
   }
 
   /* I dont know yet */ 
-  foo(0);
+  //foo(0);
 
   for (int i=0; i<INVOCATION_COUNT; i++) {
     ticks start = getticks();
-    p->deactivate(foo_entry_probe_id);
-    p->deactivate(foo_exit_probe_id);
+    p->deactivate(foo_entry_probe_id); // ? 
+    p->deactivate(foo_exit_probe_id);  // ? 
     ticks end = getticks();
 
     deactivate_cost += (end - start);
 
     // foo(i);
     ((void (*)(void ))&fun[start_offset])();
+
     start = getticks();
-    p->activate(foo_entry_probe_id, instrumentation);
-    p->activate(foo_exit_probe_id, instrumentation);
+    p->activate(foo_entry_probe_id, instrumentation); //?
+    p->activate(foo_exit_probe_id, instrumentation);  //?
     end = getticks();
 
     activate_cost += (end - start);
 
-    foo(i);
+    ((void (*)(void ))&fun[start_offset])();
+    //foo(i);
   }
 
-  fprintf(stderr, "Foo count : %lu\n", foo_count);
+  // some new  correctness criteria needed
+  // fprintf(stderr, "Foo count : %lu\n", foo_count);
   // Check if the probes has been deactivated as expected
-  assert(foo_count == INVOCATION_COUNT*2 + 3); 
+  // assert(foo_count == INVOCATION_COUNT*2 + 3); 
   // Why +3 expected +2 for additional initial call.
 
   fprintf(stderr, "Number of probes deactivated : %lu\n", INVOCATION_COUNT * 2);
