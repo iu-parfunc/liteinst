@@ -10,6 +10,8 @@ using namespace std;
 /* Globals for this profiler */
 uint64_t fb_sample_size;
 
+static __thread bool allocated;
+
 // All thread local statistics data
 static __thread TLStatistics** all_thread_stats;
 
@@ -22,7 +24,7 @@ static __thread TLSBackoffProfilerStat* current_thread_func_stats_table;
 // Instrumentation Functions
 void backoffPrologFunction(ProbeArg func_id) {
 
-  static __thread bool allocated;
+  // fprintf(stderr, "[Prolog] Entering thread %lu\n",pthread_self());
 
   if (!allocated) {
     allocated = true;
@@ -63,6 +65,13 @@ void backoffPrologFunction(ProbeArg func_id) {
 }
 
 void backoffEpilogFunction(ProbeArg func_id) {
+
+  if (!allocated) {
+    // Prolog has not been run for some reason. Skip this sample.
+    return;
+  }
+
+  // fprintf(stderr, "[Epilog] Entering thread %lu\n",pthread_self());
   
   ticks epilog_start = getticks();
 

@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string>
 #include <string.h>
+#include <assert.h>
 #include <list>
 #include <limits.h>
 
@@ -13,6 +14,8 @@
 // #include "overhead_series.hpp"
 
 using namespace std;
+
+static __thread bool allocated;
 
 // All thread statistics data thread local reference
 static __thread TLStatistics** all_thread_stats;
@@ -23,12 +26,27 @@ static __thread TLStatistics* current_thread_stats;
 // Function statistics table for current thread 
 static __thread TLSSamplingProfilerStat* current_thread_func_stats_table;
 
+void fprintPt(FILE *f, pthread_t pt) {
+  unsigned char *ptc = (unsigned char*)(void*)(&pt);
+  fprintf(f, "0x");
+  for (size_t i=0; i<sizeof(pt); i++) {
+    fprintf(f, "%02x", (unsigned)(ptc[i]));
+  }
+}
+
 // Instrumentation Functions
 void samplingPrologFunction(ProbeArg func_id) {
 
-  static __thread bool allocated;
-
+  // fprintf(stderr, "[Prolog] Entering thread %lu\n",pthread_self());
   if (!allocated) {
+
+    /*
+    fprintf(stderr, "[Enter] Initializing thread local data in thread ");
+    fprintPt(stderr, pthread_self());
+    fprintf(stderr, "\n");
+    fflush(stderr);
+    */
+
     allocated = true;
     uint32_t function_count = PROBE_PROVIDER->getNumberOfFunctions(); 
     // C++ value initilization.. Similar to calloc
@@ -78,6 +96,23 @@ void samplingPrologFunction(ProbeArg func_id) {
 }
 
 void samplingEpilogFunction(ProbeArg func_id) {
+  // fprintf(stderr, "[Epilog] Entering thread %lu\n",pthread_self());
+
+  if (!allocated) {
+    // Prolog has not been run for some reason. Skip this sample.
+    return;
+  }
+
+    /*
+  if (!allocated) {
+    fprintf(stderr, "[Exit] Entering cyg_exit at thread ");
+    fprintPt(stderr, pthread_self());
+    fprintf(stderr, "\n");
+    fflush(stderr);
+
+    assert(1==0);
+  }
+  */
 
   ticks epilog_start = getticks();
 

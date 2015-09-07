@@ -84,7 +84,6 @@ class FinstrumentProbeProvider : public ProbeProvider {
     std::string getFunctionName(Address func_addr);
 
     ~FinstrumentProbeProvider() {
-
     }
 
 };

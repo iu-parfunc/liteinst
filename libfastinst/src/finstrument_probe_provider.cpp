@@ -80,6 +80,8 @@ bool FinstrumentProbeProvider::activate(const ProbeId probe_id,
 bool FinstrumentProbeProvider::deactivate(const ProbeId probe_id) {
 
   ProbeMetaData* pmd =  (*probe_meta_data)[probe_id];
+  fprintf(stderr, "Deactivating probe : %s\n", pmd->probe_name.c_str());
+  fflush(stderr);
 
   if (pmd->state == ProbeState::UNINITIALIZED) {
     throw -1; 
@@ -148,32 +150,32 @@ string FinstrumentProbeProvider::getFunctionName(Address func_addr) {
 
 ProbeMetaData* FinstrumentProbeProvider::getNewProbeMetaDataContainer(
     Address probe_addr) {
-  ProbeMetaData* pmd = new ProbeMetaData;
-
   // Get exclusive access to probe meta data vector before updating.
   // This is required since we need to get a unique probe id which directly
   // maps to the index of ProbeMetaData element for efficent future access.
   // [WARNING] This is a potential scalability bottleneck since all threads
   // will be locking on this lock to gain access to probe meta data during
   // probe initialization phase. 
-  if (probe_lookup.find(probe_addr) == probe_lookup.end()) {
+  if (probe_lookup.find(probe_addr) != probe_lookup.end()) {
+    return NULL;
+  } else {
     probe_lock.lock(); // Double check locking
-    if (probe_lookup.find(probe_addr) == probe_lookup.end()) { 
+    if (probe_lookup.find(probe_addr) != probe_lookup.end()) { 
+      probe_lock.unlock();
+      return NULL;
+    } else {
+      ProbeMetaData* pmd = new ProbeMetaData;
       probe_meta_data->push_back(pmd);
       pmd->probe_id = probe_meta_data->size()-1;
       probe_lookup.insert(make_pair(probe_addr, 1)); // Value we put is 
                                                    // inconsequentail
       probe_lock.unlock();
-    } else {
-      probe_lock.unlock();
-      return NULL;
+      return pmd;
     }
-  } else {
-    probe_lock.unlock();
-    return NULL;
   }
 
-  return pmd;
+  return NULL;
+
 }
 
 void FinstrumentProbeProvider::registerProbe(ProbeMetaData* pmd) {
