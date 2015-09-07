@@ -7,6 +7,7 @@
 
 #include "fastinst.hpp"
 #include "cycle.h"
+#include "patcher.h" 
 
 #include <string>
 #include <cassert>
@@ -19,12 +20,6 @@
 
 using namespace std;
 
-// ermm
-void _cyg_profile_func_enter(void*,void*) { }
-void _cyg_profile_func_exit(void*,void*)  { }
-
-  
-
 
 const uint64_t INVOCATION_COUNT = 10000;
 const uint64_t FOO_FUNC_ID = 0;
@@ -36,8 +31,8 @@ int foo_exit_probe_id;
 uint64_t activate_cost = 0;
 uint64_t deactivate_cost = 0;
 
-int foo(int x)
-    __attribute__((noinline));
+//int foo(int x)
+//  __attribute__((noinline));
 void instrumentation(ProbeArg func_id)
   __attribute__((no_instrument_function));
 void callback(const ProbeMetaData* pmd)
@@ -117,8 +112,8 @@ int main() {
   uint32_t *cyg_enter_addr = (uint32_t*)(&fun[enter_call_address_offset]);
   uint32_t *cyg_exit_addr  = (uint32_t*)(&fun[exit_call_address_offset]);
 
-  cyg_enter_addr[0] = (uint32_t)((uint64_t)_cyg_profile_func_enter - (uint64_t)&fun[enter_call_address_offset+4]);
-  cyg_exit_addr[0]  = (uint32_t)((uint64_t)_cyg_profile_func_exit - (uint64_t)&fun[exit_call_address_offset+4]);
+  cyg_enter_addr[0] = (uint32_t)((uint64_t)__cyg_profile_func_enter - (uint64_t)&fun[enter_call_address_offset+4]);
+  cyg_exit_addr[0]  = (uint32_t)((uint64_t)__cyg_profile_func_exit - (uint64_t)&fun[exit_call_address_offset+4]);
   
   edi_arg1[0] = (uint32_t)((uint64_t)&(fun[start_offset])); 
   edi_arg2[0] = (uint32_t)((uint64_t)&(fun[start_offset]));
@@ -171,8 +166,9 @@ int main() {
   /* 4 BYTES ADDRESS */ 
   fun[start_offset + 64 + 34] = 0xc9; /* leaveq */ 
   fun[start_offset + 64 + 35] = 0xc3; /* retq */ 
-				     
-   
+				    
+  /* make executable (should have something else for this)*/ 
+  init_patch_site((void*)&fun[start_offset],1024); 
   
   /* done with straddling setup */
 
@@ -198,6 +194,9 @@ int main() {
   /* I dont know yet */ 
   //foo(0);
 
+  ((void (*)(void ))&fun[start_offset])();
+
+  /*
   for (int i=0; i<INVOCATION_COUNT; i++) {
     ticks start = getticks();
     p->deactivate(foo_entry_probe_id); // ? 
@@ -219,6 +218,7 @@ int main() {
     ((void (*)(void ))&fun[start_offset])();
     //foo(i);
   }
+  */
 
   // some new  correctness criteria needed
   // fprintf(stderr, "Foo count : %lu\n", foo_count);

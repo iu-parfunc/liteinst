@@ -7,6 +7,7 @@ EXES = $(patsubst %.cpp,%.exe,$(SRCS))
 CFLAGS = -finstrument-functions -fno-inline -fno-optimize-sibling-calls
 
 LIBS = -L../../build/lib -lfastinst -lrt -ldl
+LIBS2 = -L../../build/lib -lfastinst -lpointpatch ../../deps/distorm/distorm3.a  -lrt -ldl
 
 CXX=icpc
 
@@ -29,4 +30,4 @@ clean:
 
 
 straddler: toggle_cost_straddlers.cpp
-	$(CXX) --std=c++11 -g $(CFLAGS) -I../../include -I../../common/include toggle_cost_straddlers.cpp -o toggle_cost_straddlers.exe $(LIBS)
+	$(CXX) --std=c++11 -g $(CFLAGS) -I../../include -I../../deps/distorm/include -I../../common/include toggle_cost_straddlers.cpp -o toggle_cost_straddlers.exe $(LIBS2)
