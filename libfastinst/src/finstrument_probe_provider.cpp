@@ -80,8 +80,6 @@ bool FinstrumentProbeProvider::activate(const ProbeId probe_id,
 bool FinstrumentProbeProvider::deactivate(const ProbeId probe_id) {
 
   ProbeMetaData* pmd =  (*probe_meta_data)[probe_id];
-  fprintf(stderr, "Deactivating probe : %s\n", pmd->probe_name.c_str());
-  fflush(stderr);
 
   if (pmd->state == ProbeState::UNINITIALIZED) {
     throw -1; 
@@ -105,6 +103,12 @@ void FinstrumentProbeProvider::readFunctionInfo() {
   string line;
   ifstream fp ("functions.txt");
   std::string::size_type sz = 16;
+
+  if (fp.fail()) {
+    fprintf(stderr, "[Finstrument Probe Provider] ERROR : Failed opening "
+        "functions.txt. Exiting program\n");
+    throw -1;
+  }
 
   if (fp.is_open()) {
     while (getline (fp,line)){
