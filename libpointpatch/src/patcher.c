@@ -22,6 +22,11 @@
 #define __USE_GNU  
 #include <signal.h>
 
+#ifdef PATCH_SCHED_YIELD
+#include <sched.h>
+#endif 
+
+
 
 /* -----------------------------------------------------------------
    Globals 
@@ -125,10 +130,15 @@ void init_patcher() {
 #ifdef NO_WAIT
   printf("NO_WAIT VERSION OF PATCHER CODE\n");
 #endif 
-  /* printf("*** WAIT *** : %d\n", WAIT_ITERS); */
-#if defined( PATCH_FLUSH_CACHE )
+#ifdef PATCH_FLUSH_CACHE
   printf("FLUSH_CACHE VERSION OF PATCHER CODE\n"); 
 #endif
+#ifdef PATCH_SCHED_YIELD
+  printf("SCHED_YIELD VERSION OF PATCHER CODE\n");
+#endif 
+#ifdef PATCH_CLEAR_CACHE 
+  printf("\"__builtin___clear_cache\" VERSION OF PATCHER CODE\n");
+#endif 
 
 #ifdef WAIT_NANOSLEEP
   printf("Using NANOSLEEP for wait\n"); 
@@ -280,20 +290,21 @@ bool patch_64(void *addr, uint64_t patch_value){
     uint64_t patch_after =  patch_keep_after | ((patch_value  & ~lsb_mask) >> (8 * cutoff_point));
 
 
+    /* ----------------------------------------------------------------- 
+       NON_THREADSAFE 
+       ----------------------------------------------------------------- */ 
 #if defined(NON_THREADSAFE_PATCHING) /* racy patching */      
     /* implement the straddler protocol */ 
     ((uint8_t*)addr)[0] = int3; 
-    /*WRITE((straddle_point - 1), int3_sequence); */
-    
-    /* An empty delay loop that is unlikely to be optimized out 
-       due to the magic asm inside */ 
-  /* #ifndef NO_WAIT  */
-  /*   for(long i = 0; i < WAIT_ITERS; i++) { asm (""); } */
-  /* #endif  */
+ 
     WAIT(); 
     WRITE(straddle_point,patch_after); 
     WRITE((straddle_point-1), patch_before); 
     return true; 
+
+    /* ----------------------------------------------------------------- 
+       CLFLUSH BASED
+       ----------------------------------------------------------------- */ 
 #elif defined(PATCH_FLUSH_CACHE) 
     uint8_t oldFR = ((uint8_t*)addr)[0]; 
     
@@ -308,16 +319,54 @@ bool patch_64(void *addr, uint64_t patch_value){
   
       return true; 
     }
+    else return false;
+
+    /* ----------------------------------------------------------------- 
+       SCHED_YIELD 
+       ----------------------------------------------------------------- */ 
+#elif defined(PATCH_SCHED_YIELD)
+    uint8_t oldFR = ((uint8_t*)addr)[0]; 
+    
+    if (oldFR == int3) return false; 
+    else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {
+
+      sched_yield();
+      
+      WRITE(straddle_point,patch_after);  
+      WRITE((straddle_point-1), patch_before); 
+      
+      return true; 
+    }
     else return false; 
+
+    /* ----------------------------------------------------------------- 
+       CLEAR_CACHE
+       ----------------------------------------------------------------- */ 
+#elif defined(PATCH_CLEAR_CACHE) 
+uint8_t oldFR = ((uint8_t*)addr)[0]; 
+    
+    if (oldFR == int3) return false; 
+    else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {
+
+      __builtin___clear_cache((char*)addr,((char*)addr)+8);
+      
+      WRITE(straddle_point,patch_after);  
+      WRITE((straddle_point-1), patch_before); 
+      
+      return true; 
+    }
+    else return false; 
+
+    /* ----------------------------------------------------------------- 
+       WAIT BASED THREADSAFE PATCHER
+       ----------------------------------------------------------------- */ 
 #else /* Threadsafe patching */
 
     uint8_t oldFR = ((uint8_t*)addr)[0]; 
     
     if (oldFR == int3) return false; 
     else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {
-  /* #ifndef NO_WAIT  */
-  /*     for(long i = 0; i < WAIT_ITERS; i++) { asm (""); }  */
-  /* #endif  */
+ 
       WAIT();
       WRITE(straddle_point,patch_after); 
       WRITE((straddle_point-1), patch_before); 
