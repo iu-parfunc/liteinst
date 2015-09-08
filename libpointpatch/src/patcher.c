@@ -374,8 +374,7 @@ uint8_t oldFR = ((uint8_t*)addr)[0];
        TRANSACTION
        ----------------------------------------------------------------- */ 
 #elif defined(PATCH_TRANSACTION_XBEGIN) 
-    int status = 0; 
-    if ((status = _xbegin()) == _XBEGIN_STARTED) { 
+    if (_xbegin() == _XBEGIN_STARTED) { 
       straddle_point[0] = patch_after;  
       (straddle_point-1)[0] = patch_before; 
       _xend();
@@ -388,13 +387,12 @@ uint8_t oldFR = ((uint8_t*)addr)[0];
        TRANSACTION2
        ----------------------------------------------------------------- */ 
 #elif defined(PATCH_TRANSACTION_XBEGIN2)       
-    int status = 0; 
     uint8_t oldFR = ((uint8_t*)addr)[0]; 
     
     if (oldFR == int3) return false; 
     
     else {
-      if ((status = _xbegin()) == _XBEGIN_STARTED) { 
+      if (_xbegin() == _XBEGIN_STARTED) { 
 	((uint8_t*)addr)[0] = int3; 
 	_xend();
 
