@@ -26,6 +26,13 @@
 #include <sched.h>
 #endif 
 
+#ifdef PATCH_TRANSACTION_XBEGIN
+#include <immintrin.h>
+#endif 
+
+#ifdef PATCH_TRANSACTION_XBEGIN2
+#include <immintrin.h>
+#endif 
 
 
 /* -----------------------------------------------------------------
@@ -78,7 +85,7 @@ const uint8_t int3 = 0xCC;
 #define WRITE(addr,value)  (addr)[0] = (value) 
 #else 
 /* An atomic write implemented via CAS. I'm not sure this comment makes sense */
-#define WRITE(addr,value)  __sync_val_compare_and_swap((addr), *(addr), (value));
+#define WRITE(addr,value)  __sync_val_compare_and_swap((addr), *(addr), (value))
 #endif 
 
 /* internally used min/max macros */ 
@@ -138,6 +145,12 @@ void init_patcher() {
 #endif 
 #ifdef PATCH_CLEAR_CACHE 
   printf("\"__builtin___clear_cache\" VERSION OF PATCHER CODE\n");
+#endif 
+#ifdef PATCH_TRANSACTION_XBEGIN
+  printf("TRANSACTION VERSION OF PATCHER CODE\n");
+#endif 
+#ifdef PATCH_TRANSACTION_XBEGIN2
+  printf("TRANSACTION2 VERSION OF PATCHER CODE\n");
 #endif 
 
 #ifdef WAIT_NANOSLEEP
@@ -357,6 +370,44 @@ uint8_t oldFR = ((uint8_t*)addr)[0];
     }
     else return false; 
 
+   /* ----------------------------------------------------------------- 
+       TRANSACTION
+       ----------------------------------------------------------------- */ 
+#elif defined(PATCH_TRANSACTION_XBEGIN) 
+    int status = 0; 
+    if ((status = _xbegin()) == _XBEGIN_STARTED) { 
+      straddle_point[0] = patch_after;  
+      (straddle_point-1)[0] = patch_before; 
+      _xend();
+      return true; 
+    } else { 
+      return false; 
+    }
+
+   /* ----------------------------------------------------------------- 
+       TRANSACTION2
+       ----------------------------------------------------------------- */ 
+#elif defined(PATCH_TRANSACTION_XBEGIN2)       
+    int status = 0; 
+    uint8_t oldFR = ((uint8_t*)addr)[0]; 
+    
+    if (oldFR == int3) return false; 
+    
+    else {
+      if ((status = _xbegin()) == _XBEGIN_STARTED) { 
+	((uint8_t*)addr)[0] = int3; 
+	_xend();
+
+	WRITE(straddle_point,patch_after);  
+	WRITE((straddle_point-1), patch_before); 
+      
+	return true; 
+	
+	
+      } else { 
+	return false; 
+      }
+    }
     /* ----------------------------------------------------------------- 
        WAIT BASED THREADSAFE PATCHER
        ----------------------------------------------------------------- */ 
