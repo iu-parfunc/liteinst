@@ -152,6 +152,9 @@ void init_patcher() {
 #ifdef PATCH_TRANSACTION_XBEGIN2
   printf("TRANSACTION2 VERSION OF PATCHER CODE\n");
 #endif 
+#ifdef PATCH_ATOMIC_EXCHANGE 
+  printf("ATOMIC_EXCHANGE VERSION OF PATCHER CODE\n");
+#endif 
 
 #ifdef WAIT_NANOSLEEP
   printf("Using NANOSLEEP for wait\n"); 
@@ -375,8 +378,9 @@ uint8_t oldFR = ((uint8_t*)addr)[0];
        ----------------------------------------------------------------- */ 
 #elif defined(PATCH_TRANSACTION_XBEGIN) 
     if (_xbegin() == _XBEGIN_STARTED) { 
-      straddle_point[0] = patch_after;  
-      (straddle_point-1)[0] = patch_before; 
+      ((uint64_t*)addr)[0] = patch_value;
+	// straddle_point[0] = patch_after;  
+	// (straddle_point-1)[0] = patch_before; 
       _xend();
       return true; 
     } else { 
@@ -396,8 +400,10 @@ uint8_t oldFR = ((uint8_t*)addr)[0];
 	((uint8_t*)addr)[0] = int3; 
 	_xend();
 
-	WRITE(straddle_point,patch_after);  
-	WRITE((straddle_point-1), patch_before); 
+	((uint64_t*)addr)[0] = patch_value;
+	  
+	  // WRITE(straddle_point,patch_after);  
+	  // WRITE((straddle_point-1), patch_before); 
       
 	return true; 
 	
@@ -406,6 +412,13 @@ uint8_t oldFR = ((uint8_t*)addr)[0];
 	return false; 
       }
     }
+    /* ----------------------------------------------------------------- 
+       atomic-exchange 
+       ----------------------------------------------------------------- */
+#elif defined(PATCH_ATOMIC_EXCHANCE)
+    __sync_lock_test_and_set((uint64_t*)addr,patch_value);
+
+    return true;
     /* ----------------------------------------------------------------- 
        WAIT BASED THREADSAFE PATCHER
        ----------------------------------------------------------------- */ 
