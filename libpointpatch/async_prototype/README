@@ -1,0 +1,1 @@
+gcc --std=gnu99 asyncpatch.c test_patch_parallel6.c -o test -I../../deps/distorm/include/ ../../deps/distorm/distorm3.a -pthread

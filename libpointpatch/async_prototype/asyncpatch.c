@@ -1,19 +1,5 @@
-/* 
-   
-  libpointpatch
-  
-  Authors: Buddhika Chamith,  Bo Joel Svensson 
-  year: 2015
 
-  Should compile with: 
-    icpc [-std=c++11]
-    icc 
-    gcc -std=gnu99   (because of inline assembly, stdbool) 
-    g++ [-std=c++11]
-  
-*/ 
-
-#include "patcher.h" 
+#include "asyncpatch.h"
 
 #include <stdlib.h> 
 #include <memory.h> 
@@ -21,19 +7,6 @@
 
 #define __USE_GNU  
 #include <signal.h>
-
-#ifdef PATCH_SCHED_YIELD
-#include <sched.h>
-#endif 
-
-#ifdef PATCH_TRANSACTION_XBEGIN
-#include <immintrin.h>
-#endif 
-
-#ifdef PATCH_TRANSACTION_XBEGIN2
-#include <immintrin.h>
-#endif 
-
 
 /* -----------------------------------------------------------------
    Globals 
@@ -46,9 +19,43 @@ uint64_t g_int3_interrupt_count = 0;
 struct sigaction g_newact; 
 struct sigaction g_oldact; 
 
-#if defined(WAIT_NANOSLEEP)
-struct timespec g_wait_time; 
-#endif
+
+PatchList g_patchlist = {0}; 
+volatile uint64_t g_patchlock = 0; 
+
+
+void cons_patch(struct Patch *p, PatchList *pl){ 
+  struct Patch *old_hd = pl->head; 
+  p->next  = old_hd;
+  pl->head = p;
+  pl->length++; 
+}
+
+struct Patch *remove_patch(uint64_t find_addr, PatchList *pl){ 
+  
+  struct Patch *p = pl->head; 
+  if (p == NULL) return NULL; 
+  
+  if (p->address == find_addr) { 
+    pl->head = p->next; 
+    pl->length--;
+    return p;
+  }
+  
+  struct Patch *curr = p->next; 
+  struct Patch *prev = p;
+  while (curr != NULL && curr->address != find_addr) { 
+    prev = curr; 
+    curr = curr->next;
+  }
+  if (curr == NULL) return NULL; 
+
+  prev->next = curr->next; 
+  curr->next = NULL; 
+  pl->length--;
+  return curr;
+}
+
 
 /* -----------------------------------------------------------------
    Constants 
@@ -61,19 +68,11 @@ const uint8_t int3 = 0xCC;
    ----------------------------------------------------------------- */
 
 #ifndef WAIT_ITERS
-#define WAIT_ITERS 100
+#define WAIT_ITERS 10
 #endif 
 
-#if defined(NO_WAIT) 
-#define WAIT() 
-#elif defined(WAIT_NANOSLEEP)
-#define WAIT() clock_nanosleep(CLOCK_MONOTONIC,0, &g_wait_time,NULL)
-#elif defined(WAIT_CPUID) 
-#define WAIT() asm volatile ( "cpuid" ) 
-#else 
-#define WAIT() for(long i = 0; i < WAIT_ITERS; i++) { asm (""); } 
-#endif
-
+//#define WAIT() for(long i = 0; i < WAIT_ITERS; i++) { asm (""); } 
+#define WAIT() {}
 
 /* -----------------------------------------------------------------
    MACROES 
@@ -109,6 +108,28 @@ static void int3_handler(int signo, siginfo_t *inf, void* ptr);
 void clflush(volatile void *p);
 
 /* -----------------------------------------------------------------
+   Print some info
+   ----------------------------------------------------------------- */
+void print_cache_info() {
+  printf("L1 ICACHE size: %ld\n", sysconf(_SC_LEVEL1_ICACHE_SIZE));
+  printf("L1 ICACHE assoc: %ld\n", sysconf(_SC_LEVEL1_ICACHE_ASSOC));
+  printf("L1 ICACHE linesize: %ld\n", sysconf(_SC_LEVEL1_ICACHE_LINESIZE));
+  printf("\n");
+  printf("L1 DCACHE size: %ld\n", sysconf(_SC_LEVEL1_DCACHE_SIZE));
+  printf("L1 DCACHE assoc: %ld\n", sysconf(_SC_LEVEL1_DCACHE_ASSOC));
+  printf("L1 DCACHE linesize: %ld\n", sysconf(_SC_LEVEL1_DCACHE_LINESIZE));
+  printf("\n");
+  printf("L2 CACHE size: %ld\n", sysconf(_SC_LEVEL2_CACHE_SIZE));
+  printf("L2 CACHE assoc: %ld\n", sysconf(_SC_LEVEL2_CACHE_ASSOC));
+  printf("L2 CACHE linesize: %ld\n", sysconf(_SC_LEVEL2_CACHE_LINESIZE));
+  printf("\n");
+  printf("L3 CACHE size: %ld\n", sysconf(_SC_LEVEL3_CACHE_SIZE));
+  printf("L3 CACHE assoc: %ld\n", sysconf(_SC_LEVEL3_CACHE_ASSOC));
+  printf("L3 CACHE linesize: %ld\n", sysconf(_SC_LEVEL3_CACHE_LINESIZE));
+
+} 
+
+/* -----------------------------------------------------------------
    CODE Internal 
    ----------------------------------------------------------------- */
 
@@ -134,54 +155,14 @@ void init_patcher() {
 #ifdef NO_CAS 
   printf("NO_CAS VERSION OF PATCHER CODE\n"); 
 #endif
-#ifdef NO_WAIT
-  printf("NO_WAIT VERSION OF PATCHER CODE\n");
-#endif 
-#ifdef PATCH_FLUSH_CACHE
-  printf("FLUSH_CACHE VERSION OF PATCHER CODE\n"); 
-#endif
-#ifdef PATCH_SCHED_YIELD
-  printf("SCHED_YIELD VERSION OF PATCHER CODE\n");
-#endif 
-#ifdef PATCH_CLEAR_CACHE 
-  printf("\"__builtin___clear_cache\" VERSION OF PATCHER CODE\n");
-#endif 
-#ifdef PATCH_TRANSACTION_XBEGIN
-  printf("TRANSACTION VERSION OF PATCHER CODE\n");
-#endif 
-#ifdef PATCH_TRANSACTION_XBEGIN2
-  printf("TRANSACTION2 VERSION OF PATCHER CODE\n");
-#endif 
-#ifdef PATCH_ATOMIC_EXCHANGE 
-  printf("ATOMIC_EXCHANGE VERSION OF PATCHER CODE\n");
-#endif 
-
-#ifdef WAIT_NANOSLEEP
-  printf("Using NANOSLEEP for wait\n"); 
   
-  struct timespec res; 
-  clock_getres(CLOCK_MONOTONIC,&res); 
-  if (res.tv_sec > 0) { 
-    printf("BAD!\n"); 
-    exit(EXIT_FAILURE); 
-  }
-  printf("Clock resolution ns: %ld\n", res.tv_nsec);
-  
-  g_wait_time.tv_nsec = res.tv_nsec * WAIT_ITERS; 
-  g_wait_time.tv_sec = 0; 
-
-  printf("Wait time is set to: %ld ns\n", g_wait_time.tv_nsec);
-  
-  
-#endif
 }
 
 __attribute__((destructor)) 
 void destroy_patcher() {
   
   /* potentially do something here */ 
-  
-  
+    
   return; 
 }
 
@@ -198,15 +179,53 @@ clflush(volatile void *p)
    ----------------------------------------------------------------- */ 
 
 static void int3_handler(int signo, siginfo_t *inf, void* ptr) {
-  //ticks start = getticks();
-  ucontext_t *ucontext = (ucontext_t*)ptr;
-
-  /* Resuming the thread after skipping the call instruction. */ 
-  ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] + 4;
-  /* REG_RIP is another machine and compiler specific define */ 
-
 
   g_int3_interrupt_count++;
+  ucontext_t *ucontext = (ucontext_t*)ptr;  
+  
+  //uint64_t addr = (uint64_t)inf->si_addr; 
+  uint64_t addr = (uint64_t)ucontext->uc_mcontext.gregs[REG_RIP] -1;
+  
+  
+  /* printf("list: %lu \n",g_patchlist.length); */ 
+  
+  /* need locks around this one */ 
+  bool i_got_it = __sync_bool_compare_and_swap(&g_patchlock, 0, 1); 
+  if (i_got_it) { 
+  
+    struct Patch *p = remove_patch(addr,&g_patchlist); 
+    //printf("INT3_HANDLER: looking up addr: %lu\n",addr); 
+  
+    if (p == NULL) { 
+      //printf("INT3_HANDLER: addr %lu not found in list\n",addr); 
+      g_patchlock=0; 
+    } else { 
+      //printf("PATCHING\n");
+      int offset = (uint64_t)addr % g_cache_lvl3_line_size;
+      unsigned int cutoff_point = g_cache_lvl3_line_size - offset; 
+      uint64_t* straddle_point = (uint64_t*)((uint8_t*)addr + cutoff_point);
+      
+      WAIT();
+      WRITE(straddle_point,p->back); 
+      WRITE((straddle_point-1),p->front); 
+      
+      g_patchlock=0; 
+    }
+    ucontext->uc_mcontext.gregs[REG_RIP] = 
+      (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] + 4;
+    return; 
+ 
+  } 
+  ucontext->uc_mcontext.gregs[REG_RIP] = 
+      (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] + 4;
+  //ticks start = getticks();
+
+
+  /* Resuming the thread after skipping the call instruction. */ 
+  // ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] + 4;
+  /* REG_RIP is another machine and compiler specific define */ 
+
+  
   //ticks end = getticks();
   //g_finstrumentor_overhead += (g_int3_interrupt_overhead + end - start);
 }
@@ -248,13 +267,7 @@ bool init_patch_site(void *addr, size_t nbytes){
 
 /* Get the set wait time for the patching protocol */ 
 long patch_get_wait(){ 
-#if defined(WAIT_NANOSLEEP)
-  return(g_wait_time.tv_nsec * WAIT_ITERS);
-#elif defined (WAIT_CPUID)
-  return -1;
-#else 
   return WAIT_ITERS;
-#endif 
 }
 
 /* is this location a straddler ? */ 
@@ -276,7 +289,7 @@ inline int straddle_point_64(void *addr){
 
 /* patch 8 bytes (64 bits) in a safe way. 
    automatically applying patcher protocol in patch_site is a straddler. */
-bool patch_64(void *addr, uint64_t patch_value){  
+bool async_patch_64(void *addr, uint64_t patch_value){  
   
   int offset = (uint64_t)addr % g_cache_lvl3_line_size; 
   
@@ -304,220 +317,42 @@ bool patch_64(void *addr, uint64_t patch_value){
     
     uint64_t patch_before = patch_keep_before | ((patch_value  & lsb_mask) << shift_size);
     uint64_t patch_after =  patch_keep_after | ((patch_value  & ~lsb_mask) >> (8 * cutoff_point));
-
-
-    /* ----------------------------------------------------------------- 
-       NON_THREADSAFE 
-       ----------------------------------------------------------------- */ 
-#if defined(NON_THREADSAFE_PATCHING) /* racy patching */      
-    /* implement the straddler protocol */ 
-    ((uint8_t*)addr)[0] = int3; 
- 
-    WAIT(); 
-    WRITE(straddle_point,patch_after); 
-    WRITE((straddle_point-1), patch_before); 
-    return true; 
-
-    /* ----------------------------------------------------------------- 
-       CLFLUSH BASED
-       ----------------------------------------------------------------- */ 
-#elif defined(PATCH_FLUSH_CACHE) 
-    uint8_t oldFR = ((uint8_t*)addr)[0]; 
     
-    if (oldFR == int3) return false; 
-    else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {
-
-      clflush((void*)addr);
-      WRITE(straddle_point,patch_after);  
-      clflush((void*)straddle_point);
-      WRITE((straddle_point-1), patch_before); 
-      clflush((void*)(straddle_point-1));
-  
-      return true; 
-    }
-    else return false;
-
-    /* ----------------------------------------------------------------- 
-       SCHED_YIELD 
-       ----------------------------------------------------------------- */ 
-#elif defined(PATCH_SCHED_YIELD)
-    uint8_t oldFR = ((uint8_t*)addr)[0]; 
     
-    if (oldFR == int3) return false; 
-    else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {
-
-      sched_yield();
-      
-      WRITE(straddle_point,patch_after);  
-      WRITE((straddle_point-1), patch_before); 
-      
-      return true; 
-    }
-    else return false; 
-
-    /* ----------------------------------------------------------------- 
-       CLEAR_CACHE
-       ----------------------------------------------------------------- */ 
-#elif defined(PATCH_CLEAR_CACHE) 
-uint8_t oldFR = ((uint8_t*)addr)[0]; 
     
-    if (oldFR == int3) return false; 
-    else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {
-
-      __builtin___clear_cache((char*)addr,((char*)addr)+8);
-      
-      WRITE(straddle_point,patch_after);  
-      WRITE((straddle_point-1), patch_before); 
-      
-      return true; 
-    }
-    else return false; 
-
-   /* ----------------------------------------------------------------- 
-       TRANSACTION
-       ----------------------------------------------------------------- */ 
-#elif defined(PATCH_TRANSACTION_XBEGIN) 
-    if (_xbegin() == _XBEGIN_STARTED) { 
-      ((uint64_t*)addr)[0] = patch_value;
-	// straddle_point[0] = patch_after;  
-	// (straddle_point-1)[0] = patch_before; 
-      _xend();
-      return true; 
-    } else { 
-      return false; 
-    }
-
-   /* ----------------------------------------------------------------- 
-       TRANSACTION2
-       ----------------------------------------------------------------- */ 
-#elif defined(PATCH_TRANSACTION_XBEGIN2)       
-    uint8_t oldFR = ((uint8_t*)addr)[0]; 
-    
-    if (oldFR == int3) return false; 
-    
-    else {
-      if (_xbegin() == _XBEGIN_STARTED) { 
-	((uint8_t*)addr)[0] = int3; 
-	_xend();
-
-	((uint64_t*)addr)[0] = patch_value;
-	  
-	  // WRITE(straddle_point,patch_after);  
-	  // WRITE((straddle_point-1), patch_before); 
-      
-	return true; 
-	
-	
-      } else { 
-	return false; 
-      }
-    }
-    /* ----------------------------------------------------------------- 
-       atomic-exchange 
-       ----------------------------------------------------------------- */
-#elif defined(PATCH_ATOMIC_EXCHANCE)
-    __sync_lock_test_and_set((uint64_t*)addr,patch_value);
-
-    return true;
     /* ----------------------------------------------------------------- 
        WAIT BASED THREADSAFE PATCHER
        ----------------------------------------------------------------- */ 
-#else /* Threadsafe patching */
-  
-    uint8_t oldFR = ((uint8_t*)addr)[0];  
-    
-    if (oldFR == int3) return false;
-    else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3))     {
-      WAIT();
-      //__sync_lock_test_and_set((uint64_t*)straddle_point,patch_after);
-      //__sync_lock_test_and_set((uint64_t*)(straddle_point-1),patch_before);
-      
-      WRITE(straddle_point,patch_after);
-      WRITE((straddle_point-1), patch_before);
-      return true;
-    }
-    else return false;
-#endif     
-  } 
-  
-  /* if not a straddler perform a single write */
-  WRITE((uint64_t*)addr,patch_value);
-  return true; 
-  
-}
-    
-/* -----------------------------------------------------------------
-   Patching
-   ----------------------------------------------------------------- */
-
-/* patch 4 bytes (32 bits) in a safe way. 
-       automatically applying patcher protocol in patch_site is a straddler. */
-bool patch_32(void *addr, uint32_t patch_value){  
-  
-  int offset = (uint64_t)addr % g_cache_lvl3_line_size; 
-
-  /* Is this a straddler patch ? */ 
-  if (offset > g_cache_lvl3_line_size - 4) { 
-    /* fprintf(stderr,"Straddler update\n"); */ 
-    /* Here the patch site straddles a cache line and all atomicity 
-       guarantees in relation to instruction fetch seems to go out the window */ 
-
-    unsigned int cutoff_point = g_cache_lvl3_line_size - offset; 
-    uint32_t* straddle_point = (uint32_t*)((uint8_t*)addr + cutoff_point);
-    
-    uint32_t lsb_mask = get_lsb_mask_32(cutoff_point);
-    uint32_t msb_mask = get_msb_mask_32(cutoff_point); 
-
-    /* read in 8 bytes before and after the straddle point */
-    uint32_t before = *(straddle_point - 1);
-    uint32_t after  = *straddle_point;
-
-    int shift_size = 8 * (4 - cutoff_point); 
-
-    /* this is the parts to keep from what was originally in memory */
-    uint32_t patch_keep_before = before & (~msb_mask);
-    uint32_t patch_keep_after  = after & msb_mask;
-    
-    uint32_t patch_before = patch_keep_before | ((patch_value  & lsb_mask) << shift_size);
-    uint32_t patch_after =  patch_keep_after | ((patch_value & ~lsb_mask) >> (8 * cutoff_point));
-
-
-    /* implement the straddler protocol */ 
-#if defined(NON_THREADSAFE_PATCHING)
-    ((uint8_t*)addr)[0] = int3;     
-    /* An empty delay loop that is unlikely to be optimized out 
-       due to the magic asm inside */ 
-  /* #ifndef NO_WAIT  */
-  /*   for(long i = 0; i < WAIT_ITERS; i++) { asm (""); } */
-  /* #endif */
-    WAIT();
-    WRITE(straddle_point,patch_after); 
-    WRITE(straddle_point-1, patch_before); 
-    return true; 
-#elif defined(PATCH_SIGILL)
-    /* Threadsafe variant using illegal instruction */ 
-
-#else  
-    /* Threadsafe variant using trap*/
     uint8_t oldFR = ((uint8_t*)addr)[0]; 
-
-    if (oldFR == int3) return false;
-    else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3))     {
-      WAIT();
-      WRITE(straddle_point,patch_after);
-      WRITE((straddle_point-1), patch_before);
-      return true;
-    }
-    else return false;
-
-#endif
-  } 
     
-  /* if not a straddler perform a single write */
-  WRITE((uint32_t*)addr,patch_value);
-  return true; 
-}
+    if (oldFR == int3) return false; 
+    else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {
+      
+      struct Patch *p = (struct Patch*)malloc(sizeof(struct Patch)); 
+      p->address = (uint64_t)addr;
+      p->front   = patch_before; 
+      p->back    = patch_after; 
+      p->timestamp = 0; /* fixme */ 
+      p->next = NULL; 
+      
+      /* need to lock access to this list */ 
+      while (!__sync_bool_compare_and_swap(&g_patchlock, 0, 1)) {};  
+      // printf("ASYNC_PATCH: Adding address %lu to list\n",p->address);
+      cons_patch(p,&g_patchlist); 
+      g_patchlock=0; 
 
+      
+      //WAIT();
+      //WRITE(straddle_point,patch_after); 
+      //WRITE((straddle_point-1), patch_before); 
+      return true; 
+    }
+    else return false; 
+  } 
+  
+  
+}
+    
 
 /* ----------------------------------------------------------------- 
    Parameter patching. 
@@ -696,36 +531,6 @@ inline uint64_t get_lsb_mask_64(int nbytes) {
       return 0xFFFFFFFFFFFFFF;
     default:
       printf("ERROR : Invalid input to get_lsb_mask\n");
-      return 0;
-  }
-}
-
-
-
-inline uint32_t get_msb_mask_32(int nbytes) {
-  switch (nbytes) {
-  case 1:
-    return 0xFF000000;
-  case 2:
-    return 0xFFFF0000;
-  case 3:
-    return 0xFFFFFF00;
-  default:
-    printf("ERROR : Invalid input to get_msb_mask\n");
-    return 0;
-  }
-}
-
-inline uint32_t get_lsb_mask_32(int nbytes) {
-  switch (nbytes) {
-    case 1:
-      return 0xFF;
-    case 2:
-      return 0xFFFF;
-    case 3:
-      return 0xFFFFFF;
-    default:
-      printf("ERROR : Invalid input to get_lsb_mask_32\n");
       return 0;
   }
 }
