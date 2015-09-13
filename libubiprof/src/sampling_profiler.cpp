@@ -419,12 +419,12 @@ SamplingProfiler::~SamplingProfiler() {
     g_probe_count += tls_stat[i]->thread_local_count;
   }
   // Profiler::cleanupInstrumentor();
-  delete (SamplingProfilerStat*)g_ubiprof_stats;
+  delete[] (SamplingProfilerStat*)g_ubiprof_stats;
 
   for (int i = 0; i < 64; i++) {
     delete tls_stats[i];
   }
 
-  delete tls_stats;
+  delete[] tls_stats;
 
 }

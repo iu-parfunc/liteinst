@@ -5,8 +5,13 @@
 #include "fastinst.hpp"
 #include "cycle.h"
 
+
 // Do not mangle this function
 extern "C" {
+
+  // __cyg_ function prototypes
+  void __cyg_profile_func_enter(void* fn_addr, void* call_site);
+  void __cyg_profile_func_exit(void* fn_addr, void* call_site);
 
   inline ticks calibrationFunction() {
 
