@@ -26,11 +26,7 @@
 #include <sched.h>
 #endif 
 
-#ifdef PATCH_TRANSACTION_XBEGIN
-#include <immintrin.h>
-#endif 
-
-#ifdef PATCH_TRANSACTION_XBEGIN2
+#if defined(PATCH_TRANSACTION_XBEGIN) || defined(PATCH_TRANSACTION_XBEGIN2) || defined(PATCH_TRANSACTION_XBEGIN3)
 #include <immintrin.h>
 #endif 
 
@@ -152,6 +148,9 @@ void init_patcher() {
 #ifdef PATCH_TRANSACTION_XBEGIN2
   printf("TRANSACTION2 VERSION OF PATCHER CODE\n");
 #endif 
+#ifdef PATCH_TRANSACTION_XBEGIN3
+  printf("TRANSACTION3 VERSION OF PATCHER CODE\n");
+#endif
 #ifdef PATCH_ATOMIC_EXCHANGE 
   printf("ATOMIC_EXCHANGE VERSION OF PATCHER CODE\n");
 #endif 
@@ -389,7 +388,7 @@ uint8_t oldFR = ((uint8_t*)addr)[0];
 
    /* ----------------------------------------------------------------- 
        TRANSACTION2
-       ----------------------------------------------------------------- */ 
+      ----------------------------------------------------------------- */ 
 #elif defined(PATCH_TRANSACTION_XBEGIN2)       
     uint8_t oldFR = ((uint8_t*)addr)[0]; 
     
@@ -412,6 +411,27 @@ uint8_t oldFR = ((uint8_t*)addr)[0];
 	return false; 
       }
     }
+   /* ----------------------------------------------------------------- 
+       TRANSACTION3
+      ----------------------------------------------------------------- */ 
+#elif defined(PATCH_TRANSACTION_XBEGIN3)       
+    if (_xbegin() == _XBEGIN_STARTED) { 
+      uint8_t oldFR = ((uint8_t*)addr)[0]; 
+    
+      if (oldFR == int3) {
+	_xend(); 
+	return false;
+      } 
+      ((uint8_t*)addr)[0] = int3; 
+      _xend(); 
+
+      WRITE(straddle_point,patch_after);  
+      WRITE((straddle_point-1), patch_before); 
+      return true; 
+    } else { 
+      return false; 
+    }
+      
     /* ----------------------------------------------------------------- 
        atomic-exchange 
        ----------------------------------------------------------------- */
