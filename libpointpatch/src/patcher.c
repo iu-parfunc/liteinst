@@ -154,8 +154,10 @@ void init_patcher() {
 #ifdef PATCH_ATOMIC_EXCHANGE 
   printf("ATOMIC_EXCHANGE VERSION OF PATCHER CODE\n");
 #endif 
-
-#ifdef WAIT_NANOSLEEP
+#ifdef PATCH_ATOMIC_EXCHANGE2
+  printf("ATOMIC_EXCHANGE2 VERSION OF PATCHER CODE\n");
+#endif 
+#ifdef WAIT_NANOSLEEP 
   printf("Using NANOSLEEP for wait\n"); 
   
   struct timespec res; 
@@ -433,12 +435,25 @@ uint8_t oldFR = ((uint8_t*)addr)[0];
     }
       
     /* ----------------------------------------------------------------- 
-       atomic-exchange 
+       atomic-exchange  
        ----------------------------------------------------------------- */
-#elif defined(PATCH_ATOMIC_EXCHANCE)
+#elif defined(PATCH_ATOMIC_EXCHANGE)
     __sync_lock_test_and_set((uint64_t*)addr,patch_value);
 
     return true;
+#elif defined(PATCH_ATOMIC_EXCHANGE2)
+    
+    uint8_t oldfr = __sync_lock_test_and_set((uint8_t*)addr,int3);
+
+    if (oldfr == int3) { 
+      /* someone already initiated patching here */ 
+      return false; 
+    } else { 
+      WRITE(straddle_point,patch_after);  
+      WRITE((straddle_point-1), patch_before); 
+      return true; 
+    } 
+
     /* ----------------------------------------------------------------- 
        WAIT BASED THREADSAFE PATCHER
        ----------------------------------------------------------------- */ 
