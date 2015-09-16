@@ -67,6 +67,8 @@ namespace utils {
     init_patch_site((void*)patch_site, 8);
     patch_64((void*)patch_site, patch); 
 
+    destroy_decoded(d);
+
   }
 
 }
