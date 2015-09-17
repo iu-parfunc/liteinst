@@ -49,6 +49,7 @@ void FinstrumentProbeProvider::initialize(ProbeId probe_id, ProbeArg arg) {
   pmd->inactive_seq = (call_masked | nop_mask); 
   pmd->state = ProbeState::INITIALIZING;
 
+  // Probably check if we are 64 bit mode before this
   pmd->is_straddler = is_straddler_64((void*)pmd->probe_addr); 
   pmd->straddle_point = straddle_point_64((void*)pmd->probe_addr);
 
@@ -160,7 +161,7 @@ ProbeMetaData* FinstrumentProbeProvider::getNewProbeMetaDataContainer(
   // [WARNING] This is a potential scalability bottleneck since all threads
   // will be locking on this lock to gain access to probe meta data during
   // probe initialization phase. 
-  probe_lock.lock(); // Double check locking
+  probe_lock.lock(); 
   if (probe_lookup.find(probe_addr) != probe_lookup.end()) { 
     probe_lock.unlock();
     return NULL;
