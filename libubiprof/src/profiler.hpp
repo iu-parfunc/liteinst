@@ -38,4 +38,11 @@ typedef struct InvocationData {
   uint64_t leaf_count;
 } InvocationData;
 
+enum class RunState { RUNNING, SHUTDOWN_REQUESTED, SHUTDOWN_ACKED, SHUTTING_DOWN };
+extern volatile RunState g_ubiprof_state; 
+                                         // This flag is used to communicate 
+                                         // the fact that Ubiprof is shutting
+                                         // down to daemon threads running in
+                                         // the background
+
 #endif /* _PROFILER_HPP_ */

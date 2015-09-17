@@ -213,7 +213,7 @@ void* samplingProbeMonitor(void* param) {
   int func_count = PROBE_PROVIDER->getNumberOfFunctions();
 
   struct timespec ts;
-  while(true) {
+  while(g_ubiprof_state == RunState::RUNNING) {
     for(int i = 0; i < func_count; i++) {
       if (!g_stats[i].active) {
         g_stats[i].sample_size = sp_sample_size;
@@ -233,6 +233,8 @@ void* samplingProbeMonitor(void* param) {
     nanosleep(&ts, NULL);
 
   }
+
+  g_ubiprof_state = RunState::SHUTDOWN_ACKED;
 
   return NULL;
 }
@@ -294,6 +296,7 @@ void SamplingProfiler::initialize() {
   fprintf(stderr, "[Sampling Profiler] **** Parameters : Sample size => %lu Epoch period => %.2lf \n", 
       sp_sample_size, sp_epoch_period); 
 
+  g_ubiprof_state = RunState::RUNNING;
   spawnMonitor();
 
 }
@@ -418,6 +421,21 @@ SamplingProfiler::~SamplingProfiler() {
     g_probe_overheads += tls_stat[i]->thread_local_overhead; 
     g_probe_count += tls_stat[i]->thread_local_count;
   }
+
+  g_ubiprof_state = RunState::SHUTDOWN_REQUESTED;
+
+  struct timespec ts;
+  while (!(g_ubiprof_state == RunState::SHUTDOWN_ACKED)) {
+    uint64_t nanos = sp_epoch_period * 1000000; 
+    uint64_t secs = nanos / 1000000000;
+    uint64_t nsecs = nanos % 1000000000;
+    ts.tv_sec = secs;
+    ts.tv_nsec = nsecs;
+    nanosleep(&ts, NULL);
+  }
+
+  g_ubiprof_state = RunState::SHUTTING_DOWN;
+
   // Profiler::cleanupInstrumentor();
   delete[] (SamplingProfilerStat*)g_ubiprof_stats;
 

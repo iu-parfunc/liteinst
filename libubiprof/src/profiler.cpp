@@ -8,6 +8,7 @@
 using namespace std;
 
 Profiler* PROFILER;
+volatile RunState g_ubiprof_state;
 
 Profiler* initializeGlobalProfiler(ProfilerType type) {
 
@@ -15,6 +16,8 @@ Profiler* initializeGlobalProfiler(ProfilerType type) {
   if (PROFILER) {
     throw -1;
   }
+
+  g_ubiprof_state = RunState::RUNNING;
 
   if (type == ProfilerType::BACKOFF) {
     PROFILER = new BackoffProfiler();
@@ -260,5 +263,12 @@ bool Profiler::unprofileFunction(FuncId func_id) {
 }
 
 Profiler::~Profiler() {
+  for (auto it = meta_data_by_id_.begin(); it != meta_data_by_id_.end();
+      ++it) {
+    FuncMetaData* fmd = it->second;
+    delete fmd->probe_meta_data;
+    delete fmd;
+  }
+
   delete PROBE_PROVIDER;
 }
