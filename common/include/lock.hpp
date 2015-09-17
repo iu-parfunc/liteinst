@@ -9,7 +9,10 @@ namespace lock {
   class CASLock {
 
     private:
-      std::atomic<uint32_t> cas_lock;
+      // Buddhika : std::atomic version not working at the moment.
+      // Revertng plain __sync_compare_and_swap
+      // std::atomic<uint32_t> cas_lock;
+      uint32_t cas_lock_raw;
 
     public:
       CASLock();

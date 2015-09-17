@@ -61,7 +61,7 @@ namespace utils {
     uint64_t patch = (uint64_t) (sequence & mask);
     uint8_t* patch_ptr = (uint8_t*) (&patch);
     patch_ptr[0] = ((uint8_t*)patch_site)[0]; // MOV REG opcode
-    *(uint32_t*)(patch_ptr+1) = probe_id; 
+    *(uint32_t*)(patch_ptr+1) = probe_id;  // Unsafe patching here..
 
     // Caculate the patch site and patch it
     init_patch_site((void*)patch_site, 8);

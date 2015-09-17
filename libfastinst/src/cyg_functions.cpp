@@ -182,7 +182,10 @@ void __cyg_profile_func_enter(void* func_addr, void* call_site_addr) {
 
   // This is the branch probably taken most often. 
   if (IS_PROBE_ID(function)) { 
+    assert(function < ins.probe_meta_data.size()); 
     ProbeMetaData* pmd = ins->getProbeMetaData(function);
+
+    assert(pmd != NULL);
 
     pmd->instrumentation_func.load()(pmd->probe_arg);
     
@@ -243,7 +246,6 @@ void __cyg_profile_func_enter(void* func_addr, void* call_site_addr) {
   // NOW PATCH ARGUMENTS (Set up for next run to enter the efficient branch) 
   patch_first_argument(func_addr, (void*) call_addr, (uint32_t) pmd->probe_id);
 
-
   // Finish off by calling instrumentation function 
   pmd->instrumentation_func.load()(pmd->probe_arg);
 
@@ -295,7 +297,12 @@ void __cyg_profile_func_exit(void* func_addr, void* call_site_addr) {
   }
 
   if (IS_PROBE_ID(function)) { 
+    assert(function < ins.probe_meta_data.size()); 
+
     ProbeMetaData* pmd = ins->getProbeMetaData(function);
+
+    assert(pmd != NULL);
+
     pmd->instrumentation_func.load()(pmd->probe_arg);
     return; 
   }
