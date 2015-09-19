@@ -36,7 +36,7 @@
 #include <pthread.h> 
 
 #define ITERS 1000000
-#define NUM_RUNNERS 10
+#define NUM_RUNNERS 4
 
 unsigned long g_foo_val[NUM_RUNNERS] = {0}; 
 unsigned long g_bar_val[NUM_RUNNERS] = {0}; 

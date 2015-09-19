@@ -66,9 +66,12 @@ const uint8_t int3 = 0xCC;
 #define WAIT() clock_nanosleep(CLOCK_MONOTONIC,0, &g_wait_time,NULL)
 #elif defined(WAIT_CPUID) 
 #define WAIT() asm volatile ( "cpuid" ) 
+#elif defined(WAIT_SPIN_RDTSC)
+#define WAIT() wait_spin_rdtsc()
 #else 
 #define WAIT() for(long i = 0; i < WAIT_ITERS; i++) { asm (""); } 
 #endif
+
 
 
 /* -----------------------------------------------------------------
@@ -127,11 +130,15 @@ void init_patcher() {
   
   sigaction(SIGTRAP, &g_newact, &g_oldact);
 
+#ifndef NDEBUG 
 #ifdef NO_CAS 
   printf("NO_CAS VERSION OF PATCHER CODE\n"); 
 #endif
 #ifdef NO_WAIT
   printf("NO_WAIT VERSION OF PATCHER CODE\n");
+#endif 
+#ifdef WAIT_SPIN_RDTSC
+  printf("WAIT_SPIN_RDTSC VERSION OF PATCHER CODE\n");
 #endif 
 #ifdef PATCH_FLUSH_CACHE
   printf("FLUSH_CACHE VERSION OF PATCHER CODE\n"); 
@@ -159,7 +166,10 @@ void init_patcher() {
 #endif 
 #ifdef WAIT_NANOSLEEP 
   printf("Using NANOSLEEP for wait\n"); 
-  
+#endif 
+#endif  /* NDEBUG */ 
+
+#ifdef WAIT_NANOSLEEP 
   struct timespec res; 
   clock_getres(CLOCK_MONOTONIC,&res); 
   if (res.tv_sec > 0) { 
@@ -172,8 +182,6 @@ void init_patcher() {
   g_wait_time.tv_sec = 0; 
 
   printf("Wait time is set to: %ld ns\n", g_wait_time.tv_nsec);
-  
-  
 #endif
 }
 
@@ -193,7 +201,21 @@ clflush(volatile void *p)
     asm volatile ("clflush (%0)" :: "r"(p));
 }
 
-   
+/* RDTSC */    
+static inline uint64_t rdtsc() {
+  uint64_t a, d;
+  __asm__ volatile ("rdtsc" : "=a" (a), "=d" (d));
+  return (d<<32) | a;
+}
+
+static inline void wait_spin_rdtsc() { 
+  uint64_t start = rdtsc(); 
+
+  while (rdtsc() < start + WAIT_ITERS); 
+
+  return; 
+}
+
 /* -----------------------------------------------------------------
    Interrupt handlers 
    ----------------------------------------------------------------- */ 

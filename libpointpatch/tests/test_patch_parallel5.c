@@ -34,7 +34,6 @@
 #ifndef ITERS
 #define ITERS 10000000
 #endif 
-#define NUM_RUNNERS 10 
 
 unsigned long g_foo_val = 0; 
 unsigned long  g_bar_val = 0; 
@@ -140,7 +139,8 @@ int main(int argc, char** argv) {
   
   pthread_t thread1, thread2; 
   int r1,r2; 
-  pthread_t runners[NUM_RUNNERS]; 
+  int num_runners = 4; 
+  pthread_t *runners;
   
   unsigned long it = 0; 
 
@@ -165,10 +165,16 @@ int main(int argc, char** argv) {
   /* where within the call should the straddler occur */ 
   int call_straddler_point = 1;
   
-  if (argc == 2){ /* if there is an argument */
+  if (argc == 1){ 
+    printf("NO ARGS: Running with default settings\n"); 
+  } else if (argc == 3){ /* if there is an argument */
     call_straddler_point = atoi(argv[1]);
+    num_runners = atoi(argv[2]); 
   } 
   printf("Setting straddler point at %d (distance in byte into the patch site)\n",call_straddler_point); 
+  printf("Running with %d threads executing the call site\n", num_runners);
+
+  runners = (pthread_t*)malloc(sizeof(pthread_t)*num_runners); 
 
 
   /* find a straddling position within fun */
@@ -209,12 +215,12 @@ int main(int argc, char** argv) {
 
   
   /* Start the runners */ 
-  int ids[NUM_RUNNERS];
+  int *ids = (int*)malloc(sizeof(int)*num_runners);
   /* I hope this call to foo will initialize the call site */
   int id_ = -1; 
   runner(&id_); 
   
-  for (int i = 0; i < NUM_RUNNERS; i ++) { 
+  for (int i = 0; i < num_runners; i ++) { 
     ids[i] = i;
     pthread_create(&runners[i],
 		   NULL, 
@@ -222,7 +228,7 @@ int main(int argc, char** argv) {
 		   &ids[i]);
   }
 
-  for (int i = 0; i < NUM_RUNNERS; i ++) { 
+  for (int i = 0; i < num_runners; i ++) { 
     pthread_join(runners[i],NULL); 
   }					
 	
@@ -238,7 +244,7 @@ int main(int argc, char** argv) {
 	 g_foo_val,
 	 g_bar_val,
 	 g_foo_val + g_bar_val,
-	 NUM_RUNNERS * ITERS);
+	 num_runners * ITERS);
  
   /* if (g_foo_val + g_bar_val == ITERS) { */ 
   if (g_foo_val > 0 && g_bar_val > 0) {
