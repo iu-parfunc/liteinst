@@ -57,7 +57,7 @@ const uint8_t int3 = 0xCC;
    ----------------------------------------------------------------- */
 
 #ifndef WAIT_ITERS
-#define WAIT_ITERS 100
+#define WAIT_ITERS 400
 #endif 
 
 #if defined(NO_WAIT) 

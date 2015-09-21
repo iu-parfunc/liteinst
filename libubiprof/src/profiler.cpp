@@ -17,6 +17,10 @@ Profiler* initializeGlobalProfiler(ProfilerType type) {
     throw -1;
   }
 
+#ifdef DISABLE_STRADDLERS
+  fprintf(stderr, "[Ubiprof] Straddlers will be disabled ..\n");
+#endif
+
   g_ubiprof_state = RunState::RUNNING;
 
   if (type == ProfilerType::BACKOFF) {
@@ -122,11 +126,22 @@ void Profiler::callback(const ProbeMetaData* pmd) {
   // Mandatory probe initialization call
   PROBE_PROVIDER->initialize(pmd->probe_id, func_id);
   try {
+#ifdef DISABLE_STRADDLERS
+    if (pmd->is_straddler) {
+      // fprintf(stderr, "Deactivating probe %p\n", pmd->probe_addr);
+      PROBE_PROVIDER->deactivate(pmd->probe_id);
+    } else if (pmd->probe_context == ProbeContext:: ENTRY) {
+      PROBE_PROVIDER->activate(pmd->probe_id, profiler_->prolog_);
+    } else {
+      PROBE_PROVIDER->activate(pmd->probe_id, profiler_->epilog_);
+    }
+#else
     if (pmd->probe_context == ProbeContext:: ENTRY) {
       PROBE_PROVIDER->activate(pmd->probe_id, profiler_->prolog_);
     } else {
       PROBE_PROVIDER->activate(pmd->probe_id, profiler_->epilog_);
     }
+#endif
   } catch (int e) {
     fprintf(stderr, "Error while activating probe of function : %s.\n",
         pmd->func_name.c_str());

@@ -14,6 +14,8 @@
 
 using namespace std;
 
+static __thread bool allocated;
+
 // All thread statistics data thread local reference
 static __thread TLStatistics** all_thread_stats;
 
@@ -25,8 +27,6 @@ static __thread TLSSamplingProfilerStat* current_thread_func_stats_table;
 
 // Instrumentation Functions
 void minimalSamplingPrologFunction(ProbeArg func_id) {
-
-  static __thread bool allocated;
 
   if (!allocated) {
     allocated = true;
@@ -51,6 +51,11 @@ void minimalSamplingPrologFunction(ProbeArg func_id) {
 }
 
 void minimalSamplingEpilogFunction(ProbeArg func_id) {
+
+  if (!allocated) {
+    // Prolog has not been run for some reason. Skip this sample.
+    return;
+  }
 
   ticks epilog_start = getticks();
 

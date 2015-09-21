@@ -247,7 +247,9 @@ void __cyg_profile_func_enter(void* func_addr, void* call_site_addr) {
   patch_first_argument(func_addr, (void*) call_addr, (uint32_t) pmd->probe_id);
 
   // Finish off by calling instrumentation function 
-  pmd->instrumentation_func.load()(pmd->probe_arg);
+  if (pmd->state != ProbeState::DEACTIVATED) {
+    pmd->instrumentation_func.load()(pmd->probe_arg);
+  }
 
 }
 #endif
@@ -364,7 +366,10 @@ void __cyg_profile_func_exit(void* func_addr, void* call_site_addr) {
   patch_first_argument(func_addr, (void*) call_addr, (uint32_t) pmd->probe_id);
 
   // Finish off by calling instrumentation function 
-  pmd->instrumentation_func.load()(pmd->probe_arg);
+
+  if (pmd->state != ProbeState::DEACTIVATED) {
+    pmd->instrumentation_func.load()(pmd->probe_arg);
+  }
 
 }
 #endif

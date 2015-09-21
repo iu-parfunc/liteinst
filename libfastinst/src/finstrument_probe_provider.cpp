@@ -75,6 +75,8 @@ bool FinstrumentProbeProvider::activate(const ProbeId probe_id,
 
   // Patch the probe site 
   patch_64((void*) pmd->probe_addr, pmd->active_seq);
+
+  pmd->state = ProbeState::ACTIVE;
   return true;
 }
 
@@ -93,6 +95,8 @@ bool FinstrumentProbeProvider::deactivate(const ProbeId probe_id) {
 
   // Patch the probe site 
   patch_64((void*) pmd->probe_addr, pmd->inactive_seq);
+
+  pmd->state = ProbeState::DEACTIVATED;
   return true;
 }
 
