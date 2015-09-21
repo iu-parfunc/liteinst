@@ -64,7 +64,7 @@ void writer(int *arg) {
     clock_gettime(CLOCK_MONOTONIC, &t); 
     g_array[trial]=0xFFFFFFFFFFFFFFFF;
     
-    g_times[trial][*arg] = t.tv_sec * 1000000000 + t.tv_nsec;
+    g_times[trial][*arg] = t.tv_sec * NS_PER_S + t.tv_nsec;
 
     /* sleep some usec, before next test */ 
     usleep(10);
@@ -88,7 +88,7 @@ void reader(int *arg) {
     while (g_array[trial] != 0xFFFFFFFFFFFFFFFF); 
     clock_gettime(CLOCK_MONOTONIC, &t); 
     
-    g_times[trial][*arg] = t.tv_sec * 1000000000 + t.tv_nsec;
+    g_times[trial][*arg] = t.tv_sec * NS_PER_S + t.tv_nsec;
     
    
   }
@@ -121,7 +121,6 @@ int main(int argc, char **argv) {
 
   pthread_t *threads=(pthread_t*)malloc(sizeof(pthread_t)*num_threads);
 
-  //printf("a\n");
 
   int *ids = (int*)malloc(sizeof(int)*num_threads);
 
