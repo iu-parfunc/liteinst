@@ -285,7 +285,7 @@ int main(int argc, char **argv) {
     pthread_join(threads[i],NULL);
   }
 
-  
+  /*
   for (int trial = 0; trial < NUM_TRIALS; trial ++){ 
     printf("Trial %d: ", trial);
     for (int i = 1; i < num_threads; i ++) { 
@@ -293,7 +293,7 @@ int main(int argc, char **argv) {
       printf("%lu ",g_times[trial][i] - g_times[trial][0]); 
     }
     printf("\n");
-  }
+    } */ 
   
   print_stats();
   
