@@ -38,7 +38,7 @@ done;
 # unparameterised tests above.
 
 #test all straddling points
-for f in test_patch_parallel4.exe test_patch_parallel5.exe test_patch_parallel6.exe; do
+for f in test_patch_parallel4.exe; do
     for i in 2 3 4 5 6 7 ; do   # one is tested above
 	echo ""
 	echo ""
@@ -58,12 +58,44 @@ for f in test_patch_parallel4.exe test_patch_parallel5.exe test_patch_parallel6.
 	    echo "$f FAILED! "
 	    echo '****************************'
 
-	    fails="$fails $f"
+	    fails="$fails $f($i)"
 	    failed=$((failed+1))
 	fi
 
 
 
+    done;
+done;
+#test all straddling points att varying numbers of threads 
+# hitting the call site. 
+for f in test_patch_parallel5.exe test_patch_parallel6.exe test_patch_parallel7.exe; do
+    for threads in 1 2 3 4 5 6 7; do 
+	for i in 1 2 3 4 5 6 7 ; do   # one is tested above
+	    echo ""
+	    echo ""
+
+	    echo '****************************'
+	    echo "RUNNING TEST $f"
+	    echo '****************************'
+
+	    time ./${f} $i $threads
+ 	    if [ $? -eq 0 ]; then
+		echo '****************************'
+		echo "$f PASSED"
+		echo '****************************'
+		success=$((success+1))
+	    else
+		echo '****************************'
+		echo "$f FAILED! "
+		echo '****************************'
+		
+		fails="$fails $f($i,$threads)"
+		failed=$((failed+1))
+	    fi
+	    
+	    
+
+	done;
     done;
 done;
 

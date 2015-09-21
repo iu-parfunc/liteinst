@@ -15,6 +15,7 @@
 #include <memory.h>
 #include <stdint.h> 
 #include <stdlib.h>
+#include <time.h>
 
 #include <patcher.h>
 
@@ -51,22 +52,22 @@ unsigned int start_addr = 0;
 
 
 void activator(int *arg) { 
+  struct timespec t;
+  struct timespec r; 
+  t.tv_sec = 0; 
+  t.tv_nsec = 200; 
   
   while (g_first_run); /* wait until setup phase is done */ 
   
   while(g_running) { 
     patch_64((void*)g_call_addr, g_orig_call);
+
+    /* nanosleep(&t,&r); */ 
+    /* potentially check r for remainder 
+       but I dont think that is important for this test */ 
+    
+    patch_64((void*)g_call_addr, g_nop_patch); 
   }  
-} 
-
-void deactivator(int *arg) { 
-
-  while (g_first_run); /* wait until setup phase is done */ 
-  
-  while (g_running) { 
-
-    patch_64((void*)g_call_addr, g_nop_patch);
-  }
 } 
 
 void foo(void) { 
@@ -108,8 +109,7 @@ void runner(int *arg) {
     ((void (*)(void ))&fun[start_addr])(); 
   }
 
-  
-
+ 
 } 
 
 
@@ -127,11 +127,6 @@ int main(int argc, char** argv) {
 		 (void *) activator, 
 		 (void *) &r1);
 
-  pthread_create(&thread2,
-		 NULL, 
-		 (void *) deactivator, 
-		 (void *) &r2); 
-
    
   printf("Testing parallel updates to a STRADDLING call_site as it is being executed by multiple threads.\n"); 
   printf("Number of iterations: %d\n",ITERS);
@@ -142,7 +137,7 @@ int main(int argc, char** argv) {
 
   /* where within the call should the straddler occur */ 
   int call_straddler_point = 1;
-
+  
   if (argc == 1){ 
     printf("NO ARGS: Running with default settings\n"); 
   } else if (argc == 3){ /* if there is an argument */
@@ -153,7 +148,8 @@ int main(int argc, char** argv) {
   printf("Running with %d threads executing the call site\n", num_runners);
 
   runners = (pthread_t*)malloc(sizeof(pthread_t)*num_runners); 
-  
+
+
   /* find a straddling position within fun */
   uint64_t fun_address = (uint64_t)fun; 
   size_t cache_line_size=sysconf(_SC_LEVEL3_CACHE_LINESIZE);
@@ -213,7 +209,6 @@ int main(int argc, char** argv) {
   g_running = false; 
   
   pthread_join(thread1, NULL); 
-  pthread_join(thread2, NULL); 
   
   printf("function foo executed %ld times.\n",g_foo_val); 
  
@@ -233,7 +228,5 @@ int main(int argc, char** argv) {
   
   /* if test reaches this point without crashing it is 
      considered a success */ 
-
- 
 
 }
