@@ -18,7 +18,7 @@ gcc --std=gnu99 experiment1.c -lpthread -o experiment1.exe
 
 #define NS_PER_S 1000000000
 
-#define NUM_TRIALS 100
+#define NUM_TRIALS 1000000
 #define MAX_CORES  64
 
 volatile uint64_t g_array[NUM_TRIALS] = {0};
@@ -95,8 +95,151 @@ void reader(int *arg) {
   
 }
 
+/* -----------------------------------------------------------------
+   SORTING and statistics 
+   ----------------------------------------------------------------- */ 
+
+int cmp(const void *a, const void *b) {
+  return ( *(uint64_t*)a - *(uint64_t*)b); 
+}
 
 
+double median_in_range(int start, int end, uint64_t *data) { 
+  double median;
+
+  int num_vals = end - start; 
+
+  if (num_vals % 2 == 0) { /* even number of values */ 
+    uint64_t tmp1 = data[start + (num_vals / 2)];  
+    uint64_t tmp2 = data[start + (num_vals / 2 + 1)];  
+    median = (double)(tmp1 + tmp2) / 2;
+  } else { 
+    median = (double)data[start + (num_vals / 2)];  
+  }
+  
+  return median; 
+} 
+
+void print_stats() { 
+  
+  int num_vals = NUM_TRIALS*(g_num_cores-1);
+  
+  uint64_t *flatvals = 
+    (uint64_t*)malloc(sizeof(uint64_t)*num_vals);
+
+
+  
+  /* copy and flatten */ 
+  int targ_i = 0; 
+  for (int i = 0; i < NUM_TRIALS; i ++){
+    for (int j = 1; j < g_num_cores; j ++) {
+      flatvals[targ_i] = g_times[i][j] - g_times[i][0]; 
+      targ_i++; 
+    }
+  }  
+
+  /* sort time values */ 
+
+  qsort(flatvals, num_vals, sizeof(uint64_t),cmp);
+  
+
+  /*  for (int i = 0; i < num_vals; i ++) { 
+    printf ("%lu ", flatvals[i]);
+    }*/ 
+
+
+  /* find median */ 
+  
+  double median = median_in_range(0, num_vals, flatvals);
+
+  /* find Q1 and Q3 */
+  double q1 = median_in_range(0,num_vals/2,flatvals); 
+  double q3 = median_in_range(num_vals/2,num_vals,flatvals); 
+  
+  /* find diff_q */ 
+
+  double diff_q = q3 - q1; 
+  
+  /* find inner fences  */
+  double inner_fence_low  = q1 - (diff_q * 1.5); 
+  double inner_fence_high = q3 + (diff_q * 1.5); 
+  double outer_fence_low  = q1 - (diff_q * 3); 
+  double outer_fence_high = q3 + (diff_q * 3); 
+  double extreme_fence_low  = q1 - (diff_q * 9); 
+  double extreme_fence_high = q3 + (diff_q * 9); 
+  
+
+    
+  
+  
+  //  uint64_t q1     = flatvals[mid_index/2]; 
+  //uint64_t q3     = flatvals[mid_index + ((num_vals - mid_index) / 2)]; 
+  
+  printf("Median: %f\n",median); 
+  printf("Q1: %f\n", q1); 
+  printf("Q3: %f\n", q3); 
+  printf("inner_fence_low: %f\n",inner_fence_low); 
+  printf("inner_fence_high: %f\n",inner_fence_high);  
+  printf("outer_fence_low: %f\n",outer_fence_low); 
+  printf("outer_fence_high: %f\n",outer_fence_high); 
+  printf("extreme_fence_low: %f\n",extreme_fence_low); 
+  printf("extreme_fence_high: %f\n",extreme_fence_high); 
+
+  
+  printf("Some of the EXTREME outliers: \n");
+  int m = num_vals - 1; 
+  int n_outliers = 0; 
+  uint64_t val; 
+
+  while (flatvals[m] > extreme_fence_high) { 
+    n_outliers ++;
+    if (n_outliers % 100 == 0) {
+      printf(" %lu ",flatvals[m]); 
+    }
+    m --;
+  }
+  printf("\nEXTREME outliers total: %d\n",n_outliers);
+  
+  double max_val = extreme_fence_low;
+  double min_val = extreme_fence_high; 
+  double avg_val = 0; 
+
+  double sum = 0; 
+  int counter;
+
+  int start = 0; 
+  int end = num_vals - 1; 
+  
+  while (flatvals[start] <= extreme_fence_low) start++; 
+  while (flatvals[end] >= extreme_fence_high) end--; 
+
+  
+  for (int i = start; i < end; i++) { 
+    uint64_t val = (double)flatvals[i];
+    if ( val < min_val) min_val = val;
+    if ( val > max_val) max_val = val; 
+    sum += val; 
+    counter++; 
+  }
+  
+  avg_val = (double)sum / counter; 
+  
+  printf("Min: %f\n", min_val);
+  printf("Max: %f\n", max_val);
+  printf("Avg: %f\n", avg_val);
+  
+  
+  
+  
+  free(flatvals); 
+
+}
+
+
+
+/* -----------------------------------------------------------------
+   MAIN
+   ----------------------------------------------------------------- */ 
 int main(int argc, char **argv) { 
   g_num_cores = sysconf(_SC_NPROCESSORS_ONLN)/2;
   int lv3_cache_line_size = sysconf(_SC_LEVEL3_CACHE_LINESIZE);
@@ -152,6 +295,10 @@ int main(int argc, char **argv) {
     printf("\n");
   }
   
+  print_stats();
+  
+  free(threads); 
+  free(g_all_ready);
   
   printf("Done!\n"); 
   return 0;
