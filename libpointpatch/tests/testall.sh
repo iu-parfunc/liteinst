@@ -107,6 +107,12 @@ echo "Num passed tests: " $success
 echo "Num failed tests: " $failed
 echo "Failed tests: " $fails
 
+if [ $# -eq 2 ]; then 
+    echo "Appending data to file $2"
+    echo "$1, $failed" >> $2 
+fi 
+
+
 if [ "$failed" == "0" ];
 then
     exit 0;
