@@ -56,6 +56,9 @@ typedef void (*InstrumentationFunc) (ProbeArg context_id);
 /// Atomic reference to an InstrumentationFunc function pointer
 typedef std::atomic<InstrumentationFunc> InstrumentationFuncAtomic;
 
+// Forward declare ProbeProvider class to be used inside ProbeMetaData
+class ProbeProvider;
+
 /// Everything we need to know about a newly discovered probe.
 typedef struct ProbeMetaData {
   FuncId func_id;
@@ -75,7 +78,7 @@ typedef struct ProbeMetaData {
   int  straddle_point;
 
   // The provider that "owns" this probe:
-  // ProbeProvider* provider;
+  ProbeProvider* provider;
 } ProbeMetaData;
 
 /// Probe meta data vector data type

@@ -94,7 +94,7 @@ Profiler::Profiler(InstrumentationFunc prolog, InstrumentationFunc epilog) :
 void Profiler::callback(const ProbeMetaData* pmd) {
 
   // Profiler hasn't yet been initialized properly
-  if (!profiler_ || !provider_) {
+  if (!profiler_ || !pmd->provider) {
     // return;
     throw -1; // Make the failure signalable without terminating
   }
@@ -122,22 +122,22 @@ void Profiler::callback(const ProbeMetaData* pmd) {
   profiler_->func_lock_.unlock(); 
 
   // Mandatory probe initialization call
-  provider_->initialize(pmd->probe_id, func_id);
+  pmd->provider->initialize(pmd->probe_id, func_id);
   try {
 #ifdef DISABLE_STRADDLERS
     if (pmd->is_straddler) {
       // fprintf(stderr, "Deactivating probe %p\n", pmd->probe_addr);
-      provider_->deactivate(pmd->probe_id);
+      pmd->provider->deactivate(pmd->probe_id);
     } else if (pmd->probe_context == ProbeContext:: ENTRY) {
-      provider_->activate(pmd->probe_id, profiler_->prolog_);
+      pmd->provider->activate(pmd->probe_id, profiler_->prolog_);
     } else {
-      provider_->activate(pmd->probe_id, profiler_->epilog_);
+      pmd->provider->activate(pmd->probe_id, profiler_->epilog_);
     }
 #else
     if (pmd->probe_context == ProbeContext:: ENTRY) {
-      provider_->activate(pmd->probe_id, profiler_->prolog_);
+      pmd->provider->activate(pmd->probe_id, profiler_->prolog_);
     } else {
-      provider_->activate(pmd->probe_id, profiler_->epilog_);
+      pmd->provider->activate(pmd->probe_id, profiler_->epilog_);
     }
 #endif
   } catch (int e) {
