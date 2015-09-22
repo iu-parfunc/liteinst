@@ -165,6 +165,9 @@ class ProbeProvider {
      *
      * \param probe_id The probe id opaque identifier
      * \param func The instrumentation function
+     *
+     * \return A boolean indicating success or failure.  True implies
+     * that the probe was successfully activated.
      */
     virtual bool activate(ProbeId probe_id, InstrumentationFunc func) = 0;
 
