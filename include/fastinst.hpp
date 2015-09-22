@@ -73,6 +73,9 @@ typedef struct ProbeMetaData {
   InstrumentationFuncAtomic instrumentation_func;
   bool is_straddler;
   int  straddle_point;
+
+  // The provider that "owns" this probe:
+  // ProbeProvider* provider;
 } ProbeMetaData;
 
 /// Probe meta data vector data type
@@ -90,6 +93,8 @@ typedef std::vector<ProbeMetaData*> ProbeVec;
 ///  (2) Call either activate() or deactivate() any number of times,
 ///      to leave the probe in a valid state by callback completion.
 ///
+/// These methods can be called by accessing the owning ProbeProvider
+/// through the ProbeMetadata pointer itself.
 typedef void (*Callback) (const ProbeMetaData* pmd);
 
 
@@ -112,11 +117,11 @@ class ProbeProvider {
       probe_meta_data = new ProbeVec;
     }
 
-    /// This method can be used to do probe provider specific further 
-    /// intializations. 
+    /// This method can be used to do probe provider specific further
+    /// intializations.
     /* Specially any initialization which might require the
-     * ProbeProvider instance to have been fully constructed. The default 
-     * implementation is empty. 
+     * ProbeProvider instance to have been fully constructed. The default
+     * implementation is empty.
      *
      */
     virtual void initializeProvider() {
@@ -160,6 +165,9 @@ class ProbeProvider {
      *
      * \param probe_id The probe id opaque identifier
      * \param func The instrumentation function
+     *
+     * \return A boolean indicating success or failure.  True implies
+     * that the probe was successfully activated.
      */
     virtual bool activate(ProbeId probe_id, InstrumentationFunc func) = 0;
 
@@ -178,14 +186,14 @@ class ProbeProvider {
     virtual bool deactivate(ProbeId probe_id) = 0;
 
     /// Gets the number of functions in the application
-    /*  Usually probe providers are privy to this information by reading 
-     *  ELF tables during the processing of probe sites. This method 
+    /*  Usually probe providers are privy to this information by reading
+     *  ELF tables during the processing of probe sites. This method
      *  exposes the number of functions found during such initialization
-     *  to the client. This can be really useful for initialization of 
-     *  client data structures for gathering statistics related to each 
+     *  to the client. This can be really useful for initialization of
+     *  client data structures for gathering statistics related to each
      *  function in more efficient manner (e.g: array instead
-     *  of list) since the size of the data structure is known before hand. 
-     *  \return The number of functions discovered durig probe provider 
+     *  of list) since the size of the data structure is known before hand.
+     *  \return The number of functions discovered durig probe provider
      *  initialization. Returns -1 if the particular provider isn't capable
      *  of enumerating functions.
      */
@@ -198,7 +206,7 @@ class ProbeProvider {
       uint64_t straddler_hist[8] = {0};
       uint64_t entry_straddlers = 0;
       uint64_t exit_straddlers  = 0;
-      for (auto it = probe_meta_data->begin(); it != probe_meta_data->end(); 
+      for (auto it = probe_meta_data->begin(); it != probe_meta_data->end();
           ++it) {
         ProbeMetaData* pmd = *it;
         if (pmd->is_straddler) {
@@ -217,9 +225,9 @@ class ProbeProvider {
 
       fprintf(fp, "Straddler Report \n");
       fprintf(fp, "================ \n");
-      fprintf(fp, "Straddlers (out of total probes)  : %lu/%lu\n", 
+      fprintf(fp, "Straddlers (out of total probes)  : %lu/%lu\n",
           num_straddlers, num_probes);
-      fprintf(fp, "Straddlers % (out of total probes) : %.2lf\n", 
+      fprintf(fp, "Straddlers % (out of total probes) : %.2lf\n",
           (double) num_straddlers * 100/ num_probes);
       fprintf(fp, "Entry straddlers : %lu\n", entry_straddlers);
       fprintf(fp, "Exit straddlers : %lu\n", exit_straddlers);
@@ -229,11 +237,11 @@ class ProbeProvider {
         fprintf(fp, "%d  :  %lu\n", i, straddler_hist[i]);
       }
 
-      fclose(fp); 
+      fclose(fp);
 #endif
 
       // Release probe meta data entries
-      for (auto it = probe_meta_data->begin(); it != probe_meta_data->end(); 
+      for (auto it = probe_meta_data->begin(); it != probe_meta_data->end();
           ++it) {
         ProbeMetaData* pmd = *it;
         delete pmd;
