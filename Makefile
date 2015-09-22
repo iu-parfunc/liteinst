@@ -3,9 +3,6 @@
 .PHONY: fastinst_tests pointpatch_tests dyninst_inst_test
 # ----------------------------------------
 
-CC=icc
-CXX=icpc
-
 # TODO: build everything before running/benchmarking:
 all: lib
 # Nothing here currently.
