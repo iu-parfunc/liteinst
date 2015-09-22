@@ -23,8 +23,8 @@ lib:
 	$(CXX) --version || echo ok
 	$(CC) --version || echo ok
 
-	# (cd instrumentors/finstrument/src/ && make CFLAGS='-DNDEBUG -O3')
-	# (cd profilers/src/ && make install CFLAGS='-DNDEBUG -O3')
+#	(cd instrumentors/finstrument/src/ && make CFLAGS='-DNDEBUG -O3')
+#	(cd profilers/src/ && make install CFLAGS='-DNDEBUG -O3')
 
 #       Ugh, something above wipes the build/ directory... FIXME
 	(cd libpointpatch/src && make CC=$(CC) CXX=$(CXX) CFLAGS="$(CFLAGS) -DNDEBUG -O3" && make install )
@@ -49,8 +49,8 @@ doc:
 # --------------------------------------------------------------------------------
 
 microbench : lib
-	# (cd microbenchmarks && make run)
-	(cd libfastinst/microbenchmarks && make run) 
+# 	(cd microbenchmarks && make run)
+	(cd libfastinst/microbenchmarks && make run)
 
 bench: lib
 	(cd benchmarks && make run)
@@ -103,7 +103,9 @@ docker: clean
 WDYNINST_TAG=iu-parfunc/ubiprof_dyninst:14.10
 #
 # TODO: This should eventually turn into the benchmarking image.
-docker2: clean
+
+docker2: docker_dyninst
+docker_dyninst: clean
 # I know of no principled way to parameterize Dockerfiles.  Hence *this* hackery:
 	cp -f dockerfiles/Dockerfile_wdyninst_14.10 ./Dockerfile
 	docker build -t $(WDYNINST_TAG) .
@@ -123,13 +125,13 @@ testdocker:
 # --------------------------------------------------------------------------------
 
 clean:
-	# (cd instrumentors/finstrument/src/ && make clean)
-	# (cd profilers/src/ && make clean)
+# 	(cd instrumentors/finstrument/src/ && make clean)
+# 	(cd profilers/src/ && make clean)
 	(cd libpointpatch/src/ && make clean)
 	(cd libpointpatch/tests/ && make clean)
 	(cd libfastinst/tests/ && make clean)
 	(cd libfastinst/src/ && make clean)
-	# (cd libubiprof/tests/ && make clean)
+# 	(cd libubiprof/tests/ && make clean)
 	(cd libubiprof/src/ && make clean)
 
 	rm -rf ./build run-benchmarks.hi run-benchmarks.exe run-benchmarks.o
