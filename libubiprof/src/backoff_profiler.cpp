@@ -28,9 +28,10 @@ void backoffPrologFunction(ProbeArg func_id) {
 
   if (!allocated) {
     allocated = true;
-    uint32_t function_count = PROBE_PROVIDER->getNumberOfFunctions();
+    uint32_t function_count = Profiler::provider_->getNumberOfFunctions();
     // C++ value initilization.. Similar to calloc
-    current_thread_func_stats_table = new TLSBackoffProfilerStat[PROBE_PROVIDER->getNumberOfFunctions()](); 
+    current_thread_func_stats_table = 
+      new TLSBackoffProfilerStat[Profiler::provider_->getNumberOfFunctions()](); 
     current_thread_stats = new TLStatistics;
     current_thread_stats->func_stats = current_thread_func_stats_table;
     current_thread_stats->thread_local_overhead = 0;
@@ -161,7 +162,8 @@ void BackoffProfiler::initialize() {
   // Profiler::initInstrumentor(backoffPrologFunction, backoffEpilogFunction);
 
   // C++ value initilization.. Similar to calloc
-  statistics = new BackoffProfilerStat[PROBE_PROVIDER->getNumberOfFunctions()](); 
+  statistics = 
+    new BackoffProfilerStat[Profiler::provider_->getNumberOfFunctions()](); 
 
   // Leaking the reference to the global variable so that 
   // instrumentaion functions can access it without going through object reference
@@ -210,7 +212,7 @@ void BackoffProfiler::dumpStatistics() {
   FILE* fp = fopen("prof.out", "a");
 
   uint64_t total_count = 0;
-  int func_count = PROBE_PROVIDER->getNumberOfFunctions();
+  int func_count = Profiler::provider_->getNumberOfFunctions();
   fprintf(stderr, "\nTotal function count : %d\n", func_count);
   fprintf(stderr, "Thread count : %d\n", thread_counter);
   fprintf(fp, "Function,Count,Min_time,Max_time,Avg_time,Deactivation_count,Leaf?\n");
