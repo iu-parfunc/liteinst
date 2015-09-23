@@ -1,6 +1,6 @@
 .PHONY: all lib microbench bench doc devdoc docker clean deps test quicktest
 .PHONY: docker docker2 rundock rundock2 testdocker
-.PHONY: inst_tests prof_tests pointpatch_tests dyninst_inst_test
+.PHONY: fastinst_tests pointpatch_tests dyninst_inst_test
 # ----------------------------------------
 
 # TODO: build everything before running/benchmarking:
@@ -57,18 +57,18 @@ bench: lib
 
 # Run all available tests, this is our regression testing / continuous
 # integration target:
-test: quicktest pointpatch_tests fastinst_tests
+test: quicktest  
 
 # Only the fast-running tests:
-quicktest: lib inst_tests prof_tests
+quicktest: lib pointpatch_tests fastinst_tests prof_tests
 
-inst_tests:
-	(cd instrumentors/tests/unit && make check)
-	(cd instrumentors/tests/integration && make check)
+# inst_tests:
+#	(cd instrumentors/tests/unit && make check)
+#	(cd instrumentors/tests/integration && make check)
 
-prof_tests:
-	(cd profilers/tests/unit && make check)
-	(cd profilers/tests/integration && make check)
+# prof_tests:
+#	(cd profilers/tests/unit && make check)
+#	(cd profilers/tests/integration && make check)
 
 pointpatch_tests:
 	(cd libpointpatch/tests && make test )

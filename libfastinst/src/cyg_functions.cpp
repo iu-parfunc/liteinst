@@ -223,6 +223,7 @@ void __cyg_profile_func_enter(void* func_addr, void* call_site_addr) {
   pmd->type = ProbeType::FINSTRUMENT;
   pmd->state = ProbeState::UNINITIALIZED; 
   pmd->probe_context = ProbeContext::ENTRY;
+  pmd->provider = ins;
 
   ins->registerProbe(pmd);
 
@@ -333,6 +334,7 @@ void __cyg_profile_func_exit(void* func_addr, void* call_site_addr) {
   pmd->type = ProbeType::FINSTRUMENT;
   pmd->state = ProbeState::UNINITIALIZED; //??
   pmd->probe_context = ProbeContext::EXIT;
+  pmd->provider = ins;
 
   ins->registerProbe(pmd); 
   

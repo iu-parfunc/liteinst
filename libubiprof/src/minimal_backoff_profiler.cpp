@@ -31,7 +31,7 @@ void minimalBackoffPrologFunction(ProbeArg func_id) {
     //uint32_t function_count = INSTRUMENTOR_INSTANCE->getFunctionCount();
     // C++ value initilization.. Similar to calloc
     current_thread_func_stats_table = 
-      new TLSBackoffProfilerStat[PROBE_PROVIDER->getNumberOfFunctions()](); 
+      new TLSBackoffProfilerStat[Profiler::provider_->getNumberOfFunctions()](); 
     current_thread_stats = new TLStatistics;
     current_thread_stats->func_stats = current_thread_func_stats_table;
     current_thread_stats->thread_local_overhead = 0;
@@ -107,7 +107,7 @@ void MinimalBackoffProfiler::initialize() {
 
   // C++ value initilization.. Similar to calloc
   statistics = 
-    new BackoffProfilerStat[PROBE_PROVIDER->getNumberOfFunctions()](); 
+    new BackoffProfilerStat[Profiler::provider_->getNumberOfFunctions()](); 
 
   // Leaking the reference to the global variable so that 
   // instrumentaion functions can access it without going through object reference
@@ -138,7 +138,7 @@ void MinimalBackoffProfiler::dumpStatistics() {
   FILE* fp = fopen("prof.out", "a");
 
   uint64_t total_count = 0;
-  int func_count = PROBE_PROVIDER->getNumberOfFunctions();
+  int func_count = Profiler::provider_->getNumberOfFunctions();
   fprintf(stderr, "\nTotal function count : %d\n", func_count);
   fprintf(stderr, "Thread count : %d\n", thread_counter);
   fprintf(fp, "Function,Count,Min_time,Max_time,Avg_time,Deactivation_count," 
