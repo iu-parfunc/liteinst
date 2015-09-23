@@ -75,16 +75,14 @@ Profiler::Profiler(InstrumentationFunc prolog, InstrumentationFunc epilog) :
       provider_type = ProviderType::FINSTRUMENT;
     }
 
-    ProbeProvider* p;
     try {
-
-      p = initializeGlobalProbeProvider(provider_type, callback);
+      provider_ = initializeGlobalProbeProvider(provider_type, callback);
     } catch (int e) {
-      p = getGlobalProbeProvider();
+      provider_ = getGlobalProbeProvider();
       fprintf(stderr, "ProbeProvider already initialized. Getting the existing one..\n");
     }
 
-    if (p == NULL) {
+    if (provider_ == NULL) {
       fprintf(stderr, "Unable to initialize probe provider..\n");
       exit(EXIT_FAILURE);
     }
@@ -96,7 +94,7 @@ Profiler::Profiler(InstrumentationFunc prolog, InstrumentationFunc epilog) :
 void Profiler::callback(const ProbeMetaData* pmd) {
 
   // Profiler hasn't yet been initialized properly
-  if (!profiler_ || !PROBE_PROVIDER) {
+  if (!profiler_ || !pmd->provider) {
     // return;
     throw -1; // Make the failure signalable without terminating
   }
@@ -124,22 +122,22 @@ void Profiler::callback(const ProbeMetaData* pmd) {
   profiler_->func_lock_.unlock(); 
 
   // Mandatory probe initialization call
-  PROBE_PROVIDER->initialize(pmd->probe_id, func_id);
+  pmd->provider->initialize(pmd->probe_id, func_id);
   try {
 #ifdef DISABLE_STRADDLERS
     if (pmd->is_straddler) {
       // fprintf(stderr, "Deactivating probe %p\n", pmd->probe_addr);
-      PROBE_PROVIDER->deactivate(pmd->probe_id);
+      pmd->provider->deactivate(pmd->probe_id);
     } else if (pmd->probe_context == ProbeContext:: ENTRY) {
-      PROBE_PROVIDER->activate(pmd->probe_id, profiler_->prolog_);
+      pmd->provider->activate(pmd->probe_id, profiler_->prolog_);
     } else {
-      PROBE_PROVIDER->activate(pmd->probe_id, profiler_->epilog_);
+      pmd->provider->activate(pmd->probe_id, profiler_->epilog_);
     }
 #else
     if (pmd->probe_context == ProbeContext:: ENTRY) {
-      PROBE_PROVIDER->activate(pmd->probe_id, profiler_->prolog_);
+      pmd->provider->activate(pmd->probe_id, profiler_->prolog_);
     } else {
-      PROBE_PROVIDER->activate(pmd->probe_id, profiler_->epilog_);
+      pmd->provider->activate(pmd->probe_id, profiler_->epilog_);
     }
 #endif
   } catch (int e) {
@@ -206,9 +204,9 @@ bool Profiler::profileFunction(string func_name) {
     for (auto it = plist->begin(); it != plist->end(); ++it) {
       const ProbeMetaData* pmd = *it;
       if (pmd->probe_context == ProbeContext::ENTRY) {
-        result = result && PROBE_PROVIDER->activate(pmd->probe_id, prolog_);
+        result = result && provider_->activate(pmd->probe_id, prolog_);
       } else {
-        result = result && PROBE_PROVIDER->activate(pmd->probe_id, epilog_);
+        result = result && provider_->activate(pmd->probe_id, epilog_);
       }
     }
   }
@@ -229,9 +227,9 @@ bool Profiler::profileFunction(FuncId func_id) {
     for (auto it = plist->begin(); it != plist->end(); ++it) {
       const ProbeMetaData* pmd = *it;
       if (pmd->probe_context == ProbeContext::ENTRY) {
-        result = result && PROBE_PROVIDER->activate(pmd->probe_id, prolog_);
+        result = result && provider_->activate(pmd->probe_id, prolog_);
       } else {
-        result = result && PROBE_PROVIDER->activate(pmd->probe_id, epilog_);
+        result = result && provider_->activate(pmd->probe_id, epilog_);
       }
     }
   }
@@ -251,7 +249,7 @@ bool Profiler::unprofileFunction(string func_name) {
     // inconsitent state within the function.
     for (auto it = plist->begin(); it != plist->end(); ++it) {
       const ProbeMetaData* pmd = *it;
-      result = result && PROBE_PROVIDER->deactivate(pmd->probe_id);
+      result = result && provider_->deactivate(pmd->probe_id);
     }
   }
 
@@ -270,7 +268,7 @@ bool Profiler::unprofileFunction(FuncId func_id) {
     // inconsitent state within the function.
     for (auto it = plist->begin(); it != plist->end(); ++it) {
       const ProbeMetaData* pmd = *it;
-      result = result && PROBE_PROVIDER->deactivate(pmd->probe_id);
+      result = result && provider_->deactivate(pmd->probe_id);
     }
   }
 
@@ -285,5 +283,5 @@ Profiler::~Profiler() {
     delete fmd;
   }
 
-  delete PROBE_PROVIDER;
+  delete provider_;
 }

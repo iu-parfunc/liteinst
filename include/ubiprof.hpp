@@ -45,6 +45,7 @@ class Profiler {
 
   public:
     static Profiler* profiler_;
+    static ProbeProvider* provider_; 
     std::atomic_ulong func_id_counter_; // Used to generate new function
                                             // ids
     // Meta data structures

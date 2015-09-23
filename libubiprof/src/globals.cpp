@@ -7,6 +7,9 @@
 // Declaring the profiler static member
 Profiler* Profiler::profiler_ = NULL;
 
+// Declaring the probe provider static member
+ProbeProvider* Profiler::provider_= NULL;
+
 void* g_ubiprof_stats = 0;
 volatile uint64_t g_deactivation_count = 0;
 

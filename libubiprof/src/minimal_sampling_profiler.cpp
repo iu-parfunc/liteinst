@@ -30,7 +30,7 @@ void minimalSamplingPrologFunction(ProbeArg func_id) {
 
   if (!allocated) {
     allocated = true;
-    uint32_t function_count = PROBE_PROVIDER->getNumberOfFunctions(); 
+    uint32_t function_count = Profiler::provider_->getNumberOfFunctions(); 
     // C++ value initilization.. Similar to calloc
     current_thread_func_stats_table = new TLSSamplingProfilerStat[function_count]();
     current_thread_stats = new TLStatistics;
@@ -113,7 +113,7 @@ void MinimalSamplingProfiler::initialize() {
   overhead_time_series = new list<string>();
 #endif
 
-  int func_count = PROBE_PROVIDER->getNumberOfFunctions();
+  int func_count = Profiler::provider_->getNumberOfFunctions();
   statistics = new SamplingProfilerStat[func_count](); // C++ value initialization. Similar to calloc
 
   // Leaking the reference to the global variable so that 
@@ -167,7 +167,7 @@ void MinimalSamplingProfiler::dumpStatistics() {
   FILE* fp = fopen("prof.out", "a");
 
   uint64_t total_count = 0;
-  int func_count = PROBE_PROVIDER->getNumberOfFunctions();
+  int func_count = Profiler::provider_->getNumberOfFunctions();
   fprintf(stderr, "[finstrumentor] Total function count : %d\n", func_count);
   fprintf(stderr, "[Minimal Sampling Profiler] Thread count : %d\n", thread_counter);
   fprintf(fp, "Function,Count,Min_time,Max_time,Avg_time,Deactivation_count\n");
