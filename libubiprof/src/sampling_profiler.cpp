@@ -378,7 +378,8 @@ void SamplingProfiler::dumpStatistics() {
     statistics[i].min_time = cur_min;
     statistics[i].max_time = cur_max;
     
-    if (statistics[i].count != 0) {
+    if (statistics[i].count != 0
+        && (statistics[i].count - statistics[i].limited_count)) {
       fprintf(fp, "%s,%lu,%llu,%llu,%llu,%d,%d\n",  
           getFunctionName(i).c_str(),  statistics[i].count,
           statistics[i].min_time, statistics[i].max_time, 
