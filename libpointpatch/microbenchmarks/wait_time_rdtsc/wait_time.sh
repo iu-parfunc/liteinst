@@ -3,14 +3,17 @@
 #set -v
 #set -x
 
+if [ ! $# -eq 6 ]; then 
+    echo "INCORRECT ARGS: CC CXX N_TESTS START_POS STEP_SIZE outfile" 
+    exit 1;
+fi 
+
 USE_CC=$1
 USE_CXX=$2
-
-#MAX_WAIT=1500
-STEP_SIZE=100
 N_TESTS=$3
 START_POS=$4
-
+STEP_SIZE=$5
+outfile=$6
 
 compileLib() { 
     ITERS=$1; 
@@ -32,63 +35,19 @@ compileTests() {
 }
 
 for (( i=0;i<=N_TESTS;i++ )); do 
-
-    echo "WOHOO" 
     
     it=$(( i * STEP_SIZE + START_POS )); 
     
-    echo $i $it
+    echo "Running test: $i $it"
     
     compileLib $it; 
     compileTests;
-    
-    (cd ../../tests && ./testall.sh $it data.out || true) 
+
+    # dir=$(pwd); 
+
+    (cd ../../tests && ./paralleltests.sh 1 1 $outfile 1 $it || true) 
 
 done; 
 
-# for (( i=0;i<=N_TESTS;i++ )); do 
-   
-#     it=$(( i * STEP_SIZE ));
-    
-#     stats[$i]=0; 
-#     echo $it
-#       compileit $it
-#     # There is static linking going on ! 
-#     make clean
-#     make CC=$USE_CC CXX=$USE_CXX CFLAGS=-DITERS=1000000
-    
-#     for straddle_point in {1..7}; do 
-# 	fail=0; 
-# 	echo "**********************"
-# 	echo "wait time iters: $it"
-# 	echo "Straddle point: $straddle_point"
-# 	echo "**********************"
-	 
-# 	for (( run=1;run<=N_RUNS;run++ )) ; do 
-# 	    echo "RUN NUM: $run"
-# 	    $EXEC $straddle_point
-# 	    if [ $? -eq 0 ]; then 
-# 		echo "OK"
-# 	    else 
-# 		fail=1;
-# 		echo "FAILURE"
-# 	    fi; 
-# 	done; 
-# 	if [ $fail -eq 1 ]; then 
-# 	    (( stats[$i]++ )); 
-# 	fi; 
-#     done; 
-# done;  
-
-# echo ${stats[@]}
-
-# echo "Test, WaitIters, NumFailures"
-# for (( i=0;i<=N_TESTS;i++ )); do 
-    
-#     it=$(( i * STEP_SIZE )); 
-    
-#     echo "$i $it ${stats[$i]}"
-    
-# done; 
 
 
