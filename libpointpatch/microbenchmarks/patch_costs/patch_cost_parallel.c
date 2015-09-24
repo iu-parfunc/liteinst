@@ -16,6 +16,7 @@ int NUM_THREADS = 1;
 
 bool g_initialized = false;
 volatile bool g_activator_done = false;
+bool g_is_straddler = false;
 
 uint8_t* g_call_addr;
 uint64_t g_active_sequence;
@@ -39,6 +40,8 @@ void foo(int arg) {
     g_inactive_sequence = (call_masked | nop_mask);
 
     init_patch_site((void*)g_call_addr, 8);
+
+    g_is_straddler = is_straddler_64((void*)g_call_addr);
 
     g_initialized = true;
   }
@@ -88,17 +91,21 @@ int main(int argc, char* argv[]) {
         (void*) &n_threads);
   }
 
+  bool activation_success = true;
+  bool deactivation_success = true;
   for (i = 0; i < NUM_OF_PATCHES; i++){
     
     ticks start = getticks();
-    patch_64((void*) g_call_addr, g_inactive_sequence);
+    deactivation_success = deactivation_success && 
+      patch_64((void*) g_call_addr, g_inactive_sequence);
     ticks end = getticks();
 
     assert(end > start);
     deactivation_cost += (end - start);
 
     start = getticks();
-    patch_64((void*) g_call_addr, g_active_sequence);
+    activation_success = activation_success && 
+      patch_64((void*) g_call_addr, g_active_sequence);
     end = getticks();
 
     assert(end > start);
@@ -112,8 +119,14 @@ int main(int argc, char* argv[]) {
     pthread_join(run_threads[i], NULL);
   }
 
+  fprintf(stderr, "\nIs this a straddler? : %s \n", g_is_straddler ? "TRUE": 
+      "FALSE");
+  fprintf(stderr, "All activations succeeded? %s \n", activation_success ? 
+      "TRUE" : "FALSE");
+  fprintf(stderr, "All deactivations succeeded? %s \n", deactivation_success ? 
+      "TRUE" : "FALSE");
   fprintf(stderr, "Number of invocations: %lu\n", g_num_invocations);
-
+  
   fprintf(stderr, "Number of activations: %lu\n", NUM_OF_PATCHES);
   fprintf(stderr, "Number of deactivations: %lu\n", NUM_OF_PATCHES);
 

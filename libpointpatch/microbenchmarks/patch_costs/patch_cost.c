@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #include "patcher.h"
 #include "cycle.h"
@@ -43,7 +44,7 @@ void foo(int arg) {
   return;
 }
 
-int main(void) {
+int main(int argc, char* argv[]) {
 
   fprintf(stderr, "Measure probe activation and deactivation costs..\n");
 
