@@ -57,8 +57,20 @@ class FinstrumentProbeProvider : public ProbeProvider {
     /// Overridden activate method from ProbeProvider
     bool activate(ProbeId probe_id, InstrumentationFunc func);
 
+    /// Overridden activate method from ProbeProvider
+    bool activate_async(ProbeId probe_id, InstrumentationFunc func);
+
+    /// Overridden activate method from ProbeProvider
+    void activate_async_finish(ProbeId probe_id);
+
     /// Overridden deactivate method from ProbeProvider
     bool deactivate(ProbeId probe_id);
+
+    /// Overridden activate method from ProbeProvider
+    bool deactivate_async(ProbeId probe_id);
+
+    /// Overridden activate method from ProbeProvider
+    void deactivate_async_finish(ProbeId probe_id);
 
     /// Generates a new ProbeMetaData entry initialized with a sequentilal, 
     //  monotonically increasing (starting from zero) unique probe id filled in.
