@@ -28,6 +28,8 @@
 #endif 
 #include <pthread.h> 
 
+#define ITERS 10000000
+
 unsigned long  g_foo_val = 0; 
 
 /* control */
@@ -68,7 +70,7 @@ void activator(int *arg) {
   
   while (g_first_run); /* wait until setup phase is done */ 
   
-  for (int i = 0; i < 1000; i ++) { 
+  for (int i = 0; i < ITERS; i ++) { 
     
     patch_64((void*)g_call_addr, g_orig_call);
     
@@ -83,7 +85,7 @@ void deactivator(int *arg) {
 
   while (g_first_run); /* wait until setup phase is done */ 
   
-  for (int i = 0; i < 1000; i ++) { 
+  for (int i = 0; i < ITERS; i ++) { 
 
     patch_64((void*)g_call_addr, g_patch);
     

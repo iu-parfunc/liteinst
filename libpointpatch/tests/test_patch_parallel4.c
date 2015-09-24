@@ -1,4 +1,8 @@
-/* 
+/*  ******** RETIRED! ********
+    ******** RETIRED! ********
+    ******** RETIRED! ********
+    ******** RETIRED! ********
+    
     Test desc: 
     tests parallel updates of a call site. 
      - One thread repeatedly writes the original call site code (call to foo). 
@@ -7,6 +11,12 @@
      foo and bar increments a value each. 
      Test is a success if the foo-value + bar-value == ITERS 
      Iters is the number of times the call site is executed. 
+
+     ******** RETIRED! ********
+     ******** RETIRED! ********
+     ******** RETIRED! ********
+     ******** RETIRED! ********
+     
 */ 
 #include <stdio.h> 
 #include <memory.h>

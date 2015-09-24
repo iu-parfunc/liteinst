@@ -1,0 +1,8 @@
+example: 
+./wait_time.sh gcc g++ 10 0 100 /home/joels/Skrivbord/output2.csv
+meaning:  
+  - compile with: gcc g++ 
+  - perform 10 tests 
+  - first test uses wait = 0 
+  - step size in wait = 100 
+  - output file 

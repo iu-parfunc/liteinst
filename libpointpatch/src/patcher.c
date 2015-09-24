@@ -143,7 +143,7 @@ void init_patcher() {
   printf("WAIT_SPIN_RDTSC VERSION OF PATCHER CODE\n");
 #endif 
 #ifdef WAIT_SPIN_RDTSC_YIELD
-  printf("WAIT_SPIN_RDTSC VERSION OF PATCHER CODE\n");
+  printf("WAIT_SPIN_RDTSC_YIELD VERSION OF PATCHER CODE\n");
 #endif 
 #ifdef PATCH_FLUSH_AFTER_INT3
   printf("FLUSHES CACHE AFTER WRITING INT3\n");
@@ -217,6 +217,7 @@ static inline uint64_t rdtsc() {
   return (d<<32) | a;
 }
 
+#ifdef WAIT_SPIN_RDTSC
 static inline void wait_spin_rdtsc() { 
   uint64_t start = rdtsc(); 
 
@@ -224,7 +225,9 @@ static inline void wait_spin_rdtsc() {
 
   return; 
 }
+#endif 
 
+#ifdef WAIT_SPIN_RDTSC_YIELD
 static inline void wait_spin_rdtsc_yield() { 
   uint64_t start = rdtsc(); 
 
@@ -234,6 +237,7 @@ static inline void wait_spin_rdtsc_yield() {
 
   return; 
 }
+#endif 
 
 /* -----------------------------------------------------------------
    Interrupt handlers 

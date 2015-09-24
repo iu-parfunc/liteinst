@@ -29,7 +29,7 @@
 #include <pthread.h> 
 
 #ifndef ITERS
-#define ITERS 10000000
+#define ITERS 50000000
 #endif 
 
 
@@ -38,6 +38,7 @@ unsigned long g_foo_val = 0;
 /* control */
 volatile int g_running = true; 
 volatile bool g_first_run = true;
+uint64_t g_init_lock = 0; 
 
 
 /* patch info */
@@ -55,42 +56,47 @@ void activator(int *arg) {
   struct timespec t;
   struct timespec r; 
   t.tv_sec = 0; 
-  t.tv_nsec = 200; 
+  t.tv_nsec = 20; 
   
+  printf("activator waiting\n"); 
   while (g_first_run); /* wait until setup phase is done */ 
   
-  while(g_running) { 
+  for (int i = 0; i < ITERS; i ++){
     patch_64((void*)g_call_addr, g_orig_call);
 
-    /* nanosleep(&t,&r); */ 
+    //nanosleep(&t,&r); 
     /* potentially check r for remainder 
        but I dont think that is important for this test */ 
     
     patch_64((void*)g_call_addr, g_nop_patch); 
   }  
+
+  g_running = false; 
 } 
 
 void foo(void) { 
   
   if (g_first_run) { 
-    /* do init stuff */ 
-    uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
-    g_call_addr = (uint64_t)((uint8_t*)addr - 5);
+    if (__sync_bool_compare_and_swap(&g_init_lock,0,1)) { 
+      /* do init stuff */ 
+      uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
+      g_call_addr = (uint64_t)((uint8_t*)addr - 5);
     
-    init_patch_site((void*)g_call_addr, 8);
+      init_patch_site((void*)g_call_addr, 8);
     
-    g_orig_call = *(uint64_t*)g_call_addr;
+      g_orig_call = *(uint64_t*)g_call_addr;
    
-    uint64_t keep_mask = 0xFFFFFF0000000000; 
+      uint64_t keep_mask = 0xFFFFFF0000000000; 
 	   
    	   
-    uint64_t nop_mask = 0x0000000000441F0F;
+      uint64_t nop_mask = 0x0000000000441F0F;
 
-    g_nop_patch = (g_orig_call & keep_mask) | nop_mask;
-    printf("nop_patch: %lx\n",g_nop_patch);
+      g_nop_patch = (g_orig_call & keep_mask) | nop_mask;
+      printf("nop_patch: %lx\n",g_nop_patch);
     
 
-    g_first_run = false; 
+      g_first_run = false; 
+    }
   }
  
   g_foo_val++;
@@ -99,12 +105,7 @@ void foo(void) {
 
 void runner(int *arg) { 
 
-  int num_iters = 1; 
-  int id = *arg; 
-
-  if (id >= 0) num_iters = ITERS; 
-
-  for (int i = 0; i < num_iters; i ++ ) { 
+  while(g_running){
     /* the call site that we patch is within fun */ 
     ((void (*)(void ))&fun[start_addr])(); 
   }
@@ -121,12 +122,6 @@ int main(int argc, char** argv) {
   pthread_t *runners; 
   
   unsigned long it = 0; 
-
-  pthread_create(&thread1,
-		 NULL, 
-		 (void *) activator, 
-		 (void *) &r1);
-
    
   printf("Testing parallel updates to a STRADDLING call_site as it is being executed by multiple threads.\n"); 
   printf("Number of iterations: %d\n",ITERS);
@@ -143,11 +138,13 @@ int main(int argc, char** argv) {
   } else if (argc == 3){ /* if there is an argument */
     call_straddler_point = atoi(argv[1]);
     num_runners = atoi(argv[2]); 
-  } 
+  } else { 
+    printf("INCORRECT ARGS\n"); 
+    exit(EXIT_FAILURE); 
+  }								       
+  
   printf("Setting straddler point at %d (distance in byte into the patch site)\n",call_straddler_point); 
   printf("Running with %d threads executing the call site\n", num_runners);
-
-  runners = (pthread_t*)malloc(sizeof(pthread_t)*num_runners); 
 
 
   /* find a straddling position within fun */
@@ -183,16 +180,18 @@ int main(int argc, char** argv) {
   
 
   init_patch_site((void*)&fun[start_addr],1024); 
-  
  
 
+  pthread_create(&thread1,
+		 NULL, 
+		 (void *) activator, 
+		 (void *) &r1);
+    
   
   /* Start the runners */ 
+  runners = (pthread_t*)malloc(sizeof(pthread_t)*num_runners); 
   int *ids = (int*)malloc(sizeof(int)*num_runners);
-  /* I hope this call to foo will initialize the call site */
-  int id_ = -1; 
-  runner(&id_); 
-  
+ 
   for (int i = 0; i < num_runners; i ++) { 
     ids[i] = i;
     pthread_create(&runners[i],
@@ -201,20 +200,18 @@ int main(int argc, char** argv) {
 		   &ids[i]);
   }
 
+       
+  pthread_join(thread1, NULL); 
+
   for (int i = 0; i < num_runners; i ++) { 
     pthread_join(runners[i],NULL); 
   }					
-	
-  /* then allow the modifier threads to die */ 
-  g_running = false; 
-  
-  pthread_join(thread1, NULL); 
+
   
   printf("function foo executed %ld times.\n",g_foo_val); 
  
-  printf("foo: %ld, Targ: %d\n",
-	 g_foo_val,
-	 num_runners * ITERS);
+  printf("foo: %ld\n",
+	 g_foo_val);
  
   /* if (g_foo_val + g_bar_val == ITERS) { */ 
   if (g_foo_val > 0 ) {
