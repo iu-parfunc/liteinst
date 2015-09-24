@@ -8,7 +8,8 @@ USE_CXX=$2
 
 #MAX_WAIT=1500
 STEP_SIZE=100
-N_TESTS=20
+N_TESTS=$3
+START_POS=$4
 
 
 compileLib() { 
@@ -34,7 +35,7 @@ for (( i=0;i<=N_TESTS;i++ )); do
 
     echo "WOHOO" 
     
-    it=$(( i * STEP_SIZE )); 
+    it=$(( i * STEP_SIZE + START_POS )); 
     
     echo $i $it
     

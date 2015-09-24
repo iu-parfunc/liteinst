@@ -22,7 +22,7 @@
 #define __USE_GNU  
 #include <signal.h>
 
-#ifdef PATCH_SCHED_YIELD
+#if defined(PATCH_SCHED_YIELD) || defined(WAIT_SPIN_RDTSC_YIELD)
 #include <sched.h>
 #endif 
 
@@ -68,6 +68,8 @@ const uint8_t int3 = 0xCC;
 #define WAIT() asm volatile ( "cpuid" ) 
 #elif defined(WAIT_SPIN_RDTSC)
 #define WAIT() wait_spin_rdtsc()
+#elif defined(WAIT_SPIN_RDTSC_YIELD)
+#define WAIT() wait_spin_rdtsc_yield()
 #else 
 #define WAIT() for(long i = 0; i < WAIT_ITERS; i++) { asm (""); } 
 #endif
@@ -140,6 +142,12 @@ void init_patcher() {
 #ifdef WAIT_SPIN_RDTSC
   printf("WAIT_SPIN_RDTSC VERSION OF PATCHER CODE\n");
 #endif 
+#ifdef WAIT_SPIN_RDTSC_YIELD
+  printf("WAIT_SPIN_RDTSC VERSION OF PATCHER CODE\n");
+#endif 
+#ifdef PATCH_FLUSH_AFTER_INT3
+  printf("FLUSHES CACHE AFTER WRITING INT3\n");
+#endif   
 #ifdef PATCH_FLUSH_CACHE
   printf("FLUSH_CACHE VERSION OF PATCHER CODE\n"); 
 #endif
@@ -167,6 +175,7 @@ void init_patcher() {
 #ifdef WAIT_NANOSLEEP 
   printf("Using NANOSLEEP for wait\n"); 
 #endif 
+  printf("WAIT SETTING: %d\n", WAIT_ITERS);
 #endif  /* NDEBUG */ 
 
 #ifdef WAIT_NANOSLEEP 
@@ -212,6 +221,16 @@ static inline void wait_spin_rdtsc() {
   uint64_t start = rdtsc(); 
 
   while (rdtsc() < start + WAIT_ITERS); 
+
+  return; 
+}
+
+static inline void wait_spin_rdtsc_yield() { 
+  uint64_t start = rdtsc(); 
+
+  while (rdtsc() < start + WAIT_ITERS) { 
+    sched_yield(); 
+  }
 
   return; 
 }
@@ -485,6 +504,9 @@ uint8_t oldFR = ((uint8_t*)addr)[0];
     
     if (oldFR == int3) return false;
     else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3))     {
+#ifdef PATCH_FLUSH_AFTER_INT3
+      clflush(addr);
+#endif 
       WAIT();
       //__sync_lock_test_and_set((uint64_t*)straddle_point,patch_after);
       //__sync_lock_test_and_set((uint64_t*)(straddle_point-1),patch_before);
