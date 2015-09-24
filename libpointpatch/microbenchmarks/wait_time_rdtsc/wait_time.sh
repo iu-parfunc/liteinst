@@ -45,7 +45,7 @@ for (( i=0;i<=N_TESTS;i++ )); do
 
     # dir=$(pwd); 
 
-    (cd ../../tests && ./paralleltests.sh 1 1 $outfile 1 $it || true) 
+    (cd ../../tests && ./paralleltests.sh 1 14 $outfile 5 $it || true) 
 
 done; 
 
