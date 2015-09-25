@@ -34,7 +34,7 @@ compileTests() {
     
 }
 
-for (( i=0;i<=N_TESTS;i++ )); do 
+for (( i=0;i<N_TESTS;i++ )); do 
     
     it=$(( i * STEP_SIZE + START_POS )); 
     
