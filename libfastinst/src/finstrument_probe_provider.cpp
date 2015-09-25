@@ -79,6 +79,33 @@ bool FinstrumentProbeProvider::activate(const ProbeId probe_id,
   return b;
 }
 
+bool FinstrumentProbeProvider::activate_async(ProbeId probe_id, InstrumentationFunc func) {
+  ProbeMetaData* pmd =  (*probe_meta_data)[probe_id];
+
+  if (pmd->state == ProbeState::UNINITIALIZED) {
+    throw -1;
+  }
+
+  if (pmd->state == ProbeState::ACTIVE) {
+    return false;
+  }
+
+  (*probe_meta_data)[probe_id]->instrumentation_func.store(func,
+      std::memory_order_seq_cst);
+
+  // Patch the probe site
+  bool b;
+  // bool b = async_patch_64((void*) pmd->probe_addr, pmd->active_seq);
+
+  pmd->state = ProbeState::ACTIVE;
+  return b;
+}
+
+void FinstrumentProbeProvider::activate_async_finish(ProbeId probe_id) {
+  ProbeMetaData* pmd =  (*probe_meta_data)[probe_id];
+  // finish_patch_64((void*) pmd->probe_addr);
+}
+
 bool FinstrumentProbeProvider::deactivate(const ProbeId probe_id) {
 
   ProbeMetaData* pmd =  (*probe_meta_data)[probe_id];
@@ -95,6 +122,30 @@ bool FinstrumentProbeProvider::deactivate(const ProbeId probe_id) {
 
   pmd->state = ProbeState::DEACTIVATED;
   return b;
+}
+
+bool FinstrumentProbeProvider::deactivate_async(const ProbeId probe_id) {
+
+  ProbeMetaData* pmd =  (*probe_meta_data)[probe_id];
+
+  if (pmd->state == ProbeState::UNINITIALIZED) {
+    throw -1;
+  }
+  if (pmd->state == ProbeState::DEACTIVATED ) {
+    return false;
+  }
+
+  // Patch the probe site
+  bool b;
+  // bool b = async_patch_64((void*) pmd->probe_addr, pmd->inactive_seq);
+
+  pmd->state = ProbeState::DEACTIVATING;
+  return b;
+}
+
+void FinstrumentProbeProvider::deactivate_async_finish(ProbeId probe_id) {
+  ProbeMetaData* pmd =  (*probe_meta_data)[probe_id];
+  // finish_patch_64((void*) pmd->probe_addr);
 }
 
 void FinstrumentProbeProvider::readFunctionInfo() {

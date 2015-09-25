@@ -29,7 +29,8 @@ typedef uint64_t ProbeLoc;
 /// Probes are a four-state finite automata, and all transitions
 /// between states must be atomic (i.e. have serialization points in
 /// the code).
-enum class ProbeState { UNINITIALIZED, INITIALIZING, ACTIVE, DEACTIVATED };
+enum class ProbeState { UNINITIALIZED, INITIALIZING, ACTIVE, DEACTIVATED ,
+  ACTIVATING, DEACTIVATING};
 
 /// An opaque, unique probe identifier.  Do not depend on the
 /// representation of this value.
@@ -174,6 +175,27 @@ class ProbeProvider {
      */
     virtual bool activate(ProbeId probe_id, InstrumentationFunc func) = 0;
 
+    /// Activates the given probe asynchronously
+    /* Activates the probe with given instrumentation function.
+     *
+     * \param probe_id The probe id opaque identifier
+     * \param func The instrumentation function
+     *
+     * \return TODO
+     * 
+     */
+    virtual bool activate_async(ProbeId probe_id, 
+        InstrumentationFunc func) = 0;
+
+    /// Force asynchronous probe activation to finish before returning
+    /* Wait until the asynchronous protocol gets finished
+     *
+     * \param  The probe id: an opaque identifier.
+     *
+     * \return TODO
+     */
+    virtual void activate_async_finish(ProbeId probe_id) = 0;
+
     /// Deactivates the given probe
     /* Deactivate the probe, restoring the original functioality of
      * the machine code at the probe point.
@@ -187,6 +209,30 @@ class ProbeProvider {
      * that the probe was successfully deactivated.
      */
     virtual bool deactivate(ProbeId probe_id) = 0;
+
+    /// Deactivates the given probe
+    /* Deactivate the probe, restoring the original functioality of
+     * the machine code at the probe point.
+     *
+     * The deactivation protocol completion happens asyncronously.
+     * Once the top half of the protocol is completed probe would transition to
+     * DEACTIVATING. Once the bottom half is run probe will be in DEACTIVATED
+     * state.
+     *
+     * \param  The probe id: an opaque identifier.
+     *
+     * \return TODO
+     */
+    virtual bool deactivate_async(ProbeId probe_id) = 0;
+
+    /// Force asynchronous probe deactivation to finish before returning
+    /* Wait until the asynchronous protocol gets finished
+     *
+     * \param  The probe id: an opaque identifier.
+     *
+     * \return TODO
+     */
+    virtual void deactivate_async_finish(ProbeId probe_id) = 0;
 
     /// Gets the number of functions in the application
     /*  Usually probe providers are privy to this information by reading
