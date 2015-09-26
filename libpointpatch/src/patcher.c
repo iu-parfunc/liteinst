@@ -38,6 +38,7 @@
 long g_page_size = 0; 
 size_t g_cache_lvl3_line_size = 0; 
 uint64_t g_int3_interrupt_count = 0; 
+int g_wait_iters = 400;
 
 struct sigaction g_newact; 
 struct sigaction g_oldact; 
@@ -56,9 +57,10 @@ const uint8_t int3 = 0xCC;
    WAIT
    ----------------------------------------------------------------- */
 
-#ifndef WAIT_ITERS
-#define WAIT_ITERS 400
-#endif 
+/* Switching to reading this from an env_var */
+/* #ifndef WAIT_ITERS
+   #define WAIT_ITERS 400
+   #endif */
 
 #if defined(NO_WAIT) 
 #define WAIT() 
@@ -71,7 +73,7 @@ const uint8_t int3 = 0xCC;
 #elif defined(WAIT_SPIN_RDTSC_YIELD)
 #define WAIT() wait_spin_rdtsc_yield()
 #else 
-#define WAIT() for(long i = 0; i < WAIT_ITERS; i++) { asm (""); } 
+#define WAIT() for(long i = 0; i < g_wait_iters; i++) { asm (""); } 
 #endif
 
 
@@ -122,6 +124,11 @@ void init_patcher() {
   g_page_size=sysconf(_SC_PAGESIZE);
   g_cache_lvl3_line_size=sysconf(_SC_LEVEL3_CACHE_LINESIZE); 
 
+  char *wait_str = getenv("PATCH_WAIT_TIME");
+  if (wait_str != NULL) { 
+    g_wait_iters = atoi(wait_str); 
+    
+  } /* otherwise use default */ 
 
   /* setup signal handling for straddler protocol */ 
   memset( &g_newact, 0, sizeof g_newact);
@@ -175,7 +182,7 @@ void init_patcher() {
 #ifdef WAIT_NANOSLEEP 
   printf("Using NANOSLEEP for wait\n"); 
 #endif 
-  printf("WAIT SETTING: %d\n", WAIT_ITERS);
+  printf("WAIT SETTING: %d\n", g_wait_iters);
 #endif  /* NDEBUG */ 
 
 #ifdef WAIT_NANOSLEEP 
@@ -187,7 +194,7 @@ void init_patcher() {
   }
   printf("Clock resolution ns: %ld\n", res.tv_nsec);
   
-  g_wait_time.tv_nsec = res.tv_nsec * WAIT_ITERS; 
+  g_wait_time.tv_nsec = res.tv_nsec * g_wait_iters; 
   g_wait_time.tv_sec = 0; 
 
   printf("Wait time is set to: %ld ns\n", g_wait_time.tv_nsec);
@@ -221,7 +228,7 @@ static inline uint64_t rdtsc() {
 static inline void wait_spin_rdtsc() { 
   uint64_t start = rdtsc(); 
 
-  while (rdtsc() < start + WAIT_ITERS); 
+  while (rdtsc() < start + g_wait_iters); 
 
   return; 
 }
@@ -231,7 +238,7 @@ static inline void wait_spin_rdtsc() {
 static inline void wait_spin_rdtsc_yield() { 
   uint64_t start = rdtsc(); 
 
-  while (rdtsc() < start + WAIT_ITERS) { 
+  while (rdtsc() < start + g_wait_iters) { 
     sched_yield(); 
   }
 
@@ -295,11 +302,11 @@ bool init_patch_site(void *addr, size_t nbytes){
 /* Get the set wait time for the patching protocol */ 
 long patch_get_wait(){ 
 #if defined(WAIT_NANOSLEEP)
-  return(g_wait_time.tv_nsec * WAIT_ITERS);
+  return(g_wait_time.tv_nsec * g_wait_iters);
 #elif defined (WAIT_CPUID)
   return -1;
 #else 
-  return WAIT_ITERS;
+  return g_wait_iters;
 #endif 
 }
 

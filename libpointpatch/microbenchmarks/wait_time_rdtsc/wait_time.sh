@@ -3,49 +3,31 @@
 #set -v
 #set -x
 
-if [ ! $# -eq 6 ]; then 
-    echo "INCORRECT ARGS: CC CXX N_TESTS START_POS STEP_SIZE outfile" 
+if [ ! $# -eq 5 ]; then 
+    echo "INCORRECT ARGS: N_TESTS START_POS STEP_SIZE N_RUNS outfile" 
     exit 1;
 fi 
 
-USE_CC=$1
-USE_CXX=$2
-N_TESTS=$3
-START_POS=$4
-STEP_SIZE=$5
-outfile=$6
+#USE_CC=$1
+#USE_CXX=$2
+N_TESTS=$1
+START_POS=$2
+STEP_SIZE=$3
+N_RUNS=$4
+outfile=$5
 
-compileLib() { 
-    ITERS=$1; 
-    echo "Compiling Library" 
-    echo "Wait iterations:  $ITERS"
-    
-    make cleanLib
-    make installLib CC=$USE_CC CXX=$USE_CXX CFLAGS=-DWAIT_ITERS=$ITERS
-} 
+# The wait iters are now set as a env var "PATCH_WAIT_TIME" 
+# so recompilation of the library and tests are no-longer needed! 
 
-# Do we really need to recompile these ?
-# I think we do since we statically link against library.. (for some compilers?)
-compileTests() {
-    echo "Compiling Tests" 
-    
-    make cleanTests
-    make buildTests CC=$USE_CC CXX=$USE_CXX
-    
-}
 
 for (( i=0;i<N_TESTS;i++ )); do 
     
     it=$(( i * STEP_SIZE + START_POS )); 
     
     echo "Running test: $i $it"
-    
-    compileLib $it; 
-    compileTests;
-
-    # dir=$(pwd); 
-
-    (cd ../../tests && ./paralleltests.sh 1 14 $outfile 5 $it || true) 
+   
+    (cd ../../tests && 
+	PATCH_WAIT_TIME=$it ./paralleltests.sh 1 14 $outfile $N_RUNS $it || true) 
 
 done; 
 
