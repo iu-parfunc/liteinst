@@ -52,7 +52,8 @@ done;
 # hitting the call site. 
 for f in test_patch_parallel5.exe test_patch_parallel6.exe test_patch_parallel7.exe; do
     for  (( threads=minthreads;threads<=maxthreads;threads++ )); do 
-	for i in 1 2 3 4 5 6 7; do # straddler location 
+	#only try those straddler locations that are likely to fail (save time)
+	for i in 1 2 3 4; do # straddler location 
 	    for (( run=0;run<nruns;run++ )); do 
 		echo ""
 		echo ""

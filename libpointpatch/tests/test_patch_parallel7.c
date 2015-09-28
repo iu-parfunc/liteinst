@@ -64,6 +64,7 @@ void activator(int *arg) {
   for (int i = 0; i < ITERS; i ++){
     patch_64((void*)g_call_addr, g_orig_call);
 
+    //sched_yield();
     //nanosleep(&t,&r); 
     /* potentially check r for remainder 
        but I dont think that is important for this test */ 
