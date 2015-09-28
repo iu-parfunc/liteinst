@@ -27,7 +27,7 @@ for (( i=0;i<N_TESTS;i++ )); do
     echo "Running test: $i $it"
    
     (cd ../../tests && 
-	PATCH_WAIT_TIME=$it ./paralleltests.sh 1 14 $outfile $N_RUNS $it || true) 
+	./paralleltests.sh 1 14 $outfile $N_RUNS $it || true) 
 
 done; 
 
