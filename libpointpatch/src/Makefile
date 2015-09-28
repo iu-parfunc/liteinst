@@ -52,4 +52,4 @@ test:
 	(cd ../tests; make test)
 
 clean:
-	$(RM) -f *.o *.exe *.so $(INSTALL)/libpointpatch.*
+	$(RM) -f *.o *.exe *.so *.a $(INSTALL)/libpointpatch.*
