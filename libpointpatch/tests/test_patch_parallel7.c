@@ -2,13 +2,10 @@
     Test desc: 
     tests parallel updates of a STRADDLING call site that is being executed 
     by multiple threads in parallel. 
-     - One thread repeatedly writes the original call site code (call to foo). 
-     - One thread repeatedly writes a5 byte nop at that same location. 
+     - One thread repeatedly patches (call, nop)  
      
     Currently this test is considered a success if it does not crash
     and if foo has been executed at least once. 
-    
-    This test needs to be improved as we fix the details of the straddler protocol. 
     
 */ 
 #include <stdio.h> 
