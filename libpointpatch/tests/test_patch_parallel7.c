@@ -136,7 +136,28 @@ void foo(void) {
       int relative = (int)(g_orig_call >> 8);
       printf("Computed absolute destination: %p\n", (void*)(g_call_addr + 5 + relative));
       relative = (int)(g_expected_bogus_call >> 8);
-      printf("Computed bogus destination: %p\n", (void*)(g_call_addr + 5 + relative));
+      void *bogus_target = (void*)(g_call_addr + 5 + relative);
+      printf("Computed bogus destination: %p\n", bogus_target);
+
+      // Hack this up to make the bogus target executable with an invalid
+      // opcode, so that we can get a useful sigill if we take that brancj.
+      uintptr_t bt = (uintptr_t)bogus_target & ~(UINT64_C(4096)-1);
+      void *base = (void*)bt;
+      void *page = mmap(base, 4096, PROT_READ | PROT_WRITE | PROT_EXEC,
+                        MAP_ANONYMOUS | MAP_PRIVATE,
+                        -1, 0);
+
+      if (page == MAP_FAILED) {
+        if (mprotect(base, 4096, PROT_READ | PROT_WRITE | PROT_EXEC) ) {
+          abort();
+        }
+      }
+
+      memset(base, 0x0E, 4096);
+
+      if (mprotect(base, 4096, PROT_READ | PROT_EXEC) ) {
+          abort();
+      }
 
       g_first_run = false;
     }
@@ -205,7 +226,10 @@ static void inspect_patch_site() {
 }
 
 static void sigill_handler(int signo, siginfo_t *inf, void* ctx) {
-  fprintf(stderr,"SigILL Handler: address of fault: %p\n", inf->si_addr);
+  ucontext_t *ucontext = (ucontext_t*)ctx;
+  void *rip = (void*)ucontext->uc_mcontext.gregs[REG_RIP];
+  assert(!inf || !inf->si_addr || inf->si_addr == rip);
+  fprintf(stderr,"SigILL Handler: address of fault: %p\n", rip);
   fflush(stderr);
   inspect_patch_site();
 
@@ -213,10 +237,15 @@ static void sigill_handler(int signo, siginfo_t *inf, void* ctx) {
 }
 
 static void sigseg_handler(int signo, siginfo_t *inf, void*ctx) {
-  fprintf(stderr,"SigSEGV Handler: address of fault: %p\n", inf->si_addr);
+  ucontext_t *ucontext = (ucontext_t*)ctx;
+  void *rip = (void*)ucontext->uc_mcontext.gregs[REG_RIP];
+  assert(!inf || !inf->si_addr || inf->si_addr == rip);
+  fprintf(stderr,"SigSEGV Handler: address of fault: %p (%p)\n", rip,
+            *(void**)rip);
   fflush(stderr);
   inspect_patch_site();
-  exit(EXIT_FAILURE);
+  raise(SIGABRT);
+  //exit(EXIT_FAILURE);
 }
 
 
