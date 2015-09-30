@@ -138,10 +138,31 @@ void runner(int *arg) {
 
 }
 
+static void inspect_patch_site() {
+  int reps = 20;
+  char str[1024];
+  volatile uint64_t* ptr = (uint64_t*)g_call_addr;
+
+  printf("  Polling patch location, first slow:\n");
+  for(int i=0; i<reps; i++) {
+    sprintf(str, "   rep %2d: Contents of patch site", i);
+    print_bytes(str, *ptr, 5, g_call_straddler_point);
+  }
+  printf("  Then fast:\n");
+  uint64_t observations[reps];
+  for(int i=0; i<reps; i++) {
+    observations[i] = *ptr;
+  }
+  for(int i=0; i<reps; i++) {
+    sprintf(str, "   rep %2d: Contents of patch site", i);
+    print_bytes(str, *ptr, 5, g_call_straddler_point);
+  }
+}
 
 static void sigill_handler(int signo, siginfo_t *inf, void* ctx) {
   fprintf(stderr,"SigILL Handler: address of fault: %p\n", inf->si_addr);
   fflush(stderr);
+  inspect_patch_site();
 
   exit(EXIT_FAILURE);
 }
@@ -149,6 +170,7 @@ static void sigill_handler(int signo, siginfo_t *inf, void* ctx) {
 static void sigseg_handler(int signo, siginfo_t *inf, void*ctx) {
   fprintf(stderr,"SigSEGV Handler: address of fault: %p\n", inf->si_addr);
   fflush(stderr);
+  inspect_patch_site();
   exit(EXIT_FAILURE);
 }
 

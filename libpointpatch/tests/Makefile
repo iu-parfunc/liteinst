@@ -11,9 +11,9 @@ UBIROOT=../../
 
 LIBDIR=$(UBIROOT)build/lib
 
-#DEPS =  ../../deps/distorm/distorm3.a -lpointpatch -lpthread 
-# USE .a for now (static) 
-DEPS =  $(UBIROOT)/deps/distorm/distorm3.a $(LIBDIR)/libpointpatch.a -lpthread 
+#DEPS =  ../../deps/distorm/distorm3.a -lpointpatch -lpthread
+# USE .a for now (static)
+DEPS =  $(UBIROOT)/deps/distorm/distorm3.a $(LIBDIR)/libpointpatch.a -lpthread
 
 
 
@@ -21,11 +21,10 @@ DEPS =  $(UBIROOT)/deps/distorm/distorm3.a $(LIBDIR)/libpointpatch.a -lpthread
 #-I../src ../src/patcher.c
 
 # I guess distorm and libpointpatch should be on the rhs of this rule
-all: $(EXES) 
+all: $(EXES)
 
 %.exe: %.c
-	$(CC)  -std=gnu99 -g $(CFLAGS) -I../../deps/distorm/include -I../../include  $< -o $@ -L$(LIBDIR) $(DEPS) 
-
+	$(CC)  -std=gnu99 -g $(CFLAGS) -I../../deps/distorm/include -I../../include  $< -o $@ -L$(LIBDIR) $(DEPS)
 
 test: $(EXES)
 	./testall.sh
