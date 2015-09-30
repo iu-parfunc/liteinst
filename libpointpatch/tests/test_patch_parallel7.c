@@ -48,6 +48,9 @@ uint64_t g_call_addr = 0;
 uint64_t g_orig_call = 0;  /* original instr */
 uint64_t g_nop_patch = 0;  /* replacement isntr sequence */
 
+uint64_t g_locked_call = 0;
+uint64_t g_locked_nop  = 0;
+
 uint64_t g_expected_bogus_call = 0;
 uint64_t g_expected_bogus_nop  = 0;
 
@@ -92,6 +95,7 @@ void print_bytes(const char* tag, uint64_t bytes, int num, int straddler_loc) {
   printf("\n");
 }
 
+// The function which we call from the patch site:
 void foo(void) {
 
   if (g_first_run) {
@@ -114,11 +118,26 @@ void foo(void) {
       print_bytes("nop_patch", g_nop_patch, 5, g_call_straddler_point);
       print_bytes("orig_call", g_orig_call, 5, g_call_straddler_point);
 
+      g_locked_nop  = (g_nop_patch & 0xFFFFFFFFFFFFFF00) | 0xCC;
+      g_locked_call = (g_orig_call & 0xFFFFFFFFFFFFFF00) | 0xCC;
+      print_bytes("Locked noop:", g_locked_nop, 5, g_call_straddler_point);
+      print_bytes("Locked call:", g_locked_call, 5, g_call_straddler_point);
+
       g_expected_bogus_call = (g_nop_patch & 0xFFFFFFFFFFFFFF00) | (g_orig_call & 0xFF);
       g_expected_bogus_nop  = (g_orig_call & 0xFFFFFFFFFFFFFF00) | (g_nop_patch & 0xFF);
 
       print_bytes("Expected bogus noop",  g_expected_bogus_nop, 5,  g_call_straddler_point);
       print_bytes("Expected bogus call", g_expected_bogus_call, 5, g_call_straddler_point);
+
+      printf("Double check, g_call_addr = %p\n", (void*)g_call_addr);
+
+      // Manually add in the relative jump as a sanity check:
+      printf("Computed absolute destination: %p\n",
+             (void*)(g_call_addr + 5 +
+                     ((g_orig_call & 0xFFFFFFFF00) >> 8)));
+      printf("Computed bogus destination: %p\n",
+             (void*)(g_call_addr + 5 +
+                     ((g_expected_bogus_call & 0xFFFFFFFF00) >> 8)));
 
       g_first_run = false;
     }
@@ -138,6 +157,30 @@ void runner(int *arg) {
 
 }
 
+// Takes just a 5 byte instruction in the low bytes.
+static void check_instruction_observation(uint64_t x) {
+  x &= 0xFFFFFFFFFF;
+  if (  x == (g_locked_nop   & 0xFFFFFFFFFF)
+     || x == (g_locked_call  & 0xFFFFFFFFFF)
+     || x == (g_nop_patch    & 0xFFFFFFFFFF)
+     || x == (g_orig_call    & 0xFFFFFFFFFF)
+     )
+  {
+  }
+  else if (  x == (g_expected_bogus_call & 0xFFFFFFFFFF)
+          || x == (g_expected_bogus_nop  & 0xFFFFFFFFFF)
+          )
+  {
+    print_bytes("Expected bad state observed", x, 5, g_call_straddler_point);
+  }
+  else
+  {
+    print_bytes("Unexpected bad state observed", x, 5, g_call_straddler_point);
+  }
+}
+
+
+
 static void inspect_patch_site() {
   int reps = 20;
   char str[1024];
@@ -146,7 +189,9 @@ static void inspect_patch_site() {
   printf("  Polling patch location, first slow:\n");
   for(int i=0; i<reps; i++) {
     sprintf(str, "   rep %2d: Contents of patch site", i);
-    print_bytes(str, *ptr, 5, g_call_straddler_point);
+    uint64_t tmp = *ptr;
+    print_bytes(str, tmp, 5, g_call_straddler_point);
+    check_instruction_observation(tmp);
   }
   printf("  Then fast:\n");
   uint64_t observations[reps];
@@ -154,8 +199,9 @@ static void inspect_patch_site() {
     observations[i] = *ptr;
   }
   for(int i=0; i<reps; i++) {
+    check_instruction_observation(observations[i]);
     sprintf(str, "   rep %2d: Contents of patch site", i);
-    print_bytes(str, *ptr, 5, g_call_straddler_point);
+    print_bytes(str, observations[i], 5, g_call_straddler_point);
   }
 }
 
@@ -245,9 +291,13 @@ int main(int argc, char** argv) {
 
   addr[0] = (uint32_t)((uint64_t)( (uint64_t)foo - (uint64_t)&fun[start_addr + 9]) );
 
-  printf("Patch address, absolute : %p\n", fun + start_addr + 4);
-  printf("JUMP ADDR REL: %x\n", addr[0]);
-  printf("Target call address: %p\n", foo);
+  printf("Patch address, absolute         : %p\n", fun + start_addr + 4);
+  printf("Target function absolute address: %p\n", foo);
+  //  printf("Relative distance from patch to dest: %x\n", addr[0]);
+  printf("Relative distance from patch to dest: %ld / %x\n",
+         (long)((uint8_t*)foo - (fun + start_addr + 4)),
+         (unsigned int)((uint8_t*)foo - (fun + start_addr + 4))
+         );
 
   /* generate some code containing a call at a straddling location */
   fun[start_addr] = 0x55;     /* push %rbp */
