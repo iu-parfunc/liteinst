@@ -131,13 +131,12 @@ void foo(void) {
 
       printf("Double check, g_call_addr = %p\n", (void*)g_call_addr);
 
+
       // Manually add in the relative jump as a sanity check:
-      printf("Computed absolute destination: %p\n",
-             (void*)(g_call_addr + 5 +
-                     ((g_orig_call & 0xFFFFFFFF00) >> 8)));
-      printf("Computed bogus destination: %p\n",
-             (void*)(g_call_addr + 5 +
-                     ((g_expected_bogus_call & 0xFFFFFFFF00) >> 8)));
+      int relative = (int)(g_orig_call >> 8);
+      printf("Computed absolute destination: %p\n", (void*)(g_call_addr + 5 + relative));
+      relative = (int)(g_expected_bogus_call >> 8);
+      printf("Computed bogus destination: %p\n", (void*)(g_call_addr + 5 + relative));
 
       g_first_run = false;
     }
@@ -314,9 +313,9 @@ int main(int argc, char** argv) {
 
 
   pthread_create(&thread1,
-		 NULL,
-		 (void *) activator,
-		 (void *) &r1);
+         NULL,
+         (void *) activator,
+         (void *) &r1);
 
 
   /* Start the runners */
@@ -326,9 +325,9 @@ int main(int argc, char** argv) {
   for (int i = 0; i < num_runners; i ++) {
     ids[i] = i;
     pthread_create(&runners[i],
-		   NULL,
-		   (void *) runner,
-		   &ids[i]);
+           NULL,
+           (void *) runner,
+           &ids[i]);
   }
 
 
@@ -341,7 +340,7 @@ int main(int argc, char** argv) {
   printf("function foo executed %ld times.\n",g_foo_val);
 
   printf("foo: %ld\n",
-	 g_foo_val);
+     g_foo_val);
 
   /* if (g_foo_val + g_bar_val == ITERS) { */
   if (g_foo_val > 0 ) {
