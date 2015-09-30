@@ -16,6 +16,9 @@
 
 #include <patcher.h>
 
+#define __USE_GNU
+#include <signal.h>
+
 #if defined(__ICC) || defined(__INTEL_COMPILER) 
 
 #else 
@@ -91,8 +94,8 @@ void foo(void) {
 
       g_nop_patch = (g_orig_call & keep_mask) | nop_mask;
       printf("nop_patch: %lx\n",g_nop_patch);
+      printf("orig_call: %lx\n",g_orig_call);
     
-
       g_first_run = false; 
     }
   }
@@ -112,6 +115,18 @@ void runner(int *arg) {
 } 
 
 
+static void sigill_handler(int signo, siginfo_t *inf, void* ctx) {
+  /* TODO: Print info about where sigill occured */
+  /* How do we do that ? */ 
+  exit(EXIT_FAILURE);
+}
+
+static void sigseg_handler(int signo, siginfo_t *inf, void*ctx) { 
+  /* TODO: Print info about where/how segfault occured */
+  exit(EXIT_FAILURE);
+}
+
+
 int main(int argc, char** argv) {
   
   pthread_t thread1, thread2; 
@@ -120,7 +135,29 @@ int main(int argc, char** argv) {
   pthread_t *runners; 
   
   unsigned long it = 0; 
-   
+  
+  /* setup aux sig handlers */ 
+  struct sigaction ill;
+  struct sigaction seg; 
+
+  memset(&ill, 0, sizeof(ill)); 
+  memset(&seg, 0, sizeof(seg)); 
+  
+  ill.sa_sigaction = &sigill_handler;
+  ill.sa_flags = SA_SIGINFO;
+  sigemptyset(&(ill.sa_mask)); 
+  sigaction(SIGILL,&ill,NULL); 
+
+  seg.sa_sigaction = &sigseg_handler;
+  seg.sa_flags = SA_SIGINFO;
+  sigemptyset(&(seg.sa_mask)); 
+  sigaction(SIGSEGV,&seg,NULL); 
+
+
+  
+  
+  /* ********************* */
+
   printf("Testing parallel updates to a STRADDLING call_site as it is being executed by multiple threads.\n"); 
   printf("Number of iterations: %d\n",ITERS);
   
@@ -164,7 +201,10 @@ int main(int argc, char** argv) {
   uint32_t* addr = (uint32_t*)(&fun[start_addr+5]); 
 
   addr[0] = (uint32_t)((uint64_t)( (uint64_t)foo - (uint64_t)&fun[start_addr + 9]) );
-  
+
+  printf("Patch address, absolute : %p\n", fun + start_addr + 4);
+  printf("JUMP ADDR REL: %x\n", addr[0]);
+  printf("Target call address: %p\n", foo);
 
   /* generate some code containing a call at a straddling location */ 
   fun[start_addr] = 0x55;     /* push %rbp */
@@ -204,7 +244,6 @@ int main(int argc, char** argv) {
   for (int i = 0; i < num_runners; i ++) { 
     pthread_join(runners[i],NULL); 
   }					
-
   
   printf("function foo executed %ld times.\n",g_foo_val); 
  
