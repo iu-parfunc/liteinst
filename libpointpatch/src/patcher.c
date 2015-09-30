@@ -259,10 +259,11 @@ static void int3_handler(int signo, siginfo_t *inf, void* ptr) {
   // fprintf(stdout, "INT3 HNDLR RET ADDR: %p\n", (void*)ucontext->uc_mcontext.gregs[REG_RIP]);
 
   /* Resuming the thread after skipping the call instruction. */
-  // ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] + 4;
-  ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] - 1;
-
-
+  ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] + 4;
+  //ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] - 1;
+ 
+  
+  
   /* REG_RIP is another machine and compiler specific define */
 
   g_int3_interrupt_count++;
@@ -347,6 +348,7 @@ bool patch_64(void *addr, uint64_t patch_value){
 
     unsigned int cutoff_point = g_cache_lvl3_line_size - offset;
     uint64_t* straddle_point = (uint64_t*)((uint8_t*)addr + cutoff_point);
+    assert((uint64_t)straddle_point % g_cache_lvl3_line_size == 0);
 
     uint64_t lsb_mask = get_lsb_mask_64(cutoff_point);
     uint64_t msb_mask = get_msb_mask_64(cutoff_point);
