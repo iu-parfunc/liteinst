@@ -225,6 +225,7 @@ static inline uint64_t rdtsc() {
 }
 
 #ifdef WAIT_SPIN_RDTSC
+#warning "Patcher: using RDTSC variant"
 static inline void wait_spin_rdtsc() { 
   uint64_t start = rdtsc(); 
 
@@ -235,6 +236,7 @@ static inline void wait_spin_rdtsc() {
 #endif 
 
 #ifdef WAIT_SPIN_RDTSC_YIELD
+#warning "Patcher: using RDTSC_yield variant"
 static inline void wait_spin_rdtsc_yield() { 
   uint64_t start = rdtsc(); 
 
@@ -255,9 +257,11 @@ static void int3_handler(int signo, siginfo_t *inf, void* ptr) {
   ucontext_t *ucontext = (ucontext_t*)ptr;
 
   /* Resuming the thread after skipping the call instruction. */ 
-  ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] + 4;
-  /* REG_RIP is another machine and compiler specific define */ 
+  // ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] + 4;
+  ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] - 1;
 
+  
+  /* REG_RIP is another machine and compiler specific define */ 
 
   g_int3_interrupt_count++;
   //ticks end = getticks();
@@ -510,7 +514,7 @@ uint8_t oldFR = ((uint8_t*)addr)[0];
        WAIT BASED THREADSAFE PATCHER
        ----------------------------------------------------------------- */ 
 #else /* Threadsafe patching */
-  
+#warning "Running DEFAULT VERSION OF PATCHER"
     uint8_t oldFR = ((uint8_t*)addr)[0];  
     
     if (oldFR == int3) return false;
