@@ -48,6 +48,9 @@ uint64_t g_call_addr = 0;
 uint64_t g_orig_call = 0;  /* original instr */
 uint64_t g_nop_patch = 0;  /* replacement isntr sequence */
 
+uint64_t g_expected_bogus_call = 0;
+uint64_t g_expected_bogus_nop  = 0;
+
 /* globals */
 uint8_t* fun = NULL;
 unsigned int start_addr = 0;
@@ -77,6 +80,18 @@ void activator(int *arg) {
   g_running = false;
 }
 
+
+void print_bytes(const char* tag, uint64_t bytes, int num, int straddler_loc) {
+  printf("%s, LSB first: ", tag);
+  for (int i=0; i<num; i++) {
+    if (i == straddler_loc)
+      printf("| ");
+    printf("%02lx ", bytes % 256);
+    bytes /= 256;
+  }
+  printf("\n");
+}
+
 void foo(void) {
 
   if (g_first_run) {
@@ -95,8 +110,15 @@ void foo(void) {
       uint64_t nop_opcodes = 0x0000000000441F0F;
 
       g_nop_patch = (g_orig_call & keep_mask) | nop_opcodes;
-      printf("nop_patch: %lx\n", g_nop_patch);
-      printf("orig_call: %lx\n", g_orig_call);
+
+      print_bytes("nop_patch", g_nop_patch, 5, g_call_straddler_point);
+      print_bytes("orig_call", g_orig_call, 5, g_call_straddler_point);
+
+      g_expected_bogus_call = (g_nop_patch & 0xFFFFFFFFFFFFFF00) | (g_orig_call & 0xFF);
+      g_expected_bogus_nop  = (g_orig_call & 0xFFFFFFFFFFFFFF00) | (g_nop_patch & 0xFF);
+
+      print_bytes("Expected bogus noop",  g_expected_bogus_nop, 5,  g_call_straddler_point);
+      print_bytes("Expected bogus call", g_expected_bogus_call, 5, g_call_straddler_point);
 
       g_first_run = false;
     }
