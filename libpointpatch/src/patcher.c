@@ -85,10 +85,13 @@ const uint8_t int3 = 0xCC;
 /* You can try this out with normal writes to memory by defined NO_CAS */
 #ifdef NO_CAS
 /* A WRITE is just a regular assingment */
+#warning "NON-ATOMIC WRITE"
 #define WRITE(addr,value)  (addr)[0] = (value)
 #else
+#warning "ATOMIC WRITE"
 /* An atomic write implemented via CAS. I'm not sure this comment makes sense */
-#define WRITE(addr,value)  __sync_val_compare_and_swap((addr), *(addr), (value))
+#define WRITE(addr,value) __atomic_store_n((addr),(value),__ATOMIC_SEQ_CST)
+//#define WRITE(addr,value)  __sync_val_compare_and_swap((addr), *(addr), (value))
 #endif
 
 /* internally used min/max macros */
@@ -254,19 +257,30 @@ static inline void wait_spin_rdtsc_yield() {
 
 static void int3_handler(int signo, siginfo_t *inf, void* ptr) {
   //ticks start = getticks();
+  g_int3_interrupt_count++;
   ucontext_t *ucontext = (ucontext_t*)ptr;
 
   // fprintf(stdout, "INT3 HNDLR RET ADDR: %p\n", (void*)ucontext->uc_mcontext.gregs[REG_RIP]);
 
   /* Resuming the thread after skipping the call instruction. */
-  ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] + 4;
-  //ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] - 1;
- 
+  //ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] + 4;
   
-  
-  /* REG_RIP is another machine and compiler specific define */
 
-  g_int3_interrupt_count++;
+  //  uint64_t word=*(uint64_t*)(ucontext->uc_mcontext.gregs[REG_RIP]-1);
+  //while (((uint8_t*)&word)[0] == 0xCC) { 
+  //  word=*(uint64_t*)(ucontext->uc_mcontext.gregs[REG_RIP]-1);
+    //  fprintf(stderr,"IT HAPPEND\n");
+      
+    //fflush(stderr);
+  //}
+  while(*(uint8_t*)(ucontext->uc_mcontext.gregs[REG_RIP]-1) == 0xCC); 
+  
+  ucontext->uc_mcontext.gregs[REG_RIP] = 
+    (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] - 1;
+  //asm volatile ( "cpuid" );
+
+  /* REG_RIP is another machine and compiler specific define */
+  
   //ticks end = getticks();
   //g_finstrumentor_overhead += (g_int3_interrupt_overhead + end - start);
 }
@@ -365,7 +379,7 @@ bool patch_64(void *addr, uint64_t patch_value){
 
     uint64_t patch_before = patch_keep_before | ((patch_value  & lsb_mask) << shift_size);
     uint64_t patch_after =  patch_keep_after | ((patch_value  & ~lsb_mask) >> (8 * cutoff_point));
-
+    
 
     /* -----------------------------------------------------------------
        NON_THREADSAFE
@@ -523,15 +537,20 @@ uint8_t oldFR = ((uint8_t*)addr)[0];
 
     if (oldFR == int3) return false;
     else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3))     {
+      //else if (__atomic_compare_exchange((uint8_t*)addr,&oldFR, &int3,false,__ATOMIC_SEQ_CST,__ATOMIC_SEQ_CST)) { 
 #ifdef PATCH_FLUSH_AFTER_INT3
       clflush(addr);
 #endif
+      
       WAIT();
+      //__atomic_thread_fence(__ATOMIC_SEQ_CST);
+
       //__sync_lock_test_and_set((uint64_t*)straddle_point,patch_after);
       //__sync_lock_test_and_set((uint64_t*)(straddle_point-1),patch_before);
-
       WRITE(straddle_point,patch_after);
+      WAIT();
       WRITE((straddle_point-1), patch_before);
+      //WRITE((uint64_t*)addr,patch_value);
       return true;
     }
     else return false;
