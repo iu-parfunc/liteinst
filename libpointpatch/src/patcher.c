@@ -82,17 +82,24 @@ const uint8_t int3 = 0xCC;
    MACROES
    ----------------------------------------------------------------- */
 
-#if defined(NONATOMIC_WRITE)
+#if defined(CAS_WRITE) 
+#warning "CAS WRITE" 
+#define WRITE(addr,value)  __sync_val_compare_and_swap((addr), *(addr), (value))
+#elif defined(NONATOMIC_WRITE)
 #warning "NONATOMIC WRITE" 
 #define WRITE(addr,value)  (addr)[0] = (value)
 
 #elif defined(ATOMIC_WRITE) 
-#warning "ATOMIC WRITE"
+#warning "ATOMIC WRITE2"
 #define WRITE(addr,value) __atomic_store_n((addr),(value),__ATOMIC_SEQ_CST)
 
 #else
-#warning "CAS WRITE" 
-#define WRITE(addr,value)  __sync_val_compare_and_swap((addr), *(addr), (value))
+#warning "LUKE's atomic write" 
+#define WRITE(addr, val) do {              \
+    __asm volatile ("":::"memory");                 \
+    *(addr) = val;                                  \
+  } while (0)
+
 #endif  
 
 /* You can try this out with normal writes to memory by defined NO_CAS */
