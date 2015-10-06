@@ -2,10 +2,16 @@
 CC = g++
 CFLAGS = -O2 $(NUMNOPS)
 
-all: main.exe 
+default: sigtime
+
+# I believe these extra tests were added by Joel:
+all: sig0 sig1 sig2 sig3 sig4 sig5 sig6 sigjs
+
+.phony: sigtime runtime run run0 run1 run2 run3 run4 run5 run6 runjs
 
 # Just build
-sigtime:
+sigtime: main.exe
+main.exe:
 	$(CC) $(CFLAGS) main.c -o main.exe
 
 sig0:
@@ -34,6 +40,7 @@ sigjs:
 
 
 # Just run
+run: runtime
 runtime:
 	./main.exe
 
