@@ -60,14 +60,15 @@ main = do
         }
 
 
-benchmark_names = ["h264ref-9.3","fluid", "blackscholes", "hull", "nbody","bzip-1.0.3", "perl-5.8.7", "hmmer", "sjeng", "lbm"]
+-- benchmark_names = ["h264ref-9.3","fluid", "blackscholes", "hull", "nbody","bzip-1.0.3", "perl-5.8.7", "hmmer", "sjeng", "lbm"]
+benchmark_names = ["h264ref-9.3"]
 
 benches :: [Benchmark DefaultParamMeaning]
 benches =
-  [ (mkBenchmark ("benchmarks/"++name++"/"++var_name++"/Makefile") [] variant)
-    { progname = Just name } 
-    | name <- benchmark_names
-    , (var_name, variant) <- base_variants] ++
+--  [ (mkBenchmark ("benchmarks/"++name++"/"++var_name++"/Makefile") [] variant)
+--    { progname = Just name } 
+--    | name <- benchmark_names
+--    , (var_name, variant) <- base_variants] ++
 
   [ (mkBenchmark ("benchmarks/"++name++"/"++var_name++"/Makefile") [] variant)
     { progname = Just name } 
@@ -84,7 +85,7 @@ benches =
                           ]
 
 
-    ubiprof_variants = [("ubiprof",adaptive)] -- ,("ubiprof", backoff),("noprof",backoff)] 
+    ubiprof_variants = [("ubiprof",sampling)] -- ,("ubiprof", backoff),("noprof",backoff)] 
 
     adaptive = Or [And [ Set (Variant ("ADAPTIVEMINIMAL_" ++ (show targ))) (RuntimeEnv "PROFILER_TYPE" "MINIMAL_ADAPTIVE")
                        , Set NoMeaning (RuntimeEnv "ADAPTIVE_STRATEGY" "SLOW_RAMP_UP") -- "EPOCH_CONTROL")
@@ -99,24 +100,23 @@ benches =
 -- This is misguided
 --                       ,("sampling",sampling)]
     
--- epochs :: [Int] 
--- epochs = [10,100,250,500,750,1000]
+epochs :: [Int] 
+epochs = [1000]
 
--- samplesize :: [Int] 
--- samplesize = [100,1000,10000,100000]
+samplesize :: [Int] 
+samplesize = [10]
 
--- sampling = Or [And [ Set (Variant (compiler ++ "_" ++ optlevel ++ "_Sampling_"++show s_size++"_"++show epoch)) (RuntimeEnv "PROFILER_TYPE" "SAMPLING")
---                    , Set NoMeaning (RuntimeEnv "SAMPLE_SIZE" (show s_size))
---                    , Set NoMeaning (RuntimeEnv "EPOCH_PERIOD" (show epoch))
---                    , Set NoMeaning (CompileEnv "CC"  compiler)
---                    , Set NoMeaning (CompileEnv "OPTLEVEL"  optlevel) 
---                    ]
---               | s_size <- samplesize
---               , epoch <- epochs
---               , compiler <- ["gcc"] -- , "icc"]
---               , optlevel <- ["-O2"] -- ["-O1", "-O2", "-O3" ]
---               ]
-
+sampling = Or [And [ Set (Variant (compiler ++ "_" ++ optlevel ++ "_Sampling_"++show s_size++"_"++show epoch)) (RuntimeEnv "PROFILER_TYPE" "SAMPLING")
+                   , Set NoMeaning (RuntimeEnv "SAMPLE_SIZE" (show s_size))
+                   , Set NoMeaning (RuntimeEnv "EPOCH_PERIOD" (show epoch))
+                   , Set NoMeaning (CompileEnv "CC"  compiler)
+                   , Set NoMeaning (CompileEnv "OPTLEVEL"  optlevel) 
+                   ]
+              | s_size <- samplesize
+              , epoch <- epochs
+              , compiler <- ["gcc"] -- , "icc"]
+              , optlevel <- ["-O2"] -- ["-O1", "-O2", "-O3" ]
+              ]
 
 
 backoff_params = [x * 10^6 | x <- [1,10,20,30,40,50,60,70,80,90,100]] 
