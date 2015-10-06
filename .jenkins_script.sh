@@ -9,7 +9,7 @@ make clean
 make docker
 
 # Run the tests inside the docker image:
-make testdocker
+# make testdocker
 
 # build run-benchmarks.exe via stack:
 make -f Make_runbench run-benchmarks.exe
