@@ -90,7 +90,7 @@ const uint8_t int3 = 0xCC;
 #define WRITE(addr,value)  (addr)[0] = (value)
 
 #elif defined(ATOMIC_WRITE) 
-#warning "ATOMIC WRITE2"
+#warning "ATOMIC WRITE"
 #define WRITE(addr,value) __atomic_store_n((addr),(value),__ATOMIC_SEQ_CST)
 
 #else
