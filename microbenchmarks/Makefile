@@ -2,11 +2,11 @@
 # Configuration stuff
 # ----------------------------------------
 # Note, obeys environment variables:
-# 
+#
 # ----------------------------------------
 
-ifeq ($(CABAL),)
-  CABAL=cabal
+ifeq ($(STACK),)
+  STACK=stack
 endif
 
 ifeq ($(MACHINECLASS),)
@@ -14,10 +14,6 @@ ifeq ($(MACHINECLASS),)
 endif
 
 RUNID=$(shell hostname -s)_$(shell date "+%s")
-
-ifeq ($(JENKINS_GHC),)
-  JENKINS_GHC=7.8.2
-endif
 
 TRIALS=5
 
@@ -44,12 +40,9 @@ run: run-benchmarks.exe
 bench: lib run-benchmarks.exe
 	./run-benchmarks.exe --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --name="Dynaprof_Benchmarks" --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
 
-run-benchmarks.exe: run-benchmarks.cabal run-benchmarks.hs
-	$(CABAL) sandbox init --sandbox=../.cabal-sandbox/
-#       Build the parent to make sure all the libs are installed:
-	(cd ..; make run-benchmarks.exe)
-#       Then we know that ours can build:
-	$(CABAL) install --bindir=. --disable-documentation --with-ghc=ghc-$(JENKINS_GHC)
+run-benchmarks.exe: run-micro-benchmarks.cabal run-benchmarks.hs
+	$(STACK) setup
+	$(STACK) --local-bin-path=. install
 	./run-benchmarks.exe --help
 	./run-benchmarks.exe -l
 
