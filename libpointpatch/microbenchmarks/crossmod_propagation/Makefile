@@ -1,13 +1,12 @@
 .PHONY: clean all
 
 
-
 SRCS = $(wildcard *.c)
 
 EXES = $(patsubst %.c,%.exe,$(SRCS))
 
 # hardcoded ??
-UBIROOT=../../
+UBIROOT=../../../
 
 LIBDIR=$(UBIROOT)build/lib
 
@@ -26,8 +25,8 @@ all: $(EXES)
 %.exe: %.c
 	$(CC)  -std=gnu99 -g $(CFLAGS) -I$(UBIROOT)/deps/distorm/include -I$(UBIROOT)/include  $< -o $@ -L$(LIBDIR) $(DEPS)
 
-test: $(EXES)
-	./testall.sh
+run: $(EXES)
+	echo "Finish me"
 
 clean:
 	rm -f *.exe
