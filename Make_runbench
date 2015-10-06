@@ -78,3 +78,4 @@ plotter: run-benchmarks.exe
 
 clean:
 	rm -rf ./run-benchmarks.exe ./dist
+	rm -rf ./build run-benchmarks.hi run-benchmarks.exe run-benchmarks.o

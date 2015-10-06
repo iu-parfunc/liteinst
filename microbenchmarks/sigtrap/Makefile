@@ -1,5 +1,5 @@
 
-CC = g++
+CC  = cc
 CFLAGS = -O2 $(NUMNOPS)
 
 default: sigtime

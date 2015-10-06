@@ -1,10 +1,12 @@
-CC = icc
-VTCC = vtcc -vt:cc icc
-CFLAGS = 
 
-default: main.exe 
+CC = cc
+# CC = icc
+# VTCC = vtcc -vt:cc icc
+CFLAGS =
 
-LIBS = -lgcc 
+default: main.exe
+
+LIBS = -lgcc
 # -ldynamic
 
 OPTS = -O0 -g
@@ -15,7 +17,7 @@ main.exe: main.c
 	$(CC) $(OPTS) $(LIBS) $(CFLAGS) main.c -o main.exe
 
 
-all: 
+all:
 	gcc -g -O0 $(LIBS) $(CFLAGS) main.c -o main_gcc_O0.exe
 	gcc -O3 $(LIBS) $(CFLAGS) main.c -o main_gcc_O3.exe
 
@@ -24,6 +26,11 @@ all:
 
 	clang -g -O0 $(LIBS) $(CFLAGS) main.c -o main_clang_O0.exe
 	clang -g -O3  $(LIBS) $(CFLAGS) main.c -o main_clang_O3.exe
+
+# TODO: this dumps a time series.  It could do a linear regression and
+# print the slope which HSbencher could capture.
+run: main.exe
+	./main.exe
 
 clean:
 	rm -f main.exe main_vt.exe *.o *.z *.otf *.thumb *.uctl *.def *.events
