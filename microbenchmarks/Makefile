@@ -25,6 +25,8 @@ SEC=MQ72ZWDde_1e1ihI5YE9YlEi
 .phony: all lib bench
 # ----------------------------------------
 
+default: run-benchmarks.exe
+
 # TODO: build everything before running/benchmarking:
 all: lib run-benchmarks.exe
 # Nothing here currently.

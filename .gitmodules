@@ -1,6 +1,3 @@
 [submodule "benchmarks"]
 	path = benchmarks
 	url = git@github.com:iu-parfunc/prof_apps.git
-[submodule "HSBencher"]
-	path = HSBencher
-	url = git@github.com:rrnewton/HSBencher.git
