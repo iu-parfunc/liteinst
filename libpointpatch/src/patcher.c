@@ -102,18 +102,6 @@ const uint8_t int3 = 0xCC;
 
 #endif  
 
-/* You can try this out with normal writes to memory by defined NO_CAS */
-//#ifdef NO_CAS
-/* A WRITE is just a regular assingment */
-//#warning "NON-ATOMIC WRITE"
-//#define WRITE(addr,value)  (addr)[0] = (value)
-//#else
-//#warning "ATOMIC WRITE"
-/* An atomic write implemented via CAS. I'm not sure this comment makes sense */
-//#define WRITE(addr,value) __atomic_store_n((addr),(value),__ATOMIC_SEQ_CST)
-//#define WRITE(addr,value)  __sync_val_compare_and_swap((addr), *(addr), (value))
-//#endif
-
 /* internally used min/max macros */
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
