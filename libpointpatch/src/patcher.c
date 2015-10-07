@@ -38,7 +38,7 @@
 long g_page_size = 0;
 size_t g_cache_lvl3_line_size = 0;
 uint64_t g_int3_interrupt_count = 0;
-int g_wait_iters = 400;
+int g_wait_iters = 2000;
 
 struct sigaction g_newact;
 struct sigaction g_oldact;
