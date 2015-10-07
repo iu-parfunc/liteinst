@@ -1,7 +1,7 @@
 
 # A separate Makefile concerned with running benchmarks.
 
-.phony: all bench
+.phony: all benchharnesses plotter clean distclean run-micro run-full
 
 # Configuration stuff
 # ----------------------------------------
@@ -10,6 +10,8 @@
 #   BENCHARGS  -- same as WHICHBENCH, gets passed to hsbencher harness
 #   STACK -- set executable to use for stack
 # ----------------------------------------
+
+# Configuration stuff:
 
 ifeq ($(STACK),)
   STACK=stack
@@ -53,29 +55,43 @@ endif
 # [2014.08.07] Debugging problems, trying to start fresh:
 TABLE=Dynaprof_Benchmarks2
 
-# ----------------------------------------
-
-# TODO: build everything before running/benchmarking:
-all: run-benchmarks.exe
+all: benchharnesses
 
 
-# Run the benchmarks
-bench: run-benchmarks.exe
-	./run-benchmarks.exe --retry=10 --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --name=$(TABLE) --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
+# Build the benchmarks:
+#----------------------------------------
 
-run-benchmarks.exe: run-benchmarks.cabal run-benchmarks.hs
+run-micro-benchmarks.exe: benchharnesses
+full-ubiprof-benchmarks.exe: benchharnesses
+
+benchharnesses:
 	which -a $(STACK)
 	$(STACK) --version
-	(cd ./HSBencher/; $(STACK) build)
-	$(STACK) --stack-yaml=./HSBencher/stack.yaml ghc -- run-benchmarks.hs -o run-benchmarks.exe
-#	$(STACKRUN) run-benchmarks.hs -l
+	$(STACK) --install-ghc install
 	echo "Listing available benchmarks."
-	./run-benchmarks.exe -l
+	./full-ubiprof-benchmarks.exe -l
+	./run-micro-benchmarks.exe -l
 
+# Run the benchmarks:
+#----------------------------------------
+
+run-micro: benchmarks
+	./run-micro-benchmarks.exe --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --name=$(TABLE) --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
+
+run-full: benchmarks
+	./full-ubiprof-benchmarks.exe --retry=10 --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --name=$(TABLE) --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
+
+#----------------------------------------
+
+
+# Old, ignoring for now [2015.10.07]:
 plotter: run-benchmarks.exe
 	(cd ./Plotting && $(CABAL) sandbox init --sandbox=$(TOP)/.cabal-sandbox/)
 	(cd ./Plotting && $(CABAL) install --bindir=. . ../HSBencher/hsbencher-analytics --force-reinstalls --disable-documentation)
 
 clean:
-	rm -rf ./run-benchmarks.exe ./dist
-	rm -rf ./build run-benchmarks.hi run-benchmarks.exe run-benchmarks.o
+	rm -rf ./run-micro-benchmarks.exe ./full-ubiprof-benchmarks.exe
+	rm -rf ./build
+
+distclean: clean
+	rm -rf .stack-work

@@ -8,8 +8,8 @@ make clean
 # Build the docker image:
 make docker
 
-# Run the tests inside the docker image:
+# TODO: Run the tests inside the docker image:
 # make testdocker
 
 # build run-benchmarks.exe via stack:
-make -f Make_runbench run-benchmarks.exe
+make -f Make_runbench benchharnesses
