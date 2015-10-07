@@ -1,0 +1,79 @@
+
+
+Libpointpatch microbenchmarks 
+-----------------------------
+
+
+directories
+-----------
+
+ cache1: (bjs) 
+  Try to find out how long it takes for updates to an array 
+  in one thread (on one core) takes to propagate to other threads 
+  on other cores. 
+  
+  compile: 
+  gcc --std=c99 experiment1.c -o experiment1.exe -lpthread
+
+ crossmod_propagation: (rrn)
+  A more clever (and instr patching relevant) approach to measuring the 
+  propagation delay. 
+
+ is_lock_free: (bjs) 
+  Simple program that asks the "compiler" whether certain atomic operations 
+  are lock free. 
+ 
+  compile: 
+  gcc --std=gnu99 islockfree.c -o islockfree.exe
+
+
+ patch_cost: (budd)  
+  find cost of patches.  
+
+  compile: 
+   Makefile
+ 
+ straddler_roulette: (bjs) 
+  A version of one of the tests where all patches are replaced 
+  with regular writes. 
+
+  (OLD AND ROTTEN!) 
+
+  compile: 
+   make 
+
+ torture_test: (bjs) 
+  Run a variant of a test for as long as possible.
+  Consider it a success if the infinitely looping test survives for 
+  some number of hours.  
+		     	
+  usage: 
+   ./torture gcc g++  
+
+ 
+ wait_iters_failures: (bjs) 
+  wait time in iterations vs failures test (OUTDATED). 
+
+ wait_time: (bjs) 
+  wait time. run a test program repeatedly with increasing wait time 
+  to find the fails - succeeds crossover point. 
+  (OUTDATED) 
+
+ wait_time2: (bjs)	
+  Similar to above and (OUTDATED). 
+
+ wait_time_rdtsc: (bjs) 
+  similar to above and should be fine. 
+  
+
+ wait_wait_time_rdtsc: (bjs) 
+  This and directly above should now be equivalent.. 
+  Clean this up. 
+
+
+   
+
+ 			
+
+
+			
