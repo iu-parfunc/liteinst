@@ -10,17 +10,16 @@
 
 ticks start, end;
 
-// void catchit(int signo, siginfo_t * inf, void * ptr) { 
-void catchit(int signo) { 
+// void catchit(int signo, siginfo_t * inf, void * ptr) {
+void catchit(int signo) {
   end = getticks();
   double duration = elapsed(end, start);
   printf("Catching signal, num %d.. ticks elapsed %lf\n",signo, duration);
-  printf("SELFTMED: %3.0lf\n", duration);
 }
 
 int main () {
-  struct sigaction newact; 
-  struct sigaction oldact; 
+  struct sigaction newact;
+  struct sigaction oldact;
   memset( &newact, 0, sizeof newact);
   newact.sa_handler = & catchit;
   int i = sigemptyset(& (newact.sa_mask));
@@ -32,9 +31,17 @@ int main () {
   end   = getticks();
 
   printf("Min elapsed %lf\n", elapsed(end,start));
-  start = getticks();
-  __asm__ ("int $0x03" : : );
-  
+
+  int j;
+  for(j=0; j<10; j++) {
+    printf("Restarting start time..\n");
+    start = getticks();
+    __asm__ ("int $0x03" : : );
+  }
+
+  // We report the last one as our benchmark time:
+  printf("SELFTIMED: %3.0lf\n", elapsed(end, start));
+
   // printf("Exiting main function... should not see this?\n");
   return 0;
 }

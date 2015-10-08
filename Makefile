@@ -57,10 +57,11 @@ bench: lib
 
 # Run all available tests, this is our regression testing / continuous
 # integration target:
-test: quicktest  
+test: quicktest
 
 # Only the fast-running tests:
-quicktest: lib pointpatch_tests fastinst_tests prof_tests
+quicktest: lib fastinst_tests prof_tests
+# pointpatch_tests ... need to make these fast!
 
 # inst_tests:
 #	(cd instrumentors/tests/unit && make check)
