@@ -6,6 +6,9 @@ failed=0;
 fails=""
 
 for f in *.exe ; do
+    if [ $f  =  'test_patch_parallel4.exe' ]; 
+    then continue; 
+    fi; 
     if [ $f  =  '*.exe' ] ;
 	then echo "Build tests first"
 	exit;
@@ -38,34 +41,34 @@ done;
 # unparameterised tests above.
 
 #test all straddling points
-for f in test_patch_parallel4.exe; do
-    for i in 2 3 4 5 6 7 ; do   # one is tested above
-	echo ""
-	echo ""
+# for f in test_patch_parallel4.exe; do
+#     for i in 2 3 4 5 6 7 ; do   # one is tested above
+# 	echo ""
+# 	echo ""
 
-	echo '****************************'
-	echo "RUNNING TEST $f"
-	echo '****************************'
+# 	echo '****************************'
+# 	echo "RUNNING TEST $f"
+# 	echo '****************************'
 
-	time ./${f} $i
-	if [ $? -eq 0 ]; then
-	    echo '****************************'
-	    echo "$f PASSED"
-	    echo '****************************'
-	    success=$((success+1))
-	else
-	    echo '****************************'
-	    echo "$f FAILED! "
-	    echo '****************************'
+# 	time ./${f} $i
+# 	if [ $? -eq 0 ]; then
+# 	    echo '****************************'
+# 	    echo "$f PASSED"
+# 	    echo '****************************'
+# 	    success=$((success+1))
+# 	else
+# 	    echo '****************************'
+# 	    echo "$f FAILED! "
+# 	    echo '****************************'
 
-	    fails="$fails $f($i)"
-	    failed=$((failed+1))
-	fi
+# 	    fails="$fails $f($i)"
+# 	    failed=$((failed+1))
+# 	fi
 
 
 
-    done;
-done;
+#     done;
+# done;
 #test all straddling points att varying numbers of threads 
 # hitting the call site. 
 for f in test_patch_parallel5.exe test_patch_parallel6.exe test_patch_parallel7.exe; do
