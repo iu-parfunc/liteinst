@@ -11,31 +11,31 @@ all: sig0 sig1 sig2 sig3 sig4 sig5 sig6 sigjs
 
 # Just build
 sigtime: main.exe
-main.exe:
+main.exe: main.c
 	$(CC) $(CFLAGS) main.c -o main.exe
 
-sig0:
+sig0: pt_main_0.c
 	$(CC) $(CFLAGS) pt_main_0.c -lpthread -o pt_main_0.exe
 
-sig1:
+sig1: pt_main_1.c
 	$(CC) $(CFLAGS) pt_main_1.c -lpthread -o pt_main_1.exe
 
-sig2:
+sig2: pt_main_2.c
 	$(CC) $(CFLAGS) pt_main_2.c -lpthread -o pt_main_2.exe
 
-sig3:
+sig3: pt_main_3.c
 	$(CC) $(CFLAGS) pt_main_3.c -lpthread -o pt_main_3.exe
 
-sig4:
+sig4: pt_main_4.c
 	$(CC) $(CFLAGS) pt_main_4.c -lpthread -o pt_main_4.exe
 
-sig5:
+sig5: pt_main_5.c
 	$(CC) $(CFLAGS) pt_main_5.c -lpthread -o pt_main_5.exe
 
-sig6:
+sig6: pt_main_6.c
 	$(CC) $(CFLAGS) pt_main_6.c -lpthread -o pt_main_6.exe
 
-sigjs:
+sigjs: pt_main_js.c
 	$(CC) $(CFLAGS) pt_main_js.c -lpthread -o pt_main_js.exe
 
 
