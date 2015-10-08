@@ -89,17 +89,16 @@ const uint8_t int3 = 0xCC;
 #warning "NONATOMIC WRITE" 
 #define WRITE(addr,value)  (addr)[0] = (value)
 
-#elif defined(ATOMIC_WRITE) 
-#warning "ATOMIC WRITE"
-#define WRITE(addr,value) __atomic_store_n((addr),(value),__ATOMIC_SEQ_CST)
-
-#else
+#elif defined(LUKE_ATOMIC_WRITE) 
 #warning "LUKE's atomic write" 
 #define WRITE(addr, val) do {              \
     __asm volatile ("":::"memory");                 \
     *(addr) = val;                                  \
   } while (0)
 
+#else
+#warning "ATOMIC WRITE"
+#define WRITE(addr,value) __atomic_store_n((addr),(value),__ATOMIC_SEQ_CST)
 #endif  
 
 /* internally used min/max macros */
