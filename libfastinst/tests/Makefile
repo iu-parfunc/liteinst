@@ -8,8 +8,6 @@ CFLAGS = -finstrument-functions -fno-inline -fno-optimize-sibling-calls
 
 LIBS = -L../../build/lib -lfastinst -ldl -lpthread
 
-CXX=icpc
-
 all: $(EXES)
 
 %.exe: %.cpp
