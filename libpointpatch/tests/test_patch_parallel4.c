@@ -60,16 +60,18 @@ void bar(void) {
 void activator(int *arg) { 
   
   while (g_first_run); /* wait until setup phase is done */ 
+  printf("Activator running\n"); 
   
   while(g_running) { 
     patch_64((void*)g_call_addr, g_orig_call);
-    /* pthread_yield(); */
+    /* pthread_yield(); */ 
   }  
 } 
 
 void deactivator(int *arg) { 
 
   while (g_first_run); /* wait until setup phase is done */ 
+  printf("Deactivator running\n"); 
   
   while (g_running) { 
 
@@ -190,7 +192,14 @@ int main(int argc, char** argv) {
     //pthread_mutex_lock(&patch_lock);
     ((void (*)(void ))&fun[start_addr])(); 
     //pthread_mutex_unlock(&patch_lock);
+    
+    if (it % 1000 == 0) {
+      fprintf(stdout,"."); 
+      fflush(stdout);
+    }
+    
   }
+  printf("\n");
   g_running = false; 
   
   pthread_join(thread1, NULL); 

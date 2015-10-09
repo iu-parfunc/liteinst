@@ -60,16 +60,17 @@ bench: lib
 test: quicktest
 
 # Only the fast-running tests:
-quicktest: lib fastinst_tests prof_tests
+quicktest: lib fastinst_tests
 # pointpatch_tests ... need to make these fast!
+# prof_tests -- RRN: What's the deal with this one?
 
 # inst_tests:
 #	(cd instrumentors/tests/unit && make check)
 #	(cd instrumentors/tests/integration && make check)
 
 # prof_tests:
-#	(cd profilers/tests/unit && make check)
-#	(cd profilers/tests/integration && make check)
+# 	(cd profilers/tests/unit && make check)
+# 	(cd profilers/tests/integration && make check)
 
 pointpatch_tests:
 	(cd libpointpatch/tests && make test )
