@@ -22,5 +22,6 @@ else
 
    # build run-benchmarks.exe via stack:
    make -f Make_runbench benchharnesses
+   make -f Make_runbench run-full
 
 fi
