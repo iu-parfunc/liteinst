@@ -20,4 +20,7 @@ else
    make devdoc
    make test
 
+   # build run-benchmarks.exe via stack:
+   make -f Make_runbench benchharnesses
+
 fi
