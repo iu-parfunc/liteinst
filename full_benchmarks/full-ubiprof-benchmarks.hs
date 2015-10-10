@@ -60,15 +60,15 @@ main = do
         }
 
 
--- benchmark_names = ["h264ref-9.3","fluid", "blackscholes", "hull", "nbody","bzip-1.0.3", "perl-5.8.7", "hmmer", "sjeng", "lbm"]
-benchmark_names = ["h264ref-9.3"]
+benchmark_names = ["h264ref-9.3","fluid", "blackscholes", "hull", "nbody","bzip-1.0.3", "perl-5.8.7", "hmmer", "sjeng", "lbm"]
+-- benchmark_names = ["h264ref-9.3"]
 
 benches :: [Benchmark DefaultParamMeaning]
 benches =
---  [ (mkBenchmark ("benchmarks/"++name++"/"++var_name++"/Makefile") [] variant)
---    { progname = Just name } 
---    | name <- benchmark_names
---    , (var_name, variant) <- base_variants] ++
+  [ (mkBenchmark ("benchmarks/"++name++"/"++var_name++"/Makefile") [] variant)
+    { progname = Just name } 
+    | name <- benchmark_names
+    , (var_name, variant) <- base_variants] ++
 
   [ (mkBenchmark ("benchmarks/"++name++"/"++var_name++"/Makefile") [] variant)
     { progname = Just name } 
@@ -76,7 +76,7 @@ benches =
     , (var_name, variant) <- ubiprof_variants] 
 
   where
-    base  = ["gprof", "unprofiled" ]
+    base  = ["unprofiled" ]
     base_variants = [(nom, setVariant nom) | nom <- base]
     
     setVariant str = And [Set (Variant str) (CompileParam "")
