@@ -14,6 +14,7 @@
 */
 
 #include "patcher.h"
+#include "patchlist.h"
 
 #include <stdlib.h>
 #include <memory.h>
@@ -32,13 +33,24 @@
 
 
 /* -----------------------------------------------------------------
+   Constants
+   ----------------------------------------------------------------- */
+
+const uint8_t int3 = 0xCC;
+
+/* -----------------------------------------------------------------
    Globals
    ----------------------------------------------------------------- */
 
-long g_page_size = 0;
+long g_page_size = 0;        
 size_t g_cache_lvl3_line_size = 0;
 uint64_t g_int3_interrupt_count = 0;
 int g_wait_iters = 2000;
+
+#define ADDR_KEY_BITS 8 
+#define ADDR_KEY_MAX  256 // why not 2**8 
+
+PatchList g_patch_list[ADDR_KEY_MAX] = {0};
 
 struct sigaction g_newact;
 struct sigaction g_oldact;
@@ -47,11 +59,6 @@ struct sigaction g_oldact;
 struct timespec g_wait_time;
 #endif
 
-/* -----------------------------------------------------------------
-   Constants
-   ----------------------------------------------------------------- */
-
-const uint8_t int3 = 0xCC;
 
 /* -----------------------------------------------------------------
    WAIT
@@ -641,6 +648,143 @@ bool patch_32(void *addr, uint32_t patch_value){
   WRITE((uint32_t*)addr,patch_value);
   return true;
 }
+
+/* ----------------------------------------------------------------- 
+   Async Patching
+   ----------------------------------------------------------------- */
+
+
+inline int patch_list_key(void *addr) { 
+  
+  /* use some low bits of address */ 
+  return (int)((uint64_t)addr & ADDR_KEY_MAX);
+  
+}
+
+
+bool async_patch_64(void *addr, uint64_t patch_value) { 
+  
+  int offset = (uint64_t)addr % g_cache_lvl3_line_size; 
+  
+  /* Is this a straddler patch ? */ 
+  if (offset > g_cache_lvl3_line_size - 8) { 
+    /* fprintf(stderr,"Straddler update\n"); */ 
+    /* Here the patch site straddles a cache line and all atomicity 
+       guarantees in relation to instruction fetch seems to go out the window */ 
+    
+    unsigned int cutoff_point = g_cache_lvl3_line_size - offset; 
+    uint64_t* straddle_point = (uint64_t*)((uint8_t*)addr + cutoff_point);
+    
+    uint64_t lsb_mask = get_lsb_mask_64(cutoff_point);
+    uint64_t msb_mask = get_msb_mask_64(cutoff_point); 
+     
+    /* read in 8 bytes before and after the straddle point */
+    uint64_t before = *(straddle_point - 1);
+    uint64_t after  = *straddle_point;
+    
+    int shift_size = 8 * (8 - cutoff_point); 
+      
+    /* this is the parts to keep from what was originally in memory */
+    uint64_t patch_keep_before = before & (~msb_mask);
+    uint64_t patch_keep_after  = after & msb_mask;
+    
+    uint64_t patch_before = patch_keep_before | ((patch_value  & lsb_mask) << shift_size);
+    uint64_t patch_after =  patch_keep_after | ((patch_value  & ~lsb_mask) >> (8 * cutoff_point));
+    
+    
+    
+    /* ----------------------------------------------------------------- 
+       WAIT BASED THREADSAFE PATCHER
+       ----------------------------------------------------------------- */ 
+    uint8_t oldFR = ((uint8_t*)addr)[0]; 
+    
+    if (oldFR == int3) return false; 
+    else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {
+      
+      struct Patch *p = (struct Patch*)malloc(sizeof(struct Patch)); 
+      p->addr      = (uint64_t)addr;
+      p->front     = patch_before; 
+      p->back      = patch_after; 
+      p->timestamp = rdtsc(); 
+      p->next = NULL; 
+      
+      
+      int key = patch_list_key(addr); 
+#ifndef NDEBUG 
+      printf("ASYNC_PATCH: Adding address %lu to list\n",p->addr);
+#endif 
+      cons_patch(p,&g_patch_list[key]); 
+
+      return true; 
+    }
+    else return false; 
+  } 
+
+  /* if not a straddler perform a single write */
+  WRITE((uint32_t*)addr,patch_value);
+  return true;
+
+}
+
+bool try_finish_patch_64(void *addr){ 
+
+  int key = patch_list_key(addr);
+
+  struct Patch *p; 
+  int retval; 
+  while ((retval = remove_patch((uint64_t)addr,&g_patch_list[key],&p)) == 
+	 PATCH_LIST_CONTENTION);
+
+  if (retval == PATCH_NOT_FOUND) { 
+#ifndef NDEBUG 
+    printf("try_finish_patch: patch not found\n"); 
+    return; 
+#endif 
+  }
+  /* we got a patch to attempt to apply */ 
+  if (retval == PATCH_REMOVED) { 
+
+    int offset = (uint64_t)addr % g_cache_lvl3_line_size;
+    unsigned int cutoff_point = g_cache_lvl3_line_size - offset; 
+    uint64_t* straddle_point = (uint64_t*)((uint8_t*)addr + cutoff_point);
+      
+    if (rdtsc() < (p->timestamp + g_wait_iters)) { 
+      WRITE(straddle_point,p->back); 
+      WRITE((straddle_point-1),p->front); 
+      free(p); 
+    } else { 
+      cons_patch(p,&g_patch_list[key]); 
+    }
+    
+  }
+} 
+
+void finish_patch_64(void *addr){ 
+  
+  int key = patch_list_key(addr); 
+
+  struct Patch *p; 
+  int retval;
+  while ((retval = remove_patch((uint64_t)addr,&g_patch_list[key],&p)) == 
+	 PATCH_LIST_CONTENTION);
+  
+  if (retval == PATCH_NOT_FOUND) return; /* patch already applied */
+
+  /* we got a patch to apply */ 
+  if (retval == PATCH_REMOVED) { 
+
+    int offset = (uint64_t)addr % g_cache_lvl3_line_size;
+    unsigned int cutoff_point = g_cache_lvl3_line_size - offset; 
+    uint64_t* straddle_point = (uint64_t*)((uint8_t*)addr + cutoff_point);
+      
+    while (rdtsc() < (p->timestamp + g_wait_iters));
+    WRITE(straddle_point,p->back); 
+    WRITE((straddle_point-1),p->front); 
+    free(p); 
+  }
+  
+}
+
 
 
 /* -----------------------------------------------------------------
