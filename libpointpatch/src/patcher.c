@@ -84,7 +84,7 @@ const uint8_t int3 = 0xCC;
 
 #if defined(CAS_WRITE) 
 #warning "CAS WRITE" 
-#define WRITE(addr,value) __sync_bool_compare_and_swap((addr), *(addr), (value))
+#define WRITE(addr,value) assert(__sync_bool_compare_and_swap((addr), *(addr), (value)))
 #elif defined(NONATOMIC_WRITE)
 #warning "NONATOMIC WRITE" 
 #define WRITE(addr,value)  (addr)[0] = (value)
@@ -781,9 +781,13 @@ int64_t find_reg_setter(_RegisterType reg, Decoded d){
 
 /* Inline this when possible */
 inline uint64_t get_msb_mask_64(int nbytes) {
+  assert(nbytes > 0 && nbytes < 8); 
+  return((uint64_t)0xFFFFFFFFFFFFFFFF << (64 - (nbytes*8)));
+  
+  /*
   switch (nbytes) {
   case 1:
-    return 0xFF00000000000000;
+    return 0xFF00000000000000; 
   case 2:
     return 0xFFFF000000000000;
   case 3:
@@ -799,13 +803,17 @@ inline uint64_t get_msb_mask_64(int nbytes) {
   default:
     printf("ERROR : Invalid input to get_msb_mask\n");
     return 0;
-  }
+    }*/
 }
 
 inline uint64_t get_lsb_mask_64(int nbytes) {
+  assert(nbytes > 0 && nbytes < 8); 
+  return((uint64_t)0xFFFFFFFFFFFFFFFF >> (64 - (nbytes*8)));
+
+  /*
   switch (nbytes) {
     case 1:
-      return 0xFF;
+      return 0xFF;     
     case 2:
       return 0xFFFF;
     case 3:
@@ -821,7 +829,7 @@ inline uint64_t get_lsb_mask_64(int nbytes) {
     default:
       printf("ERROR : Invalid input to get_lsb_mask\n");
       return 0;
-  }
+      } */
 }
 
 
