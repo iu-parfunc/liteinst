@@ -50,6 +50,9 @@ echo $PATH
 # (1) Piggy-back on the standard regression tests to do the build:
 # This should get the rest of the params, right ???
 
+# Make sure the module bash function is available:
+source /etc/profile.d/modules-local.sh
+
 #./.jenkins_script.sh
 case $LIBCOMPILER in
     icc)
