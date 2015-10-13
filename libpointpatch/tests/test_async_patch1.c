@@ -68,10 +68,21 @@ void activator(int *arg) {
 
   for (int i = 0; i < ITERS; i ++){
 
+    /* foo patch */ 
     async_patch_64((void*)g_call_addr, g_orig_call);
 
     /* test try_finish_patch */ 
     try_finish_patch_64((void*)g_call_addr); 
+    /* test finish_patch */
+    finish_patch_64((void*)g_call_addr);
+
+
+    /* bar patch */ 
+    async_patch_64((void*)g_call_addr, g_call_bar_patch);
+
+    /* test try_finish_patch */ 
+    try_finish_patch_64((void*)g_call_addr); 
+
     /* test finish_patch */
     finish_patch_64((void*)g_call_addr);
     
@@ -88,13 +99,7 @@ void deactivator(int *arg) {
 
   for (int i = 0; i < ITERS; i ++){
 
-    async_patch_64((void*)g_call_addr, g_call_bar_patch);
-
-    /* test try_finish_patch */ 
-    try_finish_patch_64((void*)g_call_addr); 
-
-    /* test finish_patch */
-    finish_patch_64((void*)g_call_addr);
+    
 
   }
   
@@ -264,8 +269,7 @@ int main(int argc, char** argv) {
 	 g_foo_val + g_bar_val);
  
   /* if (g_foo_val + g_bar_val == ITERS) { */ 
-  /* && g_bar_val > 0 */ 
-  if (g_foo_val > 0 ) {
+  if (g_foo_val > 0 && g_bar_val > 0) {
     printf("Success\n");
     return 0; 
   } else { 
