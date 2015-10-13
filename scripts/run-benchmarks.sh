@@ -63,7 +63,8 @@ case $LIBCOMPILER in
 	make lib CC=icc CXX=icpc
 	;;
     gcc)
-	module add gcc/4.9.2
+# Ugh, this version of gcc has an ld that makes Haskell hostname-1.0 fail to build:
+#	module add gcc/4.9.2
 
 	make clean
 	make lib CC=gcc CXX=g++
