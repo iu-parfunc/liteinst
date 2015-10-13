@@ -916,13 +916,6 @@ int64_t find_reg_setter(_RegisterType reg, Decoded d){
 }
 
 
-/* -----------------------------------------------------------------
-   This could be replaced by a few multiplications. (6 in worst case)
-   But switching a loop for a case statement is probably a zero win.
-   Also, if needed, get_lsb_mask can be obtained by a ~ from the get_msb_mask
-   (although not at the same index) .
-   ----------------------------------------------------------------- */
-
 /* Inline this when possible */
 inline uint64_t get_msb_mask_64(int nbytes) {
   assert(nbytes > 0 && nbytes < 8); 
