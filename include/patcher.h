@@ -70,6 +70,12 @@ bool patch_64(void*, uint64_t);
 /* Patch up to 4 byte instructions in a straddler safe way */
 bool patch_32(void*, uint32_t); 
 
+/* asynch api */ 
+
+bool async_patch_64(void*, uint64_t);
+bool try_finish_patch_64(void*);
+void finish_patch_64(void*);
+
 Decoded decode_range(void*, void*);
 void destroy_decoded(Decoded);
 

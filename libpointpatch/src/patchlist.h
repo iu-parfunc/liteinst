@@ -47,12 +47,17 @@ int remove_patch(uint64_t find_addr, PatchList *pl, struct Patch **res){
   if (__sync_bool_compare_and_swap(&pl->lock,0,1)){ 
   
     struct Patch *p = pl->head; 
-    if (p == NULL) return PATCH_NOT_FOUND; 
+    if (p == NULL) { 
+      pl->lock = 0; 
+      return PATCH_NOT_FOUND; 
+    }
     
     if (p->addr == find_addr) { 
       pl->head = p->next; 
       pl->length--;
-      return p;
+      pl->lock = 0; 
+      *res = p;
+      return PATCH_REMOVED;
     }
   
     struct Patch *curr = p->next; 
@@ -61,13 +66,16 @@ int remove_patch(uint64_t find_addr, PatchList *pl, struct Patch **res){
       prev = curr; 
       curr = curr->next;
     }
-    if (curr == NULL) return PATCH_NOT_FOUND; 
+    if (curr == NULL) { 
+      pl->lock = 0; 
+      return PATCH_NOT_FOUND; 
+    }
 
     prev->next = curr->next; 
     curr->next = NULL; 
     pl->length--;
-    pl->lock = 0; 
     *res = curr;  /* user is responsible for storage freeing of these.  */
+    pl->lock = 0; 
     return PATCH_REMOVED;
   }
   
