@@ -740,8 +740,8 @@ bool try_finish_patch_64(void *addr){
   if (retval == PATCH_NOT_FOUND) { 
 #ifndef NDEBUG 
     printf("try_finish_patch: patch not found\n"); 
-    return false;; 
 #endif 
+    return false;; 
   }
   /* we got a patch to attempt to apply */ 
   if (retval == PATCH_REMOVED) { 
@@ -788,9 +788,7 @@ void finish_patch_64(void *addr){
   if (retval == PATCH_NOT_FOUND) {
 #ifndef NDEBUG 
     printf("finish_patch: patch not found\n"); 
-    return;
 #endif 
-
     return; /* patch already applied */
     }
   /* we got a patch to apply */ 
