@@ -73,7 +73,7 @@ bool patch_32(void*, uint32_t);
 /* asynch api */ 
 
 bool async_patch_64(void*, uint64_t);
-bool try_finish_patch_64(void*);
+void try_finish_patch_64(void*);
 void finish_patch_64(void*);
 
 Decoded decode_range(void*, void*);

@@ -32,7 +32,7 @@
 #include <pthread.h> 
 
 #ifndef ITERS
-#define ITERS 50000000
+#define ITERS 50000
 #endif 
 
 unsigned long g_foo_val = 0; 
@@ -67,26 +67,18 @@ void activator(int *arg) {
   printf("activator running\n");   
 
   for (int i = 0; i < ITERS; i ++){
-
     /* foo patch */ 
-    async_patch_64((void*)g_call_addr, g_orig_call);
-
-    /* test try_finish_patch */ 
-    try_finish_patch_64((void*)g_call_addr); 
-    /* test finish_patch */
-    finish_patch_64((void*)g_call_addr);
-
-
-    /* bar patch */ 
-    async_patch_64((void*)g_call_addr, g_call_bar_patch);
-
-    /* test try_finish_patch */ 
-    try_finish_patch_64((void*)g_call_addr); 
-
-    /* test finish_patch */
-    finish_patch_64((void*)g_call_addr);
+    if ( i % 2 == 0 ){ 
+      async_patch_64((void*)g_call_addr, g_call_bar_patch);
+    } else { 
+      async_patch_64((void*)g_call_addr, g_orig_call);
+    } 
     
+    /* test try_finish_patch */ 
+    try_finish_patch_64((void*)g_call_addr); 
+ 
   }  
+  printf("DONE DONE DONE \n");
   activator_done = true; 
   g_running = false; 
 } 
