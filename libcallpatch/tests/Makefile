@@ -20,4 +20,4 @@ straddle_wait_free:
 	$(CC)  -std=gnu99 -g $(CFLAGS) -I$(UBIROOT)deps/distorm/include -I$(UBIROOT)include test_straddle_wait_free.c -o test_straddle_wait_free.exe -L$(LIBDIR) $(DEPS) 
 
 test: straddle_wait_free
-	./test_straddle_wait_free.exe $(STRADDLE_POINT)
+	./testall.sh

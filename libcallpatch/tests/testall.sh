@@ -10,7 +10,7 @@ for i in {1..4}; do
   echo '******************************'
   echo "RUNNING FOR STRDDLER POINT $i"
   echo '******************************'
-  STRADDLER_POINT=$i make test
+  ./test_straddle_wait_free.exe $i 
   if [ $? -eq 0 ]; then
     echo '****************************'
     echo "PASSED"

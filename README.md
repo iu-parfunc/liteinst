@@ -9,9 +9,11 @@ Directories:
  * libpointpatch - pointpatch library sources
  * libfastinst   - fastinst library sources
  * libubiprof    - ubiprof library sources
+ * libcallpatch  - wait free call instruction patching implementation
  * common        - common code and includes used by above libraries
  * deps          - third party dependencies used by above libraries
  * include       - public interface of the libraries
  * microbenchmarks - general microbenchmarks on gathering platform information
  * benchmarks    - full application benchmarks for ubiprof
  * scripts       - various build and test scripts
+ * archived      - code from earlier versions of the libraries
