@@ -52,9 +52,6 @@ microbench : lib
 # 	(cd microbenchmarks && make run)
 	(cd libfastinst/microbenchmarks && make run)
 
-bench: lib
-	(cd benchmarks && make run)
-
 # Run all available tests, this is our regression testing / continuous
 # integration target:
 test: quicktest
