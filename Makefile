@@ -23,11 +23,9 @@ lib:
 	$(CXX) --version || echo ok
 	$(CC) --version || echo ok
 
-#	(cd instrumentors/finstrument/src/ && make CFLAGS='-DNDEBUG -O3')
-#	(cd profilers/src/ && make install CFLAGS='-DNDEBUG -O3')
-
 #       Ugh, something above wipes the build/ directory... FIXME
 	(cd libpointpatch/src && make CC=$(CC) CXX=$(CXX) CFLAGS="$(CFLAGS) -DNDEBUG -O3" && make install )
+	(cd libcallpatch/src && make CC=$(CC) CXX=$(CXX) CFLAGS="$(CFLAGS) -DNDEBUG -O3" && make install )
 	(cd libfastinst/src   && make CC=$(CC) CXX=$(CXX) CFLAGS='-DNDEBUG -O3' && make install )
 	(cd libubiprof/src   && make CC=$(CC) CXX=$(CXX) CFLAGS='-DNDEBUG -O3' && make install )
 
@@ -57,7 +55,7 @@ microbench : lib
 test: quicktest
 
 # Only the fast-running tests:
-quicktest: lib fastinst_tests
+quicktest: lib callpatch_tests fastinst_tests
 # pointpatch_tests ... need to make these fast!
 # prof_tests -- RRN: What's the deal with this one?
 
@@ -74,6 +72,9 @@ pointpatch_tests:
 
 fastinst_tests:
 	(cd libfastinst/tests && make test)
+
+callpatch_tests:
+	(cd libcallpatch/tests && make test)
 
 # Not running this from the default `make test` above due to Dyninst dependency.
 dyninst_inst_test:
