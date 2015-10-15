@@ -363,7 +363,7 @@ bool patch_64(void *addr, uint64_t patch_value){
 
   /* Is this a straddler patch ? */
   if (offset > g_cache_lvl3_line_size - 8) {
-    /* fprintf(stderr,"Straddler update\n"); */
+    // fprintf(stderr,"Straddler update\n");
     /* Here the patch site straddles a cache line and all atomicity
        guarantees in relation to instruction fetch seems to go out the window */
 
@@ -380,7 +380,21 @@ bool patch_64(void *addr, uint64_t patch_value){
 
     int shift_size = 8 * (8 - cutoff_point);
 
-    /* this is the parts to keep from what was originally in memory */
+    // fprintf(stderr, "straddle_point : %X\n", *straddle_point);
+    // fprintf(stderr, "after: %X\n", after);
+
+    /* These are the parts to keep from what was originally in memory.
+     * These calculations handle little endianness in x86. Raw memory
+     * when stored as int types will get converted to the little endian 
+     * format where leading byte becomes LSB. 
+     *
+     * toy example :
+     * char bytes[] = {1, 0, 0, 0};
+     * int n = *(int*)bytes;
+     * printf("%X\n", n);
+     *
+     * On x86 this would print 0x00000001 though in raw memory it is stored
+     * as 0x10000000 */
     uint64_t patch_keep_before = before & (~msb_mask);
     uint64_t patch_keep_after  = after & msb_mask;
 
