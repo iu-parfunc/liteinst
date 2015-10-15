@@ -4,6 +4,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <assert.h>
+#include <stdlib.h>
 
 /* -----------------------------------------------------------------
    MACROES
@@ -29,11 +30,18 @@
 #endif  
 
 /* -----------------------------------------------------------------
+   DEFINES 
+   ----------------------------------------------------------------- */
+
+#define TABLE_SIZE 64 
+
+/* -----------------------------------------------------------------
  *    Globals
  * ----------------------------------------------------------------- */
 
 size_t g_cache_lvl3_line_size = 0;
 long g_page_size = 0;
+uint8_t* g_trampoline_table[TABLE_SIZE];
 
 /* -----------------------------------------------------------------
    internally used
@@ -186,6 +194,24 @@ uint8_t* allocate_degenerate_trampoline(void* addr) {
   return tramp_addr;
 }
 
+uint8_t* get_trampoline(void* addr) {
+  int i;
+  for (i=0; i< TABLE_SIZE; i++) {
+    if (!g_trampoline_table[i]) { 
+      WRITE(&g_trampoline_table[i], allocate_degenerate_trampoline(addr));
+      return g_trampoline_table[i];
+    }
+
+    if (abs(g_trampoline_table[i] - (uint8_t*)addr) < (1LL<<32)) {
+      return g_trampoline_table[i];
+    }
+  }
+
+  // This shouldn't happen. We have overflowed the trampoline table.
+  assert(i < TABLE_SIZE);
+  return 0;
+}
+
 bool is_a_deactivation(uint64_t patch_value) {
   uint64_t val = patch_value & get_lsb_mask_64(5); // Extract out 5 LSB
   // printf("patch value inside is_a_deactivation : %X\n", patch_value);
@@ -206,7 +232,7 @@ bool handle_1_4_split(void* addr, uint64_t patch_value) {
 
   if (is_a_deactivation(patch_value)) {
     // printf("Handling 1_4 deactivation..\n");
-    uint64_t tramp_addr = (uint64_t) allocate_degenerate_trampoline(addr);
+    uint64_t tramp_addr = (uint64_t) get_trampoline(addr);
     uint32_t jump_distance = (uint32_t) (tramp_addr - ((uint64_t) addr + 5));
 
     // Mask out the call instruction bytes

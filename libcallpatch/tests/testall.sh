@@ -6,26 +6,28 @@ failed=0;
 
 echo "------------ [Wait Free] Running Straddler Tests ----------"
 echo ""
-for i in {1..4}; do
-  echo '******************************'
-  echo "RUNNING FOR STRDDLER POINT $i"
-  echo '******************************'
-  ./test_straddle_wait_free.exe $i 
-  if [ $? -eq 0 ]; then
-    echo '****************************'
-    echo "PASSED"
-    echo '****************************'
-    echo ""
-    success=$((success+1))
-  else
-    echo '****************************'
-    echo "FAILED! "
-    echo '****************************'
-    echo ""
+for f in *.exe ; do
+  for i in {1..4}; do
+    echo '*******************************************'
+    echo "RUNNING TEST $f - $i"
+    echo '*******************************************'
+    ./${f} $i 
+    if [ $? -eq 0 ]; then
+      echo '*****************************************'
+      echo "PASSED"
+      echo '*****************************************'
+      echo ""
+      success=$((success+1))
+    else
+      echo '*****************************************'
+      echo "FAILED! "
+      echo '*****************************************'
+      echo ""
 
-    fails="$fails $i"
-    failed=$((failed+1)) 
-  fi
+      fails="$fails $f-$i"
+      failed=$((failed+1)) 
+    fi
+  done
 done
 
 echo ""

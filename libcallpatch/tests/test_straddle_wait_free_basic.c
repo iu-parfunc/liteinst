@@ -2,20 +2,19 @@
  * Test Description
  *  Tests the basic workings of patch_64 based on wait free CALL instruction 
  *  patching algorithms on given straddler configuration.
- *  - One thread carry out probe activations and deactivations in a loop
+ *  - One thread carry out couple of probe activations and deactivations
  *    intermingled with call site executions.
  *
- *  Test is considered a success if the number of successful calls to the 
- *  patched function is as expected. 
+ *  Test is considered a success if the program doesn't crash.
  *
- *  Run: ./test_straddle_wait_free.exe <straddle_point>
+ *  Run :
+ *    ./test_straddle_wait_free_basic.exe <straddle_point>
  */
 #include <stdio.h> 
 #include <memory.h>
 #include <stdint.h> 
 #include <stdlib.h>
 #include <unistd.h>
-#include <assert.h>
 #include <limits.h>
 #include <wait_free.h>
 #include <inttypes.h>
@@ -34,8 +33,6 @@ volatile bool g_first_run = true;
 uint64_t g_call_addr = 0; 
 uint64_t g_orig_call = 0;  /* original instr */
 uint64_t g_call_nop_patch = 0;      /* replacement isntr sequence */
-
-uint64_t NUM_INVOCATIONS = 10000;
 
 void foo(void) { 
   
@@ -63,8 +60,10 @@ void foo(void) {
     
 
     g_first_run = false; 
-    return;
-  }  
+  } else {
+    printf("[FOO] Running foo ..\n");
+  }
+  
   //printf("Running foo %d\n", apa); 
 
   g_foo_val++;
@@ -118,27 +117,28 @@ int main(int argc, char** argv) {
 
   init_patch_site((void*)&fun[start_addr],1024); 
 
-  printf("[Main] Start address : %p\n", &fun[start_addr]);
+  printf("Start address : %p\n", &fun[start_addr]);
 
-  /* Initial call to setup the stuff */
+  /* the call site that will be patched */
   ((void (*)(void ))&fun[start_addr])(); 
 
-  int i;
-  for (i=0; i< NUM_INVOCATIONS; i++) {
-    // Disabling the call site
-    patch_call_64((void*)g_call_addr, g_call_nop_patch);
+  printf(">> Overwriting the call site..\n");
+  patch_call_64((void*)g_call_addr, g_orig_call);
 
-    // Invocation after disabling the call site
-    ((void (*)(void ))&fun[start_addr])(); 
+  printf(">> Invocation after overwriting the call site..\n");
+  ((void (*)(void ))&fun[start_addr])(); 
 
-    // Reactivating the call site
-    patch_call_64((void*)g_call_addr, g_orig_call);
+  printf(">> Disabling the call site..\n");
+  patch_call_64((void*)g_call_addr, g_call_nop_patch);
 
-    // Invocation after the reactivation
-    ((void (*)(void ))&fun[start_addr])(); 
-  }
+  printf(">> Invocation after disabling the call site..\n");
+  ((void (*)(void ))&fun[start_addr])(); 
 
-  assert(g_foo_val == NUM_INVOCATIONS);
+  printf(">> Reactivating the call site..\n");
+  patch_call_64((void*)g_call_addr, g_orig_call);
+
+  printf(">> Invocation after reactivating the call site..\n");
+  ((void (*)(void ))&fun[start_addr])(); 
 
   return 0;
 
