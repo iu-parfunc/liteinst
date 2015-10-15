@@ -6,10 +6,10 @@ Various (in-progress) tools related to onlineProfiling
 
 Directories:
 
+ * libcallpatch  - wait free call instruction patching implementation
  * libpointpatch - pointpatch library sources
  * libfastinst   - fastinst library sources
  * libubiprof    - ubiprof library sources
- * libcallpatch  - wait free call instruction patching implementation
  * common        - common code and includes used by above libraries
  * deps          - third party dependencies used by above libraries
  * include       - public interface of the libraries
