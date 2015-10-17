@@ -278,7 +278,7 @@ static void int3_handler(int signo, siginfo_t *inf, void* ptr) {
 
   uint64_t addr = (uint64_t)(ucontext->uc_mcontext.gregs[REG_RIP]-1);
   
-  //#ifndef NDEBUG
+#ifndef NDEBUG
   fprintf(stdout,"try_finish from int3_handler\n");
   fflush(stdout);
 
@@ -289,7 +289,7 @@ static void int3_handler(int signo, siginfo_t *inf, void* ptr) {
   fprintf(stdout,"NO PATCH TO APPLY HERE \n");
   fflush(stdout);
   }
-  //#endif   
+#endif   
 
   try_finish_patch_64(addr); 
 
@@ -800,10 +800,11 @@ void try_finish_patch_64(void *addr){
 #endif 
 	
 	/* write front part and update timestamp */ 
-	WRITE((straddle_point-1),p->front); 
-	p->timestamp = rdtsc(); 
+	
+	p->timestamp = 0; 
 	p->state = FINISHED; 
 	p->lock = 0; 
+	WRITE((straddle_point-1),p->front); 
 	return; 
       }
 

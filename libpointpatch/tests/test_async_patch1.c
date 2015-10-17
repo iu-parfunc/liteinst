@@ -32,7 +32,7 @@
 #include <pthread.h> 
 
 #ifndef ITERS
-#define ITERS 50000
+#define ITERS 500000
 #endif 
 
 unsigned long g_foo_val = 0; 
