@@ -115,6 +115,22 @@ void init_patcher() {
 
 }
 
+__attribute__((destructor))
+void destroy_patcher() {
+  /* Should be able to just #define these values
+     by investigating what arch/os we are running on.
+     Then no need for this init phase */
+  int i, num_regions = 0;
+  for (i=0; i< TABLE_SIZE; i++) {
+    if (g_trampoline_table[i]) { 
+      num_regions++;
+    }
+  }
+
+  printf("Number of regions : %d\n", num_regions);
+
+}
+
 /* Inline this when possible */
 inline uint64_t get_msb_mask_64(int nbytes) {
   if (nbytes > 8 || nbytes < 0) {
