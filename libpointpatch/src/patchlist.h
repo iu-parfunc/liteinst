@@ -84,17 +84,12 @@ bool add_patch( uint64_t addr,
     //assert(p->state == FINISHED);
 
     if (p->state != FINISHED) { 
-#ifndef NDEBUG 
-      printf("add_patch WRONG STATE\n");
-#endif 
       pl[key].lock = 0; 
       return false; 
     }
     /* update patch data */ 
     while (!__sync_bool_compare_and_swap(&p->lock,0,1));
-#ifndef NDEBUG 
-    printf("add_patch UPDATING EXISTING\n");
-#endif 
+
     p->addr = addr; 
     p->front = front; 
     p->back = back; 
@@ -104,9 +99,6 @@ bool add_patch( uint64_t addr,
 	
   } else { 
     /* invent and insert patch */ 
-#ifndef NDEBUG 
-    printf("add_patch CREATING NEW \n");
-#endif 
 
     struct Patch *p = (struct Patch*)malloc(sizeof(struct Patch)); 
     p->addr      = addr;

@@ -1,12 +1,12 @@
 /* 
     Test desc: tests parallel updates of a STRADDLING call site that
-    is being executed using the async protocol.
+    is being executed using the async protocol. 
     
-    One single thread async patches with a call to foo and bar 
-    in a loop while other threads execute the call site. 
-    The patching thread also issues try_finish in each 
-    iteration. 
-    
+    One single thread patches with a call to foo in a loop. 
+    Another single thread issues NOP patches in a loop. 
+
+    Test relies on the try_finish in the int3_handler to finish 
+    the patches. 
 
 */ 
 #include <stdio.h> 
@@ -30,7 +30,6 @@
 #endif 
 
 unsigned long g_foo_val = 0; 
-unsigned long  g_bar_val = 0; 
 
 /* control */
 volatile int g_running = true; 
@@ -42,17 +41,11 @@ volatile bool activator_done=false;
 /* patch info */
 uint64_t g_call_addr = 0; 
 uint64_t g_orig_call = 0;  /* original instr */
-uint64_t g_call_bar_patch = 0;      /* replacement isntr sequence */
+uint64_t g_nop_patch = 0;
 
 /* globals */ 
 uint8_t* fun = NULL; 
 unsigned int start_addr = 0;
-
-void bar(void) {
-  
-  g_bar_val++; 
-  
-}
 
 
 void activator(int *arg) { 
@@ -61,20 +54,11 @@ void activator(int *arg) {
   printf("activator running\n");   
 
   for (int i = 0; i < ITERS; i ++){
-    /* foo patch */ 
-    if ( i % 2 == 0 ){ 
-      async_patch_64((void*)g_call_addr, g_call_bar_patch);
-    } else { 
-      async_patch_64((void*)g_call_addr, g_orig_call);
-    } 
-    
-    /* test try_finish_patch */ 
-    try_finish_patch_64((void*)g_call_addr); 
- 
+    async_patch_64((void*)g_call_addr, g_orig_call);
+     
   }  
   printf("DONE DONE DONE \n");
   activator_done = true; 
-  g_running = false; 
 } 
 
 /* not activated at the moment */ 
@@ -84,9 +68,9 @@ void deactivator(int *arg) {
   printf("deactivator running\n");   
 
   for (int i = 0; i < ITERS; i ++){
-
+    /* nop patch */ 
+    async_patch_64((void*)g_call_addr, g_nop_patch);    
     
-
   }
   
   while (!activator_done); 
@@ -105,23 +89,13 @@ void foo(void) {
 	
 	g_orig_call = *(uint64_t*)g_call_addr;
 	
-	
-	uint64_t tmp = 0x00000000000000e8;
-	
-	uint64_t bar_addr = ((uint64_t)bar - (uint64_t)addr); 
-	
+		
 	uint64_t keep_mask = 0xFFFFFF0000000000; 
 	
-	printf("call_instr: %lx\n",tmp);
-	printf("bar_addr:   %lx\n",bar_addr); 
-	
-	tmp = (tmp | (bar_addr << 8)) & ~keep_mask;
-	printf("call_bar: %lx\n",tmp);
-	
-	
-	g_call_bar_patch = (g_orig_call & keep_mask) | tmp;
-	printf("call_bar_patch: %lx\n",g_call_bar_patch);
-    
+	uint64_t nop_mask = 0x0000000000441F0F;
+      
+	g_nop_patch = (g_orig_call & keep_mask) | nop_mask;
+	printf("nop_patch: %lx\n",g_nop_patch);
 	
 	g_first_run = false; 
       }
@@ -156,10 +130,10 @@ int main(int argc, char** argv) {
 		 (void *) activator, 
 		 (void *) &r1);
 
-  /*  pthread_create(&thread2,
+  pthread_create(&thread2,
 		 NULL, 
 		 (void *) deactivator, 
-		 (void *) &r2); */ 
+		 (void *) &r2); 
 
    
   printf("Testing parallel updates to a STRADDLING call_site as it is being executed by multiple threads.\n"); 
@@ -237,7 +211,7 @@ int main(int argc, char** argv) {
 
          
   pthread_join(thread1, NULL); 
-  /* pthread_join(thread2, NULL); */
+  pthread_join(thread2, NULL);
   
   for (int i = 0; i < num_runners; i ++) { 
     pthread_join(runners[i],NULL); 
@@ -249,13 +223,8 @@ int main(int argc, char** argv) {
 
   printf("function foo executed %ld times.\n",g_foo_val); 
  
-  printf("foo: %ld, bar: %ld\nsum: %ld\n",
-	 g_foo_val,
-	 g_bar_val,
-	 g_foo_val + g_bar_val);
- 
   /* if (g_foo_val + g_bar_val == ITERS) { */ 
-  if (g_foo_val > 0 && g_bar_val > 0) {
+  if (g_foo_val > 0) {
     printf("Success\n");
     return 0; 
   } else { 

@@ -278,18 +278,18 @@ static void int3_handler(int signo, siginfo_t *inf, void* ptr) {
 
   uint64_t addr = (uint64_t)(ucontext->uc_mcontext.gregs[REG_RIP]-1);
   
-#ifndef NDEBUG
-  fprintf(stdout,"try_finish from int3_handler\n");
-  fflush(stdout);
+/* #ifndef NDEBUG */
+/*   fprintf(stdout,"try_finish from int3_handler\n"); */
+/*   fflush(stdout); */
 
-  int key = patch_list_key(addr); 
-  if (peek_patch(addr,&g_patch_list[key]) == NULL || 
-      peek_patch(addr,&g_patch_list[key])->state == FINISHED) { 
+/*   int key = patch_list_key(addr);  */
+/*   if (peek_patch(addr,&g_patch_list[key]) == NULL ||  */
+/*       peek_patch(addr,&g_patch_list[key])->state == FINISHED) {  */
     
-  fprintf(stdout,"NO PATCH TO APPLY HERE \n");
-  fflush(stdout);
-  }
-#endif   
+/*   fprintf(stdout,"NO PATCH TO APPLY HERE \n"); */
+/*   fflush(stdout); */
+/*   } */
+/* #endif    */
 
   try_finish_patch_64(addr); 
 
@@ -705,28 +705,10 @@ bool async_patch_64(void *addr, uint64_t patch_value) {
     /* Create async patch job */
     if (oldFR == int3) return false; 
     else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {     
-      //struct Patch *p = (struct Patch*)malloc(sizeof(struct Patch)); 
-      //p->addr      = (uint64_t)addr;
-      //p->front     = patch_before; 
-      //p->back      = patch_after; 
-      //p->timestamp = rdtsc(); 
-      //p->next = NULL;
-    uint64_t timestamp = rdtsc(); 
-    
-#ifndef NDEBUG 
-    printf("async_patch: adding patch\n");
-#endif  
-      add_patch((uint64_t)addr,patch_before,patch_after,timestamp,g_patch_list); 
-#ifndef NDEBUG 
-    printf("async_patch: added patch\n");
-#endif  
-      
-      //int key = patch_list_key(addr); 
-      //#ifndef NDEBUG 
-      //printf("ASYNC_PATCH: Adding address %lu to list\n",p->addr);
-      //#endif 
-      //cons_patch(p,&g_patch_list[key]); 
 
+      uint64_t timestamp = rdtsc(); 
+    
+      add_patch((uint64_t)addr,patch_before,patch_after,timestamp,g_patch_list); 
       return true; 
     }        
     else {       
@@ -754,28 +736,24 @@ void try_finish_patch_64(void *addr){
   }
   
   if (__sync_bool_compare_and_swap(&p->lock,0,1)) { 
-#ifndef NDEBUG 
-    printf("try_finish acquired lock\n");
-#endif 
-    
+    /* got the patch lock. attempt to finish it */ 
+
     int offset = (uint64_t)addr % g_cache_lvl3_line_size;
     unsigned int cutoff_point = g_cache_lvl3_line_size - offset; 
     uint64_t* straddle_point = (uint64_t*)((uint8_t*)addr + cutoff_point);
     
     if (p->state == FINISHED) { 
-#ifndef NDEBUG 
-      printf("try_finish FINISHED LEAVING\n");
-#endif 
+      /* already finished, return */
 
       p->lock = 0; 
       return; 
     }
   
     if (p->state == FIRST_WAIT) { 
+      /* the int3 has been written and we wait for enough 
+	 time to pass to allow the write of BACK */
+      
       if (rdtsc() > (p->timestamp + g_wait_iters)) { 
-#ifndef NDEBUG 
-	printf("try_finish WRITING BACK\n");
-#endif 
     
 	/* write back part and update timestamp */ 
 	WRITE(straddle_point,p->back); 
@@ -784,21 +762,18 @@ void try_finish_patch_64(void *addr){
 	p->lock = 0; 
 	return; 
       }  
-
-#ifndef NDEBUG 
-      printf("try_finish FIRST WAIT STILL TIME \n");
-#endif 
+      
+      /* There is still more time to wait. return */ 
 
       p->lock = 0; 
       return; 
       
     }
     if (p->state == SECOND_WAIT) { 
-      if (rdtsc() > (p->timestamp + g_wait_iters)) { 
-#ifndef NDEBUG 
-	printf("try_finish WRITING FRONT\n");
-#endif 
-	
+      
+      /* int3 and BACK has been written, wait to write FRONT */ 
+      
+      if (rdtsc() > (p->timestamp + g_wait_iters)) { 	
 	/* write front part and update timestamp */ 
 	
 	p->timestamp = 0; 
@@ -807,11 +782,7 @@ void try_finish_patch_64(void *addr){
 	WRITE((straddle_point-1),p->front); 
 	return; 
       }
-
-#ifndef NDEBUG 
-      printf("try_finish FIRST WAIT STILL TIME \n");
-#endif 
-
+      /* There is still more time to wait. return */ 
       p->lock = 0; 
       return;      
       
