@@ -14,6 +14,7 @@
 */
 
 #include "patcher.h"
+
 #include "patchlist.h"
 
 #include <stdlib.h>
@@ -47,10 +48,7 @@ size_t g_cache_lvl3_line_size = 0;
 uint64_t g_int3_interrupt_count = 0;
 int g_wait_iters = 2000;
 
-#define ADDR_KEY_BITS 8 
-#define ADDR_KEY_MAX  256 // why not 2**8 
-
-PatchList g_patch_list[ADDR_KEY_MAX];
+LSPatchList g_patch_list;
 
 struct sigaction g_newact;
 struct sigaction g_oldact;
@@ -119,12 +117,12 @@ struct timespec g_wait_time;
    internally used
    ----------------------------------------------------------------- */
 bool set_page_rwe(void *addr, size_t nBytes);
-uint64_t get_msb_mask_64(int nbytes);
+uint64_t get_msb_mask_64(int nbyte);
 uint64_t get_lsb_mask_64(int nbytes);
 uint32_t get_msb_mask_32(int nbytes);
 uint32_t get_lsb_mask_32(int nbytes);
 bool reg_equal(_RegisterType reg1, _RegisterType reg2);
-int patch_list_key(void*);
+
 
 static void int3_handler(int signo, siginfo_t *inf, void* ptr);
 void clflush(volatile void *p);
@@ -158,7 +156,7 @@ void init_patcher() {
   sigaction(SIGTRAP, &g_newact, &g_oldact);
 
   /* zero out patchlists */ 
-  memset(g_patch_list,0,ADDR_KEY_MAX*sizeof(PatchList)); 
+  initialize_LSPatchList(&g_patch_list); 
 
 #ifndef NDEBUG
 #ifdef NO_CAS
@@ -278,29 +276,28 @@ static void int3_handler(int signo, siginfo_t *inf, void* ptr) {
   g_int3_interrupt_count++;
   ucontext_t *ucontext = (ucontext_t*)ptr;
 
-  // fprintf(stdout, "INT3 HNDLR RET ADDR: %p\n", (void*)ucontext->uc_mcontext.gregs[REG_RIP]);
-
-  /* Resuming the thread after skipping the call instruction. */
-  //ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] + 4;
+  uint64_t addr = (uint64_t)(ucontext->uc_mcontext.gregs[REG_RIP]-1);
   
+/* #ifndef NDEBUG */
+/*   fprintf(stdout,"try_finish from int3_handler\n"); */
+/*   fflush(stdout); */
 
-  //  uint64_t word=*(uint64_t*)(ucontext->uc_mcontext.gregs[REG_RIP]-1);
-  //while (((uint8_t*)&word)[0] == 0xCC) { 
-  //  word=*(uint64_t*)(ucontext->uc_mcontext.gregs[REG_RIP]-1);
-    //  fprintf(stderr,"IT HAPPEND\n");
-      
-    //fflush(stderr);
-  //}
-  while(*(uint8_t*)(ucontext->uc_mcontext.gregs[REG_RIP]-1) == 0xCC); 
-  
-  ucontext->uc_mcontext.gregs[REG_RIP] = 
-    (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] - 1;
-  //asm volatile ( "cpuid" );
+/*   int key = patch_list_key(addr);  */
+/*   if (peek_patch(addr,&g_patch_list[key]) == NULL ||  */
+/*       peek_patch(addr,&g_patch_list[key])->state == FINISHED) {  */
+    
+/*   fprintf(stdout,"NO PATCH TO APPLY HERE \n"); */
+/*   fflush(stdout); */
+/*   } */
+/* #endif    */
 
-  /* REG_RIP is another machine and compiler specific define */
+  try_finish_patch_64(addr); 
+
+  //while(*(uint8_t*)(ucontext->uc_mcontext.gregs[REG_RIP]-1) == 0xCC); 
   
-  //ticks end = getticks();
-  //g_finstrumentor_overhead += (g_int3_interrupt_overhead + end - start);
+  ucontext->uc_mcontext.gregs[REG_RIP] = addr;
+  //    (greg_t)ucontext->uc_mcontext.gregs[REG_RIP] - 1;
+
 }
 
 
@@ -671,15 +668,6 @@ bool patch_32(void *addr, uint32_t patch_value){
    Async Patching
    ----------------------------------------------------------------- */
 
-
-inline int patch_list_key(void *addr) { 
-  
-  /* use some low bits of address */ 
-  return (int)((uint64_t)addr & (ADDR_KEY_MAX-1));
-  
-}
-
-
 bool async_patch_64(void *addr, uint64_t patch_value) { 
   
   int offset = (uint64_t)addr % g_cache_lvl3_line_size; 
@@ -712,27 +700,21 @@ bool async_patch_64(void *addr, uint64_t patch_value) {
     
     uint8_t oldFR = ((uint8_t*)addr)[0]; 
     
+
+    
     /* Create async patch job */
     if (oldFR == int3) return false; 
-    else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {
-      
-      struct Patch *p = (struct Patch*)malloc(sizeof(struct Patch)); 
-      p->addr      = (uint64_t)addr;
-      p->front     = patch_before; 
-      p->back      = patch_after; 
-      p->timestamp = rdtsc(); 
-      p->next = NULL; 
-      
-      
-      int key = patch_list_key(addr); 
-#ifndef NDEBUG 
-      printf("ASYNC_PATCH: Adding address %lu to list\n",p->addr);
-#endif 
-      cons_patch(p,&g_patch_list[key]); 
+    else if (__sync_bool_compare_and_swap((uint8_t*)addr, oldFR, int3)) {     
 
+      uint64_t timestamp = rdtsc(); 
+    
+      add_patch((uint64_t)addr,patch_before,patch_after,timestamp,g_patch_list); 
       return true; 
+    }        
+    else {       
+      return false; 
     }
-    else return false; 
+
   } 
 
   /* if not a straddler perform a single write */
@@ -741,46 +723,82 @@ bool async_patch_64(void *addr, uint64_t patch_value) {
 
 }
 
-bool try_finish_patch_64(void *addr){ 
-
-  int key = patch_list_key(addr);
-  assert( key < ADDR_KEY_MAX);
-
+void try_finish_patch_64(void *addr){ 
+  
   struct Patch *p; 
-  int retval; 
-  while ((retval = remove_patch((uint64_t)addr,&g_patch_list[key],&p)) == 
-	 PATCH_LIST_CONTENTION);
 
-  if (retval == PATCH_NOT_FOUND) { 
-#ifndef NDEBUG 
-    printf("try_finish_patch: patch not found\n"); 
-#endif 
-    return false;; 
+  /* Clean this up! */
+  int key = patch_list_key((uint64_t)addr); 
+  p = peek_patch((uint64_t)addr,&g_patch_list[key]); 
+
+  if (p == NULL) { 
+    return; 
   }
-  /* we got a patch to attempt to apply */ 
-  if (retval == PATCH_REMOVED) { 
+  
+  if (__sync_bool_compare_and_swap(&p->lock,0,1)) { 
+    /* got the patch lock. attempt to finish it */ 
 
     int offset = (uint64_t)addr % g_cache_lvl3_line_size;
     unsigned int cutoff_point = g_cache_lvl3_line_size - offset; 
     uint64_t* straddle_point = (uint64_t*)((uint8_t*)addr + cutoff_point);
-      
-    if (rdtsc() < (p->timestamp + g_wait_iters)) { 
-      WRITE(straddle_point,p->back); 
-      WRITE((straddle_point-1),p->front); 
-      free(p); 
-      return true; 
-    } else { 
-      cons_patch(p,&g_patch_list[key]); 
-      return false; 
+    
+    if (p->state == FINISHED) { 
+      /* already finished, return */
+
+      p->lock = 0; 
+      return; 
     }
-  }
   
-  assert(false); 
-  return false; /* impossible */ 
-} 
+    if (p->state == FIRST_WAIT) { 
+      /* the int3 has been written and we wait for enough 
+	 time to pass to allow the write of BACK */
+      
+      if (rdtsc() > (p->timestamp + g_wait_iters)) { 
+    
+	/* write back part and update timestamp */ 
+	WRITE(straddle_point,p->back); 
+	p->timestamp = rdtsc(); 
+	p->state = SECOND_WAIT; 
+	p->lock = 0; 
+	return; 
+      }  
+      
+      /* There is still more time to wait. return */ 
+
+      p->lock = 0; 
+      return; 
+      
+    }
+    if (p->state == SECOND_WAIT) { 
+      
+      /* int3 and BACK has been written, wait to write FRONT */ 
+      
+      if (rdtsc() > (p->timestamp + g_wait_iters)) { 	
+	/* write front part and update timestamp */ 
+	
+	p->timestamp = 0; 
+	p->state = FINISHED; 
+	p->lock = 0; 
+	WRITE((straddle_point-1),p->front); 
+	return; 
+      }
+      /* There is still more time to wait. return */ 
+      p->lock = 0; 
+      return;      
+      
+    }
+  
+    assert(false);
+  
+  }
+  return; 
+}
+    
+     
 
 void finish_patch_64(void *addr){ 
-  
+  assert(false); 
+  /* 
   int key = patch_list_key(addr); 
 
 #ifndef NDEBUG 
@@ -803,9 +821,9 @@ void finish_patch_64(void *addr){
 #ifndef NDEBUG 
     printf("finish_patch: patch not found\n"); 
 #endif 
-    return; /* patch already applied */
+    return; // patch already applied 
     }
-  /* we got a patch to apply */ 
+// we got a patch to apply
   if (retval == PATCH_REMOVED) { 
 #ifndef NDEBUG 
     printf("finish_patch_64: found patch data\n");
@@ -824,7 +842,7 @@ void finish_patch_64(void *addr){
     free(p); 
     return; 
   }
-  
+  */ 
   
 }
 

@@ -1,11 +1,11 @@
 /* 
     Test desc: tests parallel updates of a STRADDLING call site that
-    is being executed using the async protocol.
+    is being executed using the async protocol. 
     
-    One single thread async patches with a call to foo and bar 
-    in a loop while other threads execute the call site. 
+    One single thread patches with a call to foo and NOP sequence 
+    in a loop while other threads execute this call site. 
     The patching thread also issues try_finish in each 
-    iteration. 
+    iteration.
     
 
 */ 
@@ -30,7 +30,6 @@
 #endif 
 
 unsigned long g_foo_val = 0; 
-unsigned long  g_bar_val = 0; 
 
 /* control */
 volatile int g_running = true; 
@@ -42,17 +41,11 @@ volatile bool activator_done=false;
 /* patch info */
 uint64_t g_call_addr = 0; 
 uint64_t g_orig_call = 0;  /* original instr */
-uint64_t g_call_bar_patch = 0;      /* replacement isntr sequence */
+uint64_t g_nop_patch = 0;
 
 /* globals */ 
 uint8_t* fun = NULL; 
 unsigned int start_addr = 0;
-
-void bar(void) {
-  
-  g_bar_val++; 
-  
-}
 
 
 void activator(int *arg) { 
@@ -63,7 +56,7 @@ void activator(int *arg) {
   for (int i = 0; i < ITERS; i ++){
     /* foo patch */ 
     if ( i % 2 == 0 ){ 
-      async_patch_64((void*)g_call_addr, g_call_bar_patch);
+      async_patch_64((void*)g_call_addr, g_nop_patch);
     } else { 
       async_patch_64((void*)g_call_addr, g_orig_call);
     } 
@@ -105,23 +98,13 @@ void foo(void) {
 	
 	g_orig_call = *(uint64_t*)g_call_addr;
 	
-	
-	uint64_t tmp = 0x00000000000000e8;
-	
-	uint64_t bar_addr = ((uint64_t)bar - (uint64_t)addr); 
-	
+		
 	uint64_t keep_mask = 0xFFFFFF0000000000; 
 	
-	printf("call_instr: %lx\n",tmp);
-	printf("bar_addr:   %lx\n",bar_addr); 
-	
-	tmp = (tmp | (bar_addr << 8)) & ~keep_mask;
-	printf("call_bar: %lx\n",tmp);
-	
-	
-	g_call_bar_patch = (g_orig_call & keep_mask) | tmp;
-	printf("call_bar_patch: %lx\n",g_call_bar_patch);
-    
+	uint64_t nop_mask = 0x0000000000441F0F;
+      
+	g_nop_patch = (g_orig_call & keep_mask) | nop_mask;
+	printf("nop_patch: %lx\n",g_nop_patch);
 	
 	g_first_run = false; 
       }
@@ -249,13 +232,8 @@ int main(int argc, char** argv) {
 
   printf("function foo executed %ld times.\n",g_foo_val); 
  
-  printf("foo: %ld, bar: %ld\nsum: %ld\n",
-	 g_foo_val,
-	 g_bar_val,
-	 g_foo_val + g_bar_val);
- 
   /* if (g_foo_val + g_bar_val == ITERS) { */ 
-  if (g_foo_val > 0 && g_bar_val > 0) {
+  if (g_foo_val > 0) {
     printf("Success\n");
     return 0; 
   } else { 
