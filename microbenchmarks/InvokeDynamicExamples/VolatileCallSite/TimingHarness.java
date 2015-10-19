@@ -2,7 +2,7 @@
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.lang.invoke.MutableCallSite;
+import java.lang.invoke.VolatileCallSite;
 
 public class TimingHarness
 {
@@ -68,7 +68,7 @@ public class TimingHarness
           t2 = System.nanoTime ();
           times[i % trials_kept] = t2-t1;
       }
-      summarize("Time for direct call to IDD.main() and then thru MutableCallSite");
+      summarize("Time for direct call to IDD.main() and then thru VolatileCallSite");
 
       // --------------------------------------------------------------------------------
       // Next for toggling:
@@ -88,29 +88,7 @@ public class TimingHarness
           i++;
           times[i % trials_kept] = t4-t3;
       }
-      summarize("Time for one MutableCallSite toggle");
-
-      MutableCallSite[] allSites = new MutableCallSite[1];
-      allSites[0] = IDDL.site;
-
-      for (int i=0; i<trials; i++) {
-          t1 = System.nanoTime ();
-          IDDL.site.setTarget(IDDL.onMode);
-          MutableCallSite.syncAll(allSites);
-          t2 = System.nanoTime ();
-          IDD.main(null);
-
-          t3 = System.nanoTime ();
-          IDDL.site.setTarget(IDDL.offMode);
-          MutableCallSite.syncAll(allSites);
-          t4 = System.nanoTime ();
-          IDD.main(null);
-
-          times[i % trials_kept] = t2-t1;
-          i++;
-          times[i % trials_kept] = t4-t3;
-      }
-      summarize("Time for one MutableCallSite toggle + syncAll");
+      summarize("Time for one VolatileCallSite toggle");
 
    }
 }
