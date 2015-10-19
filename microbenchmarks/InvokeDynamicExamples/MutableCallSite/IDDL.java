@@ -11,15 +11,14 @@ public class IDDL
    public static MethodHandle offMode;
    static public MutableCallSite site = null;
 
-   static public long hw_calls = 0;
+   static public long active_calls = 0;
 
    // --------------------------------------------------------------------------------
    // Our two function calls to toggle between:
 
-   public static void hw()
+   public static void active_call()
    {
-       // System.out.println("Hello, World from hw() function..");
-      hw_calls ++;
+      active_calls ++;
    }
 
    public static void noop() {
@@ -34,7 +33,7 @@ public class IDDL
    {
       MethodHandles.Lookup lookup = MethodHandles.lookup();
       Class thisClass = lookup.lookupClass();
-      onMode = lookup.findStatic(thisClass, "hw",
+      onMode = lookup.findStatic(thisClass, "active_call",
                              MethodType.methodType(void.class));
       if (!type.equals(onMode.type()))
          onMode = onMode.asType(type);
@@ -56,5 +55,6 @@ public class IDDL
         System.out.printf("Mutating call site...\n");
         //   site.
     }
+
 
 }

@@ -21,11 +21,14 @@ public class TimingHarness
            sum += x;
        }
        System.out.printf("%s, min %d, max %d, avg %d\n", msg, mn,mx, sum / trials_kept);
+       System.out.printf("  count of active_calls: %d\n", IDDL.active_calls);
    }
 
    public static void main(String[] args) throws Throwable
    {
-       long t1=0, t2=0, t3=0, t4=0;
+      long t1=0, t2=0, t3=0, t4=0;
+      t1 = System.nanoTime ();
+      t2 = System.nanoTime ();
       System.out.printf("Smallest time for System.nanotime, at first: %d\n", t2-t1);
       for(int i=0; i < 10000; i++) {
           t1 = System.nanoTime ();
@@ -50,16 +53,14 @@ public class TimingHarness
           times[i % trials_kept] = t2-t1;
       }
       summarize("Time for direct call to noop()");
-      System.out.printf("hw_calls: %d\n", IDDL.hw_calls);
 
       for (int i=0; i<trials; i++) {
           t1 = System.nanoTime ();
-          IDDL.hw();
+          IDDL.active_call();
           t2 = System.nanoTime ();
           times[i % trials_kept] = t2-t1;
       }
-      summarize("Time for direct call to hw()");
-      System.out.printf("hw_calls: %d\n", IDDL.hw_calls);
+      summarize("Time for direct call to active_call()");
 
       for (int i=0; i<trials; i++) {
           t1 = System.nanoTime ();
@@ -68,7 +69,6 @@ public class TimingHarness
           times[i % trials_kept] = t2-t1;
       }
       summarize("Time for direct call to IDD.main()");
-      System.out.printf("hw_calls: %d\n", IDDL.hw_calls);
 
       // --------------------------------------------------------------------------------
       // Next for toggling:
@@ -89,7 +89,6 @@ public class TimingHarness
           times[i % trials_kept] = t4-t3;
       }
       summarize("Time for one MutablCallSite toggle");
-      System.out.printf("hw_calls: %d\n", IDDL.hw_calls);
 
       MutableCallSite[] allSites = new MutableCallSite[1];
       allSites[0] = IDDL.site;
@@ -112,9 +111,6 @@ public class TimingHarness
           times[i % trials_kept] = t4-t3;
       }
       summarize("Time for one MutablCallSite toggle + syncAll");
-      System.out.printf("hw_calls: %d\n", IDDL.hw_calls);
-
-
 
    }
 }
