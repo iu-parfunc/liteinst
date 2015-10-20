@@ -291,7 +291,7 @@ static void int3_handler(int signo, siginfo_t *inf, void* ptr) {
 /*   } */
 /* #endif    */
 
-  try_finish_patch_64(addr); 
+  try_finish_patch_64((void*)addr); 
 
   //while(*(uint8_t*)(ucontext->uc_mcontext.gregs[REG_RIP]-1) == 0xCC); 
   
