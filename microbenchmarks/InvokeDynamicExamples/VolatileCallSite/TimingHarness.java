@@ -3,10 +3,11 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.invoke.VolatileCallSite;
+import java.util.Arrays;
 
 public class TimingHarness
 {
-   private static int trials = 10000;
+   private static int trials = 100000;
    private static int trials_kept = 1000;
    private static long[] times = null;
 
@@ -20,7 +21,9 @@ public class TimingHarness
            mx = Math.max(mx,x);
            sum += x;
        }
-       System.out.printf("%s, min %d, max %d, avg %d\n", msg, mn,mx, sum / trials_kept);
+       Arrays.sort( times );
+       long median = times[trials_kept / 2];
+       System.out.printf("%s, min %d, max %d, avg %d, median %d\n", msg, mn,mx, sum / trials_kept, median);
        System.out.printf("  count of active_calls: %d\n", IDDL.active_calls);
    }
 
@@ -89,6 +92,5 @@ public class TimingHarness
           times[i % trials_kept] = t4-t3;
       }
       summarize("Time for one VolatileCallSite toggle");
-
    }
 }
