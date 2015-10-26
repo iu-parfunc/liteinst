@@ -5,7 +5,15 @@ compileLib() {
     echo "Compiling Library" 
     
     make cleanLib
-    make installLib CC=$USE_CC CXX=$USE_CXX 
+    case "$1" in 
+	nonatomic) 
+	    make installLib CC=$USE_CC CXX=$USE_CXX CFLAGS=-DNONATOMIC_WRITE
+	    ;; 
+	*) 
+	    make installLib CC=$USE_CC CXX=$USE_CXX 
+	    ;;
+    esac 
+
 } 
 
 
@@ -18,5 +26,5 @@ compileTests() {
 }
 
 # One time compile before running test workload
-compileLib; 
+compileLib $3; 
 compileTests;
