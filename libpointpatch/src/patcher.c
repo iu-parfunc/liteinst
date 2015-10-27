@@ -90,9 +90,9 @@ struct timespec g_wait_time;
 #if defined(CAS_WRITE) 
 #warning "CAS WRITE" 
 #define WRITE(addr,value) assert(__sync_bool_compare_and_swap((addr), *(addr), (value)))
-#elif defined(NONATOMIC_WRITE)
-#warning "NONATOMIC WRITE" 
-#define WRITE(addr,value)  (addr)[0] = (value)
+#elif defined(ATOMIC_WRITE)
+#warning "ATOMIC WRITE" 
+#define WRITE(addr,value) __atomic_store_n((addr),(value),__ATOMIC_SEQ_CST)
 
 #elif defined(LUKE_ATOMIC_WRITE) 
 #warning "LUKE's atomic write" 
@@ -102,8 +102,8 @@ struct timespec g_wait_time;
   } while (0)
 
 #else
-#warning "ATOMIC WRITE"
-#define WRITE(addr,value) __atomic_store_n((addr),(value),__ATOMIC_SEQ_CST)
+#warning "NONATOMIC WRITE"
+#define WRITE(addr,value)  (addr)[0] = (value)
 #endif  
 
 /* internally used min/max macros */
