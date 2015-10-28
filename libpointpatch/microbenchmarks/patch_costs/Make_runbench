@@ -1,5 +1,5 @@
 
-.phony: all benchharness
+.phony: all benchharness library
 
 ifeq ($(STACK),)
      STACK=stack
@@ -36,7 +36,10 @@ endif
 TABLE=UBIPROF_PATCH_OVERHEAD
 
 
-all: benchharness
+all: benchharness library
+
+library: 
+	make -f ../../src/Makefile CC=gcc CXX=g++ install
 
 microbench.exe: benchharness
 
