@@ -589,8 +589,8 @@ uint8_t oldFR = ((uint8_t*)addr)[0];
   /* if not a straddler perform a single write */
   WRITE((uint64_t*)addr,patch_value);
   return true;
-
 }
+
 
 /* -----------------------------------------------------------------
    Patching
