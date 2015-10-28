@@ -28,7 +28,8 @@ all: $(EXES)
 
 
 run: $(EXES)
-	./runall.sh
+	./patch_cost_parallel.exe $(RUN_ARGS)
+#	./runall.sh
 
 clean:
 	rm -f *.exe
