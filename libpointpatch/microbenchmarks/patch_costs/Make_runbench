@@ -39,7 +39,7 @@ TABLE=UBIPROF_PATCH_OVERHEAD
 all: benchharness library
 
 library: 
-	make -f ../../src/Makefile CC=gcc CXX=g++ install
+	(cd ../../src && make CC=gcc CXX=g++ install)
 
 microbench.exe: benchharness
 
