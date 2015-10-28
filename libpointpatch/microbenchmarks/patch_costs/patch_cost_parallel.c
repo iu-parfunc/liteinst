@@ -155,6 +155,9 @@ int main(int argc, char* argv[]) {
 
   bool activation_success = true;
   bool deactivation_success = true;
+
+  while (!g_initialized); 
+
   for (i = 0; i < NUM_OF_PATCHES; i++){
     
     ticks start = getticks();
