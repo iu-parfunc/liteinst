@@ -42,8 +42,8 @@ void *thread(int *arg) {
   pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset); 
   printf("Thread %d running\n", *arg); 
 
-   __sync_fetch_and_add(&ready,1); 
-
+  __sync_fetch_and_add(&ready,1); 
+  
   while (ready < 2); 
   
   
