@@ -3,6 +3,16 @@
 Libpointpatch microbenchmarks 
 -----------------------------
 
+UPDATE Oct 29  2015
+-------------------
+ 
+  Benches that are in use: 
+    - patch_costs 
+    - wait_wait_time_rdtsc 
+    
+ 
+
+
 
 directories
 -----------
