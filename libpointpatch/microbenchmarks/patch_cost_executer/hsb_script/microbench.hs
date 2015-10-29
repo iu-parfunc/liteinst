@@ -35,7 +35,7 @@ main = do
 
 benches :: [Benchmark DefaultParamMeaning]
 benches = [mkBenchmark ("Makefile") [show threads,show straddle_pos, show (num_activations*1000)]  (Set (Variant "microbench") (RuntimeEnv "PATCH_WAIT_TIME" "1800")) 
-          | threads <- [1..32]
+          | threads <- [1..8]
           , straddle_pos <- [0..4] -- zero means not-a-straddler
           , num_activations <- [0..100]]
 
