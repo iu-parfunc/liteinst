@@ -96,7 +96,8 @@ int main(int argc, char* argv[]) {
   memset(fun,0x90,1024); 
 
 
-  pthread_t run_threads[n_threads];
+  pthread_t *run_threads;
+  run_threads = (pthread_t*)malloc(sizeof(pthread_t)*n_threads); 
   uint64_t activation_cost = 0;
   uint64_t deactivation_cost = 0;
 
