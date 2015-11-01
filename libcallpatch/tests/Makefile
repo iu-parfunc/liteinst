@@ -18,7 +18,7 @@ clean:
 	rm *.exe
 
 %.exe: %.c
-	$(CC)  -std=gnu99 -g $(CFLAGS) -I$(UBIROOT)deps/distorm/include -I$(UBIROOT)include $< -o $@ -L$(LIBDIR) $(DEPS) 
+	$(CC)  -std=gnu99 -g $(CFLAGS) -I$(UBIROOT)deps/distorm/include -I$(UBIROOT)include -I$(UBIROOT)common/include $< -o $@ -L$(LIBDIR) $(DEPS) 
 
 test: $(EXES) 
 	./testall.sh

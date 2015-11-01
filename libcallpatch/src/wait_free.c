@@ -1,6 +1,5 @@
 
-// #include "wait_free.h"
-#include "patch_utils.h"
+#include <wait_free.h> // #include "patch_utils.h"
 
 #include <sys/mman.h>
 #include <unistd.h>
@@ -46,6 +45,12 @@ uint8_t* g_trampoline_table[TABLE_SIZE];
 /* -----------------------------------------------------------------
    internally used
    ----------------------------------------------------------------- */
+
+bool set_page_rwe(void *addr,size_t nbytes);
+uint64_t get_msb_mask_64(int nbytes);
+uint64_t get_lsb_mask_64(int nbytes);
+uint32_t get_msb_mask_32(int nbytes);
+uint32_t get_lsb_mask_32(int nbytes);
 
 bool handle_1_4_split(void* addr, uint64_t patch_value);
 bool handle_2_3_split(void* addr, uint64_t patch_value);
