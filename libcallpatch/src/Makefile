@@ -1,4 +1,8 @@
 
+ROOT = ../..
+BUILD = $(ROOT)/build
+INSTALL= $(ROOT)/build/lib
+
 # using icc requires some extra flags.
 # these flags are probably different from when using gcc
 # since a lot of what we do is not standard-c (asm, REG_RIP, etc not standard!)
@@ -12,7 +16,10 @@ CODE = wait_free.c
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 
-INCLUDES = -I../../include -I../../deps/distorm/include
+COMMON = $(wildcard $(ROOT)/common/src/patch/*.c)
+COMMON_OBJ = $(COMMON:.c=.o)
+
+INCLUDES = -I$(ROOT)/include -I$(ROOT)/common/include -I$(ROOT)/deps/distorm/include
 
 LIBS =
 DEPS = ../../deps/distorm/distorm3.a
@@ -25,16 +32,16 @@ RM = rm
 
 .PHONY: test build distorm install
 
-build: $(OBJ)
+build: $(OBJ) $(COMMON_OBJ)
 
-libcallpatch.a: build distorm
+libcallpatch.a: build 
 	if [ -d libcallpatch.a ]; then $(RM) -f libcallpatch.a; fi
-	mkdir temp;cd temp; $(AR) -x ../$(DEPS)
-	$(AR) rc libcallpatch.a  $(OBJ) temp/*.o
+	# mkdir temp;cd temp; $(AR) -x ../$(DEPS)
+	$(AR) rc libcallpatch.a  $(OBJ) $(COMMON_OBJ) #temp/*.o
 	$(RM) -rf temp
 
-libcallpatch.so: build distorm
-	$(CXX) $(LIBS) -shared -Wl,-soname,libcallpatch.so -o libcallpatch.so $(OBJ) $(DEPS)
+libcallpatch.so: build 
+	$(CXX) $(LIBS) -shared -Wl,-soname,libcallpatch.so -o libcallpatch.so $(OBJ) $(COMMON_OBJ) $(DEPS)
 
 install: libcallpatch.so libcallpatch.a
 	if [ ! -d $(BUILD) ]; then mkdir $(BUILD); fi
@@ -44,6 +51,7 @@ install: libcallpatch.so libcallpatch.a
 
 .c.o:
 	  $(CC) -g -std=gnu99 $(INCLUDES) $(CFLAGS) $(OPTS) -fPIC -c -Wall  -o $@ $<
+	  # $(CC) -rdynamic -g -std=gnu99 $(INCLUDES) $(CFLAGS) $(OPTS) -fPIC -c -Wall  -o $@ $<
 
 distorm:
 	(cd ../../deps/distorm/make/linux/ && make clean && make CC=$(CC));

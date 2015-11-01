@@ -2,9 +2,12 @@
 #ifndef __WAIT_FREE_H_
 #define __WAIT_FREE_H_
 
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
+
+#include "patch_utils.h"
 
 #ifdef __cplusplus
 extern "C" {

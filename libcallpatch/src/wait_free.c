@@ -1,10 +1,12 @@
 
-#include "wait_free.h"
+// #include "wait_free.h"
+#include "patch_utils.h"
 
 #include <sys/mman.h>
 #include <unistd.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <execinfo.h>
 
 /* -----------------------------------------------------------------
    MACROES
@@ -39,18 +41,11 @@
  *    Globals
  * ----------------------------------------------------------------- */
 
-size_t g_cache_lvl3_line_size = 0;
-long g_page_size = 0;
 uint8_t* g_trampoline_table[TABLE_SIZE];
 
 /* -----------------------------------------------------------------
    internally used
    ----------------------------------------------------------------- */
-bool set_page_rwe(void *addr, size_t nBytes);
-uint64_t get_msb_mask_64(int nbytes);
-uint64_t get_lsb_mask_64(int nbytes);
-uint32_t get_msb_mask_32(int nbytes);
-uint32_t get_lsb_mask_32(int nbytes);
 
 bool handle_1_4_split(void* addr, uint64_t patch_value);
 bool handle_2_3_split(void* addr, uint64_t patch_value);
@@ -62,15 +57,20 @@ bool is_a_deactivation(uint64_t patch_value);
 
 uint8_t* allocate_degenerate_trampoline(void* addr);
 
-inline bool set_page_rwe(void *addr,size_t nbytes);
+static void dump_trace() {
+  void * buffer[255];
+  const int calls = backtrace(buffer,
+        sizeof(buffer) / sizeof(void *));
+  backtrace_symbols_fd(buffer, calls, 1);
+}
 
 /* -----------------------------------------------------------------
    Interface Implementation 
    ----------------------------------------------------------------- */
 
 bool patch_call_64(void* addr, uint64_t patch_value) {
+  // dump_trace();
   int offset = (uint64_t)addr % g_cache_lvl3_line_size;
-
   /* Is this a straddler patch ? */
   if (offset > g_cache_lvl3_line_size - 8) {
     unsigned int cutoff_point = g_cache_lvl3_line_size - offset;
@@ -97,6 +97,8 @@ bool patch_call_64(void* addr, uint64_t patch_value) {
 
   /* if not a straddler perform a single write */
   WRITE((uint64_t*)addr,patch_value);
+
+  // printf("[callpatch] Patched probe site %p\n", (char*) addr);
   return true;
 }
 
@@ -106,7 +108,7 @@ bool patch_call_64(void* addr, uint64_t patch_value) {
 
 /* Constructor function that intializes constants */
 __attribute__((constructor))
-void init_patcher() {
+void init_call_patcher() {
   /* Should be able to just #define these values
      by investigating what arch/os we are running on.
      Then no need for this init phase */
@@ -116,7 +118,7 @@ void init_patcher() {
 }
 
 __attribute__((destructor))
-void destroy_patcher() {
+void destroy_call_patcher() {
   /* Should be able to just #define these values
      by investigating what arch/os we are running on.
      Then no need for this init phase */
@@ -131,64 +133,9 @@ void destroy_patcher() {
 
 }
 
-/* Inline this when possible */
-inline uint64_t get_msb_mask_64(int nbytes) {
-  if (nbytes > 8 || nbytes < 0) {
-    printf("ERROR : Invalid input to get_msb_mask\n");
-  }
-
-  uint64_t mask = 0xFFFFFFFFFFFFFFFF;
-  int num_shifts = 8 * (8 - nbytes);
-  mask <<= num_shifts;
-
-  return mask;
-}
-
-inline uint64_t get_lsb_mask_64(int nbytes) {
-  if (nbytes > 8 || nbytes < 0) {
-    printf("ERROR : Invalid input to get_lsb_mask\n");
-  }
-
-  uint64_t mask = 0xFFFFFFFFFFFFFFFF;
-  int num_shifts = 8 * (8 - nbytes);
-  mask >>= num_shifts;
-
-  return mask;
-}
-
-/* initialize a patch site, make pages read/write/exec.
-   if addr + nbytes touches more than one page, all of those are modified */
-bool init_patch_site(void *addr, size_t nbytes){
-  /* uint64_t start = 0;  */
-  /* long nb = (long)nbytes; */
-  bool status = false;
-
-  status = set_page_rwe(addr,nbytes);
-
-  return status;
-}
-
 /* -----------------------------------------------------------------
  *    Private Helpers
  * ---------------------------------------------------------------- */
-
-/* Inline this function when possible */
-inline bool set_page_rwe(void *addr,size_t nbytes) {
-
-  uint64_t start = (uint64_t)addr - (((uint64_t)addr)%g_page_size);
-
-
-  uint64_t offset_into_page = (((uint64_t)addr)%g_page_size);
-  size_t bytes = offset_into_page + nbytes; /* too touch page 2 or n...  */
-  //printf("Offset into page %ld \n", offset_into_page);
-  //printf("Setting prot for %d bytes\n", bytes);
-
-  int r = mprotect((void*)start, bytes,
-		   PROT_READ | PROT_WRITE | PROT_EXEC);
-  /* need to be more sophisticated here */
-  if (r == 0) return true;
-  else return false;
-}
 
 uint8_t* allocate_degenerate_trampoline(void* addr) {
   // Try to allocate half way between given address and 2^32 range from it
