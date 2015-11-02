@@ -3,6 +3,7 @@
 #include "calibrate.hpp"
 #include "utils.hpp"
 #include "patcher.h"
+#include "wait_free.h"
 
 #include <cstdio>
 #include <vector>
@@ -73,7 +74,14 @@ bool FinstrumentProbeProvider::activate(const ProbeId probe_id,
       std::memory_order_seq_cst);
 
   // Patch the probe site
-  bool b = patch_64((void*) pmd->probe_addr, pmd->active_seq);
+  bool b;
+#if defined(INVOKE_PATCH_SYNC)
+    b = patch_64((void*) pmd->probe_addr, pmd->active_seq);
+#elif defined(INVOKE_PATCH_CALL)
+    b = patch_call_64((void*) pmd->probe_addr, pmd->active_seq); 
+#else
+    b = patch_call_64((void*) pmd->probe_addr, pmd->active_seq); // The default is callpatch
+#endif
 
   pmd->state = ProbeState::ACTIVE;
   return b;
@@ -94,10 +102,11 @@ bool FinstrumentProbeProvider::activate_async(ProbeId probe_id, InstrumentationF
       std::memory_order_seq_cst);
 
   // Patch the probe site
-  bool b;
-  // bool b = async_patch_64((void*) pmd->probe_addr, pmd->active_seq);
+  bool b = async_patch_64((void*) pmd->probe_addr, pmd->active_seq);
 
   pmd->state = ProbeState::ACTIVE;
+
+  // printf("[Finstrument Probe Provider] Asynchronously activated probe site..\n");
   return b;
 }
 
@@ -118,7 +127,14 @@ bool FinstrumentProbeProvider::deactivate(const ProbeId probe_id) {
   }
 
   // Patch the probe site
-  bool b = patch_64((void*) pmd->probe_addr, pmd->inactive_seq);
+  bool b;
+#if defined(INVOKE_PATCH_SYNC)
+    b = patch_64((void*) pmd->probe_addr, pmd->inactive_seq);
+#elif defined(INVOKE_PATCH_CALL)
+    b = patch_call_64((void*) pmd->probe_addr, pmd->inactive_seq); 
+#else
+    b = patch_call_64((void*) pmd->probe_addr, pmd->inactive_seq); // The default is callpatch
+#endif
 
   pmd->state = ProbeState::DEACTIVATED;
   return b;
@@ -136,10 +152,11 @@ bool FinstrumentProbeProvider::deactivate_async(const ProbeId probe_id) {
   }
 
   // Patch the probe site
-  bool b;
-  // bool b = async_patch_64((void*) pmd->probe_addr, pmd->inactive_seq);
+  bool b = async_patch_64((void*) pmd->probe_addr, pmd->inactive_seq);
 
   pmd->state = ProbeState::DEACTIVATING;
+
+  // printf("[Finstrument Probe Provider] Asynchronously deactivated probe site..\n");
   return b;
 }
 

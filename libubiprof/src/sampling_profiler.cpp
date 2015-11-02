@@ -96,6 +96,7 @@ void samplingPrologFunction(ProbeArg func_id) {
 }
 
 void samplingEpilogFunction(ProbeArg func_id) {
+  // printf("[Sampling Profiler] At epilog..\n");
   // fprintf(stderr, "[Epilog] Entering thread %lu\n",pthread_self());
 
   if (!allocated) {
@@ -186,7 +187,7 @@ void samplingEpilogFunction(ProbeArg func_id) {
   // Skip deactivating if that's the case
   if (new_count >= global_func_stats->sample_size && g_ubiprof_initialized) {
     if (__sync_bool_compare_and_swap(&(global_func_stats->lock), 0 , 1)) {
-      if (PROFILER->unprofileFunction(func_id) != -1) {
+      if (PROFILER->unprofileFunction(func_id)) {
         global_func_stats->deactivation_count++; // Store in thread local structure and we sum all TL stuff when flushing results
         global_func_stats->count_at_last_activation = global_count;
         global_func_stats->active = false;
@@ -241,6 +242,11 @@ void* samplingProbeMonitor(void* param) {
 
 SamplingProfiler::SamplingProfiler():Profiler(samplingPrologFunction, 
     samplingEpilogFunction) {
+
+}
+
+SamplingProfiler::SamplingProfiler(InstrumentationFunc prolog,
+    InstrumentationFunc epilog):Profiler(prolog, epilog) {
 
 }
 

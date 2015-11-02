@@ -28,6 +28,8 @@ static __thread TLSSamplingProfilerStat* current_thread_func_stats_table;
 // Instrumentation Functions
 void minimalSamplingPrologFunction(ProbeArg func_id) {
 
+  // printf("[Minimal Sampling Profiler] In prolog..\n");
+
   if (!allocated) {
     allocated = true;
     uint32_t function_count = Profiler::provider_->getNumberOfFunctions(); 
@@ -51,6 +53,10 @@ void minimalSamplingPrologFunction(ProbeArg func_id) {
 }
 
 void minimalSamplingEpilogFunction(ProbeArg func_id) {
+
+  // printf("[Minimal Sampling Profiler] In epilog..\n");
+
+  // printf("[Minimal Sampling Profiler] At epilog..\n");
 
   if (!allocated) {
     // Prolog has not been run for some reason. Skip this sample.
@@ -232,6 +238,12 @@ void MinimalSamplingProfiler::dumpStatistics() {
 
 }
 
-MinimalSamplingProfiler::~MinimalSamplingProfiler() {
+MinimalSamplingProfiler::MinimalSamplingProfiler():SamplingProfiler(
+    minimalSamplingPrologFunction, 
+    minimalSamplingEpilogFunction) {
+
+}
+
+MinimalSamplingProfiler::~MinimalSamplingProfiler(){
 
 }

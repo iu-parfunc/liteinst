@@ -91,6 +91,40 @@ Profiler::Profiler(InstrumentationFunc prolog, InstrumentationFunc epilog) :
     func_id_counter_ = 0;
 }
 
+inline void activate_probe(const ProbeMetaData* pmd, Profiler* profiler_) {
+#if defined(INVOKE_PATCH_ASYNC)
+    if (pmd->probe_context == ProbeContext:: ENTRY) {
+      pmd->provider->activate_async(pmd->probe_id, profiler_->prolog_);
+    } else {
+      pmd->provider->activate_async(pmd->probe_id, profiler_->epilog_);
+    }
+#else
+    if (pmd->probe_context == ProbeContext:: ENTRY) {
+      pmd->provider->activate(pmd->probe_id, profiler_->prolog_);
+    } else {
+      pmd->provider->activate(pmd->probe_id, profiler_->epilog_);
+    }
+#endif
+}
+
+#ifdef DISABLE_STRADDLERS
+inline void disable_straddler(const ProbeMetaData* pmd, Profiler* profiler_) {
+#if defined(INVOKE_PATCH_ASYNC)
+    if (pmd->is_straddler) {
+      pmd->provider->deactivate_async(pmd->probe_id);
+    } else {
+      activate_probe(pmd, profiler_);
+    }
+#else
+    if (pmd->is_straddler) {
+      pmd->provider->deactivate(pmd->probe_id);
+    } else {
+      activate_probe(pmd, profiler_);
+    }
+#endif
+}
+#endif
+
 void Profiler::callback(const ProbeMetaData* pmd) {
 
   // Profiler hasn't yet been initialized properly
@@ -125,20 +159,9 @@ void Profiler::callback(const ProbeMetaData* pmd) {
   pmd->provider->initialize(pmd->probe_id, func_id);
   try {
 #ifdef DISABLE_STRADDLERS
-    if (pmd->is_straddler) {
-      // fprintf(stderr, "Deactivating probe %p\n", pmd->probe_addr);
-      pmd->provider->deactivate(pmd->probe_id);
-    } else if (pmd->probe_context == ProbeContext:: ENTRY) {
-      pmd->provider->activate(pmd->probe_id, profiler_->prolog_);
-    } else {
-      pmd->provider->activate(pmd->probe_id, profiler_->epilog_);
-    }
+    disable_straddler(pmd, profiler_);
 #else
-    if (pmd->probe_context == ProbeContext:: ENTRY) {
-      pmd->provider->activate(pmd->probe_id, profiler_->prolog_);
-    } else {
-      pmd->provider->activate(pmd->probe_id, profiler_->epilog_);
-    }
+    activate_probe(pmd, profiler_);
 #endif
   } catch (int e) {
     fprintf(stderr, "Error while activating probe of function : %s.\n",
@@ -203,11 +226,19 @@ bool Profiler::profileFunction(string func_name) {
     // inconsitent state within the function.
     for (auto it = plist->begin(); it != plist->end(); ++it) {
       const ProbeMetaData* pmd = *it;
+#if defined(INVOKE_PATCH_ASYNC)
+      if (pmd->probe_context == ProbeContext::ENTRY) {
+        result = result && provider_->activate_async(pmd->probe_id, prolog_);
+      } else {
+        result = result && provider_->activate_async(pmd->probe_id, epilog_);
+      }
+#else
       if (pmd->probe_context == ProbeContext::ENTRY) {
         result = result && provider_->activate(pmd->probe_id, prolog_);
       } else {
         result = result && provider_->activate(pmd->probe_id, epilog_);
       }
+#endif
     }
   }
 
@@ -215,7 +246,7 @@ bool Profiler::profileFunction(string func_name) {
 }
 
 bool Profiler::profileFunction(FuncId func_id) {
-  bool result = false;
+  bool result = true;
   auto it = meta_data_by_id_.find(func_id);
   if (it != meta_data_by_id_.end()) {
     FuncMetaData* fmd = it->second;
@@ -226,11 +257,19 @@ bool Profiler::profileFunction(FuncId func_id) {
     // inconsitent state within the function.
     for (auto it = plist->begin(); it != plist->end(); ++it) {
       const ProbeMetaData* pmd = *it;
+#if defined(INVOKE_PATCH_ASYNC)
       if (pmd->probe_context == ProbeContext::ENTRY) {
-        result = result && provider_->activate(pmd->probe_id, prolog_);
+        result = result && provider_->activate_async(pmd->probe_id, prolog_);
+      } else {
+        result = result && provider_->activate_async(pmd->probe_id, epilog_);
+      }
+#else
+      if (pmd->probe_context == ProbeContext::ENTRY) {
+        result = result && provider_->activate(pmd->probe_id, epilog_);
       } else {
         result = result && provider_->activate(pmd->probe_id, epilog_);
       }
+#endif
     }
   }
 
@@ -249,7 +288,13 @@ bool Profiler::unprofileFunction(string func_name) {
     // inconsitent state within the function.
     for (auto it = plist->begin(); it != plist->end(); ++it) {
       const ProbeMetaData* pmd = *it;
+#if defined(INVOKE_PATCH_ASYNC)
+      // printf("[Profiler] Asynchronous patching at probe dectivation..\n");
+      result = result && provider_->deactivate_async(pmd->probe_id);
+#else
+      // printf("[Profiler] Synchronous patching at probe dectivation..\n");
       result = result && provider_->deactivate(pmd->probe_id);
+#endif
     }
   }
 
@@ -257,7 +302,7 @@ bool Profiler::unprofileFunction(string func_name) {
 }
 
 bool Profiler::unprofileFunction(FuncId func_id) {
-  bool result = false;
+  bool result = true;
   auto it = meta_data_by_id_.find(func_id);
   if (it != meta_data_by_id_.end()) {
     FuncMetaData* fmd = it->second;
@@ -268,7 +313,13 @@ bool Profiler::unprofileFunction(FuncId func_id) {
     // inconsitent state within the function.
     for (auto it = plist->begin(); it != plist->end(); ++it) {
       const ProbeMetaData* pmd = *it;
+#if defined(INVOKE_PATCH_ASYNC)
+      // printf("[Profiler] Asynchronous patching at probe dectivation..\n");
+      result = result && provider_->deactivate_async(pmd->probe_id);
+#else
+      // printf("[Profiler] Synchronous patching at probe dectivation..\n");
       result = result && provider_->deactivate(pmd->probe_id);
+#endif
     }
   }
 

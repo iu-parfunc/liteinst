@@ -182,7 +182,7 @@ void __cyg_profile_func_enter(void* func_addr, void* call_site_addr) {
 
   // This is the branch probably taken most often. 
   if (IS_PROBE_ID(function)) { 
-    assert(function < ins.probe_meta_data.size()); 
+    // assert(function < ins->probe_meta_data->size()); 
     ProbeMetaData* pmd = ins->getProbeMetaData(function);
 
     assert(pmd != NULL);
@@ -300,7 +300,7 @@ void __cyg_profile_func_exit(void* func_addr, void* call_site_addr) {
   }
 
   if (IS_PROBE_ID(function)) { 
-    assert(function < ins.probe_meta_data.size()); 
+    // assert(function < ins->probe_meta_data->size()); 
 
     ProbeMetaData* pmd = ins->getProbeMetaData(function);
 

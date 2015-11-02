@@ -4,6 +4,12 @@ INSTALL= $(ROOT)/build/lib
 # CFLAGS=-DPROBE_TRUE_EMPTY_ON -DPROBE_CPU_TIME
 # CFLAGS=-DPROBE_HIST_ON -DPROBE_CPU_TIME
 
+# override CFLAGS += -DINVOKE_PATCH_ASYNC
+
+ifeq ($(INVOKE_PATCH),INVOKE_PATCH_ASYNC)
+override CFLAGS += -DINVOKE_PATCH_ASYNC
+endif
+
 EXTRA_WARNS= -pedantic 
 #-Wextra
 ## -Wformat-nonliteral -Wcast-align -Wpointer-arith -Wbad-function-cast -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Winline -Wundef -Wnested-externs -Wcast-qual -Wshadow -Wwrite-strings -Wno-unused-parameter -Wfloat-equal

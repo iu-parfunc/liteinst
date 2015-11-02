@@ -53,6 +53,7 @@ class SamplingProfiler : public Profiler, public Monitorable {
 
   public:
     SamplingProfiler();
+    SamplingProfiler(InstrumentationFunc prolog, InstrumentationFunc epilog);
     void initialize();
     void spawnMonitor();
     void dumpStatistics();
@@ -74,6 +75,7 @@ class SamplingProfiler : public Profiler, public Monitorable {
 class MinimalSamplingProfiler : public SamplingProfiler {
 
   public:
+    MinimalSamplingProfiler();
     void initialize();
     void dumpStatistics();
     virtual ~MinimalSamplingProfiler();

@@ -3,7 +3,25 @@ ROOT = ../..
 INSTALL= $(ROOT)/build/lib
 # CFLAGS=-DPROBE_TRUE_EMPTY_ON -DPROBE_CPU_TIME
 # CFLAGS=-DPROBE_HIST_ON -DPROBE_CPU_TIME
-override CFLAGS += -DAUDIT_PROBES
+
+# Setup build macros from env variables
+ifeq ($(ARG_PATCH),ARG_PATCH_SYNC)
+override CFLAGS += -DARG_PATCH_SYNC
+endif
+
+ifeq ($(ARG_PATCH),ARG_PATCH_ASYNC)
+override CFLAGS += -DARG_PATCH_ASYNC
+endif
+
+ifeq ($(INVOKE_PATCH),INVOKE_PATCH_SYNC)
+override CFLAGS += -DINVOKE_PATCH_SYNC
+endif
+
+ifeq ($(INVOKE_PATCH),INVOKE_PATCH_CALL)
+override CFLAGS += -DINVOKE_PATCH_CALL
+endif
+
+override CFLAGS += -DAUDIT_PROBES # -DARG_PATCH_SYNC -DINVOKE_PATCH_SYNC
 
 EXTRA_WARNS= -pedantic 
 #-Wextra
@@ -11,7 +29,7 @@ EXTRA_WARNS= -pedantic
 
 ARGS= -g -Wall $(EXTRA_WARNS) -I$(ROOT)/include -I$(ROOT)/deps/distorm/include -I$(ROOT)/common/include -I.
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
-DEPS = $(INSTALL)/libpointpatch.a
+DEPS = $(INSTALL)/libpointpatch.a $(INSTALL)/libcallpatch.a
 LIBS =
 
 CC  ?= icc
@@ -24,7 +42,7 @@ AR = ar
 RM = rm
 OPTS =
 
-COMMON = $(wildcard $(ROOT)/common/src/*.cpp)
+COMMON = $(wildcard $(ROOT)/common/src/lock/*.cpp)
 COMMON_OBJ0 = $(COMMON:.cpp=.o)
 COMMON_OBJ  = $(COMMON_OBJ0:.c=.o)
 
@@ -40,7 +58,8 @@ build: $(OBJ) $(COMMON_OBJ)
 
 libfastinst.a: build
 	if [ -d libfastinst.a ]; then $(RM) -f libfastinst.a; fi
-	mkdir temp;cd temp; $(AR) -x ../$(DEPS)
+	if [ -d temp ]; then $(RM) -rf temp; fi
+	mkdir temp;cd temp; $(foreach dep,$(DEPS),$(AR) -x ../$(dep);) # for DEP in $(DEPS); do $(AR) -x ../${DEP}; done
 	$(AR) rc libfastinst.a  $(OBJ) $(COMMON_OBJ) temp/*.o
 	$(RM) -rf temp
 

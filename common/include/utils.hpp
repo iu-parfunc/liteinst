@@ -65,7 +65,14 @@ namespace utils {
 
     // Caculate the patch site and patch it
     init_patch_site((void*)patch_site, 8);
-    patch_64((void*)patch_site, patch); 
+
+#if defined(ARG_PATCH_SYNC)
+    patch_64((void*)patch_site, patch);
+#elif defined(ARG_PATCH_ASYNC)
+    async_patch_64((void*)patch_site, patch);
+#else
+    async_patch_64((void*)patch_site, patch); // Async patching is default
+#endif
 
     destroy_decoded(d);
 
