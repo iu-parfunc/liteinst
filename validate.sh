@@ -14,7 +14,12 @@ if [ "$USE_DOCKER" == "1" ]; then
    # build run-benchmarks.exe via stack:
    make -f Make_runbench benchharnesses
 
-else
+ elif [ "$BENCH_RUNS" == "1" ]; then
+   make lib
+
+   # build run-benchmarks.exe via stack, just to make sure it builds:
+   make -f Make_runbench benchharnesses
+ else
 
    make lib
    make devdoc
