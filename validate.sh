@@ -18,13 +18,14 @@ if [ "$USE_DOCKER" == "1" ]; then
    make lib
 
    # build run-benchmarks.exe via stack, just to make sure it builds:
-   make -f Make_runbench benchharnesses
+   make -f Make_runbench run-full 
  else
 
+   # The default is to just run tests
    make lib
    make devdoc
    make test
 
    # build run-benchmarks.exe via stack, just to make sure it builds:
-   make -f Make_runbench benchharnesses
+   make -f Make_runbench benchharnesses 
 fi
