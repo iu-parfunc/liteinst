@@ -75,10 +75,10 @@ benchharnesses:
 # Run the benchmarks:
 #----------------------------------------
 
-run-micro: benchmarks
+run-micro: benchharnesses
 	./run-micro-benchmarks.exe --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --name=$(TABLE) --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
 
-run-full: benchmarks
+run-full: benchharnesses
 	./full-ubiprof-benchmarks.exe --retry=10 --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --name=$(TABLE) --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
 
 #----------------------------------------
