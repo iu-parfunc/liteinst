@@ -39,7 +39,7 @@ TABLE=UBIPROF_PATCH_OVERHEAD
 all: benchharness library
 
 library: 
-	(cd ../../../libcallpatch/src && make CC=gcc CXX=g++ CFLAGS=-O3 install)
+	(cd ../../../ && make CC=gcc CXX=g++ CFLAGS=-O3 lib)
 
 microbench.exe: benchharness
 
