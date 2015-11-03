@@ -101,7 +101,7 @@ benches =
 --                       ,("sampling",sampling)]
     
 epochs :: [Int] 
-epochs = [1000]
+epochs = [10]
 
 samplesize :: [Int] 
 samplesize = [10]
