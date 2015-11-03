@@ -6,8 +6,15 @@ INSTALL= $(ROOT)/build/lib
 
 # override CFLAGS += -DINVOKE_PATCH_ASYNC
 
+# Setup macro definitions from the env variables
 ifeq ($(INVOKE_PATCH),INVOKE_PATCH_ASYNC)
 override CFLAGS += -DINVOKE_PATCH_ASYNC
+endif
+
+ifeq ($(PROBE_TOGGLING),DISABLE_STRADDLERS)
+override CFLAGS += -DDISABLE_STRADDLERS
+else ifeq ($(PROBE_TOGGLING),DISABLE_ALL_PROBES)
+override CFLAGS += -DDISABLE_ALL_PROBES
 endif
 
 EXTRA_WARNS= -pedantic 

@@ -14,12 +14,23 @@ if [ "$USE_DOCKER" == "1" ]; then
    # build run-benchmarks.exe via stack:
    make -f Make_runbench benchharnesses
 
- elif [ "$BENCH_RUNS" == "1" ]; then
+ elif [ "$BENCH_RUNS" == "PATCHING" ]; then # Patching related application benchmarks
    make lib
 
    # build run-benchmarks.exe via stack, just to make sure it builds:
    make -f Make_runbench run-full 
- else
+
+ elif [ "$BENCH_RUNS" == "PROBES" ]; then 
+   # Application benchmarks with various probe toggle configurations
+    # - DISABLE_STRADDLERS
+    # - DISABLE_ALL_PROBES
+    # - ENABLE_ALL_PROBES
+   make lib
+   make test
+
+   # build run-benchmarks.exe via stack, just to make sure it builds:
+   make -f Make_runbench run-full 
+ else # Default application benchmark runs
 
    # The default is to just run tests
    make lib
