@@ -26,11 +26,10 @@ if [ "$USE_DOCKER" == "1" ]; then
     # - DISABLE_ALL_PROBES
     # - ENABLE_ALL_PROBES
    make lib
-   make test
 
    # build run-benchmarks.exe via stack, just to make sure it builds:
    make -f Make_runbench run-full 
- else # Default application benchmark runs
+ else # Just runs the tests by default with no application benchmarks 
 
    # The default is to just run tests
    make lib
@@ -38,5 +37,5 @@ if [ "$USE_DOCKER" == "1" ]; then
    make test
 
    # build run-benchmarks.exe via stack, just to make sure it builds:
-   make -f Make_runbench benchharnesses 
+   # make -f Make_runbench benchharnesses 
 fi
