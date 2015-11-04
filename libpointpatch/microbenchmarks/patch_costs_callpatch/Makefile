@@ -13,7 +13,7 @@ LIBDIR=$(UBIROOT)/build/lib
 
 #DEPS =  ../../deps/distorm/distorm3.a -lpointpatch -lpthread 
 # USE .a for now (static) 
-DEPS =  $(UBIROOT)/deps/distorm/distorm3.a $(LIBDIR)/libcallpatch.a -lpthread 
+DEPS =  $(UBIROOT)/deps/distorm/distorm3.a $(LIBDIR)/libcallpatch.a $(LIBDIR)/libpointpatch.a -lpthread 
 
 
 
