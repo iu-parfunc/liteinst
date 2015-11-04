@@ -33,8 +33,7 @@ else
 endif
 endif
 
-TABLE=UBIPROF_PATCH_OVERHEAD
-
+TABLE=UBIPROF_MICROBENCH_PATCH_COST_CALLPATCH
 
 all: benchharness library
 
