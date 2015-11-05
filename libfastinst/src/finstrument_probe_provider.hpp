@@ -42,6 +42,22 @@ class FinstrumentProbeProvider : public ProbeProvider {
      *  \param callback Probe discovery callback
      */
     FinstrumentProbeProvider(Callback cb) : ProbeProvider(cb) {
+      // Printing arg patching method
+#if defined(ARG_PATCH_SYNC)
+      fprintf(stderr, "[Finstrument Probe Provider] ARG_PATCH_METHOD: ARG_PATCH_SYNC\n");
+#elif defined(ARG_PATCH_ASYNC)
+      fprintf(stderr, "[Finstrument Probe Provider] ARG_PATCH_METHOD: ARG_PATCH_ASYNC\n");
+#else
+      fprintf(stderr, "[Finstrument Probe Provider] ARG_PATCH_METHOD: ARG_PATCH_ASYNC\n");
+#endif
+     
+      // Printing invoke patching method
+#if defined(INVOKE_PATCH_SYNC)
+      fprintf(stderr, "[Finstrument Probe Provider]  INVOKE_PATCH_METHOD: INVOKE_PATCH_SYNC\n");
+#elif defined(INVOKE_PATCH_CALL)
+      fprintf(stderr, "[Finstrument Probe Provider]  INVOKE_PATCH_METHOD: INVOKE_PATCH_CALL\n"); 
+#endif
+
       readFunctionInfo();
       // calibrateInstrumentationOverhead();
     }

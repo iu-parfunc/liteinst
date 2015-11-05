@@ -187,6 +187,21 @@ __attribute__((constructor, no_instrument_function)) void initProfiler();
 
   void initProfiler() {
 
+    // Print invoke patching mode
+#if defined(INVOKE_PATCH_ASYNC)
+    fprintf(stderr, "[ubiprof] INVOKE_PATCH_METHOD: INVOKE_PATCH_ASYNC\n");
+#endif
+
+    // Print probe toggling mode
+#if defined(DISABLE_STRADDLERS)
+    fprintf(stderr, "[ubiprof] PROBE_TOGGLE_MODE: DISABLE_STRADDLERS\n");
+#elif defined(DISABLE_ALL_PROBES)
+    fprintf(stderr, "[ubiprof] PROBE_TOGGLE_MODE: DISABLE_ALL_PROBES\n");
+#else
+    fprintf(stderr, "[ubiprof] PROBE_TOGGLE_MODE: ENABLE_ALL_PROBES\n");
+#endif
+
+
     // ticks start = getticks();
 
     calibrateTicks();
