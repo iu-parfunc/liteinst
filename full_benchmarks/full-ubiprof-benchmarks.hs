@@ -81,7 +81,7 @@ benches =
     
     setVariant str = And [Set (Variant str) (CompileParam "")
                           , Set NoMeaning (CompileEnv "CC" "gcc")
-                          , Set NoMeaning (CompileEnv "OPTLEVEL" "-O2")  
+                          , Set NoMeaning (CompileEnv "OPTLEVEL" "-O0")  
                           ]
 
 
@@ -115,7 +115,7 @@ sampling = Or [And [ Set (Variant (compiler ++ "_" ++ optlevel ++ "_Sampling_"++
               | s_size <- samplesize
               , epoch <- epochs
               , compiler <- ["gcc"] -- , "icc"]
-              , optlevel <- ["-O2"] -- ["-O1", "-O2", "-O3" ]
+              , optlevel <- ["-O0"] -- ["-O1", "-O2", "-O3" ]
               ]
 
 
@@ -127,7 +127,7 @@ backoff  = Or [And [ Set (Variant (compiler ++ "_" ++ optlevel ++ "_Backoff_"++s
                    ]
               | s_size <- backoff_params -- samplesize
               , compiler <- ["gcc"]
-              , optlevel <- ["-O2"]
+              , optlevel <- ["-O0"]
               ] 
 
 
