@@ -56,6 +56,9 @@ main = do
                        customTagHarvesterDouble "REAL_EXEC_TIME"          `mappend`
                        customTagHarvesterDouble "EXEC_TIME"               `mappend`
                        customTagHarvesterInt    "PROBE_COUNT"             `mappend`
+                       customTagHarvesterInt    "ARG_PATCH_METHOD"        `mappend`
+                       customTagHarvesterInt    "INVOKE_PATCH_METHOD"     `mappend`
+                       customTagHarvesterInt    "PROBE_TOGGLE_MODE"     `mappend`
                        harvesters conf
         }
 
