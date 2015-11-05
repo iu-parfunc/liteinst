@@ -71,7 +71,7 @@ namespace utils {
 #elif defined(ARG_PATCH_ASYNC)
     async_patch_64((void*)patch_site, patch);
 #else
-    async_patch_64((void*)patch_site, patch); // Async patching is default
+    patch_64((void*)patch_site, patch); // Sync patching is default
 #endif
 
     destroy_decoded(d);
