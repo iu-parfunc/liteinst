@@ -33,7 +33,7 @@ TOP=$(shell pwd)
 # Google API authentication
 # ----------------------------------------
 
-ifeq ($(MACHINECLASS),delta)
+ifeq ($(MACHINECLASS),)
   # Parfunc account / FusionTable_DynaprofUploader project:
   $(info Using DynaProf-specific FusionTable uploader.)
   CID=925399326325-6dir7re3ik7686p6v3kkfkf1kj0ec7ck.apps.googleusercontent.com
@@ -41,6 +41,10 @@ ifeq ($(MACHINECLASS),delta)
 else
 # ifeq ($(MACHINECLASS),mine)
 ifneq (,$(filter $(MACHINECLASS),mine xmen))
+  $(info Using general FusionTable uploader number 3)
+  CID=759282369766-qbqb7sccab86m8j0jma6r3t21ng6uaoa.apps.googleusercontent.com
+  SEC=TtfkUzUSR3LWfJ_udJi6wdO3
+elif (,$(filter $(MACHINECLASS),cutter))
   $(info Using general FusionTable uploader number 3)
   CID=759282369766-qbqb7sccab86m8j0jma6r3t21ng6uaoa.apps.googleusercontent.com
   SEC=TtfkUzUSR3LWfJ_udJi6wdO3
