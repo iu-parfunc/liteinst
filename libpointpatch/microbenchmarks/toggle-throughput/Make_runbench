@@ -41,7 +41,7 @@ else
 endif
 endif
 
-TABLE=PATCH_TOGGLE_THROUGHPUT 
+TABLE=PATCH_TOGGLE_THROUGHPUT2 
 
 
 all: benchharness library

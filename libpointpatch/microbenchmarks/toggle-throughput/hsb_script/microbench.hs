@@ -39,6 +39,8 @@ main = do
                        customTagHarvesterInt    "MAXIMUM_FOO_CALLS" `mappend`
                        customTagHarvesterInt    "MINIMUM_BAR_CALLS" `mappend`
                        customTagHarvesterInt    "MAXIMUM_BAR_CALLS" `mappend`
+                       customTagHarvesterInt    "TOTAL_FOO_CALLS" `mappend`
+                       customTagHarvesterInt    "TOTAL_BAR_CALLS" `mappend`
                        harvesters conf
         }
 
