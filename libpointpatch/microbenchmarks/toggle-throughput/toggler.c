@@ -303,6 +303,7 @@ int main(int argc, char** argv) {
   printf("MINIMUM_SWITCHES: %ld\n", min_switches); 
   printf("MAXIMUM_SWITCHES: %ld\n", max_switches); 
   printf("NUMBER_OF_TOGGLES: %ld\n",n_toggles); 
+  printf("NUMBER_OF_EXECUTERS: %d\n", num_runners); 
   printf("TARGET_TIME: %f\n", duration); 
   printf("ELLAPSED_TIME: %f\n", diff_time_s(&t2,&t1)); 
 
