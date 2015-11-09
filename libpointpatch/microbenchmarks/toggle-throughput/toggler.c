@@ -41,6 +41,7 @@
 
 #define ITERS 500000
 #define NS_PER_S 1000000000
+#define PAD 8 
 
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y)) 
@@ -53,7 +54,6 @@ static inline double diff_time_s(struct timespec *t1, struct timespec *t2){
   return (diff_ns / NS_PER_S); 
 
 }                 
-
 
 unsigned long *g_foo_val; 
 unsigned long *g_bar_val; 
@@ -82,14 +82,14 @@ unsigned int start_addr = 0;
 
 void bar(int arg) {
   
-  if (g_ran_foo_last[arg]) {
-    g_ran_foo_last[arg] = false; 
-    g_switches[arg]++; 
+  if (g_ran_foo_last[arg*PAD]) {
+    g_ran_foo_last[arg*PAD] = false; 
+    g_switches[arg*PAD]++; 
   }
 
 
   if (g_collect_data) {
-    g_bar_val[arg]++; 
+    g_bar_val[arg*PAD]++; 
   }
 }
 
@@ -127,14 +127,14 @@ void foo(int arg) {
       }
   }
   
-  if (!g_ran_foo_last[arg]) {
-    g_ran_foo_last[arg] = true; 
-    g_switches[arg]++; 
+  if (!g_ran_foo_last[arg*PAD]) {
+    g_ran_foo_last[arg*PAD] = true; 
+    g_switches[arg*PAD]++; 
   }
     
   
   if (g_collect_data) { 
-    g_foo_val[arg]++;
+    g_foo_val[arg*PAD]++;
   }
 
 }
@@ -190,16 +190,16 @@ int main(int argc, char** argv) {
    
   runners = (pthread_t*)malloc(sizeof(pthread_t)*num_runners); 
 
-  g_foo_val = (unsigned long*)malloc(sizeof(unsigned long)*num_runners); 
-  g_bar_val = (unsigned long*)malloc(sizeof(unsigned long)*num_runners); 
-  g_switches = (unsigned long *)malloc(sizeof(unsigned long)*num_runners); 
-  g_ran_foo_last = (bool *)malloc(sizeof(bool)*num_runners); 
+  g_foo_val = (unsigned long*)malloc(sizeof(unsigned long)*num_runners*PAD); 
+  g_bar_val = (unsigned long*)malloc(sizeof(unsigned long)*num_runners*PAD); 
+  g_switches = (unsigned long *)malloc(sizeof(unsigned long)*num_runners*PAD); 
+  g_ran_foo_last = (bool *)malloc(sizeof(bool)*num_runners*PAD); 
 
   for (int i = 0; i < num_runners; i ++) { 
-    g_foo_val[i] = 0; 
-    g_bar_val[i] = 0; 
-    g_switches[i] = 0; 
-    g_ran_foo_last[i] = true; 
+    g_foo_val[i*PAD] = 0; 
+    g_bar_val[i*PAD] = 0; 
+    g_switches[i*PAD] = 0; 
+    g_ran_foo_last[i*PAD] = true; 
   }
   
 
@@ -299,19 +299,19 @@ int main(int argc, char** argv) {
   unsigned long total_foo_calls = 0; 
   unsigned long total_bar_calls = 0; 
   for (int i = 0; i < num_runners; i ++) { 
-    printf("Runner %d switches: %ld\n", i, g_switches[i]); 
-    printf("Runner %d foo calls: %ld\n", i, g_foo_val[i]); 
-    printf("Runner %d bar calls: %ld\n", i, g_bar_val[i]); 
+    printf("Runner %d switches: %ld\n", i, g_switches[i*PAD]); 
+    printf("Runner %d foo calls: %ld\n", i, g_foo_val[i*PAD]); 
+    printf("Runner %d bar calls: %ld\n", i, g_bar_val[i*PAD]); 
     
-    min_switches = MIN(min_switches, g_switches[i]);
-    max_switches = MAX(max_switches, g_switches[i]); 
-    min_foo_calls = MIN(min_foo_calls, g_foo_val[i]);
-    max_foo_calls = MAX(max_foo_calls, g_foo_val[i]); 
-    min_bar_calls = MIN(min_bar_calls, g_bar_val[i]);
-    max_bar_calls = MAX(max_bar_calls, g_bar_val[i]); 
-    observed_switches_total += g_switches[i];
-    total_foo_calls += g_foo_val[i]; 
-    total_bar_calls += g_bar_val[i]; 
+    min_switches = MIN(min_switches, g_switches[i*PAD]);
+    max_switches = MAX(max_switches, g_switches[i*PAD]); 
+    min_foo_calls = MIN(min_foo_calls, g_foo_val[i*PAD]);
+    max_foo_calls = MAX(max_foo_calls, g_foo_val[i*PAD]); 
+    min_bar_calls = MIN(min_bar_calls, g_bar_val[i*PAD]);
+    max_bar_calls = MAX(max_bar_calls, g_bar_val[i*PAD]); 
+    observed_switches_total += g_switches[i*PAD];
+    total_foo_calls += g_foo_val[i*PAD]; 
+    total_bar_calls += g_bar_val[i*PAD]; 
     
   }
   printf("STRADDLE_POINT: %d\n", call_straddler_point);
