@@ -35,6 +35,10 @@ main = do
                        customTagHarvesterInt    "NUMBER_OF_EXECUTERS" `mappend`
                        customTagHarvesterInt    "STRADDLE_POINT" `mappend`
                        customTagHarvesterInt    "OBSERVED_SWITCHES_TOTAL" `mappend`
+                       customTagHarvesterInt    "MINIMUM_FOO_CALLS" `mappend`
+                       customTagHarvesterInt    "MAXIMUM_FOO_CALLS" `mappend`
+                       customTagHarvesterInt    "MINIMUM_BAR_CALLS" `mappend`
+                       customTagHarvesterInt    "MAXIMUM_BAR_CALLS" `mappend`
                        harvesters conf
         }
 
