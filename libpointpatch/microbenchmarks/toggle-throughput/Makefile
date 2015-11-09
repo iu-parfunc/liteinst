@@ -28,7 +28,7 @@ all: $(EXES)
 
 
 run: $(EXES)
-	./patch_cost_parallel.exe $(RUN_ARGS)
+	./toggler.exe $(RUN_ARGS)
 #	./runall.sh
 
 clean:
