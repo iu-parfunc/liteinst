@@ -39,13 +39,20 @@ main = do
                        customTagHarvesterInt    "MAXIMUM_FOO_CALLS" `mappend`
                        customTagHarvesterInt    "MINIMUM_BAR_CALLS" `mappend`
                        customTagHarvesterInt    "MAXIMUM_BAR_CALLS" `mappend`
+                       customTagHarvesterInt    "TOTAL_FOO_CALLS" `mappend`
+                       customTagHarvesterInt    "TOTAL_BAR_CALLS" `mappend`
                        harvesters conf
         }
 
 
 benches :: [Benchmark DefaultParamMeaning]
-benches = [mkBenchmark ("Makefile") [show straddle_pos, show threads, show duration]  (Set (Variant "microbench") (RuntimeEnv "PATCH_WAIT_TIME" "1800")) 
-          | threads <- [1..16]
+benches =
+  [mkBenchmark ("Makefile")
+   [show straddle_pos, show threads, show duration]
+   (And [ Set (Variant "microbench")
+              (RuntimeEnv "PATCH_WAIT_TIME" "1800")
+        , Set NoMeaning (CompileParam "-O2")])
+          | threads <- [1..15]
           , straddle_pos <- [0..4] -- zero means not-a-straddler
-          , duration <- [0.1,0.5,1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0]]
+          , duration <- [0.1,1.0,2.0,3.0,4.0,5.0]]
 
