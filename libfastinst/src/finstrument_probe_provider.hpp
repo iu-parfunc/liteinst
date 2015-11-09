@@ -56,6 +56,8 @@ class FinstrumentProbeProvider : public ProbeProvider {
       fprintf(stderr, "INVOKE_PATCH_METHOD: INVOKE_PATCH_SYNC\n");
 #elif defined(INVOKE_PATCH_CALL)
       fprintf(stderr, "INVOKE_PATCH_METHOD: INVOKE_PATCH_CALL\n"); 
+#else
+      fprintf(stderr, "INVOKE_PATCH_METHOD: INVOKE_PATCH_CALL\n"); 
 #endif
 
       readFunctionInfo();

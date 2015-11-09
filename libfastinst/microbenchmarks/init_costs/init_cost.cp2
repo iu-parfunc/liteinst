@@ -1,0 +1,14 @@
+  end = getticks();
+  ticks different_funcs_elapsed_time = end - start;
+
+  fprintf(stderr, "Num invocations : %ld\n", invoke_count);
+  assert(invoke_count == NUM_FUNCS*2*2); 
+
+  fprintf(stderr, "Initialization cost estimate (cycles) : %llu\n", 
+      (different_funcs_elapsed_time - single_func_elapsed_time) / (NUM_FUNCS-1));
+
+  delete(p);
+
+  exit(EXIT_SUCCESS);
+
+}

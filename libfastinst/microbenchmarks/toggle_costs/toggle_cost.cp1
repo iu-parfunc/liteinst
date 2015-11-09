@@ -1,0 +1,77 @@
+
+/*
+  Benchmark description:
+  Measures average initialization cost of a probe via Finstrumentor ProbeProvider API.
+   */
+
+#include "fastinst.hpp"
+#include "cycle.h"
+#include "funcs.hpp"
+
+#include <string>
+#include <cassert>
+#include <cstdlib>
+
+using namespace std;
+
+long invoke_count = 0;
+long max_probe_id = 0;
+long DEFAULT_FUNC_ID = 1;
+long NUM_FUNCS = 10000;
+
+ticks* deactivation_costs;
+ticks* activation_costs;
+
+void instrumentation(ProbeArg func_id)
+  __attribute__((no_instrument_function));
+void callback(const ProbeMetaData* pmd)
+  __attribute__((no_instrument_function));
+
+void instrumentation(ProbeArg func_id) {
+  invoke_count++;
+}
+
+void callback(const ProbeMetaData* pmd) {
+
+  // printf("probe id : %lu\n", pmd->probe_id);
+  assert(pmd->probe_id == 0 || pmd->probe_id == max_probe_id + 1);
+  // if(pmd->probe_id > max_probe_id) {
+    max_probe_id = pmd->probe_id;
+  // }
+
+  PROBE_PROVIDER->initialize(pmd->probe_id, DEFAULT_FUNC_ID);
+  try {
+    PROBE_PROVIDER->activate(pmd->probe_id, instrumentation);
+  } catch (int e) {
+    fprintf(stderr, "Error while activating probe of function : %s.\n",
+        pmd->func_name.c_str());
+    exit(EXIT_FAILURE);
+  }
+
+}
+
+int main(int argc, char* argv[]) {
+
+  fprintf(stderr, "Benchmark probe initialization..\n");
+
+  if (argc == 1) {
+    printf("NO ARGS: Running with default NUM_FUNCS : %ld..\n", NUM_FUNCS); 
+  } else {
+    NUM_FUNCS = atoi(argv[1]);
+    printf("Running with NUM_FUNCS : %ld..\n", NUM_FUNCS); 
+  }
+
+  ProbeProvider* p;
+  try {
+    p = initializeGlobalProbeProvider(ProviderType::FINSTRUMENT, callback);
+  } catch (int e) {
+    fprintf(stderr, "ProbeProvider already initialized. Getting the existing"
+        " one..\n");
+    p = getGlobalProbeProvider();
+  }
+
+  if (p == NULL) {
+    fprintf(stderr, "Unable to initialize probe provider..\n");
+    exit(EXIT_FAILURE);
+  }
+
