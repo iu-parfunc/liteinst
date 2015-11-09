@@ -320,7 +320,7 @@ int main(int argc, char** argv) {
   printf("OBSERVED_SWITCHES_TOTAL: %ld\n", observed_switches_total); 
   printf("MINIMUM_FOO_CALLS: %ld\n", min_foo_calls); 
   printf("MAXIMUM_FOO_CALLS: %ld\n", max_foo_calls); 
-  printf("TOTAL_BAR_CALLS: %ld\n", total_foo_calls); 
+  printf("TOTAL_FOO_CALLS: %ld\n", total_foo_calls); 
   printf("MINIMUM_BAR_CALLS: %ld\n", min_bar_calls); 
   printf("MAXIMUM_BAR_CALLS: %ld\n", max_bar_calls); 
   printf("TOTAL_BAR_CALLS: %ld\n", total_bar_calls); 
