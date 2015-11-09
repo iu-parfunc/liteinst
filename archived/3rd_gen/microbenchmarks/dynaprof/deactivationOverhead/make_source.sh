@@ -2,28 +2,35 @@
 set -e
 
 # Environment variable
-export DYN_STRATEGY="NO_BACKOFF"
-fileStem=40_deactivate
-
+fileStem=funcs
 
 # Infrastructure work... remove old files, output info
+rm -f $fileStem.hpp
 rm -f $fileStem.cpp
+
+file=$fileStem.hpp
+touch $file
+echo "void emptyFunc( void ) __attribute__((noinline));">>$file
+for (( j=0; j<$1; j++ ))
+do
+    echo "void emptyFunc$j( void ) __attribute__((noinline));">>$file
+done
+
+file=$fileStem.cpp
+touch $file
+echo "void emptyFunc( void ) {">>$file
+echo "  return; }" >> $file
+for (( j=0; j<$1; j++ ))
+do
+    echo "void emptyFunc$j( void ) {">>$file
+    echo "  return; }" >> $file
+done
+
+fileStem=init_cost
 # Put together the source code
 cat $fileStem.cp1 >>$fileStem.cpp
 for (( j=0; j<$1; j++ ))
 do
-    echo "void myEmptyFunc$j( void ) {">>$fileStem.cpp
-    echo " __notify_intrinsic((void*)\"myEmptyFunc$j:start\", (void *)&global_x);">>$fileStem.cpp
-    echo " __notify_intrinsic((void*)\"myEmptyFunc$j:end\", (void *)&global_x);">>$fileStem.cpp
-    echo "return; }">>$fileStem.cpp
+    echo "myEmptyFunc$j();">>$fileStem.cpp
 done
-echo "unsigned long int countTEST=$j;">>$fileStem.cpp
 cat $fileStem.cp2 >>$fileStem.cpp
-
-for (( j=0; j<$1; j++ ))
-do
-    echo "deactivate_method_profiling(\"myEmptyFunc$j\");">>$fileStem.cpp
-done
-
-
-cat $fileStem.cp3 >>$fileStem.cpp
