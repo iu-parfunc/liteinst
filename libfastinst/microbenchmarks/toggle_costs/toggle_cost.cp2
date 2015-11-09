@@ -1,0 +1,50 @@
+
+  deactivation_costs = new ticks[max_probe_id]();
+  activation_costs   = new ticks[max_probe_id]();
+
+  ticks start, end;  
+  ticks deactivation_sum = 0;
+  ticks activation_sum = 0;
+
+  FILE* fp1 = fopen("toggle_cost_deactivation.out", "w");
+  FILE* fp2 = fopen("toggle_cost_activation.out", "w");
+ 
+  for (int i=0; i<max_probe_id; i++) {
+    start = getticks();
+    p->deactivate(i);
+    end = getticks();
+
+    deactivation_costs[i] = (end - start);
+    deactivation_sum += deactivation_costs[i];
+
+    fprintf(fp1, "%d, %llu\n", i, deactivation_costs[i]);
+  }
+
+  for (int i=0; i<max_probe_id; i++) {
+    start = getticks();
+    p->activate(i, instrumentation);
+    end = getticks();
+
+    activation_costs[i] = (end - start);
+    activation_sum += activation_costs[i];
+    fprintf(fp2, "%d, %llu\n", i, activation_costs[i]);
+  }
+
+  fprintf(stderr, "Number of functions : %ld\n", NUM_FUNCS);
+
+  fprintf(stderr, "Probe deactivation cost estimate (cycles) : %llu\n", 
+      deactivation_sum / max_probe_id);
+
+  fprintf(stderr, "Probe activation cost estimate (cycles) : %llu\n", 
+      activation_sum / max_probe_id);
+
+  fclose(fp1);
+  fclose(fp2);
+
+  delete(p);
+  delete(deactivation_costs);
+  delete(activation_costs);
+
+  exit(EXIT_SUCCESS);
+
+}
