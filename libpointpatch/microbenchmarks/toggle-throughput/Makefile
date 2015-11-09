@@ -24,7 +24,7 @@ DEPS =  $(UBIROOT)/deps/distorm/distorm3.a $(LIBDIR)/libpointpatch.a -lpthread
 all: $(EXES) 
 
 %.exe: %.c
-	$(CC) -std=gnu99 -g $(CFLAGS) -I$(UBIROOT)/deps/distorm/include -I$(UBIROOT)/include -I$(UBIROOT)/common/include  $< -o $@ -L$(LIBDIR) $(DEPS) 
+	$(CC) -std=gnu99 -g $(COMPILE_ARGS) $(CFLAGS) -I$(UBIROOT)/deps/distorm/include -I$(UBIROOT)/include -I$(UBIROOT)/common/include  $< -o $@ -L$(LIBDIR) $(DEPS) 
 
 
 run: $(EXES)
@@ -32,4 +32,4 @@ run: $(EXES)
 #	./runall.sh
 
 clean:
-	rm -f *.exe
+	rm -f ./toggler.exe

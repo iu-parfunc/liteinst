@@ -267,13 +267,14 @@ int main(int argc, char** argv) {
 
   
   while (diff_time_s(&t2,&t1)  < duration){
-  
+
+#ifndef NO_TOGGLES   
     patch_64((void*)g_call_addr, g_orig_call);
     
     patch_64((void*)g_call_addr, g_call_bar_patch);
 
     n_toggles+=2; 
-
+#endif 
     clock_gettime(CLOCK_MONOTONIC, &t2); 
   }
  
