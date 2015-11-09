@@ -291,6 +291,7 @@ int main(int argc, char** argv) {
 
   unsigned long min_switches = ULONG_MAX; 
   unsigned long max_switches = 0;
+  unsigned long observed_switches_total = 0; 
   for (int i = 0; i < num_runners; i ++) { 
     printf("Runner %d switches: %ld\n", i, g_switches[i]); 
     printf("Runner %d foo calls: %ld\n", i, g_foo_val[i]); 
@@ -298,11 +299,13 @@ int main(int argc, char** argv) {
     
     min_switches = MIN(min_switches, g_switches[i]);
     max_switches = MAX(max_switches, g_switches[i]); 
+    observed_switches_total += g_switches[i];
     
   }
   printf("STRADDLE_POINT: %d\n", call_straddler_point);
   printf("MINIMUM_SWITCHES: %ld\n", min_switches); 
   printf("MAXIMUM_SWITCHES: %ld\n", max_switches); 
+  printf("OBSERVED_SWITCHES_TOTAL: %ld\n", observed_switches_total); 
   printf("NUMBER_OF_TOGGLES: %ld\n",n_toggles); 
   printf("NUMBER_OF_EXECUTERS: %d\n", num_runners); 
   printf("TARGET_TIME: %f\n", duration); 

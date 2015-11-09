@@ -34,6 +34,7 @@ main = do
                        customTagHarvesterInt    "NUMBER_OF_TOGGLES" `mappend`
                        customTagHarvesterInt    "NUMBER_OF_EXECUTERS" `mappend`
                        customTagHarvesterInt    "STRADDLE_POINT" `mappend`
+                       customTagHarvesterInt    "OBSERVED_SWITCHES_TOTAL" `mappend`
                        harvesters conf
         }
 
