@@ -1,7 +1,7 @@
 
 /*
   Benchmark description:
-  Measures average initialization cost of a probe via Finstrumentor ProbeProvider API.
+  Measures average probe activation and deactivation costs of a probe via Finstrumentor ProbeProvider API.
    */
 
 #include "fastinst.hpp"

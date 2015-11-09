@@ -6,8 +6,8 @@
   ticks deactivation_sum = 0;
   ticks activation_sum = 0;
 
-  FILE* fp1 = fopen("toggle_cost_deactivation.out", "w");
-  FILE* fp2 = fopen("toggle_cost_activation.out", "w");
+  FILE* fp1 = fopen("toggle_cost_deactivation.csv", "w");
+  FILE* fp2 = fopen("toggle_cost_activation.csv", "w");
  
   for (int i=0; i<max_probe_id; i++) {
     start = getticks();
@@ -15,9 +15,12 @@
     end = getticks();
 
     deactivation_costs[i] = (end - start);
-    deactivation_sum += deactivation_costs[i];
 
-    fprintf(fp1, "%d, %llu\n", i, deactivation_costs[i]);
+    // Filtering out outliers
+    if (deactivation_costs[i] < 10000) {
+      deactivation_sum += deactivation_costs[i];
+      fprintf(fp1, "%d, %llu\n", i, deactivation_costs[i]);
+    }
   }
 
   for (int i=0; i<max_probe_id; i++) {
@@ -26,8 +29,12 @@
     end = getticks();
 
     activation_costs[i] = (end - start);
-    activation_sum += activation_costs[i];
-    fprintf(fp2, "%d, %llu\n", i, activation_costs[i]);
+    
+    // Filtering out outliers
+    if (activation_costs[i] < 10000) {
+      activation_sum += activation_costs[i];
+      fprintf(fp2, "%d, %llu\n", i, activation_costs[i]);
+    }
   }
 
   fprintf(stderr, "Number of functions : %ld\n", NUM_FUNCS);
