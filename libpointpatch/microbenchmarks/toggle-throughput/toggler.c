@@ -300,6 +300,7 @@ int main(int argc, char** argv) {
     max_switches = MAX(max_switches, g_switches[i]); 
     
   }
+  printf("STRADDLE_POINT: %d\n", call_straddler_point);
   printf("MINIMUM_SWITCHES: %ld\n", min_switches); 
   printf("MAXIMUM_SWITCHES: %ld\n", max_switches); 
   printf("NUMBER_OF_TOGGLES: %ld\n",n_toggles); 
