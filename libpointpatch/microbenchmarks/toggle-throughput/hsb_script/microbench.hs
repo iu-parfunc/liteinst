@@ -54,5 +54,6 @@ benches =
         , Set NoMeaning (CompileParam "-O2")])
           | threads <- [1..15]
           , straddle_pos <- [0..4] -- zero means not-a-straddler
-          , duration <- [0.1,1.0,2.0,3.0,4.0,5.0]]
+          , duration <- [0.1,1.0,2.0,3.0,4.0,5.0]
+          , rate <- [250000, 500000, 750000, 1000000, 1250000, 150000 ]]
 
