@@ -48,7 +48,7 @@ main = do
 benches :: [Benchmark DefaultParamMeaning]
 benches =
   [mkBenchmark ("Makefile")
-   [show straddle_pos, show threads, show duration]
+   [show straddle_pos, show threads, show duration, show rate]
    (And [ Set (Variant "microbench")
               (RuntimeEnv "PATCH_WAIT_TIME" "1800")
         , Set NoMeaning (CompileParam "-O2")])
