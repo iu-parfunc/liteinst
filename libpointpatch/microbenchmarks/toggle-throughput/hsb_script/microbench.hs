@@ -24,7 +24,7 @@ main = do
   defaultMainModifyConfig $ \ conf ->
     conf{ benchlist = benches
         , runTimeOut = Just 600
-        , plugIns = [SomePlugin defaultFusionPlugin,
+        , plugIns = [--SomePlugin defaultFusionPlugin,
                      SomePlugin defaultDribblePlugin]
         , harvesters = customTagHarvesterInt    "NUM_THREADS"  `mappend`
                        customTagHarvesterDouble "TARGET_TIME" `mappend`
