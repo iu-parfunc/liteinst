@@ -7,31 +7,12 @@ import java.util.Arrays;
 
 public class TimingHarness
 {
-   private static int trials = 1000000;
-   private static int trials_kept = 1000;
-   private static long[] times = null;
-
-   private static void summarize(String msg)
-   {
-       long mn = times[0];
-       long mx = times[0];
-       long sum = 0;
-       for (long x : times) {
-           mn = Math.min(mn,x);
-           mx = Math.max(mx,x);
-           sum += x;
-       }
-       Arrays.sort( times );
-       long median = times[trials_kept / 2];
-       System.out.printf("%s, min %d, max %d, avg %d, median %d\n", msg, mn,mx, sum / trials_kept, median);
-       System.out.printf("  count of f_calls: %d\n", IDDL.f_calls);
-       System.out.printf("  count of g_calls: %d\n", IDDL.g_calls);
-   }
+   public static volatile boolean startSignal = false;
+   public static volatile boolean stopSignal  = false;
 
    public static void main(String[] args) throws Throwable
    {
       long t1=0, t2=0, t3=0, t4=0;
-      times = new long[trials_kept];
 
       t1 = System.nanoTime ();
       t2 = System.nanoTime ();
@@ -42,43 +23,7 @@ public class TimingHarness
       }
       System.out.printf("And after some warmup: %d\n", t2-t1);
 
-
-      //      System.out.printf("Calling IDD.main once...\n");
-      //      IDD.main(null);
-
-      // MethodHandles.Lookup lookup = MethodHandles.lookup();
-      // MethodHandle mh = lookup.findStatic(InvokeDynamicTest2.class, "noop",
-      //                                      MethodType.methodType(int.class, int.class));
-
       int result = 0;
-
-      /*
-      for (int i=0; i<trials; i++) {
-          t1 = System.nanoTime ();
-          IDDL.g();
-          t2 = System.nanoTime ();
-          times[i % trials_kept] = t2-t1;
-      }
-      summarize("Time for direct call to g()");
-
-      for (int i=0; i<trials; i++) {
-          t1 = System.nanoTime ();
-          IDDL.f();
-          t2 = System.nanoTime ();
-          times[i % trials_kept] = t2-t1;
-      }
-      summarize("Time for direct call to f()");
-
-      for (int i=0; i<trials; i++) {
-          t1 = System.nanoTime ();
-          IDD.main(null);
-          t2 = System.nanoTime ();
-          times[i % trials_kept] = t2-t1;
-      }
-      summarize("Time for direct call to IDD.main() and then thru VolatileCallSite");
-*/
-
-      //      summarize("Starting state");
 
       IDDL.f();
       IDDL.g();
@@ -87,21 +32,27 @@ public class TimingHarness
       // --------------------------------------------------------------------------------
       // Next for toggling:
 
-
       // Thread 0 toggles as fast as it can:
       Runnable thrd0 = () -> {
           System.out.println("Toggler thread running.");
-          for (int i=0; i<trials; i++) {
+          long endTime = 0;
+          long startTime = System.nanoTime();
+          startSignal = true;
+          while (endTime < startTime + 1000000000) {
               IDDL.site.setTarget(IDDL.onMode);
               IDDL.site.setTarget(IDDL.offMode);
+              endTime = System.nanoTime();
           }
+          stopSignal = true;
+          System.out.format("Toggler thread, time slice finished: %d\n", endTime - startTime);
       };
 
       // Thread 1-N runs the patch site as fast as possible
       Runnable thrd1 = () -> {
+          while (! startSignal ) {}
           // int id = 1;
           System.out.format("executor thread %d thread running.\n", -1);
-          for (int i=0; i<trials; i++) {
+          while (! stopSignal) {
               IDD.main(null);
           }
       };
@@ -115,6 +66,10 @@ public class TimingHarness
       a.join();
       b.join();
 
-      summarize("All threads returned.");
+      System.out.printf("All threads returned.\n");
+      System.out.printf("  count of f_calls: %d\n", IDDL.f_calls);
+      System.out.printf("  count of g_calls: %d\n", IDDL.g_calls);
+      long total = IDDL.f_calls + IDDL.g_calls;
+      System.out.printf("  nanoseconds per call: %f", 1000000000.0 / (double)total );
    }
 }
