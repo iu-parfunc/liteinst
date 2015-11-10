@@ -36,15 +36,19 @@ public class TimingHarness
       Runnable thrd0 = () -> {
           System.out.println("Toggler thread running.");
           long endTime = 0;
+          long numToggles = 0;
           long startTime = System.nanoTime();
           startSignal = true;
           while (endTime < startTime + 1000000000) {
               IDDL.site.setTarget(IDDL.onMode);
               IDDL.site.setTarget(IDDL.offMode);
+              numToggles += 2;
               endTime = System.nanoTime();
           }
           stopSignal = true;
           System.out.format("Toggler thread, time slice finished: %d\n", endTime - startTime);
+          System.out.format("Toggler thread, num toggles: %d\n", numToggles);
+          System.out.format("Nanoseconds per toggle: %f\n", (endTime-startTime) / (double)numToggles);
       };
 
       // Thread 1-N runs the patch site as fast as possible
