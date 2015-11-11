@@ -14,6 +14,7 @@ if [ "$USE_DOCKER" == "1" ]; then
    # build run-benchmarks.exe via stack:
    make -f Make_runbench benchharnesses
 
+ # These two modes run the APPLICATION BENCHMARKS:
  elif [ "$BENCH_RUNS" == "PATCHING" ]; then # Patching related application benchmarks
    make lib
 
