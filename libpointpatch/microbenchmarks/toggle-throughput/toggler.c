@@ -47,13 +47,15 @@
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
 
-static inline double diff_time_s(struct timespec *t1, struct timespec *t2){
-
+static inline double diff_time_ns(struct timespec *t1, struct timespec *t2){
   double diff_ns = (t1->tv_sec * NS_PER_S + t1->tv_nsec) -
     (t2->tv_sec * NS_PER_S + t2->tv_nsec);
 
-  return (diff_ns / NS_PER_S);
+  return diff_ns;
+}
 
+static inline double diff_time_s(struct timespec *t1, struct timespec *t2){
+  return diff_time_ns(t1,t2) / NS_PER_S;
 }
 
 unsigned long *g_foo_val;
@@ -263,8 +265,10 @@ int main(int argc, char** argv) {
 
   usleep(500);
 
-
+  // CLOCK_PROCESS_CPUTIME_ID ?
   clock_gettime(CLOCK_MONOTONIC, &t1);
+  clock_gettime(CLOCK_MONOTONIC, &t2);
+  printf("Min clock monotonic gap: %lf\n", diff_time_s(&t2,&t1));
   t2 = t1; /* for fist check */
   g_collect_data = true;
 
@@ -273,23 +277,43 @@ int main(int argc, char** argv) {
 
   long current_toggles_per_s;
 
-  while ((tmp_diff = diff_time_s(&t2,&t1))  < duration){
+  while ((tmp_diff = diff_time_s(&t2,&t1))  < duration) {
 
     current_toggles_per_s = (long) (n_toggles / tmp_diff);
 
-    // We're behind by this much... we can catch up as fast as we can with a loop:
-    // for()
-    if ( current_toggles_per_s < target_rate) {
+    double remaining_time = duration - tmp_diff;
+
+    // Try not to overshoot our time window:
+    long estimated_remaining_toggles;
+    if (remaining_time > 0)
+      estimated_remaining_toggles = (long)(current_toggles_per_s / remaining_time);
+    if (estimated_remaining_toggles < 1)
+      estimated_remaining_toggles = 1;
+
+    long deficit = target_rate - current_toggles_per_s;
+    if (deficit > estimated_remaining_toggles)
+      deficit = estimated_remaining_toggles;
+
+    // Heck, let's also cap our batch size to a constant:
+    if (deficit > 1000) deficit = 1000;
+
+    // Magically, including this printf increases invoke throughput by 2-3X, while
+    // still allowing the toggler to go up to 67MHz.
+    // if (deficit > 100) printf("deficit: %ld\n", deficit);
+
+    // We're behind by at least this much... we can catch up as fast
+    // as we can with a loop:
+    for(; deficit > 0; deficit-- )
+    {
       if (p) {
-	patch_64((void*)g_call_addr, g_orig_call);
-	p = false;
+        patch_64((void*)g_call_addr, g_orig_call);
+        p = false;
       } else {
-	patch_64((void*)g_call_addr, g_call_bar_patch);
-	p = true;
+        patch_64((void*)g_call_addr, g_call_bar_patch);
+        p = true;
       }
       n_toggles++;
     }
-
 
     clock_gettime(CLOCK_MONOTONIC, &t2);
   }
