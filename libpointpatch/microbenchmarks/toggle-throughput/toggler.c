@@ -353,6 +353,9 @@ int main(int argc, char** argv) {
   unsigned long observed_switches_total = 0;
   unsigned long total_foo_calls = 0;
   unsigned long total_bar_calls = 0;
+  
+  double t_diff = diff_time_s(&t2,&t1);
+
   for (int i = 0; i < num_runners; i ++) {
     printf("Runner %d switches: %ld\n", i, g_switches[i*PAD]);
     printf("Runner %d foo calls: %ld\n", i, g_foo_val[i*PAD]);
@@ -369,23 +372,32 @@ int main(int argc, char** argv) {
     total_bar_calls += g_bar_val[i*PAD];
 
   }
+  
+  printf("ALL COUNTS ARE REPORTED AS NUM/SEC\n");
   printf("STRADDLE_POINT: %d\n", call_straddler_point);
-  printf("MINIMUM_SWITCHES: %ld\n", min_switches);
-  printf("MAXIMUM_SWITCHES: %ld\n", max_switches);
-  printf("OBSERVED_SWITCHES_TOTAL: %ld\n", observed_switches_total);
-  printf("MINIMUM_FOO_CALLS: %ld\n", min_foo_calls);
-  printf("MAXIMUM_FOO_CALLS: %ld\n", max_foo_calls);
-  printf("TOTAL_FOO_CALLS: %ld\n", total_foo_calls);
-  printf("MINIMUM_BAR_CALLS: %ld\n", min_bar_calls);
-  printf("MAXIMUM_BAR_CALLS: %ld\n", max_bar_calls);
-  printf("TOTAL_BAR_CALLS: %ld\n", total_bar_calls);
+  printf("MINIMUM_SWITCHES: %f\n", min_switches / t_diff);
+  printf("MAXIMUM_SWITCHES: %f\n", max_switches / t_diff);
+  printf("OBSERVED_SWITCHES_TOTAL: %f\n", observed_switches_total / t_diff);
+  printf("MINIMUM_FOO_CALLS: %f\n", min_foo_calls / t_diff);
+  printf("MAXIMUM_FOO_CALLS: %f\n", max_foo_calls / t_diff);
+  printf("TOTAL_FOO_CALLS: %f\n", total_foo_calls / t_diff);
+  printf("MINIMUM_BAR_CALLS: %f\n", min_bar_calls / t_diff);
+  printf("MAXIMUM_BAR_CALLS: %f\n", max_bar_calls / t_diff);
+  printf("TOTAL_BAR_CALLS: %f\n", total_bar_calls / t_diff);
   printf("NUMBER_OF_EXECUTERS: %d\n", num_runners);
   printf("TARGET_TIME: %f\n", duration);
-  printf("ELLAPSED_TIME: %f\n", diff_time_s(&t2,&t1));
-  printf("NUMBER_OF_TOGGLES: %ld\n",n_toggles);
+  printf("ELAPSED_TIME: %f\n", t_diff);
+  printf("NUMBER_OF_TOGGLES: %f\n",n_toggles / t_diff);
 
+  /* printf("\nFinally, here is some human-readable output, not for HSBencher:\n"); */
+  /* setlocale(LC_NUMERIC, ""); */
+  /* printf("Total callsite toggles: %'ld\n",n_toggles); */
+  /* printf("Total calls  completed: %'ld\n", total_foo_calls + total_bar_calls); */
   printf("\nFinally, here is some human-readable output, not for HSBencher:\n");
   setlocale(LC_NUMERIC, "");
-  printf("Total callsite toggles: %'ld\n",n_toggles);
-  printf("Total calls  completed: %'ld\n", total_foo_calls + total_bar_calls);
+  printf("Total callsite toggles: %'f\n",n_toggles / t_diff);
+  printf("Total calls  completed: %'f\n", (total_foo_calls + total_bar_calls) / t_diff);
+
+
+  
 }
