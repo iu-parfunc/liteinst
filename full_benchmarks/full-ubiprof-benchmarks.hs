@@ -43,8 +43,8 @@ main = do
     conf{ benchlist  = benches
                        -- long timeout 
         , runTimeOut = Just 600 -- Erk... need a separate compile timeout.
-        , plugIns   = [ SomePlugin defaultFusionPlugin,
-                        SomePlugin defaultDribblePlugin ]
+        , plugIns   = [ SomePlugin defaultDribblePlugin ] 
+                        --SomePlugin defaultFusionPlugin,]
         , harvesters = customTagHarvesterInt    "NUM_PROBES"              `mappend` 
                        customTagHarvesterInt    "CALLED_FUNCTIONS"        `mappend`
                        customTagHarvesterDouble "MAIN"                    `mappend`

@@ -56,8 +56,8 @@ source /etc/profile.d/modules-local.sh
 #./.jenkins_script.sh
 case $LIBCOMPILER in
     icc)
-	# after hacks.. add intel libs
-	module add intel
+	# Temporarily using older version (cutter license problem):
+	module add intel/13.1.0/compiler
 
 	make clean
 	make lib CC=icc CXX=icpc
