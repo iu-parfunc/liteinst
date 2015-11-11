@@ -163,6 +163,7 @@ int main(int argc, char** argv) {
   pthread_t *runners;
   unsigned long it = 0; 
   double duration = 1.0;  /* seconds */  
+  long target_rate;       /* patches per second */ 
    
   printf("Testing parallel updates to a STRADDLING call_site as it is being executed by multiple threads.\n");
  
@@ -174,10 +175,11 @@ int main(int argc, char** argv) {
   
   if (argc == 1){ 
     printf("NO ARGS: Running with default settings\n"); 
-  } else if (argc == 4){ /* if there is an argument */
+  } else if (argc == 5){ /* if there is an argument */
     call_straddler_point = atoi(argv[1]);
     num_runners = atoi(argv[2]); 
     duration    = atof(argv[3]); 
+    target_rate = atol(argv[4]); 
   } else { 
     printf("INCORRECT ARGS\n"); 
     exit(EXIT_FAILURE); 
@@ -264,17 +266,28 @@ int main(int argc, char** argv) {
   clock_gettime(CLOCK_MONOTONIC, &t1); 
   t2 = t1; /* for fist check */ 
   g_collect_data = true; 
-
   
-  while (diff_time_s(&t2,&t1)  < duration){
+  double tmp_diff = 0; 
+  bool   p = true;     /* true -> patch foo, false -> patch bar */ 
+  
+  long current_toggles_per_s; 
 
-#ifndef NO_TOGGLES   
-    patch_64((void*)g_call_addr, g_orig_call);
+  while ((tmp_diff = diff_time_s(&t2,&t1))  < duration){
     
-    patch_64((void*)g_call_addr, g_call_bar_patch);
+    current_toggles_per_s = (long) (n_toggles / tmp_diff);
+      
+    if ( current_toggles_per_s < target_rate) {
+      if (p) { 
+	patch_64((void*)g_call_addr, g_orig_call);
+	p = false;
+      } else { 
+	patch_64((void*)g_call_addr, g_call_bar_patch);
+	p = true; 
+      }
+      n_toggles++; 
+    }
+    
 
-    n_toggles+=2; 
-#endif 
     clock_gettime(CLOCK_MONOTONIC, &t2); 
   }
  
