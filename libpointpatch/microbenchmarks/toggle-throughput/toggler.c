@@ -262,14 +262,15 @@ int main(int argc, char** argv) {
   while (g_first_run); /* wait until setup phase is done */
   printf("First run of foo done: initializes\n");
 
+  // Wait for worker threads to come up:
+  usleep(100 * 1000); // Tenth of a second.
 
-  usleep(500);
-
-  // CLOCK_PROCESS_CPUTIME_ID ?
-  clock_gettime(CLOCK_MONOTONIC, &t1);
-  clock_gettime(CLOCK_MONOTONIC, &t2);
-  printf("Min clock monotonic gap: %lf\n", diff_time_s(&t2,&t1));
-  t2 = t1; /* for fist check */
+  int clock_mode = CLOCK_MONOTONIC;
+  // int clock_mode = CLOCK_THREAD_CPUTIME_ID;  // Basically similar effect with this.
+  clock_gettime(clock_mode, &t1);
+  clock_gettime(clock_mode, &t2);
+  printf("Min clock monotonic gap, in nanoseconds: %lf\n", diff_time_ns(&t2,&t1));
+  t2 = t1; /* for first check */
   g_collect_data = true;
 
   double tmp_diff = 0;
@@ -283,23 +284,36 @@ int main(int argc, char** argv) {
 
     double remaining_time = duration - tmp_diff;
 
+    long deficit = target_rate - current_toggles_per_s;
+
     // Try not to overshoot our time window:
+    /*
     long estimated_remaining_toggles;
     if (remaining_time > 0)
       estimated_remaining_toggles = (long)(current_toggles_per_s / remaining_time);
     if (estimated_remaining_toggles < 1)
       estimated_remaining_toggles = 1;
-
-    long deficit = target_rate - current_toggles_per_s;
     if (deficit > estimated_remaining_toggles)
       deficit = estimated_remaining_toggles;
-
-    // Heck, let's also cap our batch size to a constant:
+    */
+    // We can skip all the above logic if we just cap to a reasonable max.
+    // estimated_remaining_toggles would be necessary if we had a VERY
+    // slow toggler (like dyninst).
     if (deficit > 1000) deficit = 1000;
+
+    if (deficit <= 0) {
+      // printf("keeping up!\n");
+      // pthread_yield();
+      // Creating a big enough pause in the toggler is kind of cheating because
+      // it gives the executors room to breath:
+      // for(int i=0; i<100000; i++) {  }
+    }
 
     // Magically, including this printf increases invoke throughput by 2-3X, while
     // still allowing the toggler to go up to 67MHz.
     // if (deficit > 100) printf("deficit: %ld\n", deficit);
+    // if (deficit > 100) printf("\n");   // This does the trick, but not without \n
+    // if (deficit > 100) fflush(stdout); // This doesn't do it.
 
     // We're behind by at least this much... we can catch up as fast
     // as we can with a loop:
@@ -315,7 +329,7 @@ int main(int argc, char** argv) {
       n_toggles++;
     }
 
-    clock_gettime(CLOCK_MONOTONIC, &t2);
+    clock_gettime(clock_mode, &t2);
   }
 
 
