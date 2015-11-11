@@ -9,4 +9,4 @@ javac IDDL.java IDDG.java
 java IDDG
 
 javac TimingHarness.java
-time java TimingHarness
+time java TimingHarness 1 3 10000
