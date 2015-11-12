@@ -12,6 +12,7 @@ public class TimingHarness
    public static volatile boolean stopSignal  = false;
 
    public static long numToggles = 0;
+   public static long elapsed_ns = 0;
 
    public static void main(String[] args) throws Throwable
    {
@@ -61,7 +62,7 @@ public class TimingHarness
           startSignal = true; // Tell the other threads to go.
 
           long current_toggles_per_s = 0;
-          long elapsed_ns = 1;
+          elapsed_ns = 1;
           while (elapsed_ns < duration_ns) {
               current_toggles_per_s = numToggles * 1000000000 / elapsed_ns;
 
@@ -119,16 +120,30 @@ public class TimingHarness
       }
 
       System.out.printf("All threads returned.\n");
+
+      double elapsed_s = (double)elapsed_ns / 1000000000;
+
+      System.out.printf("ALL COUNTS ARE REPORTED AS NUM/SEC\n");
+      System.out.printf("STRADDLE_POINT: 0\n");
+      // System.out.printf("MINIMUM_SWITCHES: %f\n", min_switches / t_diff);
+      // System.out.printf("MAXIMUM_SWITCHES: %f\n", max_switches / t_diff);
+      // System.out.printf("OBSERVED_SWITCHES_TOTAL: %f\n", observed_switches_total / t_diff);
+      // System.out.printf("MINIMUM_FOO_CALLS: %f\n", min_foo_calls / t_diff);
+      // System.out.printf("MAXIMUM_FOO_CALLS: %f\n", max_foo_calls / t_diff);
+      // System.out.printf("MINIMUM_BAR_CALLS: %f\n", min_bar_calls / t_diff);
+      // System.out.printf("MAXIMUM_BAR_CALLS: %f\n", max_bar_calls / t_diff);
+      System.out.printf("NUMBER_OF_EXECUTERS: %d\n", num_runners);
+      System.out.printf("TARGET_TIME: %f\n", duration);
+      System.out.printf("ELAPSED_TIME: %f\n", elapsed_s);
+      System.out.printf("NUMBER_OF_TOGGLES: %f\n", numToggles / elapsed_s);
+      System.out.printf("TOTAL_FOO_CALLS: %f\n", f_total / elapsed_s);
+      System.out.printf("TOTAL_BAR_CALLS: %f\n", g_total / elapsed_s);
+
+      System.out.printf("\n Human readable output: \n");
       System.out.printf("  count of toggles: %s\n", NumberFormat.getNumberInstance().format(numToggles));
       System.out.printf("  count of f_calls: %s\n", NumberFormat.getNumberInstance().format(f_total));
       System.out.printf("  count of g_calls: %s\n", NumberFormat.getNumberInstance().format(g_total));
-
-      // DecimalFormat formatter = new DecimalFormat("#,###.00");
-      // System.out.println(formatter.format(numToggles));
-      // NumberFormat.getInstance().format(numToggles);
-      System.out.println();
-
-      long total = IDDL.f_calls[0] + IDDL.g_calls[0];
-      System.out.printf("  nanoseconds per call: %f", 1000000000.0 / (double)total );
+      System.out.printf("  combined calls: %s\n", NumberFormat.getNumberInstance().format(g_total+f_total));
+      // System.out.printf("  nanoseconds per call: %f", 1000000000.0 / (double)total );
    }
 }
