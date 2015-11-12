@@ -23,7 +23,9 @@ public class IDDL
 
    static public ThreadLocal<Integer> threadId = new ThreadLocal<Integer>() {
            @Override protected Integer initialValue() {
-               return nextId.getAndIncrement();
+               int tid = nextId.getAndIncrement();
+               System.out.printf("Assigning thread id: %d\n", tid);
+               return tid;
            }
        };
 

@@ -5,6 +5,7 @@ import java.lang.invoke.MethodType;
 import java.lang.invoke.VolatileCallSite;
 import java.util.Arrays;
 import java.text.NumberFormat;
+import java.lang.Math;
 
 public class TimingHarness
 {
@@ -13,6 +14,9 @@ public class TimingHarness
 
    public static long numToggles = 0;
    public static long elapsed_ns = 0;
+
+   public static int toggler_thread_ind = -1;
+   public static int main_thread_ind = -1;
 
    public static void main(String[] args) throws Throwable
    {
@@ -49,6 +53,8 @@ public class TimingHarness
 
       Runnable allRunnable[] = new Runnable[num_runners + 1];
 
+      main_thread_ind = IDDL.threadId.get();
+      System.out.printf("Main thread index is %d\n", main_thread_ind);
 
       // Thread 0 toggles as fast as it can:
       allRunnable[0] = () -> {
@@ -56,6 +62,9 @@ public class TimingHarness
           try { Thread.sleep(100); // Wait a tenth of a second for everyone to get running.
           } catch (InterruptedException e) { }
           numToggles = 0;
+          toggler_thread_ind = IDDL.threadId.get();
+          System.out.printf("Toggler thread index is %d\n", toggler_thread_ind);
+
           long duration_ns = (long)(duration * 1000000000);
           long startTime = System.nanoTime();
           long curTime = startTime;
@@ -114,9 +123,28 @@ public class TimingHarness
 
       long f_total = 0;
       long g_total = 0;
-      for (int i=0; i <= num_runners; i++) {
-          f_total += IDDL.f_calls[i * IDDL.PAD];
-          g_total += IDDL.g_calls[i * IDDL.PAD];
+      long min_f_calls = Long.MAX_VALUE;
+      long min_g_calls = Long.MAX_VALUE;
+      long max_f_calls = 0;
+      long max_g_calls = 0;
+      for (int i=0; i < num_runners + 2; i++) {
+        if (i == toggler_thread_ind || i == main_thread_ind) {
+            System.out.printf("Not summing contribution from toggler thread %d\n", i);
+        } else {
+            long tmp_f = IDDL.f_calls[i * IDDL.PAD];
+            long tmp_g = IDDL.g_calls[i * IDDL.PAD];
+            System.out.printf("Thread %d totals: %d, %d\n", i, tmp_f, tmp_g);
+            f_total += tmp_f;
+            g_total += tmp_g;
+
+            // HACK: ignore the zeros, because they're from the toggler thread:
+            // if (tmp_f > 0)
+                min_f_calls = Math.min(min_f_calls, tmp_f);
+            // if (tmp_g > 0)
+                min_g_calls = Math.min(min_g_calls, tmp_g);
+            max_f_calls = Math.max(max_f_calls, IDDL.f_calls[i * IDDL.PAD]);
+            max_g_calls = Math.max(max_g_calls, IDDL.g_calls[i * IDDL.PAD]);
+        }
       }
 
       System.out.printf("All threads returned.\n");
@@ -128,10 +156,10 @@ public class TimingHarness
       // System.out.printf("MINIMUM_SWITCHES: %f\n", min_switches / t_diff);
       // System.out.printf("MAXIMUM_SWITCHES: %f\n", max_switches / t_diff);
       // System.out.printf("OBSERVED_SWITCHES_TOTAL: %f\n", observed_switches_total / t_diff);
-      // System.out.printf("MINIMUM_FOO_CALLS: %f\n", min_foo_calls / t_diff);
-      // System.out.printf("MAXIMUM_FOO_CALLS: %f\n", max_foo_calls / t_diff);
-      // System.out.printf("MINIMUM_BAR_CALLS: %f\n", min_bar_calls / t_diff);
-      // System.out.printf("MAXIMUM_BAR_CALLS: %f\n", max_bar_calls / t_diff);
+      System.out.printf("MINIMUM_FOO_CALLS: %f\n", min_f_calls / elapsed_s);
+      System.out.printf("MAXIMUM_FOO_CALLS: %f\n", max_f_calls / elapsed_s);
+      System.out.printf("MINIMUM_BAR_CALLS: %f\n", min_g_calls / elapsed_s);
+      System.out.printf("MAXIMUM_BAR_CALLS: %f\n", max_g_calls / elapsed_s);
       System.out.printf("NUMBER_OF_EXECUTERS: %d\n", num_runners);
       System.out.printf("TARGET_TIME: %f\n", duration);
       System.out.printf("ELAPSED_TIME: %f\n", elapsed_s);
