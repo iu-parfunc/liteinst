@@ -60,11 +60,10 @@ endif
 #    PATCHING - Run applications with different pointpatch/ callpatch patching methods
 #    PROBES   - Run applications with different probe toggling schemes
 ifeq ($(BENCH_RUNS), PATCHING)
-TABLE=CrossModification_PATCHING
-elif ($(BENCH_RUNS), PROBES)
-TABLE=CrossModification_PROBES
+  TABLE=CrossModification_PATCHING
+else ifeq ($(BENCH_RUNS), PROBES)
+  TABLE=CrossModification_PROBES
 endif
-
 
 all: benchharnesses
 
