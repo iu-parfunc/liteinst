@@ -7,10 +7,18 @@
 #include "fastinst.hpp"
 #include "lock.hpp"
 #include "calibrate.hpp"
+#include "utils.hpp"
 
 typedef std::unordered_map<Address, std::string> FuncAddrMapping;
 typedef std::unordered_map<Address, uint32_t> ProbeLookupMap; 
 // typedef std::unordered_map<uint64_t, lock::CASLock> FuncRWLocks;
+
+typedef struct ToggleStatistics {
+  uint64_t deactivation_count;
+  uint64_t activation_count;
+  ticks deactivation_costs;
+  ticks activation_costs;
+} ToggleStatistics;
 
 class FinstrumentProbeProvider : public ProbeProvider {
 
@@ -21,6 +29,10 @@ class FinstrumentProbeProvider : public ProbeProvider {
     ProbeLookupMap probe_lookup; //!< Looks up currently if a probe with given 
                                  //!< address has already been discovered. Value
                                  //!< is not really important. 
+
+    // Auditing
+    ToggleStatistics** toggle_stats;    
+    int thread_counter;
 
     /// Reads the function related meta data from debug tables.
     /*  The information gathered are function addresses and their names.
@@ -114,6 +126,39 @@ class FinstrumentProbeProvider : public ProbeProvider {
     std::string getFunctionName(Address func_addr);
 
     ~FinstrumentProbeProvider() {
+
+#ifdef AUDIT_PROBES
+      uint64_t deactivation_count = 0;
+      uint64_t activation_count = 0;
+      ticks deactivation_costs = 0;
+      ticks activation_costs = 0;
+
+      for (int i=0; i < thread_counter; i++) {
+        ToggleStatistics* stats = toggle_stats[i];
+        activation_count += stats->activation_count;
+        deactivation_count += stats->deactivation_count;
+        activation_costs += stats->activation_costs;
+        deactivation_costs+= stats->deactivation_costs;
+
+        free(stats);
+      }
+
+      free(toggle_stats);
+
+      double total_activation_cost = 
+        utils::getSecondsFromTicks(activation_costs); 
+      double total_deactivation_cost = 
+        utils::getSecondsFromTicks(deactivation_costs); 
+
+      fprintf(stderr, "ACTIVATION_COUNT: %lu\n", activation_count);
+      fprintf(stderr, "DEACTIVATION_COUNT: %lu\n", deactivation_count);
+      fprintf(stderr, "TOTAL_TOGGLE_COUNT: %lu\n", activation_count + deactivation_count);
+      fprintf(stderr, "ACTIVATION_COST: %.6lf\n", total_activation_cost);
+      fprintf(stderr, "DEACTIVATION_COST: %.6lf\n", total_deactivation_cost); 
+      fprintf(stderr, "TOTAL_TOGGLE_COST: %.6lf\n", 
+          total_activation_cost + total_deactivation_cost);
+#endif
+
     }
 
 };

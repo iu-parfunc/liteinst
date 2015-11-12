@@ -43,6 +43,7 @@ RM = rm
 OPTS =
 
 COMMON = $(wildcard $(ROOT)/common/src/lock/*.cpp)
+override COMMON +=  $(wildcard $(ROOT)/common/src/utils/*.cpp)
 COMMON_OBJ0 = $(COMMON:.cpp=.o)
 COMMON_OBJ  = $(COMMON_OBJ0:.c=.o)
 

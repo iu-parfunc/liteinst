@@ -1,7 +1,6 @@
 
 #include "finstrument_probe_provider.hpp"
 #include "calibrate.hpp"
-#include "utils.hpp"
 #include "patcher.h"
 #include "wait_free.h"
 
@@ -17,8 +16,14 @@ using namespace lock;
 using namespace utils;
 using namespace calibrate;
 
+#ifdef AUDIT_PROBES
+static __thread ToggleStatistics* stats = NULL;
+#endif
+
 void FinstrumentProbeProvider::initializeProvider() {
-  calibrateInstrumentationOverhead();
+  toggle_stats = new ToggleStatistics*[64](); // Number of threads fixed to 64.
+  thread_counter = 0;
+  // calibrateInstrumentationOverhead();
 }
 
 void FinstrumentProbeProvider::calibrateInstrumentationOverhead() {
@@ -60,6 +65,24 @@ void FinstrumentProbeProvider::initialize(ProbeId probe_id, ProbeArg arg) {
 
 bool FinstrumentProbeProvider::activate(const ProbeId probe_id,
     InstrumentationFunc func) {
+
+#ifdef AUDIT_PROBES
+  if (stats == NULL) { 
+    stats = new ToggleStatistics; 
+    stats->activation_count = 1;  
+    stats->deactivation_count = 0;
+    stats->activation_costs = 0;
+    stats->deactivation_costs = 0;
+
+    toggle_stats[thread_counter++] = stats; // Assumes atomic update of int var
+  } else {
+    stats->activation_count++;
+  }
+
+  ticks start = getticks();
+#endif 
+
+
   ProbeMetaData* pmd =  (*probe_meta_data)[probe_id];
 
   if (pmd->state == ProbeState::UNINITIALIZED) {
@@ -84,10 +107,34 @@ bool FinstrumentProbeProvider::activate(const ProbeId probe_id,
 #endif
 
   pmd->state = ProbeState::ACTIVE;
+
+
+#ifdef AUDIT_PROBES
+  ticks end = getticks();
+  stats->activation_costs = (end - start);
+#endif
+  
   return b;
 }
 
 bool FinstrumentProbeProvider::activate_async(ProbeId probe_id, InstrumentationFunc func) {
+
+#ifdef AUDIT_PROBES
+  if (stats == NULL) { 
+    stats = new ToggleStatistics; 
+    stats->activation_count = 1;  
+    stats->deactivation_count = 0;
+    stats->activation_costs = 0;
+    stats->deactivation_costs = 0;
+
+    toggle_stats[thread_counter++] = stats; // Assumes atomic update of int var
+  } else {
+    stats->activation_count++;
+  }
+
+  ticks start = getticks();
+#endif 
+
   ProbeMetaData* pmd =  (*probe_meta_data)[probe_id];
 
   if (pmd->state == ProbeState::UNINITIALIZED) {
@@ -106,6 +153,11 @@ bool FinstrumentProbeProvider::activate_async(ProbeId probe_id, InstrumentationF
 
   pmd->state = ProbeState::ACTIVE;
 
+#ifdef AUDIT_PROBES
+  ticks end = getticks();
+  stats->activation_costs = (end - start);
+#endif
+
   // printf("[Finstrument Probe Provider] Asynchronously activated probe site..\n");
   return b;
 }
@@ -116,6 +168,23 @@ void FinstrumentProbeProvider::activate_async_finish(ProbeId probe_id) {
 }
 
 bool FinstrumentProbeProvider::deactivate(const ProbeId probe_id) {
+
+#ifdef AUDIT_PROBES
+  if (stats == NULL) { 
+    stats = new ToggleStatistics; 
+    stats->deactivation_count = 1;  
+    stats->activation_count = 0;
+    stats->activation_costs = 0;
+    stats->deactivation_costs = 0;
+
+    toggle_stats[thread_counter++] = stats; // Assumes atomic update of int var
+  } else {
+    stats->deactivation_count++;
+  }
+
+  ticks start = getticks();
+#endif 
+
 
   ProbeMetaData* pmd =  (*probe_meta_data)[probe_id];
 
@@ -137,10 +206,32 @@ bool FinstrumentProbeProvider::deactivate(const ProbeId probe_id) {
 #endif
 
   pmd->state = ProbeState::DEACTIVATED;
+
+#ifdef AUDIT_PROBES
+  ticks end = getticks();
+  stats->deactivation_costs += (end - start);
+#endif
+
   return b;
 }
 
 bool FinstrumentProbeProvider::deactivate_async(const ProbeId probe_id) {
+
+#ifdef AUDIT_PROBES
+  if (stats == NULL) { 
+    stats = new ToggleStatistics; 
+    stats->deactivation_count = 1;  
+    stats->activation_count = 0;
+    stats->activation_costs = 0;
+    stats->deactivation_costs = 0;
+
+    toggle_stats[thread_counter++] = stats; // Assumes atomic update of int var
+  } else {
+    stats->deactivation_count++;
+  }
+
+  ticks start = getticks();
+#endif 
 
   ProbeMetaData* pmd =  (*probe_meta_data)[probe_id];
 
@@ -155,6 +246,11 @@ bool FinstrumentProbeProvider::deactivate_async(const ProbeId probe_id) {
   bool b = async_patch_64((void*) pmd->probe_addr, pmd->inactive_seq);
 
   pmd->state = ProbeState::DEACTIVATING;
+
+#ifdef AUDIT_PROBES
+  ticks end = getticks();
+  stats->deactivation_costs += (end - start);
+#endif
 
   // printf("[Finstrument Probe Provider] Asynchronously deactivated probe site..\n");
   return b;

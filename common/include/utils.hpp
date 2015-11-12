@@ -2,12 +2,20 @@
 #ifndef _UTILS_HPP_
 #define _UTILS_HPP_
 
+#include <unistd.h>
 #include <cstdint>
 #include <string>
 #include <vector>
+#include "cycle.h"
 #include "patcher.h"
 
 namespace utils {
+
+  /// Gets estimated seconds value from cycles
+  /* \param duration The cycle count to be converted to seconds
+   */
+  double getSecondsFromTicks(ticks duration);
+
   /// Tokenize a given string according to provided delimiter
   /* \param str The string to be tokenized
    * \param tokens The vector of tokens in the string
