@@ -12,7 +12,8 @@ endif
 
 RUNID=$(shell hostname -s)_$(shell date "+%s")
 
-TRIALS = 3
+# Multiple trials are not meaningful, because SELFTIMED is not meaningful.
+TRIALS = 1
 
 TOP=$(shell pwd)
 
