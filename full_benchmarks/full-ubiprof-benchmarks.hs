@@ -105,7 +105,7 @@ epochs = [10]
 samplesize :: [Int] 
 samplesize = [10]
 
-sampling = Or [And [ Set (Variant (compiler ++ "_" ++ optlevel ++ "_Sampling_"++show s_size++"_"++show epoch)) (RuntimeEnv "PROFILER_TYPE" "SAMPLING")
+sampling = Or [And [ Set (Variant (compiler ++ "_" ++ optlevel ++ "_Sampling_"++show s_size++"_"++show epoch)) (RuntimeEnv "PROFILER_TYPE" "MINIMAL_SAMPLING")
                    , Set NoMeaning (RuntimeEnv "SAMPLE_SIZE" (show s_size))
                    , Set NoMeaning (RuntimeEnv "EPOCH_PERIOD" (show epoch))
                    , Set NoMeaning (CompileEnv "CC"  compiler)
