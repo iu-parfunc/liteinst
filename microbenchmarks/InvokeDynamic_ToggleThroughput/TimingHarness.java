@@ -166,6 +166,8 @@ public class TimingHarness
       System.out.printf("NUMBER_OF_TOGGLES: %f\n", numToggles / elapsed_s);
       System.out.printf("TOTAL_FOO_CALLS: %f\n", f_total / elapsed_s);
       System.out.printf("TOTAL_BAR_CALLS: %f\n", g_total / elapsed_s);
+      System.out.printf("TOTAL_CALLS: %f\n", (f_total + g_total) / elapsed_s);
+      System.out.printf("SELFTIMED: %f\n", (f_total + g_total) / elapsed_s);
 
       System.out.printf("\n Human readable output: \n");
       System.out.printf("  count of toggles: %s\n", NumberFormat.getNumberInstance().format(numToggles));

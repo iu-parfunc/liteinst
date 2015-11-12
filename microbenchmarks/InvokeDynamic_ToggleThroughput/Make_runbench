@@ -12,8 +12,8 @@ endif
 
 RUNID=$(shell hostname -s)_$(shell date "+%s")
 
-# Multiple trials are not meaningful, because SELFTIMED is not meaningful.
-TRIALS = 1
+# We have hacked SELFTIMED = TOTAL_CALLS, so taking the median of five trials makes sense:
+TRIALS = 5
 
 TOP=$(shell pwd)
 

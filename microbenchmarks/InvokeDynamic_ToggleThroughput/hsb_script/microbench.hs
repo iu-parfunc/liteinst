@@ -41,6 +41,7 @@ main = do
                        customTagHarvesterDouble "MAXIMUM_BAR_CALLS" `mappend`
                        customTagHarvesterDouble "TOTAL_FOO_CALLS" `mappend`
                        customTagHarvesterDouble "TOTAL_BAR_CALLS" `mappend`
+                       customTagHarvesterDouble "TOTAL_CALLS" `mappend`
                        harvesters conf
         }
 
@@ -52,4 +53,4 @@ benches =
    (Set (Variant "java-volatile") (RuntimeEnv "IGNORE_THIS" "0"))
    | threads <- [1..15]
    , duration <- [4.0]
-   , rate <- [100,1000,10000,100000,1000000,10000000,100000000]]
+   , rate <- [0,10,100,1000,10000,100000,500000,1000000,10000000,100000000]]
