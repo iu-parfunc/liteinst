@@ -1,0 +1,62 @@
+
+.phony: all benchharness library
+
+ifeq ($(STACK),)
+     STACK=stack
+endif
+
+
+ifeq ($(MACHINECLASS),)
+     MACHINECLASS=$(HOSTNAME)
+endif
+
+RUNID=$(shell hostname -s)_$(shell date "+%s")
+
+TRIALS = 3
+
+TOP=$(shell pwd)
+
+# Google API authentication
+# ----------------------------------------
+
+ifeq ($(MACHINECLASS),)
+  # Parfunc account / FusionTable_DynaprofUploader project:
+  $(info Using DynaProf-specific FusionTable uploader.)
+  CID=925399326325-6dir7re3ik7686p6v3kkfkf1kj0ec7ck.apps.googleusercontent.com
+  SEC=MQ72ZWDde_1e1ihI5YE9YlEi
+else
+# ifeq ($(MACHINECLASS),mine)
+ifneq (,$(filter $(MACHINECLASS),mine xmen))
+  $(info Using general FusionTable uploader number 3)
+  CID=759282369766-qbqb7sccab86m8j0jma6r3t21ng6uaoa.apps.googleusercontent.com
+  SEC=TtfkUzUSR3LWfJ_udJi6wdO3
+elif (,$(filter $(MACHINECLASS),cutter))
+  $(info Using general FusionTable uploader number 3)
+  CID=759282369766-qbqb7sccab86m8j0jma6r3t21ng6uaoa.apps.googleusercontent.com
+  SEC=TtfkUzUSR3LWfJ_udJi6wdO3
+else
+  $(info Using general FusionTable uploader number 2)
+  CID=546809307027-8tm2lp5gtqg5o3pn3s016gd6467cf7j3.apps.googleusercontent.com
+  SEC=148aQ08EPpgkb0DiYVLoT9X2
+endif
+endif
+
+TABLE=PATCH_TOGGLE_THROUGHPUT5
+
+all: benchharness library
+
+library:
+	(cd ../../src && make CC=gcc CXX=g++ CFLAGS=-O3 install)
+
+microbench.exe: benchharness
+
+benchharness:
+	which -a $(STACK)
+	$(STACK) --version
+	$(STACK) --install-ghc install
+	echo "Listing available benchmarks."
+	./microbench.exe -l
+
+
+run:
+	./microbench.exe --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --name=$(TABLE) --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
