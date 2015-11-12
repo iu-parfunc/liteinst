@@ -24,7 +24,7 @@ main = do
   defaultMainModifyConfig $ \ conf ->
     conf{ benchlist = benches
         , runTimeOut = Just 600
-        , plugIns = [--SomePlugin defaultFusionPlugin,
+        , plugIns = [-- SomePlugin defaultFusionPlugin,
                      SomePlugin defaultDribblePlugin]
         , harvesters = customTagHarvesterInt    "NUM_THREADS"  `mappend`
                        customTagHarvesterDouble "TARGET_TIME" `mappend`
@@ -47,13 +47,9 @@ main = do
 
 benches :: [Benchmark DefaultParamMeaning]
 benches =
-  [mkBenchmark ("Makefile")
-   [show straddle_pos, show threads, show duration, show rate]
-   (And [ Set (Variant "microbench")
-              (RuntimeEnv "PATCH_WAIT_TIME" "1800")
-        , Set NoMeaning (CompileParam "-O2")])
-          | threads <- [1..17]
-          , straddle_pos <- [0..4] -- zero means not-a-straddler
-          , duration <- [0.1,1.0,2.0,3.0,4.0,5.0]
-          , rate <- [1000,10000,100000,1000000,10000000,100000000]]
-
+  [mkBenchmark ("toggle-throughput")
+   [show threads, show duration, show rate]
+   (Set (Variant "java-volatile") (RuntimeEnv "IGNORE_THIS" "0"))
+   | threads <- [1..15]
+   , duration <- [4.0]
+   , rate <- [100,1000,10000,100000,1000000,10000000,100000000]]

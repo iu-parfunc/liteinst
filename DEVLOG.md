@@ -1,37 +1,37 @@
-### Aug 6 2015 ### 
+### Aug 6 2015 ###
 
-    Docker added: 
-    
-    Usage: 
-    
+    Docker added:
+
+    Usage:
+
     docker build -t iu-parfunc/ubiprof .
 
     docker run -it iu-parfunc/ubiprof bash
-   
+
 
 ### Aug 3 2015 ###
-   * New makefile setup. 
-     make lib : makes the library with default GXX=g++ setting 
-     make lib GXX=icpc : uses intel compiler 
-   
-   * Makefile for library is now standalone from makefile for 
-     benchmarking. 
-     "make -f Make_runbench" does the benchmarking. 
-     The .run_benchmarks2.sh script has been updated to reflect this. 
-     
-     TODO: the .run_benchmarks files need an overhaul, cleaning and polish. 
-           Much of it should probably go to archive 
-      
-     
-   
+   * New makefile setup.
+     make lib : makes the library with default GXX=g++ setting
+     make lib GXX=icpc : uses intel compiler
 
-### Jul 30 2015 ### 
- 
-  * The Makefile_GCC has two modes: 
-     make lib 
-     make libdebug 
-    These two modes of operation are not present in the ICC makefile. 
-    	  	  	  
+   * Makefile for library is now standalone from makefile for
+     benchmarking.
+     "make -f Make_runbench" does the benchmarking.
+     The .run_benchmarks2.sh script has been updated to reflect this.
+
+     TODO: the .run_benchmarks files need an overhaul, cleaning and polish.
+           Much of it should probably go to archive
+
+
+
+
+### Jul 30 2015 ###
+
+  * The Makefile_GCC has two modes:
+     make lib
+     make libdebug
+    These two modes of operation are not present in the ICC makefile.
+
 
 
 ### 6-29-13 Nikhil ###
@@ -68,12 +68,12 @@ Here are the rough outcomes from each:
 
   * libffi - has interpretive overhead on every call, doesn't really
     JIT a stub.
-    
+
   * asmJit - beta release only; cmake build didn't work but very easy
              to directly embed sources.  The directly-supported
              behavior is to generate complete functions, not
              fragments.
-  
+
   * jitAsm - a single header.
 
   * Xed - encodes ONE instruction at a time.  Nice.  Unfortunotely,
@@ -83,12 +83,12 @@ Here are the rough outcomes from each:
 Other systems seem to have too much baggage or are overkill:
 
   * Pin - specific instrumentation methodology, don't see how
-    we can use for precise pinpoint emission of x86 instructions.    
+    we can use for precise pinpoint emission of x86 instructions.
   * Dynamo/RIO ? Seem to be in the same bucket as Pin.  Intercepts all
     basic blocks in the application.
   * DynInst - built to connect to a separate process.  How do you
     transparently self-instrument?
-    
+
   * LLVM - how do you use it for direct emission of machine code in a
     specific spot?  I suppose constructing the LLVM IR would be ok for
     the function call stub, but in other places we need specific
@@ -103,6 +103,17 @@ elf header extraction code would work sometimes and sometimes fail,
 and I hadn't gotten to the bottom of it.
 
 
+[2015.11.11] {Notes on getting competitors working}
+---------------------------------------------------
+
+Earlier, I had tried:
+
+ * LTTNG
+ * perf probes
+ * System Tap
+
+And had install problems or kernel version problems with all of them.
+DTrace is definitely the easiest to get working
 
 
-
+.
