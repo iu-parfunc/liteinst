@@ -1,6 +1,9 @@
 #!/bin/bash
 
-module add jdk
+# module add jdk
+# Cutter hack:
+
+export PATH=/opt/jdk/1.8.0_60/bin/:$PATH
 
 make all -f Make_runbench
 # (2) Then benchmark:
