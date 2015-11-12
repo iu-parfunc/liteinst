@@ -34,8 +34,13 @@ public class TimingHarness
 
       int result = 0;
 
-      IDDL.f();
-      IDDL.g();
+      // --------------------------------------------------------------------------------
+      for(int i=0; i < IDDL.max_threads * IDDL.PAD; i++) {
+           IDDL.f_calls[i] = 0;
+           IDDL.g_calls[i] = 0;
+      }
+
+      // IDDL.f(); IDDL.g();
       IDD.main(null);
 
       // --------------------------------------------------------------------------------
@@ -87,6 +92,7 @@ public class TimingHarness
       for (int ind = 1; ind <= num_runners; ind ++) {
         final int ind_copy = ind;
         allRunnable[ind] = () -> {
+            // IDDL.threadId.set(ind_copy); // Not working for some reason.
             while (! startSignal ) {}
             System.out.format("Executor thread %d thread running.\n", ind_copy);
             while (! stopSignal) {
@@ -104,17 +110,25 @@ public class TimingHarness
       for (int i=0; i <= num_runners; i++) {
           allThreads[i].join();
       }
+
+      long f_total = 0;
+      long g_total = 0;
+      for (int i=0; i <= num_runners; i++) {
+          f_total += IDDL.f_calls[i * IDDL.PAD];
+          g_total += IDDL.g_calls[i * IDDL.PAD];
+      }
+
       System.out.printf("All threads returned.\n");
       System.out.printf("  count of toggles: %s\n", NumberFormat.getNumberInstance().format(numToggles));
-      System.out.printf("  count of f_calls: %s\n", NumberFormat.getNumberInstance().format(IDDL.f_calls));
-      System.out.printf("  count of g_calls: %s\n", NumberFormat.getNumberInstance().format(IDDL.g_calls));
+      System.out.printf("  count of f_calls: %s\n", NumberFormat.getNumberInstance().format(f_total));
+      System.out.printf("  count of g_calls: %s\n", NumberFormat.getNumberInstance().format(g_total));
 
       // DecimalFormat formatter = new DecimalFormat("#,###.00");
       // System.out.println(formatter.format(numToggles));
       // NumberFormat.getInstance().format(numToggles);
       System.out.println();
 
-      long total = IDDL.f_calls + IDDL.g_calls;
+      long total = IDDL.f_calls[0] + IDDL.g_calls[0];
       System.out.printf("  nanoseconds per call: %f", 1000000000.0 / (double)total );
    }
 }

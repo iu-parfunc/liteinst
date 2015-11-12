@@ -4,26 +4,41 @@ import java.lang.invoke.VolatileCallSite;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class IDDL
 {
+   // How many words in a cache line:
+   public static final int PAD = 8;
+   public static final int max_threads = 256;
+
    public static MethodHandle onMode;
    public static MethodHandle offMode;
    static public VolatileCallSite site = null;
 
-   static public long f_calls = 0;
-   static public long g_calls = 0;
+   static public long f_calls[] = new long[max_threads * PAD];
+   static public long g_calls[] = new long[max_threads * PAD];
+
+   private static final AtomicInteger nextId = new AtomicInteger(0);
+
+   static public ThreadLocal<Integer> threadId = new ThreadLocal<Integer>() {
+           @Override protected Integer initialValue() {
+               return nextId.getAndIncrement();
+           }
+       };
 
    // --------------------------------------------------------------------------------
    // Our two function calls to toggle between:
 
    public static void f()
    {
-      f_calls ++;
+      int id = threadId.get();
+      f_calls[id * PAD] ++;
    }
 
    public static void g() {
-      g_calls ++;
+      int id = threadId.get();
+      g_calls[id * PAD] ++;
    }
 
    // --------------------------------------------------------------------------------
