@@ -57,7 +57,7 @@ endif
 
 # TABLE=Dynaprof_Benchmarks
 # [2014.08.07] Debugging problems, trying to start fresh:
-TABLE=CrossModification_Benchmarks
+TABLE=CrossModification_Benches
 
 all: benchharnesses
 
