@@ -13,15 +13,31 @@
 #include <string>
 #include <cassert>
 #include <cstdlib>
+#include <time.h>
+
+#define NS_PER_S 1000000000
+#define PAD 8
 
 using namespace std;
+
+static inline double diff_time_ns(struct timespec *t1, struct timespec *t2){
+  double diff_ns = (t1->tv_sec * NS_PER_S + t1->tv_nsec) -
+    (t2->tv_sec * NS_PER_S + t2->tv_nsec);
+
+  return diff_ns;
+}
+
+static inline double diff_time_s(struct timespec *t1, struct timespec *t2){
+  return diff_time_ns(t1,t2) / NS_PER_S;
+}
 
 /* Control */
 volatile int g_running = 0;
 volatile int g_start = 0;
 
 long num_runners = 1;
-long num_iterations = 1000000;
+long target_rate = 1000000;
+double duration = 1.0;
 
 long entry_probe_id = -1;
 long exit_probe_id = -1;
@@ -29,7 +45,7 @@ long foo_count = 0;
 long bar_count = 0;
 long FUNC_ID = 0;
 
-string func_mangled = "_Z4funci"; 
+string func_mangled = "_Z4funci";
 
 void *runner(void *arg) {
 
@@ -89,14 +105,16 @@ int main(int argc, char* argv[]) {
 
   fprintf(stderr, "Benchmark probe toggle throughput..\n");
 
-  if (argc == 1) {
-    printf("NO ARGS: Running with default settings # threads : %ld " 
-      " # iterations %ld..\n", num_runners, num_iterations); 
+  if (argc < 4) {
+    printf("NOT ENOUGH ARGS, expects 3: threads, duration, toggle_freq \n");
+    //    "\nRunning with default settings # threads : %ld # iterations %ld..\n", num_runners, target_rate
+    return 1;
   } else {
-    num_runners = atoi(argv[1]);
-    num_iterations = atoi(argv[2]);
-    printf("Running with # threads : %ld # iterations :%ld ..\n", 
-        num_runners, num_iterations); 
+    num_runners    = atoi(argv[1]);
+    duration       = atof(argv[2]);
+    target_rate = atoi(argv[3]);
+    printf("Running with threads : %ld, duration: %lf, toggle_freq: %ld ..\n",
+           num_runners, duration, target_rate);
   }
 
   ProbeProvider* p;
@@ -121,22 +139,44 @@ int main(int argc, char* argv[]) {
   pthread_t runners[num_runners];
   int rc;
   for (int i=0; i<num_runners; i++) {
-    rc = pthread_create(&runners[i], 
-        NULL, 
+    rc = pthread_create(&runners[i],
+        NULL,
         runner, (void *)&ids[i]);
   }
 
-  g_start = 1;
+  struct timespec t1;
+  struct timespec t2;
+  int clock_mode = CLOCK_MONOTONIC;
+  clock_gettime(clock_mode, &t1);
+  t2 = t1;
 
-  for (int i=0; i<100000; i++) {
-    p->activate(entry_probe_id, bar);
-    p->activate(exit_probe_id, bar);
+  g_start = 1; // Signal to runners.
 
-    p->activate(entry_probe_id, foo);
-    p->activate(exit_probe_id, foo);
+  unsigned long n_toggles=0;
+  int mode = 0;
+  double tmp_diff = 0;
+  long current_toggles_per_s;
+  while ((tmp_diff = diff_time_s(&t2,&t1)) < duration) {
+
+    current_toggles_per_s = (long) (n_toggles / tmp_diff);
+    long deficit = target_rate - current_toggles_per_s;
+    if (deficit > 1000) deficit = 1000;
+
+    for(; deficit > 0; deficit-- ) {
+      if (mode)
+        p->activate(entry_probe_id, bar);
+      // p->activate(exit_probe_id, bar);
+      else
+        p->activate(entry_probe_id, foo);
+      // p->activate(exit_probe_id, foo);
+      mode = !mode;
+      n_toggles++;
+    }
+
+    clock_gettime(clock_mode, &t2);
   }
 
-  g_running = 0;
+  g_running = 0; // Signal to runners.
 
   for (int i = 0; i < num_runners; i ++) {
     pthread_join(runners[i],NULL);
@@ -145,7 +185,7 @@ int main(int argc, char* argv[]) {
   delete(p);
   delete(ids);
 
-  fprintf(stderr, "Number of toggles : %lu\n", num_iterations*4);
+  fprintf(stderr, "Number of toggles : %lu\n", n_toggles);
   fprintf(stderr, "Foo count : %lu\n", foo_count);
   fprintf(stderr, "Bar count : %lu\n", bar_count);
 
