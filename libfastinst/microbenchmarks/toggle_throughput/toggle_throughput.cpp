@@ -168,16 +168,14 @@ int main(int argc, char* argv[]) {
     if (deficit > 1000) deficit = 1000;
 
     for(; deficit > 0; deficit-- ) {
-      if (mode) {
-        // printf("_");
+      if (mode == 0) {
+        printf("_");fflush(stdout);
         p->activate(entry_probe_id, bar);
-      // p->activate(exit_probe_id, bar);
       } else {
-        // printf(".");
+        printf(".");fflush(stdout);
         p->activate(entry_probe_id, foo);
       }
-      // p->activate(exit_probe_id, foo);
-      mode = !mode;
+      mode = (mode + 1) % 10;
       n_toggles++;
     }
 
