@@ -16,6 +16,8 @@
 #include <time.h>
 #include <locale.h>
 
+#include <unistd.h>
+
 #define NS_PER_S 1000000000
 #define PAD 8
 
@@ -32,9 +34,21 @@ static inline double diff_time_s(struct timespec *t1, struct timespec *t2){
   return diff_time_ns(t1,t2) / NS_PER_S;
 }
 
+// Spin while waiting to give the OS a hint that we want to stay on this core.
+void spin_sleep_ms(unsigned long ms) {
+  unsigned long ns = ms * 1000 * 1000;
+  struct timespec start, cur;
+  clock_gettime(CLOCK_MONOTONIC, &start);
+  cur = start;
+  while (diff_time_ns(&cur, &start) < ns)
+    clock_gettime(CLOCK_MONOTONIC, &cur);
+}
+
+
 /* Control */
 volatile int g_running = 0;
 volatile int g_start = 0;
+volatile int g_globally_finished = 0;
 
 long num_runners = 1;
 long target_rate = 1000000;
@@ -51,17 +65,20 @@ long runner_loop_count = 0;
 string func_mangled = "_Z4funci";
 
 void *runner(void *arg) {
+  while (!g_globally_finished) {
 
-  // Wait until main thread gives go signal
-  while (!g_start) ;
+    // Wait until main thread gives go signal
+    while (!g_start) ;
 
-  while(g_running){
-    /* the call site that we patch is within fun */
+    while(g_running) {
+      /* the call site that we patch is within fun */
 
-    int value = *((int*)arg);
+      int value = *((int*)arg);
 
-    func(value);
-    runner_loop_count++;
+      func(value);
+      runner_loop_count++;
+    }
+
   }
 }
 
@@ -113,25 +130,17 @@ void run_experiment(ProbeProvider* p) {
   bar_count = 0;
   foo_count = 0;
   runner_loop_count = 0;
-
   g_running = 1;
-  pthread_t runners[num_runners];
-  int rc;
-  int *ids = new int[num_runners];
-  for (int i=0; i<num_runners; i++) {
-    rc = pthread_create(&runners[i],
-        NULL,
-        runner, (void *)&ids[i]);
-  }
 
-  struct timespec t1;
-  struct timespec t2;
+  struct timespec t1, t2;
   int clock_mode = CLOCK_MONOTONIC;
-  clock_gettime(clock_mode, &t1);
-  t2 = t1;
 
+  usleep(100 * 1000); // Tenth of a second... let the worker threads get started.
+  // Then GO!
+  clock_gettime(clock_mode, &t1);
   g_start = 1; // Signal to runners.
 
+  t2 = t1;
   unsigned long n_toggles=0;
   int mode = 0;
   double tmp_diff = 0;
@@ -158,11 +167,10 @@ void run_experiment(ProbeProvider* p) {
     clock_gettime(clock_mode, &t2);
   }
 
-  g_running = 0; // Signal to runners.
+  g_running = 0; // Signal to runners.... quit it.
+  // Should we wait a bit so they get the signal?
 
-  for (int i = 0; i < num_runners; i ++) {
-    pthread_join(runners[i],NULL);
-  }
+  usleep(100 * 1000); // Tenth of a second... let the worker threads get started.
 
   printf("\nFinally, here is some human-readable output, not for HSBencher:\n");
   setlocale(LC_NUMERIC, "");
@@ -171,7 +179,6 @@ void run_experiment(ProbeProvider* p) {
   fprintf(stderr, "Bar count : %'lu\n", bar_count);
   fprintf(stderr, "Combined count : %'lu\n", foo_count + bar_count);
   fprintf(stderr, "Runner loop count : %'lu\n", runner_loop_count);
-  delete(ids);
 }
 
 
@@ -232,10 +239,31 @@ int main(int argc, char* argv[]) {
   printf("Passed simple test of %d calls in foo and bar mode\n", trials);
   runner_loop_count = 0;
 
-  run_experiment(p);
+  // ----------------- Thread fork -----------------------
+  pthread_t runners[num_runners];
+  int rc;
+  int *ids = new int[num_runners];
+
+  g_start = 0;
+  g_running = 1;
+  for (int i=0; i<num_runners; i++) {
+    rc = pthread_create(&runners[i],
+        NULL,
+        runner, (void *)&ids[i]);
+  }
 
   run_experiment(p);
 
+  run_experiment(p);
+
+  g_globally_finished = 1;
+
+  for (int i = 0; i < num_runners; i ++) {
+    pthread_join(runners[i],NULL);
+  }
+  // ----------------- Threads joined -----------------------
+
+  delete(ids);
   delete(p);
 
   exit(EXIT_SUCCESS);
