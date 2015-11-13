@@ -46,6 +46,8 @@ long foo_count = 0;
 long bar_count = 0;
 long FUNC_ID = 0;
 
+long runner_loop_count = 0;
+
 string func_mangled = "_Z4funci";
 
 void *runner(void *arg) {
@@ -59,6 +61,7 @@ void *runner(void *arg) {
     int value = *((int*)arg);
 
     func(value);
+    runner_loop_count++;
   }
 }
 
@@ -102,67 +105,19 @@ void callback(const ProbeMetaData* pmd) {
 
 }
 
-int main(int argc, char* argv[]) {
 
-  fprintf(stderr, "Benchmark probe toggle throughput..\n");
+void run_experiment(ProbeProvider* p) {
 
-  if (argc < 4) {
-    printf("NOT ENOUGH ARGS, expects 3: threads, duration, toggle_freq \n");
-    //    "\nRunning with default settings # threads : %ld # iterations %ld..\n", num_runners, target_rate
-    return 1;
-  } else {
-    num_runners    = atoi(argv[1]);
-    duration       = atof(argv[2]);
-    target_rate = atoi(argv[3]);
-    printf("Running with threads : %ld, duration: %lf, toggle_freq: %ld ..\n",
-           num_runners, duration, target_rate);
-  }
-
-  ProbeProvider* p;
-  try {
-    p = initializeGlobalProbeProvider(ProviderType::FINSTRUMENT, callback);
-  } catch (int e) {
-    fprintf(stderr, "ProbeProvider already initialized. Getting the existing"
-        " one..\n");
-    p = getGlobalProbeProvider();
-  }
-
-  if (p == NULL) {
-    fprintf(stderr, "Unable to initialize probe provider..\n");
-    exit(EXIT_FAILURE);
-  }
-
-  // Call it once to make sure things check out.
-  func(0);
-
-  int *ids = new int[num_runners];
-
-  assert(foo_count == 2);
-  assert(bar_count == 0);
-  foo_count = 0;
-
-  // Turn off the exit probe for the whole benchmark:
-  p->deactivate(exit_probe_id);
-
-  const int trials = 100000;
-
-  p->activate(entry_probe_id, foo);
-  for(int i=0; i<trials; i++) func(0);
-  assert(foo_count == trials);
-  assert(bar_count == 0);
-  foo_count = 0;
-
-  p->activate(entry_probe_id, bar);
-  for(int i=0; i<trials; i++) func(0);
-  assert(foo_count == 0);
-  assert(bar_count == trials);
+  // Reset the global state:
+  g_start   = 0;
   bar_count = 0;
-
-  printf("Passed simple test of %d calls in foo and bar mode\n", trials);
+  foo_count = 0;
+  runner_loop_count = 0;
 
   g_running = 1;
   pthread_t runners[num_runners];
   int rc;
+  int *ids = new int[num_runners];
   for (int i=0; i<num_runners; i++) {
     rc = pthread_create(&runners[i],
         NULL,
@@ -209,15 +164,79 @@ int main(int argc, char* argv[]) {
     pthread_join(runners[i],NULL);
   }
 
-  delete(p);
-  delete(ids);
-
   printf("\nFinally, here is some human-readable output, not for HSBencher:\n");
   setlocale(LC_NUMERIC, "");
   fprintf(stderr, "Number of toggles : %'lu\n", n_toggles);
   fprintf(stderr, "Foo count : %'lu\n", foo_count);
   fprintf(stderr, "Bar count : %'lu\n", bar_count);
   fprintf(stderr, "Combined count : %'lu\n", foo_count + bar_count);
+  fprintf(stderr, "Runner loop count : %'lu\n", runner_loop_count);
+  delete(ids);
+}
+
+
+
+int main(int argc, char* argv[]) {
+  fprintf(stderr, "Benchmark probe toggle throughput..\n");
+
+  if (argc < 4) {
+    printf("NOT ENOUGH ARGS, expects 3: threads, duration, toggle_freq \n");
+    //    "\nRunning with default settings # threads : %ld # iterations %ld..\n", num_runners, target_rate
+    return 1;
+  } else {
+    num_runners    = atoi(argv[1]);
+    duration       = atof(argv[2]);
+    target_rate = atoi(argv[3]);
+    printf("Running with threads : %ld, duration: %lf, toggle_freq: %ld ..\n",
+           num_runners, duration, target_rate);
+  }
+
+  ProbeProvider* p;
+  try {
+    p = initializeGlobalProbeProvider(ProviderType::FINSTRUMENT, callback);
+  } catch (int e) {
+    fprintf(stderr, "ProbeProvider already initialized. Getting the existing"
+        " one..\n");
+    p = getGlobalProbeProvider();
+  }
+
+  if (p == NULL) {
+    fprintf(stderr, "Unable to initialize probe provider..\n");
+    exit(EXIT_FAILURE);
+  }
+
+  // Call it once to make sure things check out.
+  func(0);
+
+  assert(foo_count == 2);
+  assert(bar_count == 0);
+  foo_count = 0;
+
+  // Turn off the exit probe for the whole benchmark:
+  p->deactivate(exit_probe_id);
+
+  const int trials = 100000;
+
+  p->activate(entry_probe_id, foo);
+  for(int i=0; i<trials; i++) func(0);
+  assert(foo_count == trials);
+  assert(bar_count == 0);
+  foo_count = 0;
+
+  p->activate(entry_probe_id, bar);
+  for(int i=0; i<trials; i++) func(0);
+  assert(foo_count == 0);
+  assert(bar_count == trials);
+  bar_count = 0;
+
+  printf("Passed simple test of %d calls in foo and bar mode\n", trials);
+  runner_loop_count = 0;
+
+  run_experiment(p);
+
+  run_experiment(p);
+
+  delete(p);
 
   exit(EXIT_SUCCESS);
 
