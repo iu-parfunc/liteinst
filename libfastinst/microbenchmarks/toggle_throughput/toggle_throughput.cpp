@@ -14,6 +14,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <time.h>
+#include <locale.h>
 
 #define NS_PER_S 1000000000
 #define PAD 8
@@ -135,6 +136,9 @@ int main(int argc, char* argv[]) {
 
   int *ids = new int[num_runners];
 
+  // Turn off the exit probe.
+  p->deactivate(exit_probe_id);
+
   g_running = 1;
   pthread_t runners[num_runners];
   int rc;
@@ -185,9 +189,12 @@ int main(int argc, char* argv[]) {
   delete(p);
   delete(ids);
 
-  fprintf(stderr, "Number of toggles : %lu\n", n_toggles);
-  fprintf(stderr, "Foo count : %lu\n", foo_count);
-  fprintf(stderr, "Bar count : %lu\n", bar_count);
+  printf("\nFinally, here is some human-readable output, not for HSBencher:\n");
+  setlocale(LC_NUMERIC, "");
+  fprintf(stderr, "Number of toggles : %'lu\n", n_toggles);
+  fprintf(stderr, "Foo count : %'lu\n", foo_count);
+  fprintf(stderr, "Bar count : %'lu\n", bar_count);
+  fprintf(stderr, "Combined count : %'lu\n", foo_count + bar_count);
 
   exit(EXIT_SUCCESS);
 
