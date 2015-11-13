@@ -45,20 +45,16 @@ main = do
         , runTimeOut = Just 600 -- Erk... need a separate compile timeout.
         , plugIns   = [ SomePlugin defaultDribblePlugin ] 
                         --SomePlugin defaultFusionPlugin,]
-        , harvesters = customTagHarvesterInt    "NUM_PROBES"              `mappend` 
-                       customTagHarvesterInt    "CALLED_FUNCTIONS"        `mappend`
-                       customTagHarvesterDouble "MAIN"                    `mappend`
-                       customTagHarvesterDouble "MONITOR"                 `mappend`
-                       customTagHarvesterDouble "DELTA"                   `mappend`
-                       customTagHarvesterDouble "PROBE_OVERHEAD"          `mappend`
-                       customTagHarvesterDouble "JUMP_OVERHEAD"           `mappend`
-                       customTagHarvesterDouble "CUMULATIVE_OVERHEAD"     `mappend`
-                       customTagHarvesterDouble "REAL_EXEC_TIME"          `mappend`
-                       customTagHarvesterDouble "EXEC_TIME"               `mappend`
-                       customTagHarvesterInt    "PROBE_COUNT"             `mappend`
-                       customTagHarvesterString "ARG_PATCH_METHOD"        `mappend`
-                       customTagHarvesterString "INVOKE_PATCH_METHOD"     `mappend`
-                       customTagHarvesterString "PROBE_TOGGLE_MODE"       `mappend`
+        , harvesters = customTagHarvesterInt    "NUMBER_OF_FUNCTION_CALLS" `mappend` 
+                       customTagHarvesterInt    "ACTIVATION_COUNT"         `mappend`
+                       customTagHarvesterInt    "DEACTIVATION_COUNT"       `mappend`
+                       customTagHarvesterInt    "TOTAL_TOGGLE_COUNT"       `mappend`
+                       customTagHarvesterDouble "ACTIVATION_COST"          `mappend`
+                       customTagHarvesterDouble "DEACTIVATION_COST"        `mappend`
+                       customTagHarvesterDouble "TOTAL_TOGGLE_COST"        `mappend`
+                       customTagHarvesterString "ARG_PATCH_METHOD"         `mappend`
+                       customTagHarvesterString "INVOKE_PATCH_METHOD"      `mappend`
+                       customTagHarvesterString "PROBE_TOGGLE_MODE"        `mappend`
                        harvesters conf
         }
 
@@ -109,7 +105,7 @@ epochs = [10]
 samplesize :: [Int] 
 samplesize = [10]
 
-sampling = Or [And [ Set (Variant (compiler ++ "_" ++ optlevel ++ "_Sampling_"++show s_size++"_"++show epoch)) (RuntimeEnv "PROFILER_TYPE" "SAMPLING")
+sampling = Or [And [ Set (Variant (compiler ++ "_" ++ optlevel ++ "_Sampling_"++show s_size++"_"++show epoch)) (RuntimeEnv "PROFILER_TYPE" "MINIMAL_SAMPLING")
                    , Set NoMeaning (RuntimeEnv "SAMPLE_SIZE" (show s_size))
                    , Set NoMeaning (RuntimeEnv "EPOCH_PERIOD" (show epoch))
                    , Set NoMeaning (CompileEnv "CC"  compiler)

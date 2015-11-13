@@ -12,7 +12,7 @@ ProbeProvider* initializeGlobalProbeProvider(ProviderType type, Callback callbac
         fprintf(stderr, "[Probe Provider] Initializing -finstrument-functions " 
             "based probe provider..\n");
         PROBE_PROVIDER = new FinstrumentProbeProvider(callback);
-        // PROBE_PROVIDER->initializeProvider();
+        PROBE_PROVIDER->initializeProvider();
         return PROBE_PROVIDER;
       case ProviderType::ZCA:
         fprintf(stderr, "ZCAProbeProvider not yet supported..\n");

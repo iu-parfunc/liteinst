@@ -40,8 +40,14 @@ extern "C"
 }
 #endif
 
+
+/*
+
+  11/11/15 - BC : Temporarily commented out. Not required for Xmod stuff.
+
 // BJS: I am very confused about why no_instrument_function would 
 // ever be needed inside this area of the code. 
+
 __attribute__((no_instrument_function))
 struct timespec *timeSpecDiff(struct timespec *ts1, struct timespec *ts2); 
 
@@ -64,10 +70,6 @@ double getSecondsFromTicks(uint64_t ticks) {
 
 double getSecondsFromTS(timespec* ts) {
   return ts->tv_sec + (double)ts->tv_nsec/ 1000000000; 
-}
-
-void __attribute__ ((noinline)) emptyFunc(uint64_t* a, uint64_t* b) {
-
 }
 
 __attribute__((no_instrument_function)) void calibrateTicks(); 
@@ -182,6 +184,8 @@ void getFinalOverhead() {
 
 }
 
+*/
+
 #ifndef NO_INIT
 __attribute__((constructor, no_instrument_function)) void initProfiler(); 
 
@@ -201,8 +205,8 @@ __attribute__((constructor, no_instrument_function)) void initProfiler();
     fprintf(stderr, "PROBE_TOGGLE_MODE: ENABLE_ALL_PROBES\n");
 #endif
 
-
-    // ticks start = getticks();
+    /*
+    11/11/15 - BC : Temporarily commented out. Not required for Xmod stuff.
 
     calibrateTicks();
 
@@ -215,6 +219,7 @@ __attribute__((constructor, no_instrument_function)) void initProfiler();
     g_deactivation_count = 0;
 
     clock_gettime(CLOCK_MONOTONIC, &g_begints);
+    */
 
     char* profiler_type_str = getenv("PROFILER_TYPE");
     if (profiler_type_str != NULL) {
@@ -263,6 +268,9 @@ __attribute__((constructor, no_instrument_function)) void initProfiler();
     g_ubiprof_initialized = true;
 
     fprintf(stderr, "[Ubiprof] Done intializing the profiler..\n\n");
+
+    /*
+    11/11/15 - BC : Temporarily commented out. Not required for Xmod stuff.
     fprintf(stderr, "[Ubiprof] Calibrated parameter values per probe\n Indirect Jump Cost : %lu  Cache miss cost : %lu\n",
                         2*g_call_overhead, g_cache_miss_overhead_upper_bound);
 
@@ -274,6 +282,7 @@ __attribute__((constructor, no_instrument_function)) void initProfiler();
     uint64_t end = nanoSecs * g_TicksPerNanoSec;  
 
     g_init_overhead = end - start;
+    */
 
   }
 #endif
@@ -307,17 +316,19 @@ __attribute__((destructor))
   // BJS HACK 
   fprintf(stderr,"Waited %d ms for monitor to shut down\n", retries * 10);
   
-  clock_gettime(CLOCK_MONOTONIC, &g_endts);
-  timeSpecDiff(&g_endts, &g_begints);
+  // 11/11/15 - BC: Temporarily commenting out. Not needed for Xmod stuff.
+  // clock_gettime(CLOCK_MONOTONIC, &g_endts);
+  // timeSpecDiff(&g_endts, &g_begints);
 
   
   fprintf(stderr, "\n[Ubiprof] Destroying the profiler..\n");  
   // run the destructor of the profiler instance. 
   delete PROFILER;  
 
+  // 11/11/15 - BC: Temporarily commenting out. Not needed for Xmod stuff.
   // getFinalOverhead needs to happen after the 
   // destructor of the profiler is executed. 
-  getFinalOverhead();
+  // getFinalOverhead();
 
  
   // BJS: Something is still accessing datastructures held within these instances 
@@ -327,8 +338,8 @@ __attribute__((destructor))
   //      The destruction of the instrumentor instance as part of the Profiler destructor 
   //      has been turned of as a hack. 
     
-  
-  fprintf(stderr, "\n[ubiprof] UBIPROF_ELAPSED_TIME : %lf\n", getSecondsFromTS(&g_diff));
+  // 11/11/15 - BC: Temporarily commenting out. Not needed for Xmod stuff.
+  // fprintf(stderr, "\n[ubiprof] UBIPROF_ELAPSED_TIME : %lf\n", getSecondsFromTS(&g_diff));
   
 } 
 #endif

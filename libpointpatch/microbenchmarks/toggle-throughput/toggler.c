@@ -292,12 +292,11 @@ int main(int argc, char** argv) {
 
     current_toggles_per_s = (long) (n_toggles / tmp_diff);
 
-    double remaining_time = duration - tmp_diff;
-
     long deficit = target_rate - current_toggles_per_s;
 
-    // Try not to overshoot our time window:
+    // Try not to overshoot our time window by scheduling too large a batch:
     /*
+    double remaining_time = duration - tmp_diff;
     long estimated_remaining_toggles;
     if (remaining_time > 0)
       estimated_remaining_toggles = (long)(current_toggles_per_s / remaining_time);

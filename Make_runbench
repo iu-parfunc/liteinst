@@ -55,9 +55,15 @@ else
 endif
 endif
 
-# TABLE=Dynaprof_Benchmarks
-# [2014.08.07] Debugging problems, trying to start fresh:
-TABLE=CrossModification_Benchmarks
+# [2015.11.12] Creating new tables for different types of application runs for
+#   cross modifcation application benchmarks
+#    PATCHING - Run applications with different pointpatch/ callpatch patching methods
+#    PROBES   - Run applications with different probe toggling schemes
+ifeq ($(BENCH_RUNS), PATCHING)
+  TABLE=CrossModification_PATCHING
+else ifeq ($(BENCH_RUNS), PROBES)
+  TABLE=CrossModification_PROBES
+endif
 
 all: benchharnesses
 

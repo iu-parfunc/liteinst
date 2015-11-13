@@ -21,7 +21,9 @@ ifeq ($(INVOKE_PATCH),INVOKE_PATCH_CALL)
 override CFLAGS += -DINVOKE_PATCH_CALL
 endif
 
+ifeq ($(AUDIT_PROBES),AUDIT_PROBES)
 override CFLAGS += -DAUDIT_PROBES # -DARG_PATCH_SYNC -DINVOKE_PATCH_SYNC
+endif
 
 EXTRA_WARNS= -pedantic 
 #-Wextra
@@ -43,6 +45,7 @@ RM = rm
 OPTS =
 
 COMMON = $(wildcard $(ROOT)/common/src/lock/*.cpp)
+override COMMON +=  $(wildcard $(ROOT)/common/src/utils/*.cpp)
 COMMON_OBJ0 = $(COMMON:.cpp=.o)
 COMMON_OBJ  = $(COMMON_OBJ0:.c=.o)
 

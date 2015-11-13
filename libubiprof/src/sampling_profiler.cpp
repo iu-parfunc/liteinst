@@ -394,7 +394,7 @@ void SamplingProfiler::dumpStatistics() {
     }
   }
 
-  fprintf(stderr, "\n[Sampling Profiler] NUMBER_OF_FUNCTION_CALLS: %lu\n", total_count);
+  fprintf(stderr, "\nNUMBER_OF_FUNCTION_CALLS: %lu\n", total_count);
 
   fclose(fp);
 
