@@ -169,13 +169,14 @@ int main(int argc, char* argv[]) {
 
     for(; deficit > 0; deficit-- ) {
       if (mode == 0) {
-        printf("_");fflush(stdout);
+        // printf("_");fflush(stdout);
         p->activate(entry_probe_id, bar);
       } else {
-        printf(".");fflush(stdout);
+        // printf(".");fflush(stdout);
         p->activate(entry_probe_id, foo);
       }
-      mode = (mode + 1) % 10;
+      // mode = (mode + 1) % 10;
+      mode = !mode;
       n_toggles++;
     }
 
