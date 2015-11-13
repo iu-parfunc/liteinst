@@ -135,7 +135,7 @@ void run_experiment(ProbeProvider* p) {
   struct timespec t1, t2;
   int clock_mode = CLOCK_MONOTONIC;
 
-  usleep(100 * 1000); // Tenth of a second... let the worker threads get started.
+  spin_sleep_ms(100); // Tenth of a second... let the worker threads get started.
   // Then GO!
   clock_gettime(clock_mode, &t1);
   g_start = 1; // Signal to runners.
@@ -170,7 +170,7 @@ void run_experiment(ProbeProvider* p) {
   g_running = 0; // Signal to runners.... quit it.
   // Should we wait a bit so they get the signal?
 
-  usleep(100 * 1000); // Tenth of a second... let the worker threads get started.
+  spin_sleep_ms(100); // Tenth of a second... let the worker threads get started.
 
   printf("\nFinally, here is some human-readable output, not for HSBencher:\n");
   setlocale(LC_NUMERIC, "");
