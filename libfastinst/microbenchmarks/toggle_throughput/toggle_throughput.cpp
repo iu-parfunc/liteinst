@@ -137,6 +137,7 @@ int main(int argc, char* argv[]) {
   int *ids = new int[num_runners];
 
   // Turn off the exit probe.
+  p->activate(entry_probe_id, foo); // Start in this mode.
   p->deactivate(exit_probe_id);
 
   g_running = 1;
@@ -167,11 +168,14 @@ int main(int argc, char* argv[]) {
     if (deficit > 1000) deficit = 1000;
 
     for(; deficit > 0; deficit-- ) {
-      if (mode)
+      if (mode) {
+        // printf("_");
         p->activate(entry_probe_id, bar);
       // p->activate(exit_probe_id, bar);
-      else
+      } else {
+        // printf(".");
         p->activate(entry_probe_id, foo);
+      }
       // p->activate(exit_probe_id, foo);
       mode = !mode;
       n_toggles++;
