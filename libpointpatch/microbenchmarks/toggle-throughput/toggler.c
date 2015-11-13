@@ -200,6 +200,13 @@ int main(int argc, char** argv) {
   printf("Setting straddler point at %d (distance in byte into the patch site)\n",call_straddler_point);
   printf("Running with %d threads executing the call site\n", num_runners);
 
+#if defined(USE_ASYNC_PATCH) 
+  printf("USING: async_patch_64\n"); 
+#else 
+  printf("USING: patch_64\n"); 
+#endif 
+
+
 
   /* Allocate per executer data */
 
