@@ -132,13 +132,30 @@ int main(int argc, char* argv[]) {
     exit(EXIT_FAILURE);
   }
 
+  // Call it once to make sure things check out.
   func(0);
 
   int *ids = new int[num_runners];
 
-  // Turn off the exit probe.
-  p->activate(entry_probe_id, foo); // Start in this mode.
+  assert(foo_count == 2);
+  assert(bar_count == 0);
+  foo_count = 0;
+
+  // Turn off the exit probe for the whole benchmark:
   p->deactivate(exit_probe_id);
+
+  const int trials = 1000;
+  p->activate(entry_probe_id, bar);
+  for(int i=0; i<trials; i++) func(0);
+  assert(foo_count == 0);
+  assert(bar_count == trials);
+  bar_count = 0;
+
+  p->activate(entry_probe_id, foo);
+  for(int i=0; i<trials; i++) func(0);
+  assert(foo_count == trials);
+  assert(bar_count == 0);
+  foo_count = 0;
 
   g_running = 1;
   pthread_t runners[num_runners];
