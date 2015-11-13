@@ -20,6 +20,11 @@
 
 #define NS_PER_S 1000000000
 #define PAD 8
+// This must be odd:
+// This fixes the worst of the imbalance problem, but a problem still remains:
+// #define BURST_SIZE 997
+// This is much better for balance, but worse for maximum toggle rate:
+#define BURST_SIZE 1
 
 using namespace std;
 
@@ -49,6 +54,7 @@ void spin_sleep_ms(unsigned long ms) {
 volatile int g_running = 0;
 volatile int g_start = 0;
 volatile int g_globally_finished = 0;
+unsigned long n_toggles=0;
 
 long num_runners = 1;
 long target_rate = 1000000;
@@ -129,6 +135,7 @@ void run_experiment(ProbeProvider* p) {
   g_start   = 0;
   bar_count = 0;
   foo_count = 0;
+  n_toggles=0;
   runner_loop_count = 0;
   g_running = 1;
 
@@ -136,22 +143,23 @@ void run_experiment(ProbeProvider* p) {
   int clock_mode = CLOCK_MONOTONIC;
 
   spin_sleep_ms(100); // Tenth of a second... let the worker threads get started.
+
   // Then GO!
   clock_gettime(clock_mode, &t1);
   g_start = 1; // Signal to runners.
 
   t2 = t1;
-  unsigned long n_toggles=0;
-  int mode = 0;
+  int mode = 1;
   double tmp_diff = 0;
   long current_toggles_per_s;
   while ((tmp_diff = diff_time_s(&t2,&t1)) < duration) {
 
     current_toggles_per_s = (long) (n_toggles / tmp_diff);
     long deficit = target_rate - current_toggles_per_s;
-    if (deficit > 1000) deficit = 1000;
-
-    for(; deficit > 0; deficit-- ) {
+    if (deficit > BURST_SIZE) deficit = BURST_SIZE;
+    for(; deficit > 0; deficit-- )
+    // if (deficit > 1) //
+    {
       if (mode == 0) {
         // printf("_");fflush(stdout);
         p->activate(entry_probe_id, bar);
@@ -170,7 +178,8 @@ void run_experiment(ProbeProvider* p) {
   g_running = 0; // Signal to runners.... quit it.
   // Should we wait a bit so they get the signal?
 
-  spin_sleep_ms(100); // Tenth of a second... let the worker threads get started.
+  spin_sleep_ms(100); // Tenth of a second...
+  // let the worker threads see the signal and go back to waiting.
 
   printf("\nFinally, here is some human-readable output, not for HSBencher:\n");
   setlocale(LC_NUMERIC, "");
@@ -179,6 +188,7 @@ void run_experiment(ProbeProvider* p) {
   fprintf(stderr, "Bar count : %'lu\n", bar_count);
   fprintf(stderr, "Combined count : %'lu\n", foo_count + bar_count);
   fprintf(stderr, "Runner loop count : %'lu\n", runner_loop_count);
+
 }
 
 
