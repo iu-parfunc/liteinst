@@ -52,5 +52,5 @@ benches =
    [show threads, show duration, show rate]
    (Set (Variant "java-volatile") (RuntimeEnv "IGNORE_THIS" "0"))
    | threads <- [1..15]
-   , duration <- [4.0]
+   , duration <- [1.0]
    , rate <- [0,10,100,1000,10000,100000,500000,1000000,10000000,100000000]]

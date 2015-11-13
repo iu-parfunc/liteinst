@@ -20,6 +20,16 @@
 
 */
 
+/* Compile params 
+   
+   -DUSE_ASYNC_PATCH
+
+   -DUSE_FASTINST
+   
+
+*/ 
+
+
 #include <time.h>
 #include <limits.h>
 #include <stdio.h>
@@ -190,6 +200,13 @@ int main(int argc, char** argv) {
   printf("Setting straddler point at %d (distance in byte into the patch site)\n",call_straddler_point);
   printf("Running with %d threads executing the call site\n", num_runners);
 
+#if defined(USE_ASYNC_PATCH) 
+  printf("USING: async_patch_64\n"); 
+#else 
+  printf("USING: patch_64\n"); 
+#endif 
+
+
 
   /* Allocate per executer data */
 
@@ -319,10 +336,19 @@ int main(int argc, char** argv) {
     for(; deficit > 0; deficit-- )
     {
       if (p) {
-        patch_64((void*)g_call_addr, g_orig_call);
+
+#if defined (USE_ASYNC_PATCH)
+        async_patch_64((void*)g_call_addr, g_orig_call);
+#else 
+	patch_64((void*)g_call_addr, g_orig_call);
+#endif
         p = false;
       } else {
+#if defined (USE_ASYNC_PATCH)
+        async_patch_64((void*)g_call_addr, g_call_bar_patch);
+#else
         patch_64((void*)g_call_addr, g_call_bar_patch);
+#endif 
         p = true;
       }
       n_toggles++;

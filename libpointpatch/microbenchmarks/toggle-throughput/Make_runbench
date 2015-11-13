@@ -41,7 +41,7 @@ else
 endif
 endif
 
-TABLE=PATCH_TOGGLE_THROUGHPUT4
+TABLE=toggle_throughput_fixed
 
 
 all: benchharness library

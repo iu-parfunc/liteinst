@@ -47,13 +47,19 @@ main = do
 
 benches :: [Benchmark DefaultParamMeaning]
 benches =
-  [mkBenchmark ("Makefile")
+  [mkBenchmark ("toggle-throughput")
    [show straddle_pos, show threads, show duration, show rate]
-   (And [ Set (Variant "microbench")
-              (RuntimeEnv "PATCH_WAIT_TIME" "1800")
-        , Set NoMeaning (CompileParam "-O2")])
-          | threads <- [1..17]
-          , straddle_pos <- [0..4] -- zero means not-a-straddler
-          , duration <- [0.1,1.0,2.0,3.0,4.0,5.0]
-          , rate <- [1000,10000,100000,1000000,10000000,100000000]]
-
+    (Or  [ And [ Set (Variant "patch_64")
+                     (RuntimeEnv "PATCH_WAIT_TIME" "1800")
+               , Set NoMeaning (CompileParam "-O2")
+               ]
+         , And [ Set (Variant "async_patch_64")
+                     (RuntimeEnv "PATCH_WAIT_TIME" "1800")
+               , Set NoMeaning (CompileParam "-O2 -DUSE_ASYNC_PATCH")
+               ]
+         ])
+  | threads <- [1..15]
+  , straddle_pos <- [0..4] -- zero means not-a-straddler
+  , duration <- [0.1,1.0,2.0,3.0,4.0,5.0]
+  , rate <- [1000,10000,100000,1000000,10000000,100000000]]
+  
