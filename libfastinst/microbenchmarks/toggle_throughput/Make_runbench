@@ -1,0 +1,39 @@
+
+.phony: all benchharness library
+
+ifeq ($(STACK),)
+     STACK=stack
+endif
+
+
+ifeq ($(MACHINECLASS),)
+     MACHINECLASS=$(HOSTNAME)
+endif
+
+RUNID=$(shell hostname -s)_$(shell date "+%s")
+
+# We have hacked SELFTIMED = TOTAL_CALLS, so taking the median of five trials makes sense:
+TRIALS = 9
+
+TOP=$(shell pwd)
+
+TABLE=PATCH_TOGGLE_THROUGHPUT_FASTINST
+
+all: benchharness library
+
+library:
+	(cd ../../src && make CC=gcc CXX=g++ CFLAGS=-O3 install)
+
+microbench.exe: benchharness
+
+benchharness:
+	which -a $(STACK)
+	$(STACK) --version
+	$(STACK) --install-ghc install
+	echo "Listing available benchmarks."
+	./microbench.exe -l
+
+run:
+	./microbench.exe --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --name=$(TABLE)  $(WHICHBENCH) $(BENCHARGS)
+
+# --fusion-upload --clientid=$(CID) --clientsecret=$(SEC)

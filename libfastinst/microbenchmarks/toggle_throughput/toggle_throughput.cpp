@@ -214,11 +214,11 @@ double run_experiment(ProbeProvider* p) {
 
   printf("\nFinally, here is some human-readable output, not for HSBencher:\n");
   setlocale(LC_NUMERIC, "");
-  fprintf(stderr, "Number of toggles : %'lu\n", n_toggles);
-  fprintf(stderr, "Foo count : %'lu\n", foo_count);
-  fprintf(stderr, "Bar count : %'lu\n", bar_count);
-  fprintf(stderr, "Combined count : %'lu\n", foo_count + bar_count);
-  fprintf(stderr, "Runner loop count : %'lu\n", runner_loop_count);
+  printf("Number of toggles : %'lu\n", n_toggles);
+  printf("Foo count : %'lu\n", foo_count);
+  printf("Bar count : %'lu\n", bar_count);
+  printf("Combined count : %'lu\n", foo_count + bar_count);
+  printf("Runner loop count : %'lu\n", runner_loop_count);
 
   return diff_time_s(&t2,&t1);
 }
@@ -362,6 +362,8 @@ int main(int argc, char* argv[]) {
   printf("TOTAL_FOO_CALLS: %f\n", total_foo_calls / elapsed_time);
   printf("TOTAL_BAR_CALLS: %f\n", total_bar_calls / elapsed_time);
   printf("TOTAL_CALLS: %f\n", (total_foo_calls + total_bar_calls) / elapsed_time);
+
+  printf("SELFTIMED: %f\n", (total_foo_calls + total_bar_calls) / elapsed_time);
 
   delete(ids);
   delete(p);
