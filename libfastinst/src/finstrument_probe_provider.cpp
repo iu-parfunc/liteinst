@@ -89,7 +89,8 @@ bool FinstrumentProbeProvider::activate(const ProbeId probe_id,
     throw -1;
   }
 
-  (*probe_meta_data)[probe_id]->instrumentation_func.store(func,
+
+  pmd->instrumentation_func.store(func,
       std::memory_order_seq_cst);
 
   if (pmd->state == ProbeState::ACTIVE) {

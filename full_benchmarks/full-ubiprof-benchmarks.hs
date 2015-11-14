@@ -46,6 +46,8 @@ main = do
         , plugIns   = [ SomePlugin defaultDribblePlugin ] 
                         --SomePlugin defaultFusionPlugin,]
         , harvesters = customTagHarvesterInt    "NUMBER_OF_FUNCTION_CALLS" `mappend` 
+                       customTagHarvesterInt    "NUMBER_OF_FUNCTIONS"      `mappend`
+                       customTagHarvesterInt    "THREAD_COUNT"             `mappend`
                        customTagHarvesterInt    "ACTIVATION_COUNT"         `mappend`
                        customTagHarvesterInt    "DEACTIVATION_COUNT"       `mappend`
                        customTagHarvesterInt    "TOTAL_TOGGLE_COUNT"       `mappend`
