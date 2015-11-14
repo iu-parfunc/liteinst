@@ -211,5 +211,8 @@ int main(int argc, char* argv[]) {
   fprintf(stdout,"ACTIVATION_COST_AVG: %f\n", (double)activation_cost/NUM_OF_PATCHES);
   fprintf(stdout,"DEACTIVATION_COST_AVG: %f\n", (double)deactivation_cost/NUM_OF_PATCHES);
 
+  // To make the median meaningful:
+  fprintf(stdout,"SELFTIMED: %f\n", (double)activation_cost/NUM_OF_PATCHES);
+
   exit(EXIT_SUCCESS);
 }

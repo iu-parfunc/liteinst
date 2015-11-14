@@ -12,7 +12,7 @@ endif
 
 RUNID=$(shell hostname -s)_$(shell date "+%s")
 
-TRIALS = 3
+TRIALS = 5
 
 TOP=$(shell pwd)
 
