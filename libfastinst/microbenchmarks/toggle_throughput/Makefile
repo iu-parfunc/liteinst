@@ -16,8 +16,8 @@ all: toggle_throughput.exe
 
 toggle_throughput.exe:
 	$(CXX) --std=c++11 -g -c $(CFLAGS) func.cpp -o func.o
-	$(CXX) --std=c++11 -g -c -I$(ROOT)/include -I$(ROOT)/common/include -I. toggle_throughput.cpp -o toggle_throughput.o
-	$(CXX) --std=c++11 -g toggle_throughput.o func.o -o toggle_throughput.exe  $(LIBS)
+	$(CXX) $(COMPILE_ARGS) --std=c++11 -g -c -I$(ROOT)/include -I$(ROOT)/common/include -I. toggle_throughput.cpp -o toggle_throughput.o
+	$(CXX) $(COMPILE_ARGS) --std=c++11 -g toggle_throughput.o func.o -o toggle_throughput.exe  $(LIBS)
 
 run: toggle_throughput.exe
 	(readelf -s toggle_throughput.exe |grep FUNC | awk -F '[[:space:]]+' '{print $$3 "," $$9}' > functions.txt)

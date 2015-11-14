@@ -48,9 +48,15 @@ main = do
 
 benches :: [Benchmark DefaultParamMeaning]
 benches =
-  [mkBenchmark ("toggle-throughput")
+  -- [mkBenchmark ("toggle-throughput")
+  --    [show threads, show duration, show rate]
+  --    (Set (Variant "fastinst") (RuntimeEnv "IGNORE_THIS" "0"))
+  --    | threads  <- threadss, duration <- durations, rate <- rates]
+  [mkBenchmark ("onoff-throughput")
    [show threads, show duration, show rate]
-   (Set (Variant "fastinst") (RuntimeEnv "IGNORE_THIS" "0"))
-   | threads <- [1..15]
-   , duration <- [3.0]
-   , rate <- [0,10,100,1000,10000,100000,500000,1000000,10000000,100000000]]
+   (Set (Variant "fastinst") (CompileParam "-DONOFF_TOGGLING"))
+   | threads  <- threadss, duration <- durations, rate <- rates]
+
+threadss  = [1..15]
+durations = [3.0]
+rates     = [0,10,100,1000,10000,100000,500000,1000000,10000000,100000000]

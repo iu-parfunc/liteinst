@@ -189,7 +189,12 @@ double run_experiment(ProbeProvider* p) {
         p->activate(entry_probe_id, bar);
       } else {
         // printf(".");fflush(stdout);
+#ifdef ONOFF_TOGGLING
+#warning "Configuring for ON/OFF throughput benchmark"
+        p->deactivate(entry_probe_id);
+#else
         p->activate(entry_probe_id, foo);
+#endif
       }
       // mode = (mode + 1) % 10;
       mode = !mode;
