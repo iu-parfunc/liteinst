@@ -82,7 +82,7 @@ volatile int worker_ids = 0;
 static __thread long thread_foo_count = 0;
 static __thread long thread_bar_count = 0;
 
-long runner_loop_count = 0;
+static __thread long runner_loop_count = 0;
 
 string func_mangled = "_Z4funci";
 
@@ -108,7 +108,7 @@ void *runner(void *arg) {
       int value = *((int*)arg);
 
       func(value);
-      runner_loop_count++;
+      // runner_loop_count++;
     }
 
   }
