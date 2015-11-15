@@ -13,6 +13,11 @@ typedef std::unordered_map<Address, std::string> FuncAddrMapping;
 typedef std::unordered_map<Address, uint32_t> ProbeLookupMap; 
 // typedef std::unordered_map<uint64_t, lock::CASLock> FuncRWLocks;
 
+#ifdef AUDIT_INIT_COST 
+extern ticks** init_costs;
+extern volatile int g_thread_counter;
+#endif
+
 typedef struct ToggleStatistics {
   uint64_t deactivation_count;
   uint64_t activation_count;
@@ -126,6 +131,18 @@ class FinstrumentProbeProvider : public ProbeProvider {
     std::string getFunctionName(Address func_addr);
 
     ~FinstrumentProbeProvider() {
+
+#ifdef AUDIT_INIT_COST 
+      ticks cost = 0;
+      for (int i=0; i < g_thread_counter; i++) {
+        cost += *init_costs[i];
+      }
+
+      double total_init_cost = utils::getSecondsFromTicks(cost); 
+      fprintf(stderr, "INIT_COST: %lf\n", total_init_cost);
+
+      delete(init_costs);
+#endif
 
 #ifdef AUDIT_PROBES
       uint64_t deactivation_count = 0;

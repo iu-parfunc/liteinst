@@ -25,6 +25,16 @@ ifeq ($(AUDIT_PROBES),AUDIT_PROBES)
 override CFLAGS += -DAUDIT_PROBES 
 endif
 
+ifeq ($(AUDIT_INIT_COST),AUDIT_INIT_COST)
+override CFLAGS += -DAUDIT_INIT_COST
+endif
+
+ifeq ($(PROBE_TOGGLING),DISABLE_STRADDLERS)
+override CFLAGS += -DDISABLE_STRADDLERS
+else ifeq ($(PROBE_TOGGLING),DISABLE_ALL_PROBES)
+override CFLAGS += -DDISABLE_ALL_PROBES
+endif
+
 EXTRA_WARNS= -pedantic 
 #-Wextra
 ## -Wformat-nonliteral -Wcast-align -Wpointer-arith -Wbad-function-cast -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Winline -Wundef -Wnested-externs -Wcast-qual -Wshadow -Wwrite-strings -Wno-unused-parameter -Wfloat-equal
