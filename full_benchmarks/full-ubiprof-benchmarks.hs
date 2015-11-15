@@ -54,6 +54,7 @@ main = do
                        customTagHarvesterDouble "ACTIVATION_COST"          `mappend`
                        customTagHarvesterDouble "DEACTIVATION_COST"        `mappend`
                        customTagHarvesterDouble "TOTAL_TOGGLE_COST"        `mappend`
+                       customTagHarvesterDouble "INIT_COST"                `mappend`
                        customTagHarvesterString "ARG_PATCH_METHOD"         `mappend`
                        customTagHarvesterString "INVOKE_PATCH_METHOD"      `mappend`
                        customTagHarvesterString "PROBE_TOGGLE_MODE"        `mappend`
@@ -77,7 +78,7 @@ benches =
     , (var_name, variant) <- ubiprof_variants] 
 
   where
-    base  = ["unprofiled" ]
+    base  = ["unprofiled" , "emptyprof", "pointpatched"]
     base_variants = [(nom, setVariant nom) | nom <- base]
     
     setVariant str = And [Set (Variant str) (CompileParam "")
