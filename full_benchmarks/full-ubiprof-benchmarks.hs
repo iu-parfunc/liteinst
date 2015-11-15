@@ -78,7 +78,7 @@ benches =
     , (var_name, variant) <- ubiprof_variants] 
 
   where
-    base  = ["unprofiled" , "emptyprof", "pointpatched"]
+    base  = ["unprofiled" , "empty", "pointpatched"]
     base_variants = [(nom, setVariant nom) | nom <- base]
     
     setVariant str = And [Set (Variant str) (CompileParam "")
