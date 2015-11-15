@@ -26,7 +26,7 @@
 #endif
 
 
-#ifdef DISABLE_ALL_PROBES
+#ifdef AUDIT_INIT_COST 
 volatile int g_thread_counter;
 __thread ticks init_cost = 0;
 __thread bool allocated = false;
