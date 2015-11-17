@@ -24,8 +24,6 @@
 
    -DUSE_ASYNC_PATCH
 
-   -DUSE_FASTINST
-
 
 */
 
@@ -51,6 +49,7 @@
 
 #define NS_PER_S 1000000000
 #define PAD 8
+#define BURST_SIZE 1
 
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
@@ -93,12 +92,14 @@ unsigned int start_addr = 0;
 
 void bar(int arg) {
 
+#ifdef MONITOR_OBSERVED_SWITCHES
   if (g_ran_foo_last[arg*PAD]) {
     g_ran_foo_last[arg*PAD] = false;
     g_switches[arg*PAD]++;
   }
+#endif
 
-
+  // RRN: Why do we need this conditional here?
   if (g_collect_data) {
     g_bar_val[arg*PAD]++;
   }
@@ -138,11 +139,12 @@ void foo(int arg) {
       }
   }
 
+#ifdef MONITOR_OBSERVED_SWITCHES
   if (!g_ran_foo_last[arg*PAD]) {
     g_ran_foo_last[arg*PAD] = true;
     g_switches[arg*PAD]++;
   }
-
+#endif
 
   if (g_collect_data) {
     g_foo_val[arg*PAD]++;
@@ -192,7 +194,7 @@ int main(int argc, char** argv) {
     duration    = atof(argv[3]);
     target_rate = atol(argv[4]);
   } else {
-    printf("INCORRECT ARGS\n");
+    printf("INCORRECT ARGS: need <straddlePoint> <numRunners> <duration> <toggleRate> \n");
     exit(EXIT_FAILURE);
   }
   printf("Setting straddler point at %d (distance in byte into the patch site)\n",call_straddler_point);
