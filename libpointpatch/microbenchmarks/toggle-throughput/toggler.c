@@ -412,14 +412,17 @@ int main(int argc, char** argv) {
   printf("OBSERVED_SWITCHES_TOTAL: %f\n", observed_switches_total / t_diff);
   printf("MINIMUM_FOO_CALLS: %f\n", min_foo_calls / t_diff);
   printf("MAXIMUM_FOO_CALLS: %f\n", max_foo_calls / t_diff);
-  printf("TOTAL_FOO_CALLS: %f\n", total_foo_calls / t_diff);
   printf("MINIMUM_BAR_CALLS: %f\n", min_bar_calls / t_diff);
   printf("MAXIMUM_BAR_CALLS: %f\n", max_bar_calls / t_diff);
-  printf("TOTAL_BAR_CALLS: %f\n", total_bar_calls / t_diff);
   printf("NUMBER_OF_EXECUTERS: %d\n", num_runners);
   printf("TARGET_TIME: %f\n", duration);
   printf("ELAPSED_TIME: %f\n", t_diff);
+
   printf("NUMBER_OF_TOGGLES: %f\n",n_toggles / t_diff);
+  printf("TOTAL_FOO_CALLS: %f\n", total_foo_calls / t_diff);
+  printf("TOTAL_BAR_CALLS: %f\n", total_bar_calls / t_diff);
+  printf("TOTAL_CALLS: %f\n", (total_foo_calls + total_bar_calls) / t_diff);
+  printf("SELFTIMED: %f\n", (total_foo_calls + total_bar_calls) / t_diff);
 
   /* printf("\nFinally, here is some human-readable output, not for HSBencher:\n"); */
   /* setlocale(LC_NUMERIC, ""); */
