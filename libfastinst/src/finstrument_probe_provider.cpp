@@ -16,12 +16,18 @@ using namespace lock;
 using namespace utils;
 using namespace calibrate;
 
-#ifdef AUDIT_PROBES
+#ifdef AUDIT_PROBES 
 static __thread ToggleStatistics* stats = NULL;
 #endif
 
+
 void FinstrumentProbeProvider::initializeProvider() {
   toggle_stats = new ToggleStatistics*[64](); // Number of threads fixed to 64.
+
+#ifdef AUDIT_INIT_COST
+  init_costs = new ticks*[64]();
+#endif
+
   thread_counter = 0;
   // calibrateInstrumentationOverhead();
 }
@@ -89,7 +95,8 @@ bool FinstrumentProbeProvider::activate(const ProbeId probe_id,
     throw -1;
   }
 
-  (*probe_meta_data)[probe_id]->instrumentation_func.store(func,
+
+  pmd->instrumentation_func.store(func,
       std::memory_order_seq_cst);
 
   if (pmd->state == ProbeState::ACTIVE) {

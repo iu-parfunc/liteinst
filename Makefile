@@ -28,6 +28,7 @@ lib:
 	(cd libcallpatch/src && make CC=$(CC) CXX=$(CXX) CFLAGS="$(CFLAGS) -DNDEBUG -O3" && make install )
 	(cd libfastinst/src   && make CC=$(CC) CXX=$(CXX) CFLAGS='-DNDEBUG -O3' && make install )
 	(cd libubiprof/src   && make CC=$(CC) CXX=$(CXX) CFLAGS='-DNDEBUG -O3' && make install )
+	(cd libnoprof/src    && make CC=$(CC) CXX=$(CXX) CFLAGS='-DNDEBUG -O3' && make install)
 
 
 libdebug:

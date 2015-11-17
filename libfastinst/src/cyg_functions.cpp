@@ -9,6 +9,7 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include <alloca.h>
+#include <stdbool.h>
 #include <setjmp.h>
 #include <assert.h> 
 
@@ -22,6 +23,14 @@
 
 #ifdef _GNU_SOURCE
 #include <dlfcn.h>
+#endif
+
+
+#ifdef AUDIT_INIT_COST 
+volatile int g_thread_counter;
+__thread ticks init_cost = 0;
+__thread bool allocated = false;
+ticks** init_costs;
 #endif
 
 using namespace std;
@@ -161,6 +170,10 @@ void __cyg_profile_func_enter(void* func, void* caller) {
 #else
 void __cyg_profile_func_enter(void* func_addr, void* call_site_addr) {
 
+#ifdef AUDIT_INIT_COST
+  ticks start = getticks();
+#endif
+
   FinstrumentProbeProvider* ins = (FinstrumentProbeProvider*) PROBE_PROVIDER;
   if (ins == NULL) { // ProbeProvider hasn't been set. Skip instrumentation.
     return;
@@ -227,6 +240,7 @@ void __cyg_profile_func_enter(void* func_addr, void* call_site_addr) {
 
   ins->registerProbe(pmd);
 
+  // printf("Disabling probe : %lu function : %s\n", pmd->probe_id, pmd->func_name.c_str());
 
   if ((uint64_t)addr < function) { 
     //fprintf(stderr, "ENTER_ERR: What does this mean!? %llx < %llx\n",(uint64_t)addr,function); 
@@ -246,6 +260,19 @@ void __cyg_profile_func_enter(void* func_addr, void* call_site_addr) {
 
   // NOW PATCH ARGUMENTS (Set up for next run to enter the efficient branch) 
   patch_first_argument(func_addr, (void*) call_addr, (uint32_t) pmd->probe_id);
+
+#ifdef AUDIT_INIT_COST
+
+  if (!allocated) {
+    init_costs[g_thread_counter++] = &init_cost;
+    init_cost = getticks() - start;
+    allocated = true;
+  } else {
+    init_cost += getticks() - start;
+  }
+
+  return;
+#endif
 
   // Finish off by calling instrumentation function 
   if (pmd->state != ProbeState::DEACTIVATED) {
@@ -286,6 +313,10 @@ void __cyg_profile_func_exit(void* func, void* caller) {
    * cyg_exit. 
    */ 
 void __cyg_profile_func_exit(void* func_addr, void* call_site_addr) {
+
+#ifdef AUDIT_INIT_COST
+  ticks start = getticks();
+#endif
 
   FinstrumentProbeProvider* ins = (FinstrumentProbeProvider*) PROBE_PROVIDER;
   if (ins == NULL) { // ProbeProvider hasn't been set. Skip instrumentation.
@@ -337,7 +368,7 @@ void __cyg_profile_func_exit(void* func_addr, void* call_site_addr) {
   pmd->provider = ins;
 
   ins->registerProbe(pmd); 
-  
+
   if ((uint64_t)addr < function) { 
     //fprintf(stderr, "ENTER_ERR: What does this mean!? %llx < %llx\n",(uint64_t)addr,function); 
 #ifdef _GNU_SOURCE
@@ -363,9 +394,16 @@ void __cyg_profile_func_exit(void* func_addr, void* call_site_addr) {
     return;
   }
   */
- 
+
   // NOW PATCH ARGUMENTS (Set up for next run to enter the efficient branch)
   patch_first_argument(func_addr, (void*) call_addr, (uint32_t) pmd->probe_id);
+ 
+#ifdef AUDIT_INIT_COST
+
+  init_cost += getticks() - start;
+
+  return;
+#endif
 
   // Finish off by calling instrumentation function 
 

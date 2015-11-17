@@ -34,7 +34,6 @@ main = do
 
 
 benches :: [Benchmark DefaultParamMeaning]
-benches = [mkBenchmark ("Makefile") [show threads,show straddle_pos]  (Set (Variant "microbench") (RuntimeEnv "PATCH_WAIT_TIME" "1800")) 
-          | threads <- [1..16]
+benches = [mkBenchmark ("Makefile") [show threads,show straddle_pos]  (Set (Variant "microbench") (RuntimeEnv "PATCH_WAIT_TIME" "1800"))
+          | threads <- [0,1,2,4,8,12,15]
           , straddle_pos <- [0..4]] -- zero means not-a-straddler
-

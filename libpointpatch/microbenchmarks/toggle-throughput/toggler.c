@@ -20,14 +20,14 @@
 
 */
 
-/* Compile params 
-   
+/* Compile params
+
    -DUSE_ASYNC_PATCH
 
    -DUSE_FASTINST
-   
 
-*/ 
+
+*/
 
 
 #include <time.h>
@@ -49,8 +49,6 @@
 #endif
 #include <pthread.h>
 
-
-#define ITERS 500000
 #define NS_PER_S 1000000000
 #define PAD 8
 
@@ -200,11 +198,11 @@ int main(int argc, char** argv) {
   printf("Setting straddler point at %d (distance in byte into the patch site)\n",call_straddler_point);
   printf("Running with %d threads executing the call site\n", num_runners);
 
-#if defined(USE_ASYNC_PATCH) 
-  printf("USING: async_patch_64\n"); 
-#else 
-  printf("USING: patch_64\n"); 
-#endif 
+#if defined(USE_ASYNC_PATCH)
+  printf("USING: async_patch_64\n");
+#else
+  printf("USING: patch_64\n");
+#endif
 
 
 
@@ -285,8 +283,8 @@ int main(int argc, char** argv) {
   int clock_mode = CLOCK_MONOTONIC;
   // int clock_mode = CLOCK_THREAD_CPUTIME_ID;  // Basically similar effect with this.
   clock_gettime(clock_mode, &t1);
-  clock_gettime(clock_mode, &t2);
-  printf("Min clock monotonic gap, in nanoseconds: %lf\n", diff_time_ns(&t2,&t1));
+  // clock_gettime(clock_mode, &t2);
+  // printf("Min clock monotonic gap, in nanoseconds: %lf\n", diff_time_ns(&t2,&t1));
   t2 = t1; /* for first check */
   g_collect_data = true;
 
@@ -339,7 +337,7 @@ int main(int argc, char** argv) {
 
 #if defined (USE_ASYNC_PATCH)
         async_patch_64((void*)g_call_addr, g_orig_call);
-#else 
+#else
 	patch_64((void*)g_call_addr, g_orig_call);
 #endif
         p = false;
@@ -348,7 +346,7 @@ int main(int argc, char** argv) {
         async_patch_64((void*)g_call_addr, g_call_bar_patch);
 #else
         patch_64((void*)g_call_addr, g_call_bar_patch);
-#endif 
+#endif
         p = true;
       }
       n_toggles++;
@@ -378,7 +376,7 @@ int main(int argc, char** argv) {
   unsigned long observed_switches_total = 0;
   unsigned long total_foo_calls = 0;
   unsigned long total_bar_calls = 0;
-  
+
   double t_diff = diff_time_s(&t2,&t1);
 
   for (int i = 0; i < num_runners; i ++) {
@@ -397,7 +395,7 @@ int main(int argc, char** argv) {
     total_bar_calls += g_bar_val[i*PAD];
 
   }
-  
+
   printf("ALL COUNTS ARE REPORTED AS NUM/SEC\n");
   printf("STRADDLE_POINT: %d\n", call_straddler_point);
   printf("MINIMUM_SWITCHES: %f\n", min_switches / t_diff);
@@ -424,5 +422,5 @@ int main(int argc, char** argv) {
   printf("Total calls  completed: %'f\n", (total_foo_calls + total_bar_calls) / t_diff);
 
 
-  
+
 }

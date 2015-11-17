@@ -46,12 +46,15 @@ main = do
         , plugIns   = [ SomePlugin defaultDribblePlugin ] 
                         --SomePlugin defaultFusionPlugin,]
         , harvesters = customTagHarvesterInt    "NUMBER_OF_FUNCTION_CALLS" `mappend` 
+                       customTagHarvesterInt    "NUMBER_OF_FUNCTIONS"      `mappend`
+                       customTagHarvesterInt    "THREAD_COUNT"             `mappend`
                        customTagHarvesterInt    "ACTIVATION_COUNT"         `mappend`
                        customTagHarvesterInt    "DEACTIVATION_COUNT"       `mappend`
                        customTagHarvesterInt    "TOTAL_TOGGLE_COUNT"       `mappend`
                        customTagHarvesterDouble "ACTIVATION_COST"          `mappend`
                        customTagHarvesterDouble "DEACTIVATION_COST"        `mappend`
                        customTagHarvesterDouble "TOTAL_TOGGLE_COST"        `mappend`
+                       customTagHarvesterDouble "INIT_COST"                `mappend`
                        customTagHarvesterString "ARG_PATCH_METHOD"         `mappend`
                        customTagHarvesterString "INVOKE_PATCH_METHOD"      `mappend`
                        customTagHarvesterString "PROBE_TOGGLE_MODE"        `mappend`
@@ -75,7 +78,7 @@ benches =
     , (var_name, variant) <- ubiprof_variants] 
 
   where
-    base  = ["unprofiled" ]
+    base  = ["unprofiled" , "empty", "pointpatched"]
     base_variants = [(nom, setVariant nom) | nom <- base]
     
     setVariant str = And [Set (Variant str) (CompileParam "")

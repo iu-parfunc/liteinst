@@ -349,8 +349,8 @@ void SamplingProfiler::dumpStatistics() {
 
   uint64_t total_count = 0;
   int func_count = Profiler::provider_->getNumberOfFunctions();
-  fprintf(stderr, "[finstrumentor] Total function count : %d\n", func_count);
-  fprintf(stderr, "[Sampling Profiler] Thread count : %d\n", thread_counter);
+  fprintf(stderr, "NUMBER_OF_FUNCTIONS: %d\n", func_count);
+  fprintf(stderr, "THREAD_COUNT: %d\n", thread_counter);
   fprintf(fp, "Function,Count,Min_time,Max_time,Avg_time,Deactivation_count,Leaf?\n");
   for(int i=0; i < func_count; i++) {
     statistics[i].count = 0;
