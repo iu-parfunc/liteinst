@@ -49,7 +49,13 @@
 
 #define NS_PER_S 1000000000
 #define PAD 8
+// Max toggle throughput of 20Mhz:
 #define BURST_SIZE 1
+// Toggle throughput of 95Mhz:
+// #define BURST_SIZE 997
+// Toggle throughput of 83MHz:
+// #define BURST_SIZE 13
+
 
 #define MAX(X,Y) ((X) > (Y) ? (X) : (Y))
 #define MIN(X,Y) ((X) < (Y) ? (X) : (Y))
@@ -315,9 +321,10 @@ int main(int argc, char** argv) {
     // We can skip all the above logic if we just cap to a reasonable max.
     // estimated_remaining_toggles would be necessary if we had a VERY
     // slow toggler (like dyninst).
-    if (deficit > 1000) deficit = 1000;
+    if (deficit > BURST_SIZE) deficit = BURST_SIZE;
 
-    if (deficit <= 0) {
+    // if (deficit <= 0)
+    {
       // printf("keeping up!\n");
       // pthread_yield();
       // Creating a big enough pause in the toggler is kind of cheating because
