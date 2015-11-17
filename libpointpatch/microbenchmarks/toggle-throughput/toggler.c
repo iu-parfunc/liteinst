@@ -430,8 +430,8 @@ int main(int argc, char** argv) {
   /* printf("Total calls  completed: %'ld\n", total_foo_calls + total_bar_calls); */
   printf("\nFinally, here is some human-readable output, not for HSBencher:\n");
   setlocale(LC_NUMERIC, "");
-  printf("Total callsite toggles: %'f\n",n_toggles / t_diff);
-  printf("Total calls  completed: %'f\n", (total_foo_calls + total_bar_calls) / t_diff);
+  printf("Total callsite toggles: %'lu\n", (unsigned long)(n_toggles / t_diff));
+  printf("Total calls  completed: %'lu\n", (unsigned long)((total_foo_calls + total_bar_calls) / t_diff) );
 
 
 
