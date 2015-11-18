@@ -13,6 +13,7 @@ endif
 RUNID=$(shell hostname -s)_$(shell date "+%s")
 
 TRIALS = 4
+RETRIES = 3
 
 TOP=$(shell pwd)
 
@@ -60,4 +61,4 @@ benchharness:
 
 
 run:
-	./microbench.exe --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --name=$(TABLE) --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
+	./microbench.exe --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --retry=$(RETRIES) --name=$(TABLE) --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
