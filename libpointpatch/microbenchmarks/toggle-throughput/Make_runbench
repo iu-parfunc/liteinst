@@ -3,16 +3,16 @@
 
 ifeq ($(STACK),)
      STACK=stack
-endif 
+endif
 
 
 ifeq ($(MACHINECLASS),)
      MACHINECLASS=$(HOSTNAME)
-endif 
+endif
 
 RUNID=$(shell hostname -s)_$(shell date "+%s")
 
-TRIALS = 3
+TRIALS = 9
 
 TOP=$(shell pwd)
 
@@ -41,23 +41,23 @@ else
 endif
 endif
 
-TABLE=toggle_throughput_fixed
+TABLE=toggle_throughput_fixed2
 
 
 all: benchharness library
 
-library: 
+library:
 	(cd ../../src && make CC=gcc CXX=g++ CFLAGS=-O3 install)
 
 microbench.exe: benchharness
 
-benchharness: 
-	which -a $(STACK) 
+benchharness:
+	which -a $(STACK)
 	$(STACK) --version
 	$(STACK) --install-ghc install
-	echo "Listing available benchmarks." 
-	./microbench.exe -l 
+	echo "Listing available benchmarks."
+	./microbench.exe -l
 
 
-run: 
+run:
 	./microbench.exe --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --name=$(TABLE) --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)

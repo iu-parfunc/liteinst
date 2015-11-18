@@ -58,8 +58,7 @@ benches =
                , Set NoMeaning (CompileParam "-O2 -DUSE_ASYNC_PATCH")
                ]
          ])
-  | threads <- [1..15]
+  | threads <- [0..15]
   , straddle_pos <- [0..4] -- zero means not-a-straddler
-  , duration <- [0.1,1.0,2.0,3.0,4.0,5.0]
-  , rate <- [1000,10000,100000,1000000,10000000,100000000]]
-  
+  , duration <- [3.0]
+  , rate <- [0,10,100,1000,10000,100000,1000000,10000000,100000000]]
