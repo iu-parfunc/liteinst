@@ -55,7 +55,7 @@ benches =
                , Set NoMeaning (CompileParam "-O2")
                ]
          , And [ Set (Variant "async_patch_64")
-                     (RuntimeEnv "PATCH_WAIT_TIME" "1800")
+                     (RuntimeEnv "PATCH_WAIT_TIME" "2000")
                , Set NoMeaning (CompileParam "-O2 -DUSE_ASYNC_PATCH")
                ]
          ])
