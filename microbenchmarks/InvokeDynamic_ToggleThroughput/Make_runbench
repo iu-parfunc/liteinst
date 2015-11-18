@@ -42,7 +42,7 @@ else
 endif
 endif
 
-TABLE=PATCH_TOGGLE_THROUGHPUT_JAVA6
+TABLE=PATCH_TOGGLE_THROUGHPUT_JAVA6-1
 
 all: benchharness library
 
