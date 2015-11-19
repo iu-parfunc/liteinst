@@ -51,6 +51,7 @@ benches =
   [mkBenchmark ("toggle-throughput")
    [show threads, show duration, show rate]
    (Set (Variant "java-volatile") (RuntimeEnv "IGNORE_THIS" "0"))
-   | threads <- [1..15]
-   , duration <- [1.0]
-   , rate <- [0,10,100,1000,10000,100000,500000,1000000,10000000,100000000]]
+   | threads <- [15] -- [1..15] -- TEMP:
+   , duration <- [3.0]
+   , rate <- [0,10,100,1000,10000,50000, 100000, 500000, 1000000,10000000,100000000]
+             ]

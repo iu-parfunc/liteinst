@@ -18,6 +18,10 @@ public class TimingHarness
    public static int toggler_thread_ind = -1;
    public static int main_thread_ind = -1;
 
+   public static int BURST_SIZE = 997;
+   // public static int BURST_SIZE = 1; // Huh, getting 100% imbalance... [2015.11.19]
+   // public static int BURST_SIZE = 17;
+
    public static void main(String[] args) throws Throwable
    {
       System.out.printf("Expects: num_runners duration target_rate\n");
@@ -76,7 +80,7 @@ public class TimingHarness
               current_toggles_per_s = numToggles * 1000000000 / elapsed_ns;
 
               long deficit = target_rate - current_toggles_per_s;
-              if (deficit > 1000) deficit = 1000;
+              if (deficit > BURST_SIZE) deficit = BURST_SIZE;
 
               boolean flip = true;
               for(; deficit > 0; deficit --) {
@@ -168,6 +172,8 @@ public class TimingHarness
       System.out.printf("TOTAL_BAR_CALLS: %f\n", g_total / elapsed_s);
       System.out.printf("TOTAL_CALLS: %f\n", (f_total + g_total) / elapsed_s);
       System.out.printf("SELFTIMED: %f\n", (f_total + g_total) / elapsed_s);
+
+      System.out.printf("BURST_SIZE: %d\n", BURST_SIZE);
 
       System.out.printf("\n Human readable output: \n");
       System.out.printf("  count of toggles: %s\n", NumberFormat.getNumberInstance().format(numToggles));

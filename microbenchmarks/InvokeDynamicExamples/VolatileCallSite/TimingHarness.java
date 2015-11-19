@@ -92,5 +92,6 @@ public class TimingHarness
           times[i % trials_kept] = t4-t3;
       }
       summarize("Time for one VolatileCallSite toggle");
+
    }
 }

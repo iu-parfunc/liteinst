@@ -13,7 +13,7 @@ endif
 RUNID=$(shell hostname -s)_$(shell date "+%s")
 
 # We have hacked SELFTIMED = TOTAL_CALLS, so taking the median of five trials makes sense:
-TRIALS = 30
+TRIALS = 9
 
 TOP=$(shell pwd)
 
