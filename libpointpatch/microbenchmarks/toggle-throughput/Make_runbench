@@ -12,7 +12,8 @@ endif
 
 RUNID=$(shell hostname -s)_$(shell date "+%s")
 
-TRIALS = 9
+TRIALS = 4
+RETRIES = 3
 
 TOP=$(shell pwd)
 
@@ -41,7 +42,7 @@ else
 endif
 endif
 
-TABLE=toggle_throughput_fixed2
+TABLE=toggle_throughput_fixed4
 
 
 all: benchharness library
@@ -60,4 +61,4 @@ benchharness:
 
 
 run:
-	./microbench.exe --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --name=$(TABLE) --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
+	./microbench.exe --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --retry=$(RETRIES) --name=$(TABLE) --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)

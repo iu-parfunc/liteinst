@@ -41,6 +41,7 @@ main = do
                        customTagHarvesterDouble "MAXIMUM_BAR_CALLS" `mappend`
                        customTagHarvesterDouble "TOTAL_FOO_CALLS" `mappend`
                        customTagHarvesterDouble "TOTAL_BAR_CALLS" `mappend`
+                       customTagHarvesterDouble "TOTAL_CALLS" `mappend`
                        harvesters conf
         }
 
@@ -50,13 +51,13 @@ benches =
   [mkBenchmark ("toggle-throughput")
    [show straddle_pos, show threads, show duration, show rate]
     (Or  [ And [ Set (Variant "patch_64")
-                     (RuntimeEnv "PATCH_WAIT_TIME" "1800")
+                     (RuntimeEnv "PATCH_WAIT_TIME" "2000")
                , Set NoMeaning (CompileParam "-O2")
                ]
-         , And [ Set (Variant "async_patch_64")
-                     (RuntimeEnv "PATCH_WAIT_TIME" "1800")
-               , Set NoMeaning (CompileParam "-O2 -DUSE_ASYNC_PATCH")
-               ]
+         -- , And [ Set (Variant "async_patch_64")
+         --             (RuntimeEnv "PATCH_WAIT_TIME" "2000")
+         --       , Set NoMeaning (CompileParam "-O2 -DUSE_ASYNC_PATCH")
+         --       ]
          ])
   | threads <- [0..15]
   , straddle_pos <- [0..4] -- zero means not-a-straddler
