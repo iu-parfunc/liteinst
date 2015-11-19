@@ -50,12 +50,8 @@ benches =
                      (RuntimeEnv "PATCH_WAIT_TIME" "1800")
                , Set NoMeaning (CompileParam "-O2")
                ]
-         , And [ Set (Variant "async_patch_64")
-                     (RuntimeEnv "PATCH_WAIT_TIME" "1800")
-               , Set NoMeaning (CompileParam "-O2 -DUSE_ASYNC_PATCH")
-               ]
          ])
   | threads <- [0..15]
   , straddle_pos <- [0..4] -- zero means not-a-straddler
   , duration <- [3.0]
-  , rate <- [0,10,100,1000,10000,100000,1000000,10000000,100000000]]
+  , rate <- [0,10,100,1000,10000,50000,100000,500000, 1000000,10000000,100000000]]
