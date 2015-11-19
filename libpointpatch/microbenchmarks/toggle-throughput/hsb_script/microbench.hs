@@ -51,7 +51,7 @@ benches =
   [mkBenchmark ("toggle-throughput")
    [show straddle_pos, show threads, show duration, show rate]
     (Or  [ And [ Set (Variant "patch_64")
-                     (RuntimeEnv "PATCH_WAIT_TIME" "2000")
+                     (RuntimeEnv "PATCH_WAIT_TIME" "3000")
                , Set NoMeaning (CompileParam "-O2")
                ]
          -- , And [ Set (Variant "async_patch_64")
