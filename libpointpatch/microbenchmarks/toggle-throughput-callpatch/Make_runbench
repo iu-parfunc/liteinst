@@ -41,7 +41,7 @@ else
 endif
 endif
 
-TABLE=toggle_throughput_callpatch1
+TABLE=toggle_throughput_callpatch2
 
 
 all: benchharness library
