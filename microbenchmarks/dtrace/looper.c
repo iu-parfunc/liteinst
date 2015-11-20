@@ -1,8 +1,8 @@
 #include <strings.h>
 
 int func(char* input) {
-  // return (strlen(input)+1);
-  return 99;
+  return (strlen(input)+1);
+  // return 99;
 }
 
 int main() {

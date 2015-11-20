@@ -1,7 +1,23 @@
 
+// #include <time.h>
+
+// Mac OS:
+#include <mach/mach.h>
+#include <mach/mach_time.h>
+
 #include <dtrace.h>
 #include <signal.h>
 #include <stdio.h>
+
+#define NS_PER_S 1000000000
+
+/* static inline double diff_time_ns(struct timespec *t1, struct timespec *t2){ */
+/*   double diff_ns = (t1->tv_sec * NS_PER_S + t1->tv_nsec) - */
+/*     (t2->tv_sec * NS_PER_S + t2->tv_nsec); */
+
+/*   return diff_ns; */
+/* } */
+
 
 static dtrace_hdl_t* g_dtp;
 
@@ -14,8 +30,10 @@ static int chewrec (const dtrace_probedata_t *data, const dtrace_recdesc_t *rec,
    return (DTRACE_CONSUME_THIS);
 }
 
-static const char* g_prog = "BEGIN { printf(\"hello from dtrace\\n\"); }";
-//static const char* g_prog = "syscall::open*:entry { printf(\"%s %s\\n\", execname, copyinstr(arg0)); }";
+// static const char* g_prog = "BEGIN { printf(\"hello from dtrace\\n\"); }";
+static const char* g_prog = "syscall::open*:entry { printf(\"%s %s\\n\", execname, copyinstr(arg0)); }";
+
+// static const char* g_prog = "pid$target:a.out:func:entry { @[copyinstr(arg0)] = count(); }";
 
 static int g_intr;
 static int g_exited;
@@ -47,11 +65,21 @@ int main (int argc, char** argv) {
    }
 
    dtrace_proginfo_t info;
+
+    static mach_timebase_info_data_t sTimebaseInfo;
+    mach_timebase_info(&sTimebaseInfo); // Determines the time scale
+    uint64_t t1 = mach_absolute_time();
+   // int clock_mode = CLOCK_MONOTONIC;
+   // int clock_mode = CLOCK_REALTIME;
+   // struct timespec t1, t2;
+   // clock_gettime(clock_mode, &t1);
    if (dtrace_program_exec(g_dtp, prog, &info) == -1) {
       fprintf(stderr, "failed to enable dtrace probes\n");
       return -1;
    } else {
-      printf("dtrace probes enabled\n");
+     uint64_t t2 = mach_absolute_time();
+     uint64_t elapsedNano = (t2-t1) * sTimebaseInfo.numer / sTimebaseInfo.denom;
+     printf("dtrace probes enabled, took nanoseconds: %llu\n", elapsedNano);
    }
 
    struct sigaction act;

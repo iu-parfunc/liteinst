@@ -1,15 +1,17 @@
-all: build run2
+.PHONY: all build run1 run2 build2 clean
+
+all: build build2
 
 build:
-	$(CC) -o looper looper.c
+	$(CC) -o looper.exe looper.c
 
 run1:
-	sudo time dtrace -n 'pid$target:a.out:func:entry { @[copyinstr(arg0)] = count(); }' -c ./looper
+	sudo time dtrace -n 'pid$target:a.out:func:entry { @[copyinstr(arg0)] = count(); }' -c ./looper.exe
 
 #--------------------------------------------------------------------------------
 # This one worked on Ryan's macbook:
 run2:
-	sudo time dtrace -n 'pid$$target::func:entry { @ = count(); }' -c ./looper
+	sudo time dtrace -n 'pid$$target::func:entry { @ = count(); }' -c ./looper.exe
 
 # This produces this output:
 # dtrace: description 'pid$target::func:entry ' matched 1 probe
@@ -20,7 +22,7 @@ run2:
 # Or about 465 nanoseconds per loop iteration.
 #--------------------------------------------------------------------------------
 
-try2: raw_libtrace.exe
+build2: raw_libtrace.exe
 # For Mac OS:
 #  elf:  brew install libelf
 #
@@ -37,4 +39,4 @@ raw_libtrace.exe:
 # What is: -l ctf
 
 clean:
-		rm -f looper
+		rm -f *.exe
