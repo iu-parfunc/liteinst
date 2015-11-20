@@ -68,7 +68,6 @@ int main (int argc, char** argv) {
 
     static mach_timebase_info_data_t sTimebaseInfo;
     mach_timebase_info(&sTimebaseInfo); // Determines the time scale
-    uint64_t t1 = mach_absolute_time();
    // int clock_mode = CLOCK_MONOTONIC;
    // int clock_mode = CLOCK_REALTIME;
    // struct timespec t1, t2;
@@ -77,9 +76,6 @@ int main (int argc, char** argv) {
       fprintf(stderr, "failed to enable dtrace probes\n");
       return -1;
    } else {
-     uint64_t t2 = mach_absolute_time();
-     uint64_t elapsedNano = (t2-t1) * sTimebaseInfo.numer / sTimebaseInfo.denom;
-     printf("dtrace probes enabled, took nanoseconds: %llu\n", elapsedNano);
    }
 
    struct sigaction act;
@@ -89,11 +85,15 @@ int main (int argc, char** argv) {
    (void) sigaction(SIGINT, &act, NULL);
    (void) sigaction(SIGTERM, &act, NULL);
 
+   uint64_t t1 = mach_absolute_time();
    if (dtrace_go(g_dtp) != 0) {
       fprintf(stderr, "could not start instrumentation\n");
       return -1;
    } else {
-      printf("instrumentation started ..\n");
+     uint64_t t2 = mach_absolute_time();
+     uint64_t elapsedNano = (t2-t1) * sTimebaseInfo.numer / sTimebaseInfo.denom;
+     printf("dtrace probes enabled, took nanoseconds: %llu\n", elapsedNano);
+     printf("instrumentation started ..\n");
    }
 
    int done = 0;
