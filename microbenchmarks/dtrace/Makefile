@@ -25,7 +25,8 @@ try2: raw_libtrace.exe
 #  elf:  brew install libelf
 #
 raw_libtrace.exe:
-	cc \
+	cc raw_libtrace.c -o raw_libtrace.exe -l dtrace
+#	cc \
          -I /usr/src/cddl/compat/opensolaris/include \
          -I /usr/src/cddl/contrib/opensolaris/lib/libdtrace/common/ \
          -I /usr/src/sys/cddl/compat/opensolaris \
