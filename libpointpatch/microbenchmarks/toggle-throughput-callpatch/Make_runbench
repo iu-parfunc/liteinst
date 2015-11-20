@@ -12,7 +12,7 @@ endif
 
 RUNID=$(shell hostname -s)_$(shell date "+%s")
 
-TRIALS = 9
+TRIALS = 3
 
 TOP=$(shell pwd)
 
@@ -41,7 +41,7 @@ else
 endif
 endif
 
-TABLE=toggle_throughput_callpatch3
+TABLE=toggle_throughput_callpatch4
 
 
 all: benchharness library

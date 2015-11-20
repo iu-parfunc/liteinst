@@ -36,6 +36,7 @@ main = do
                        customTagHarvesterDouble "MINIMUM_RUNNER_CALLS" `mappend`
                        customTagHarvesterDouble "MAXIMUM_RUNNER_CALLS" `mappend`
                        customTagHarvesterDouble "TOTAL_FOO_CALLS" `mappend`
+                       customTagHarvesterDouble "NUMBER_OF_TOGGLES" `mappend`
                        customTagHarvesterDouble "TOTAL_NOOPS" `mappend`
                        customTagHarvesterDouble "TOTAL_CALLS" `mappend`
                        harvesters conf

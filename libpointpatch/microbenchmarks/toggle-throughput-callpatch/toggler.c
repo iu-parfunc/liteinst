@@ -394,6 +394,7 @@ int main(int argc, char** argv) {
   printf("TARGET_TIME: %f\n", duration);
   printf("ELAPSED_TIME: %f\n", t_diff);
 
+  printf("NUMBER_OF_TOGGLES: %f\n",n_toggles / t_diff);
   printf("TOTAL_FOO_CALLS: %f\n", total_foo_calls / t_diff);
   printf("TOTAL_NOOPS: %f\n", (total_calls - total_foo_calls) / t_diff);
   printf("TOTAL_CALLS: %f\n", total_calls / t_diff);
