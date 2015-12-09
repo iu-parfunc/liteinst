@@ -40,9 +40,9 @@ EXTRA_WARNS= -pedantic
 #-Wextra
 ## -Wformat-nonliteral -Wcast-align -Wpointer-arith -Wbad-function-cast -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Winline -Wundef -Wnested-externs -Wcast-qual -Wshadow -Wwrite-strings -Wno-unused-parameter -Wfloat-equal
 
-ARGS= -g -Wall $(EXTRA_WARNS) -I$(ROOT)/include -I$(ROOT)/deps/distorm/include -I$(ROOT)/common/include -I.
+ARGS= -g -Wall $(EXTRA_WARNS) -I$(ROOT)/include -I$(ROOT)/deps/distorm/include -I$(ROOT)/deps/asmjit/src/asmjit -I$(ROOT)/common/include -I.
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
-DEPS = $(INSTALL)/libpointpatch.a $(INSTALL)/libcallpatch.a  $(DEPS_ROOT)/asmjit/build/libasmjit.a
+DEPS = $(INSTALL)/libpointpatch.a $(INSTALL)/libcallpatch.a  $(DEPS_ROOT)/asmjit/build/libasmjit.a $(DEPS_ROOT)/asmjit/build/libasmjit.a
 LIBS =
 
 CC  ?= icc
@@ -60,7 +60,7 @@ override COMMON +=  $(wildcard $(ROOT)/common/src/utils/*.cpp)
 COMMON_OBJ0 = $(COMMON:.cpp=.o)
 COMMON_OBJ  = $(COMMON_OBJ0:.c=.o)
 
-CODE = finstrument_probe_provider.cpp probe_provider.cpp cyg_functions.cpp globals.cpp calibrate.cpp
+CODE = finstrument_probe_provider.cpp probe_provider.cpp cyg_functions.cpp globals.cpp calibrate.cpp asmjit.cpp
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 
@@ -71,7 +71,7 @@ all: build
 asmjit:
 	(cd $(DEPS_ROOT)/asmjit/;\
 		rm -rf build; mkdir build;\
-		cd build; cmake ..; make)
+		cd build; cmake ..; make VERBOSE=1)
 
 build: $(OBJ) $(COMMON_OBJ)
 
@@ -84,7 +84,7 @@ libfastinst.a: build asmjit
 	$(RM) -rf temp
 
 libfastinst.so: build
-	$(CC+) $(LIBS) -shared -Wl,-soname,libfastinst.so -o libfastinst.so $(OBJ) $(COMMON_OBJ) $(DEPS)
+	$(CC+) $(LIBS) -shared -Wl,-soname,libfastinst.so -Wl,-init,premain -o libfastinst.so $(OBJ) $(COMMON_OBJ) $(DEPS) -ldl
 
 install: libfastinst.a libfastinst.so
 	(cp libfastinst.so $(INSTALL))
