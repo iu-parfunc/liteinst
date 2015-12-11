@@ -1,6 +1,7 @@
 
-#include "finstrument_probe_provider.hpp"
-#include "calibrate.hpp"
+#include "zca_probe_provider.hpp"
+#include "zca-types.hpp"
+// #include "calibrate.hpp"
 #include "patcher.h"
 #include "wait_free.h"
 
@@ -21,7 +22,8 @@ static __thread ToggleStatistics* stats = NULL;
 #endif
 
 
-void FinstrumentProbeProvider::initializeProvider() {
+void ZCAProbeProvider::initializeProvider() {
+  probe_meta_data = StubUtils::setupStubs();
   toggle_stats = new ToggleStatistics*[64](); // Number of threads fixed to 64.
 
 #ifdef AUDIT_INIT_COST
@@ -32,7 +34,7 @@ void FinstrumentProbeProvider::initializeProvider() {
   // calibrateInstrumentationOverhead();
 }
 
-void FinstrumentProbeProvider::calibrateInstrumentationOverhead() {
+void ZCAProbeProvider::calibrateInstrumentationOverhead() {
   Callback temp = this->callback; // Backup the current callback function
   this->callback = calibrationCallback; // Sets a temporary callback to
   // initialize the special calibration function probes
@@ -43,22 +45,36 @@ void FinstrumentProbeProvider::calibrateInstrumentationOverhead() {
 
 }
 
-uint64_t FinstrumentProbeProvider::getNumberOfFunctions() {
+uint64_t ZCAProbeProvider::getNumberOfFunctions() {
   return func_addr_mappings.size();
 }
 
-void FinstrumentProbeProvider::initialize(ProbeId probe_id, ProbeArg arg) {
+void ZCAProbeProvider::initialize(ProbeId probe_id, ProbeArg arg) {
   ProbeMetaData* pmd = (*probe_meta_data)[probe_id];
   pmd->probe_arg = arg;
 
-  // Initialize with active and deactive sequences
-  uint64_t original = *(uint64_t*)pmd->probe_addr;
-  uint64_t mask = 0xFFFFFF0000000000; // Mask out the CALL instruction
-  uint64_t call_masked = (uint64_t) (original & mask); // CALL masked out
-  uint64_t nop_mask = 0x0000000000441F0F; // Mask with a 5 byte NOP
+  uint64_t* probe_address = (uint64_t*) pmd->probe_addr;
+  uint64_t* stub_address = (uint64_t*) pmd->stub_address;
 
-  pmd->active_seq = original;
-  pmd->inactive_seq = (call_masked | nop_mask);
+  uint64_t old_val = *probe_address;
+  pmd->inactive_seq = old_val;
+  uint64_t mask = 0x0FFFFFFFFFFFFFFF;
+
+  int shift_size = (sizeof(uint64_t) - PROBE_SIZE) * 8 - 4;
+  mask = (mask >> shift_size);
+
+  uint64_t msb = (old_val & ~mask);
+
+  uint64_t active_seq = 0;
+  uint8_t* active_seq_ptr = (uint8_t*) &active_seq;
+  active_seq_ptr[0] = 0xE9;
+
+  long relative = (long)(pmd->stub_address - pmd->probe_addr - 5); 
+  *(uint32_t*)(active_seq_ptr+1) = (uint32_t)relative;
+  active_seq_ptr[5] = 0x90;
+
+  active_seq = active_seq | msb;
+  pmd->active_seq = active_seq;
   pmd->state = ProbeState::INITIALIZING;
 
   // Probably check if we are 64 bit mode before this
@@ -69,7 +85,7 @@ void FinstrumentProbeProvider::initialize(ProbeId probe_id, ProbeArg arg) {
 
 }
 
-bool FinstrumentProbeProvider::activate(const ProbeId probe_id,
+bool ZCAProbeProvider::activate(const ProbeId probe_id,
     InstrumentationFunc func) {
 
 #ifdef AUDIT_PROBES
@@ -95,13 +111,32 @@ bool FinstrumentProbeProvider::activate(const ProbeId probe_id,
     throw -1;
   }
 
-
-  pmd->instrumentation_func.store(func,
+  if (func.load() != pmd->instrumetnation_func.load()) {
+    pmd->instrumentation_func.store(func,
       std::memory_order_seq_cst);
+    Address stub_call_addr = pmd->stub_address + pmd->probe_offset; 
 
+    int CALL_INSTRUCTION_SIZE = 5; // Get this using distorm
+    uint64_t old_val = (uint64_t) *stub_call_addr;
+    long relative = (Address)func.load() - (uint64_t) stub_call_addr - 5;
+
+    uint64_t mask = 0x0FFFFFFFFFFFFFFF;
+    int shift_size = (sizeof(uint64_t) - CALL_INSTRUCTION_SIZE) * 8 - 4;
+    mask = (mask >> shift_size);
+    uint64_t msb = (old_val & ~mask);
+
+    uint64_t new_val;
+    uint8_t* new_val_ptr = (uint8_t*) & new_val;
+    new_val_ptr[0] = 0xE9;
+
+    *(uint32_t*)(new_val_ptr+1) = (int32_t)relative;
+    new_val = new_val | msb;
+  } 
+
+  /*
   if (pmd->state == ProbeState::ACTIVE) {
     return true;
-  }
+  } */
 
   // Patch the probe site
   bool b;
@@ -124,7 +159,7 @@ bool FinstrumentProbeProvider::activate(const ProbeId probe_id,
   return b;
 }
 
-bool FinstrumentProbeProvider::activate_async(ProbeId probe_id, InstrumentationFunc func) {
+bool ZCAProbeProvider::activate_async(ProbeId probe_id, InstrumentationFunc func) {
 
 #ifdef AUDIT_PROBES
   if (stats == NULL) { 
@@ -169,12 +204,12 @@ bool FinstrumentProbeProvider::activate_async(ProbeId probe_id, InstrumentationF
   return b;
 }
 
-void FinstrumentProbeProvider::activate_async_finish(ProbeId probe_id) {
+void ZCAProbeProvider::activate_async_finish(ProbeId probe_id) {
   ProbeMetaData* pmd =  (*probe_meta_data)[probe_id];
   // finish_patch_64((void*) pmd->probe_addr);
 }
 
-bool FinstrumentProbeProvider::deactivate(const ProbeId probe_id) {
+bool ZCAProbeProvider::deactivate(const ProbeId probe_id) {
 
 #ifdef AUDIT_PROBES
   if (stats == NULL) { 
@@ -222,7 +257,7 @@ bool FinstrumentProbeProvider::deactivate(const ProbeId probe_id) {
   return b;
 }
 
-bool FinstrumentProbeProvider::deactivate_async(const ProbeId probe_id) {
+bool ZCAProbeProvider::deactivate_async(const ProbeId probe_id) {
 
 #ifdef AUDIT_PROBES
   if (stats == NULL) { 
@@ -263,15 +298,14 @@ bool FinstrumentProbeProvider::deactivate_async(const ProbeId probe_id) {
   return b;
 }
 
-void FinstrumentProbeProvider::deactivate_async_finish(ProbeId probe_id) {
+void ZCAProbeProvider::deactivate_async_finish(ProbeId probe_id) {
   ProbeMetaData* pmd =  (*probe_meta_data)[probe_id];
   // finish_patch_64((void*) pmd->probe_addr);
 }
 
-void FinstrumentProbeProvider::readFunctionInfo() {
+void ZCAProbeProvider::setupStubs() {
 
-  fprintf(stderr, "[Finstrument Probe Provider] Initializing mappings data"
-      " structure..\n");
+  fprintf(stderr, "[ZCA Probe Provider] Setting up stubs..\n");
 
   string line;
   ifstream fp ("functions.txt");
@@ -316,7 +350,7 @@ void FinstrumentProbeProvider::readFunctionInfo() {
   }*/
 }
 
-string FinstrumentProbeProvider::getFunctionName(Address func_addr) {
+string ZCAProbeProvider::getFunctionName(Address func_addr) {
   auto val = func_addr_mappings.find(func_addr);
   if (val == func_addr_mappings.end()) {
     throw -1;
@@ -347,35 +381,14 @@ ProbeMetaData* FinstrumentProbeProvider::getNewProbeMetaDataContainer(
     return pmd;
   }
 
-  /*
-  if (probe_lookup.find(probe_addr) != probe_lookup.end()) {
-    probe_lock.unlock();
-    return NULL;
-  } else {
-    if (probe_lookup.find(probe_addr) != probe_lookup.end()) {
-      probe_lock.unlock();
-      return NULL;
-    } else {
-      ProbeMetaData* pmd = new ProbeMetaData;
-      probe_meta_data->push_back(pmd);
-      pmd->probe_id = probe_meta_data->size()-1;
-      probe_lookup.insert(make_pair(probe_addr, 1)); // Value we put is
-                                                   // inconsequentail
-      probe_lock.unlock();
-      return pmd;
-    }
-  }
-  */
-
   return NULL;
 
 }
 
-/*
-void FinstrumentProbeProvider::registerProbe(ProbeMetaData* pmd) {
+void ZCAProbeProvider::registerProbe(ProbeMetaData* pmd) {
   (*callback)(pmd);
-} */
+}
 
-ProbeMetaData* FinstrumentProbeProvider::getProbeMetaData(ProbeId probe_id) {
+ProbeMetaData* ZCAProbeProvider::getProbeMetaData(ProbeId probe_id) {
   return (*probe_meta_data)[probe_id];
 }

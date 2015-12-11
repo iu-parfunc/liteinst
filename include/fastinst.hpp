@@ -20,7 +20,7 @@ enum class ProbeType { ZCA, FINSTRUMENT, DTRACE, DYNINST };
 
 /// What is context of a particular probe location?  This is used by
 /// profilers to assign some semantic meaning to probe.
-enum class ProbeContext { ENTRY, EXIT, LINE_NUM };
+enum class ProbeContext { ENTRY, EXIT, LINE_NUM, OTHER };
 
 /// Currently ProbLoc is set to a line number (if context=LINE_NUM)
 /// and to null otherwise.
@@ -129,6 +129,15 @@ class ProbeProvider {
      *
      */
     virtual void initializeProvider() {
+    };
+
+    /// This method registers a newly discovered probe with the proider.
+    /* This is typically done by calling the registered probe callback.
+     * The probe initialzation call will be done inside the callback.
+     * \param pmd The probe metadata entry
+     */
+    virtual void registerProbe(ProbeMetaData* pmd) {
+      (*callback)(pmd);
     };
 
     /// Move from UNINITIALIZED to INITIALIZING state.

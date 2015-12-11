@@ -1,0 +1,4 @@
+
+namespace ElfUtils {
+  ProbeVec readZCAELFMetaData();
+}

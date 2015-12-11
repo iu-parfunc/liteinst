@@ -1,6 +1,6 @@
 
-#ifndef _FINSTRUMENT_PROBE_PROVIDER_HPP_
-#define _FINSTRUMENT_PROBE_PROVIDER_HPP_
+#ifndef _ZCA_PROBE_PROVIDER_HPP_
+#define _ZCA_PROBE_PROVIDER_HPP_
 
 #include <unordered_map>
 
@@ -18,6 +18,15 @@ extern ticks** init_costs;
 extern volatile int g_thread_counter;
 #endif
 
+typedef struct ZCAProbeMetaData : ProbeMetaData {
+
+  Address stub_address; // Address of the stub related to this probe
+  uint8_t probe_offset;  // Offset within the stub at which the original 
+                         // probe sequence could be found
+  const char* expr;      // Decoded annotation string
+
+} ZCAProbeMetaData;
+
 typedef struct ToggleStatistics {
   uint64_t deactivation_count;
   uint64_t activation_count;
@@ -25,25 +34,12 @@ typedef struct ToggleStatistics {
   ticks activation_costs;
 } ToggleStatistics;
 
-class FinstrumentProbeProvider : public ProbeProvider {
+class ZCAProbeProvider : public ProbeProvider {
 
   private:
-    FuncAddrMapping func_addr_mappings; //!< Function adress to name mapping.
-    lock::CASLock probe_lock; //!< Global lock protecting to updates to probe
-                               //!<  meta data vector.
-    ProbeLookupMap probe_lookup; //!< Looks up currently if a probe with given 
-                                 //!< address has already been discovered. Value
-                                 //!< is not really important. 
-
     // Auditing
     ToggleStatistics** toggle_stats;    
     int thread_counter;
-
-    /// Reads the function related meta data from debug tables.
-    /*  The information gathered are function addresses and their names.
-     *  Call at initialization time.
-     */
-    void readFunctionInfo();
 
     /// Estimates the overhead induced by the mechanism used by this probe 
     /// provider (via cyg_* calls) to get to  and return
@@ -58,7 +54,7 @@ class FinstrumentProbeProvider : public ProbeProvider {
      *  meta data.
      *  \param callback Probe discovery callback
      */
-    FinstrumentProbeProvider(Callback cb) : ProbeProvider(cb) {
+    ZCAProbeProvider(Callback cb) : ProbeProvider(cb) {
       // Printing arg patching method
 #if defined(ARG_PATCH_SYNC)
       fprintf(stderr, "ARG_PATCH_METHOD: ARG_PATCH_SYNC\n");
@@ -77,7 +73,6 @@ class FinstrumentProbeProvider : public ProbeProvider {
       fprintf(stderr, "INVOKE_PATCH_METHOD: INVOKE_PATCH_CALL\n"); 
 #endif
 
-      readFunctionInfo();
       // calibrateInstrumentationOverhead();
     }
 
@@ -117,7 +112,7 @@ class FinstrumentProbeProvider : public ProbeProvider {
     /*  This would call the registered callback.
      *  \param pmd ProbeMetaData entry for the probe.
      */
-    // void registerProbe(ProbeMetaData* pmd);
+    void registerProbe(ProbeMetaData* pmd);
 
     /// Gets ProbeMetaData entry for the given probe
     /*  \param probe_id The probe id of the probe
@@ -130,7 +125,7 @@ class FinstrumentProbeProvider : public ProbeProvider {
      */
     std::string getFunctionName(Address func_addr);
 
-    ~FinstrumentProbeProvider() {
+    ~ZCAProbeProvider() {
 
 #ifdef AUDIT_INIT_COST 
       ticks cost = 0;
@@ -180,4 +175,4 @@ class FinstrumentProbeProvider : public ProbeProvider {
 
 };
 
-#endif /* _FINSTRUMENT_PROBE_PROVIDER_HPP_ */
+#endif /* _ZCA_PROBE_PROVIDER_HPP_ */

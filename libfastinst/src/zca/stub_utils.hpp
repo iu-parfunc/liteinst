@@ -1,0 +1,6 @@
+
+namespace StubUtils {
+
+  ProbeVec setupStubs();
+
+}
