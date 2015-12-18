@@ -47,6 +47,9 @@
 #ifndef _ZCA_TYPES_H_
 #define _ZCA_TYPES_H_
 #ifdef __cplusplus
+
+#include <map>
+#include <list>
 extern "C"
 {
 #endif
@@ -185,7 +188,7 @@ typedef struct ann_data
 } ann_data;
 
 typedef struct mem_island {
-	unsigned long* start_addr;    // Memory island start address
+	uint8_t* start_addr;    // Memory island start address
 	int32_t mem_chunk;            // 2^32 memory chunk this island belongs to
   //	bool allocated; 			      // Has this island been actually allocated
 	uint8_t* insertion_ptr;       // Next stub insertion pointer
@@ -201,7 +204,7 @@ typedef struct exprReg {
   int reg;
   int32_t offset;
 } exprReg;
-  
+
 // --------------------------------------------------------------------------------
 // Convenience functions for dealing with rows
 

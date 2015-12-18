@@ -1,7 +1,6 @@
 
 #include "zca_probe_provider.hpp"
 #include "elf_utils.hpp"
-#include "zca_types.hpp"
 
 #include <stdio.h>
 #include <stdlib.h> // EXIT_FAILURE
@@ -9,23 +8,27 @@
 #include <string.h>
 #include <err.h>     // err
 #include <unistd.h>  // getcwd
+#include <limits.h>
 #include <libelf.h>
 
 #include <sys/param.h> // MAXPATHLEN
 #include <string>
+#include <list>
 
-namespace ElfUtils {
+namespace elfutils {
 
   using namespace std;
 
   mem_alloc_table mem_allocations;
 
-  ProbeVec* readZCAELFMetaData() {
+  void readZCAELFMetaData(ProbeVec* pmdVec) {
     // Get current directory
-    char patch[MAXPATHLEN];
-    getcwd(buf, MAXPATHLEN);
-    strcat(buf, "/");
-    strcat(buf, __progname);
+    char binary_path[MAXPATHLEN];
+    ssize_t len = readlink("/proc/self/exe", binary_path, sizeof(binary_path));
+    if (len == -1 || len == sizeof(binary_path)) {
+      len = 0;
+    }
+    binary_path[len] = '\0';
 
   	int fd;       // File descriptor for the executable ELF file
   	char *section_name;
@@ -43,8 +46,8 @@ namespace ElfUtils {
   	if(elf_version(EV_CURRENT)==EV_NONE)
   		errx(EXIT_FAILURE, "ELF library iinitialization failed: %s", elf_errmsg(-1));
 
-  	if((fd = open(path, O_RDONLY, 0))<0)
-  		err(EXIT_FAILURE, "open file \"%s\" failed", path);
+  	if((fd = open(binary_path, O_RDONLY, 0))<0)
+  		err(EXIT_FAILURE, "open file \"%s\" failed", binary_path);
 
   	if((e = elf_begin(fd, ELF_C_READ, NULL))==NULL)
   		errx(EXIT_FAILURE, "elf_begin() failed: %s.", elf_errmsg(-1));
@@ -56,6 +59,8 @@ namespace ElfUtils {
 
     uint64_t probe_start;
     uint64_t probe_end;
+
+
 
 	  // Loop over all sections in the ELF object
 	  while((scn = elf_nextscn(e, scn))!=NULL) {
@@ -114,11 +119,8 @@ namespace ElfUtils {
                 "%lu\n", row, ((long)row - (long)header));
 				    fprintf(stderr, " [ZCA Probe Provider] Annotation entry count : %d\n", 
                 header->entry_count);
-				    fprintf(stderr, " [ZCA Probe Provider] Annotation table resides at :" 
-                " %p\n", annotations);
 
-				    ProbeVec pmdVec; 
-            pmdVec.reserve(header->entry_count);
+            pmdVec->reserve(header->entry_count);
 
 				    for (int i = 0; i < header->entry_count; i++) {
 					    probe_count++;
@@ -136,23 +138,24 @@ namespace ElfUtils {
 
               ZCAProbeMetaData* pmd = new ZCAProbeMetaData;
 					    const char* str = getAnnotation(header, row);
-              char* tok, char *suffix;
+              char* tok, *suffix;
               char* temp = strdup(str);
-              pmdVec[i]->probe_id = i; 
-              pmdVec[i]->func_name = strtok_r(temp, ":", &tok);
-						  pmdVec[i]->instrumentation_func = NULL; // TODO: This is set from profiler activate_function 
-					    pmdVec[i]->expr = strdup(str);
-              pmdVec[i]->probe_addr = row->anchor;
+              pmd->probe_id = i; 
+              pmd->func_name = strtok_r(temp, ":", &tok);
+						  pmd->instrumentation_func = NULL; // TODO: This is set from profiler activate_function 
+					    pmd->expr = strdup(str);
+              pmd->probe_addr = (Address)row->anchor;
               suffix= strtok_r(NULL, ":", &tok);
 
               if (strcmp(suffix, "entry") == 0) {
-                pmd[i]->probe_context = ProbeContext::ENTRY;
+                pmd->probe_context = ProbeContext::ENTRY;
               } else if (strcmp(suffix, "exit") == 0) {
-                pmd[i]->probe_context = ProbeContext::EXIT;
+                pmd->probe_context = ProbeContext::EXIT;
               } else {
-                pmd[i]->probe_context = ProbeContext:OTHER;
+                pmd->probe_context = ProbeContext::OTHER;
               }
 
+              pmdVec->push_back(pmd);
               /*
 					    if (annotations.find(string(str)) == annotations.end()) {
 					    	list<ann_data*>* ann_list = new list<ann_data*>;
@@ -176,7 +179,7 @@ namespace ElfUtils {
 				  	  if (mem_allocations.find(mem_chunk) == mem_allocations.end()) {
 				  	  	list<mem_island*>* mem_list = new list<mem_island*>;
 				  	   	mem = new mem_island;
-				  	  	mem->start_addr = (unsigned long*)((chunk_start + CHUNK_SIZE) / 2); // We initially set this to the middle of the 2^32 chunk
+				  	  	mem->start_addr = (Address)((chunk_start + CHUNK_SIZE) / 2); // We initially set this to the middle of the 2^32 chunk
 				  	  	mem->size = STUB_SIZE;
 				  	  	mem->mem_chunk = mem_chunk;
 
@@ -209,10 +212,9 @@ namespace ElfUtils {
 		  }
 	  }
 
+    // printf("[ELF utils] PMD size : %ld\n", pmdVec->size());
 	  // elf_end(e);
 	  close(fd);
-
-	  return probe_count;
   }
 
 }

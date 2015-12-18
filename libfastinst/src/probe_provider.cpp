@@ -1,10 +1,12 @@
 
 #include "fastinst.hpp"
 #include "finstrument_probe_provider.hpp"
+#include "zca_probe_provider.hpp"
 
 ProbeProvider* PROBE_PROVIDER = NULL;
 
-ProbeProvider* initializeGlobalProbeProvider(ProviderType type, Callback callback) {
+ProbeProvider* initializeGlobalProbeProvider(ProviderType type, Callback callback,
+    InstrumentationFunc prolog, InstrumentationFunc epilog) {
   if (PROBE_PROVIDER == NULL) {
 
     switch(type) {
@@ -12,11 +14,14 @@ ProbeProvider* initializeGlobalProbeProvider(ProviderType type, Callback callbac
         fprintf(stderr, "[Probe Provider] Initializing -finstrument-functions " 
             "based probe provider..\n");
         PROBE_PROVIDER = new FinstrumentProbeProvider(callback);
-        PROBE_PROVIDER->initializeProvider();
+        PROBE_PROVIDER->initializeProvider(prolog, epilog);
         return PROBE_PROVIDER;
       case ProviderType::ZCA:
-        fprintf(stderr, "ZCAProbeProvider not yet supported..\n");
-        throw -1;
+        fprintf(stderr, "[Probe Provider] Initializing intel ZCA " 
+            "based probe provider..\n");
+        PROBE_PROVIDER = new ZCAProbeProvider(callback);
+        PROBE_PROVIDER->initializeProvider(prolog, epilog);
+        return PROBE_PROVIDER;
       case ProviderType::DTRACE:
         fprintf(stderr, "DtraceProbeProvider not yet supported..\n");
         throw -1;

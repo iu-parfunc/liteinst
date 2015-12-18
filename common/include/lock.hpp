@@ -1,5 +1,5 @@
 
-#ifndef _LOCk_HPP_
+#ifndef _LOCK_HPP_
 #define _LOCK_HPP_
 
 #include <atomic>

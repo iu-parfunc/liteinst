@@ -9,10 +9,6 @@
 #include "calibrate.hpp"
 #include "utils.hpp"
 
-typedef std::unordered_map<Address, std::string> FuncAddrMapping;
-typedef std::unordered_map<Address, uint32_t> ProbeLookupMap; 
-// typedef std::unordered_map<uint64_t, lock::CASLock> FuncRWLocks;
-
 #ifdef AUDIT_INIT_COST 
 extern ticks** init_costs;
 extern volatile int g_thread_counter;
@@ -24,22 +20,20 @@ typedef struct ZCAProbeMetaData : ProbeMetaData {
   uint8_t probe_offset;  // Offset within the stub at which the original 
                          // probe sequence could be found
   const char* expr;      // Decoded annotation string
+  uint8_t tramp_call_size; // CALL instruction size of the trampoline call
+                           // within the stub
 
 } ZCAProbeMetaData;
-
-typedef struct ToggleStatistics {
-  uint64_t deactivation_count;
-  uint64_t activation_count;
-  ticks deactivation_costs;
-  ticks activation_costs;
-} ToggleStatistics;
 
 class ZCAProbeProvider : public ProbeProvider {
 
   private:
+    int thread_counter;
+    int func_count;
+#ifdef AUDIT_PROBES
     // Auditing
     ToggleStatistics** toggle_stats;    
-    int thread_counter;
+#endif
 
     /// Estimates the overhead induced by the mechanism used by this probe 
     /// provider (via cyg_* calls) to get to  and return
@@ -76,7 +70,8 @@ class ZCAProbeProvider : public ProbeProvider {
       // calibrateInstrumentationOverhead();
     }
 
-    void initializeProvider();
+    void initializeProvider(InstrumentationFunc prolog, 
+        InstrumentationFunc epilog);
 
     /// Get the number of functions 
     uint64_t getNumberOfFunctions();
@@ -118,12 +113,6 @@ class ZCAProbeProvider : public ProbeProvider {
     /*  \param probe_id The probe id of the probe
      */
     ProbeMetaData* getProbeMetaData(ProbeId probe_id); 
-
-    /// Gets function name given the function address
-    /*  /param func_addr Address of the function
-     *  /return mangled name of the function
-     */
-    std::string getFunctionName(Address func_addr);
 
     ~ZCAProbeProvider() {
 

@@ -21,8 +21,12 @@ static __thread ToggleStatistics* stats = NULL;
 #endif
 
 
-void FinstrumentProbeProvider::initializeProvider() {
+void FinstrumentProbeProvider::initializeProvider(InstrumentationFunc prolog,
+    InstrumentationFunc epilog) {
+
+#ifdef AUDIT_PROBES 
   toggle_stats = new ToggleStatistics*[64](); // Number of threads fixed to 64.
+#endif
 
 #ifdef AUDIT_INIT_COST
   init_costs = new ticks*[64]();

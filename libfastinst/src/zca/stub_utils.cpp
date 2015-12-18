@@ -10,8 +10,11 @@
 #include <errno.h>
 #include <unistd.h>
 #include <link.h>
+#include <asmjit.h>
 
-namespace StubUtils {
+namespace stubutils {
+
+  using namespace elfutils;
 
   // Count how many islands we have allocated:
   static uint64_t num_islands = 0; 
@@ -19,12 +22,15 @@ namespace StubUtils {
   // The most recently allocated island
   static mem_island* current_alloc_unit;
 
+  // Retry attempts for memory allocation
+  static uint64_t mmap_retry_attempts = 0;
+
   void print_fn(FuncId func_id) {
     printf("[DEFAULT] Func id is : %lu\n", func_id);
   }
 
-  int genStubCode(Address stub_adress, Address probe_address,
-      ZCAProbeMetaData* pmd) {
+  int genStubCode(Address stub_address, Address probe_address,
+      ZCAProbeMetaData* pmd, InstrumentationFunc func) {
     using namespace asmjit;
     using namespace asmjit::x86;
  
@@ -41,7 +47,7 @@ namespace StubUtils {
 #if LOGLEVEL >= DEBUG_LEVEL
     FileLogger logger(stderr);
     a.setLogger(&logger);
-    a2.setLogger(&logger);
+    // a2.setLogger(&logger);
 #endif
 
     // Push all volatile registers:
@@ -50,18 +56,28 @@ namespace StubUtils {
     a.push(r12); a.push(r13); a.push(r14); a.push(r15);
 
     a.xor_(rdi,rdi);
-    a.mov(rdx, imm((sysint_t)func_id));
+    a.mov(rdx, imm((size_t)func_id));
 
     pmd->probe_offset = a.getCodeSize();
 
+    func = (InstrumentationFunc) print_fn;
+
+    fprintf(stderr, "[Stub Utils] Probe Offset : %d\n", pmd->probe_offset);
+    fprintf(stderr, "[Stub Utils] Instrumentation function : %p\n", 
+        func);
+
     a.call(imm((size_t)print_fn));
+
+    pmd->tramp_call_size = a.getCodeSize() - pmd->probe_offset;
+    fprintf(stderr, "[Stub Utils] Trampoline call instruction size: %d\n",
+        pmd->tramp_call_size);
   
     a.pop(r15); a.pop(r14); a.pop(r13); a.pop(r12);
     a.pop(r11); a.pop(r10); a.pop(r9); a.pop(r8);
     a.pop(rdx); a.pop(rcx); a.pop(rax); a.pop(rdi); a.pop(rsi); 
     // This fixes the wierd seg fault which happens when -O3 is enabled
 
-    a.jmp(imm((size_t)(void*)(probe_address + PROBESIZE)));
+    a.jmp(imm((size_t)(void*)(probe_address + PROBE_SIZE)));
 
     int codesz = a.getCodeSize();
     // This works just as well, don't need the function_cast magic:
@@ -78,7 +94,7 @@ namespace StubUtils {
 
 
   void fillStub(Address probe_address, Address stub_address, 
-      ZCAProbeMetaData* pmd) {
+      ZCAProbeMetaData* pmd, InstrumentationFunc func) {
     // LOG_DEBUG("Probe address is : %p\n", (unsigned char*)probe_address);
     // LOG_DEBUG("Stub address is : %p\n", stub_address);
 
@@ -91,7 +107,7 @@ namespace StubUtils {
     if (code) {
       /* current code page is now writable and code from it is allowed for 
        * execution */
-      fprintf(stderr "[Zca Probe Provider] mprotect was not successfull! code "
+      fprintf(stderr, "[Zca Probe Provider] mprotect was not successfull! code "
           "%d\n", code);
       fprintf(stderr, "[Zca Probe Provider] errno value is : %d\n", errno);
       assert(0);
@@ -100,7 +116,7 @@ namespace StubUtils {
 
     // If this probesite crosses a page boundary change the permissions of 
     // adjacent page too.
-    if (page_size - ((uint64_t)probe_address)%page_size < PROBESIZE) {
+    if (page_size - ((uint64_t)probe_address)%page_size < PROBE_SIZE) {
       code = mprotect(
           (void*)(probe_address -((uint64_t)probe_address)%page_size+ page_size),
           page_size,
@@ -116,7 +132,7 @@ namespace StubUtils {
       } 
     }
 
-    int stub_size = genStubCode(stub_address, probe_address, fun, pmd);
+    int stub_size = genStubCode(stub_address, probe_address, pmd, func);
     // Plug in the relative jump
     // Size of the JMP we insert is 5. So +5 points to the following instruction.
     long relative = (long)(stub_address - (uint64_t)probe_address - 5);
@@ -150,7 +166,7 @@ namespace StubUtils {
       fprintf(stderr, "[Zca Probe Provider] MMAP failed!!\n");
       return -1; // We give up. Cannot allocate memory inside this memory region.
     } else {
-      fprintf(stderr, "[Zca Probe Provider] MMAP_RETRIES: %ld\n", mmap_retry_attempts);
+      // fprintf(stderr, "[Zca Probe Provider] MMAP_RETRIES: %ld\n", mmap_retry_attempts);
       return new_size;
     }
   }
@@ -188,21 +204,21 @@ namespace StubUtils {
         // we have run out of space in the already allocated ones
         uint64_t region_size = (1LL<<32);
         Address new_island_start_addr = 
-          (Address)(*((uint64_t*)current_alloc_unit->last_probe_address) + 
-              region_size) / 2; 
+          (Address)((((uint64_t)current_alloc_unit->last_probe_address) + 
+              region_size) / 2); 
         // Take the middle address
         
         uint64_t new_island_size = current_alloc_unit->unallocated_size;
 
-        fprintf(stderr, "[Zca Probe Provider] MMAP_RETRIES: %ld\n", 
-            mmap_retry_attempts);
-        *stub_address = (Adress)mmap(&new_island_start_addr, 
+        // fprintf(stderr, "[Zca Probe Provider] MMAP_RETRIES: %ld\n", 
+            // mmap_retry_attempts);
+        *stub_address = (Address)mmap(new_island_start_addr, 
             new_island_size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE |
             MAP_FIXED| MAP_ANONYMOUS, -1,0);
 
         // Retry with smaller allocation size in case of faliure
         if (*stub_address == MAP_FAILED) {
-          int alloc_size = retry_allocation(&new_island_start_addr, 
+          int alloc_size = retry_allocation(new_island_start_addr, 
               new_island_size, stub_address);
 
           if (alloc_size == -1) {
@@ -244,7 +260,7 @@ namespace StubUtils {
 
       if (first_mem != NULL) {
 
-        fprintf(stderr, "MMAP_RETRIES: %ld\n", mmap_retry_attempts);
+        // fprintf(stderr, "MMAP_RETRIES: %ld\n", mmap_retry_attempts);
         *stub_address = (Address)mmap(first_mem->start_addr, first_mem->size,
             PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_FIXED| 
             MAP_ANONYMOUS, -1,0);
@@ -291,17 +307,42 @@ namespace StubUtils {
     return 0;
   }
 
-  ProbeVec setupStubs() {
+  void setupStubs(ProbeVec* pmdVec, InstrumentationFunc prolog, 
+      InstrumentationFunc epilog) {
     ZCAProbeProvider* ins = (ZCAProbeProvider*) PROBE_PROVIDER;
-    ProbeVec pmdVec = readZCAELFMetaData(); // func_name, probe_id, probe_addr
+    readZCAELFMetaData(pmdVec); // func_name, probe_id, probe_addr
     Address stub_address;
 
-    for (auto it = pmdVec->begin(); it != pmdVec->begin(); ++it) {
+    for (auto it = pmdVec->begin(); it != pmdVec->end(); ++it) {
       ZCAProbeMetaData* pmd = (ZCAProbeMetaData*) *it;
       int status = allocate_memory_for_stub(pmd->probe_addr, &stub_address);
 
       if (status != -1) {
-        fillStub(pmd->probe_addr, stub_address, pmd);
+        printf(" [ZCA Probe Provider] Probe Context : %d\n", 
+            pmd->probe_context);
+        if (pmd->probe_context == ProbeContext::ENTRY) {
+          fillStub(pmd->probe_addr, stub_address, pmd, prolog);
+        } else if (pmd->probe_context == ProbeContext::EXIT) {
+          fillStub(pmd->probe_addr, stub_address, pmd, epilog);
+        } else {
+          fprintf(stderr, "Probe Context invalid..\n");
+          throw -1;
+        }
+
+        /*
+        switch(pmd->probe_context) {
+          case ProbeContext::ENTRY:
+            fillStub(pmd->probe_addr, stub_address, pmd, prolog);
+            break;
+          case ProbeContext::EXIT:
+            fillStub(pmd->probe_addr, stub_address, pmd, epilog);
+            break;
+          default:
+            fprintf(stderr, "[ZCA Probe Provider] Unknown ProbeContext found.."
+                " Escaping probe at : %p\n", pmd->probe_addr);
+            break;
+        }
+        */
 
         pmd->stub_address = stub_address;
         pmd->type = ProbeType::ZCA;
@@ -310,7 +351,7 @@ namespace StubUtils {
 
         ins->registerProbe(pmd);
       } else {
-        fprintf("[ZCA Probe Provider] Stub allocation failed for %p\n", 
+        fprintf(stderr, "[ZCA Probe Provider] Stub allocation failed for %p\n", 
             pmd->probe_addr);
       }
     }

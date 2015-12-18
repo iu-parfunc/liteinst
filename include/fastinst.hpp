@@ -101,6 +101,16 @@ typedef std::vector<ProbeMetaData*> ProbeVec;
 /// through the ProbeMetadata pointer itself.
 typedef void (*Callback) (const ProbeMetaData* pmd);
 
+#ifdef AUDIT_PROBES
+/// Audit interfaces. This data structure is used to keep statistics
+/// about probe toggling.
+typedef struct ToggleStatistics {
+  uint64_t deactivation_count;
+  uint64_t activation_count;
+  ticks deactivation_costs;
+  ticks activation_costs;
+} ToggleStatistics;
+#endif
 
 /// Implements an object that discovers probes and subsequently
 /// provides the ability to toggle those probes.  When active, a
@@ -123,13 +133,19 @@ class ProbeProvider {
 
     /// This method can be used to do probe provider specific further
     /// intializations.
-    /* Specially any initialization which might require the
+    /* \param prolog Prolog instrumentation function pointer
+     * \param epilog Epilog instrumentation function pointer
+     * Specially any initialization which might require the
      * ProbeProvider instance to have been fully constructed. The default
-     * implementation is empty.
+     * implementation is empty. On demand instrumentors can ignore the 
+     * prolog and epilog information until delayed activation of probes 
+     * happen at a later time during the program runtime. 
      *
      */
-    virtual void initializeProvider() {
+    virtual void initializeProvider(InstrumentationFunc prolog, 
+        InstrumentationFunc epilog) {
     };
+
 
     /// This method registers a newly discovered probe with the proider.
     /* This is typically done by calling the registered probe callback.
@@ -257,6 +273,11 @@ class ProbeProvider {
      */
     virtual uint64_t getNumberOfFunctions() = 0;
 
+    /// Gets the probe meta data information
+    ProbeVec* getProbeMetaData() {
+      return probe_meta_data;
+    }
+
     virtual ~ProbeProvider() {
 #ifdef AUDIT_PROBES
       uint64_t num_straddlers = 0;
@@ -338,9 +359,12 @@ class ProbeProvider {
  *
  *  \param type The type of the ProbeProvider needed.
  *  \param callback The probe discovery callback.
+ *  \param prolog Prolog instrumentation function pointer
+ *  \param epilog Epilog instrumentation function pointer
  *  \return A reference to initialized ProbeProvider instance.
  */
-extern ProbeProvider* initializeGlobalProbeProvider(ProviderType type, Callback callback);
+extern ProbeProvider* initializeGlobalProbeProvider(ProviderType type, Callback callback, 
+    InstrumentationFunc prolog, InstrumentationFunc epilog);
 
 /// Accessor function
 /*  Gets the reference to ProbeProvider instance.

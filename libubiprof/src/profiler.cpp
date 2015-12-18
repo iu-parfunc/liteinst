@@ -79,8 +79,10 @@ Profiler::Profiler(InstrumentationFunc prolog, InstrumentationFunc epilog) :
       provider_type = ProviderType::FINSTRUMENT;
     }
 
+    profiler_ = this;
     try {
-      provider_ = initializeGlobalProbeProvider(provider_type, callback);
+      provider_ = initializeGlobalProbeProvider(provider_type, callback,
+          prolog, epilog);
     } catch (int e) {
       provider_ = getGlobalProbeProvider();
       fprintf(stderr, "ProbeProvider already initialized. Getting the existing one..\n");
@@ -91,7 +93,6 @@ Profiler::Profiler(InstrumentationFunc prolog, InstrumentationFunc epilog) :
       exit(EXIT_FAILURE);
     }
 
-    profiler_ = this;
     func_id_counter_ = 0;
 }
 

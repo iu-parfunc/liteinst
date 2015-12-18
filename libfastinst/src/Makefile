@@ -40,7 +40,7 @@ EXTRA_WARNS= -pedantic
 #-Wextra
 ## -Wformat-nonliteral -Wcast-align -Wpointer-arith -Wbad-function-cast -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Winline -Wundef -Wnested-externs -Wcast-qual -Wshadow -Wwrite-strings -Wno-unused-parameter -Wfloat-equal
 
-ARGS= -g -Wall $(EXTRA_WARNS) -I$(ROOT)/include -I$(ROOT)/deps/distorm/include -I$(ROOT)/deps/asmjit/src/asmjit -I$(ROOT)/common/include -I.
+ARGS= -g -Wall $(EXTRA_WARNS) -I$(ROOT)/include -I$(ROOT)/deps/distorm/include -I$(ROOT)/deps/asmjit/src/asmjit -I$(ROOT)/common/include -Izca -I.
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 DEPS = $(INSTALL)/libpointpatch.a $(INSTALL)/libcallpatch.a  $(DEPS_ROOT)/asmjit/build/libasmjit.a $(DEPS_ROOT)/asmjit/build/libasmjit.a
 LIBS =
@@ -49,7 +49,7 @@ CC  ?= icc
 CXX ?= icpc
 
 CC+  = $(CC) $(ARGS)
-CXX+ = $(CC) -std=c++11 $(ARGS)
+CXX+ = $(CXX) -std=c++11 $(ARGS)
 
 AR = ar
 RM = rm
@@ -60,7 +60,8 @@ override COMMON +=  $(wildcard $(ROOT)/common/src/utils/*.cpp)
 COMMON_OBJ0 = $(COMMON:.cpp=.o)
 COMMON_OBJ  = $(COMMON_OBJ0:.c=.o)
 
-CODE = finstrument_probe_provider.cpp probe_provider.cpp cyg_functions.cpp globals.cpp calibrate.cpp asmjit.cpp
+CODE = finstrument_probe_provider.cpp probe_provider.cpp cyg_functions.cpp globals.cpp calibrate.cpp asmjit.cpp 
+CODE += $(wildcard zca/*.cpp)
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 

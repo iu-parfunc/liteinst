@@ -1,6 +1,7 @@
 
-namespace StubUtils {
+namespace stubutils {
 
-  ProbeVec setupStubs();
+  void setupStubs(ProbeVec* pmdVec, InstrumentationFunc prolog,
+      InstrumentationFunc epilog);
 
 }

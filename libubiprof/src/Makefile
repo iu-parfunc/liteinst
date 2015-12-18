@@ -30,7 +30,7 @@ CC  ?= icc
 CXX ?= icpc
 
 CC+  = $(CC) $(ARGS)
-CXX+ = $(CC) -std=c++11 $(ARGS)
+CXX+ = $(CXX) -std=c++11 $(ARGS)
 
 AR = ar
 RM = rm

@@ -18,13 +18,6 @@ extern ticks** init_costs;
 extern volatile int g_thread_counter;
 #endif
 
-typedef struct ToggleStatistics {
-  uint64_t deactivation_count;
-  uint64_t activation_count;
-  ticks deactivation_costs;
-  ticks activation_costs;
-} ToggleStatistics;
-
 class FinstrumentProbeProvider : public ProbeProvider {
 
   private:
@@ -35,8 +28,10 @@ class FinstrumentProbeProvider : public ProbeProvider {
                                  //!< address has already been discovered. Value
                                  //!< is not really important. 
 
+#ifdef AUDIT_PROBES 
     // Auditing
     ToggleStatistics** toggle_stats;    
+#endif
     int thread_counter;
 
     /// Reads the function related meta data from debug tables.
@@ -81,7 +76,8 @@ class FinstrumentProbeProvider : public ProbeProvider {
       // calibrateInstrumentationOverhead();
     }
 
-    void initializeProvider();
+    void initializeProvider(InstrumentationFunc prolog,
+        InstrumentationFunc epilog);
 
     /// Get the number of functions 
     uint64_t getNumberOfFunctions();

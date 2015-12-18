@@ -1,11 +1,13 @@
 
 #include "zca_probe_provider.hpp"
-#include "zca-types.hpp"
+#include "zca_types.hpp"
+#include "stub_utils.hpp"
 // #include "calibrate.hpp"
 #include "patcher.h"
 #include "wait_free.h"
 
 #include <cstdio>
+#include <map>
 #include <vector>
 #include <string>
 #include <iostream>
@@ -16,21 +18,29 @@ using namespace std;
 using namespace lock;
 using namespace utils;
 using namespace calibrate;
+using namespace stubutils;
 
 #ifdef AUDIT_PROBES 
 static __thread ToggleStatistics* stats = NULL;
 #endif
 
 
-void ZCAProbeProvider::initializeProvider() {
-  probe_meta_data = StubUtils::setupStubs();
+void ZCAProbeProvider::initializeProvider(InstrumentationFunc prolog, 
+    InstrumentationFunc epilog) {
+
+  // This initializes the probe_meta_data structure with information read from
+  // binary
+  setupStubs(probe_meta_data, prolog, epilog); 
+#ifdef AUDIT_PROBES
   toggle_stats = new ToggleStatistics*[64](); // Number of threads fixed to 64.
+#endif
 
 #ifdef AUDIT_INIT_COST
   init_costs = new ticks*[64]();
 #endif
 
   thread_counter = 0;
+  func_count = 0;
   // calibrateInstrumentationOverhead();
 }
 
@@ -46,11 +56,21 @@ void ZCAProbeProvider::calibrateInstrumentationOverhead() {
 }
 
 uint64_t ZCAProbeProvider::getNumberOfFunctions() {
-  return func_addr_mappings.size();
+  if (func_count == 0) {
+    map<string, int> func_map;
+    for (auto it = probe_meta_data->begin(); it != probe_meta_data->begin(); 
+        ++it) {
+      ZCAProbeMetaData* pmd = (ZCAProbeMetaData*) *it;
+      func_map.insert(pair<string, int>(pmd->func_name, 1));
+    }
+    func_count = func_map.size();
+  }
+
+  return func_count;
 }
 
 void ZCAProbeProvider::initialize(ProbeId probe_id, ProbeArg arg) {
-  ProbeMetaData* pmd = (*probe_meta_data)[probe_id];
+  ZCAProbeMetaData* pmd = (ZCAProbeMetaData*)(*probe_meta_data)[probe_id];
   pmd->probe_arg = arg;
 
   uint64_t* probe_address = (uint64_t*) pmd->probe_addr;
@@ -69,8 +89,8 @@ void ZCAProbeProvider::initialize(ProbeId probe_id, ProbeArg arg) {
   uint8_t* active_seq_ptr = (uint8_t*) &active_seq;
   active_seq_ptr[0] = 0xE9;
 
-  long relative = (long)(pmd->stub_address - pmd->probe_addr - 5); 
-  *(uint32_t*)(active_seq_ptr+1) = (uint32_t)relative;
+  int64_t relative = (int64_t)(pmd->stub_address - pmd->probe_addr - 5); 
+  *(int32_t*)(active_seq_ptr+1) = (int32_t)relative;
   active_seq_ptr[5] = 0x90;
 
   active_seq = active_seq | msb;
@@ -105,23 +125,23 @@ bool ZCAProbeProvider::activate(const ProbeId probe_id,
 #endif 
 
 
-  ProbeMetaData* pmd =  (*probe_meta_data)[probe_id];
+  ZCAProbeMetaData* pmd =  (ZCAProbeMetaData*)(*probe_meta_data)[probe_id];
 
   if (pmd->state == ProbeState::UNINITIALIZED) {
     throw -1;
   }
 
-  if (func.load() != pmd->instrumetnation_func.load()) {
+  if (func != pmd->instrumentation_func.load()) {
     pmd->instrumentation_func.store(func,
       std::memory_order_seq_cst);
     Address stub_call_addr = pmd->stub_address + pmd->probe_offset; 
 
-    int CALL_INSTRUCTION_SIZE = 5; // Get this using distorm
     uint64_t old_val = (uint64_t) *stub_call_addr;
-    long relative = (Address)func.load() - (uint64_t) stub_call_addr - 5;
+    int64_t relative = (int64_t) ((Address)func - (uint64_t) stub_call_addr 
+        - 5);
 
     uint64_t mask = 0x0FFFFFFFFFFFFFFF;
-    int shift_size = (sizeof(uint64_t) - CALL_INSTRUCTION_SIZE) * 8 - 4;
+    int shift_size = (sizeof(uint64_t) - pmd->tramp_call_size) * 8 - 4;
     mask = (mask >> shift_size);
     uint64_t msb = (old_val & ~mask);
 
@@ -131,6 +151,15 @@ bool ZCAProbeProvider::activate(const ProbeId probe_id,
 
     *(uint32_t*)(new_val_ptr+1) = (int32_t)relative;
     new_val = new_val | msb;
+
+    bool b;
+#if defined(INVOKE_PATCH_SYNC)
+    b = patch_64((void*) stub_call_addr, new_val);
+#elif defined(INVOKE_PATCH_CALL)
+    b = patch_call_64((void*) stub_call_addr, new_val); 
+#else
+    b = patch_call_64((void*) stub_call_addr, new_val); // The default is callpatch
+#endif
   } 
 
   /*
@@ -177,18 +206,40 @@ bool ZCAProbeProvider::activate_async(ProbeId probe_id, InstrumentationFunc func
   ticks start = getticks();
 #endif 
 
-  ProbeMetaData* pmd =  (*probe_meta_data)[probe_id];
+  ZCAProbeMetaData* pmd = (ZCAProbeMetaData*)(*probe_meta_data)[probe_id];
 
   if (pmd->state == ProbeState::UNINITIALIZED) {
     throw -1;
   }
 
-  if (pmd->state == ProbeState::ACTIVE) {
-    return false;
-  }
-
-  (*probe_meta_data)[probe_id]->instrumentation_func.store(func,
+  if (func != pmd->instrumentation_func.load()) {
+    pmd->instrumentation_func.store(func,
       std::memory_order_seq_cst);
+    Address stub_call_addr = pmd->stub_address + pmd->probe_offset; 
+
+    uint64_t old_val = (uint64_t) *stub_call_addr;
+    int64_t relative = (int64_t) ((Address)func - (uint64_t) stub_call_addr 
+        - 5);
+
+    uint64_t mask = 0x0FFFFFFFFFFFFFFF;
+    int shift_size = (sizeof(uint64_t) - pmd->tramp_call_size) * 8 - 4;
+    mask = (mask >> shift_size);
+    uint64_t msb = (old_val & ~mask);
+
+    uint64_t new_val;
+    uint8_t* new_val_ptr = (uint8_t*) & new_val;
+    new_val_ptr[0] = 0xE9;
+
+    *(uint32_t*)(new_val_ptr+1) = (int32_t)relative;
+    new_val = new_val | msb;
+
+    bool b;
+    b = async_patch_64((void*) stub_call_addr, new_val);
+
+    if (!b) {
+      throw -1;
+    }
+  } 
 
   // Patch the probe site
   bool b = async_patch_64((void*) pmd->probe_addr, pmd->active_seq);
@@ -301,88 +352,6 @@ bool ZCAProbeProvider::deactivate_async(const ProbeId probe_id) {
 void ZCAProbeProvider::deactivate_async_finish(ProbeId probe_id) {
   ProbeMetaData* pmd =  (*probe_meta_data)[probe_id];
   // finish_patch_64((void*) pmd->probe_addr);
-}
-
-void ZCAProbeProvider::setupStubs() {
-
-  fprintf(stderr, "[ZCA Probe Provider] Setting up stubs..\n");
-
-  string line;
-  ifstream fp ("functions.txt");
-  std::string::size_type sz = 16;
-
-  if (fp.fail()) {
-    fprintf(stderr, "[Finstrument Probe Provider] ERROR : Failed opening "
-        "functions.txt. Exiting program\n");
-    throw -1;
-  }
-
-  if (fp.is_open()) {
-    while (getline (fp,line)){
-      string token;
-      istringstream iss(line);
-
-      vector<string> tokens;
-      int num_tokens = tokenize(line, tokens, ",");
-      if (num_tokens < 2) {
-        continue;
-      }
-
-      Address func_addr = (Address) strtoul(tokens[0].c_str(), NULL, 16);
-      string func_name = tokens[1];
-
-      func_addr_mappings.insert(make_pair(func_addr, func_name));
-      // func_rw_locks.insert(make_pair(func_addr, new CASLock));
-    }
-
-    // For now explicitly add calibrationFunction contributed by our library to
-    // the mappings. In future we should read ELF entries for all the loaded
-    // libraries for the application and include that in the mapping.
-    func_addr_mappings.insert(make_pair((Address) calibrationFunction,
-          string("calibrationFunction")));
-    fp.close();
-  }
-
-  /*
-  if (func_count == 1) {
-    fprintf(stderr, "[Ubiprof] ERROR : functions.txt not present. Ubiprof will"
-                    " not profile this application...\n");
-  }*/
-}
-
-string ZCAProbeProvider::getFunctionName(Address func_addr) {
-  auto val = func_addr_mappings.find(func_addr);
-  if (val == func_addr_mappings.end()) {
-    throw -1;
-  } else {
-    return val->second;
-  }
-}
-
-ProbeMetaData* FinstrumentProbeProvider::getNewProbeMetaDataContainer(
-    Address probe_addr) {
-  // Get exclusive access to probe meta data vector before updating.
-  // This is required since we need to get a unique probe id which directly
-  // maps to the index of ProbeMetaData element for efficent future access.
-  // [WARNING] This is a potential scalability bottleneck since all threads
-  // will be locking on this lock to gain access to probe meta data during
-  // probe initialization phase.
-  probe_lock.lock();
-  if (probe_lookup.find(probe_addr) != probe_lookup.end()) {
-    probe_lock.unlock();
-    return NULL;
-  } else {
-    ProbeMetaData* pmd = new ProbeMetaData;
-    probe_meta_data->push_back(pmd);
-    pmd->probe_id = probe_meta_data->size()-1;
-    probe_lookup.insert(make_pair(probe_addr, 1)); // Value we put is
-                                                   // inconsequentail
-    probe_lock.unlock();
-    return pmd;
-  }
-
-  return NULL;
-
 }
 
 void ZCAProbeProvider::registerProbe(ProbeMetaData* pmd) {
