@@ -24,11 +24,11 @@ lib:
 	$(CC) --version || echo ok
 
 #       Ugh, something above wipes the build/ directory... FIXME
-	(cd libpointpatch/src && make CC=$(CC) CXX=$(CXX) CFLAGS="$(CFLAGS) -DNDEBUG -O3" && make install )
-	(cd libcallpatch/src && make CC=$(CC) CXX=$(CXX) CFLAGS="$(CFLAGS) -DNDEBUG -O3" && make install )
-	(cd libfastinst/src   && make CC=$(CC) CXX=$(CXX) CFLAGS='-DNDEBUG -O3' && make install )
-	(cd libubiprof/src   && make CC=$(CC) CXX=$(CXX) CFLAGS='-DNDEBUG -O3' && make install )
-	(cd libnoprof/src    && make CC=$(CC) CXX=$(CXX) CFLAGS='-DNDEBUG -O3' && make install)
+	(cd libpointpatch/src && make CC=$(CC) CXX=$(CXX) CFLAGS="$(CFLAGS) -DNDEBUG" && make install )
+	(cd libcallpatch/src && make CC=$(CC) CXX=$(CXX) CFLAGS="$(CFLAGS) -DNDEBUG" && make install )
+	(cd libfastinst/src   && make CC=$(CC) CXX=$(CXX) CFLAGS='$(CFLAGS) -DNDEBUG' && make install )
+	(cd libubiprof/src   && make CC=$(CC) CXX=$(CXX) CFLAGS='$(CFLAGS) -DNDEBUG' && make install )
+	(cd libnoprof/src    && make CC=$(CC) CXX=$(CXX) CFLAGS='-DNDEBUG' && make install)
 
 
 libdebug:
