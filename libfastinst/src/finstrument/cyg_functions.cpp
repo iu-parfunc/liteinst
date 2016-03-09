@@ -33,6 +33,10 @@ __thread bool allocated = false;
 ticks** init_costs;
 #endif
 
+#ifdef AUDIT_PROBES
+volatile long g_num_probes = 0;
+#endif
+
 using namespace std;
 using namespace utils;
 
@@ -207,6 +211,10 @@ void __cyg_profile_func_enter(void* func_addr, void* call_site_addr) {
     return; 
   }
 
+#ifdef AUDIT_PROBES
+  g_num_probes++;
+#endif
+
   // NOW DEAL WITH FUNCTIONS THAT YET DO NOT HAVE AN ID: 
   // This is part of "system-start-up" (one-time initialization, first time run)
   assert(IS_PROBE_ID(function) == false); 
@@ -341,7 +349,10 @@ void __cyg_profile_func_exit(void* func_addr, void* call_site_addr) {
     return; 
   }
 
-  
+#ifdef AUDIT_PROBES
+  g_num_probes++;
+#endif
+
   uint64_t* addr = (uint64_t*)__builtin_extract_return_addr(__builtin_return_address(0));
   uint8_t* call_addr = (uint8_t*) addr - 5;
 

@@ -1,7 +1,7 @@
 
 #include "fastinst.hpp"
-#include "finstrument_probe_provider.hpp"
-#include "zca_probe_provider.hpp"
+#include "finstrument/finstrument_probe_provider.hpp"
+#include "zca/zca_probe_provider.hpp"
 
 ProbeProvider* PROBE_PROVIDER = NULL;
 

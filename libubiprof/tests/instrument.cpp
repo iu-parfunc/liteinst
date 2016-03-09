@@ -49,8 +49,13 @@ void genStubCode(Address stub_address, Address probe_address) {
     fprintf(stderr, "[Stub Utils] Trampoline function : %p\n", 
         (Address) func);
 
+    int sz = a.getCodeSize();
+
     // Call the trampoline function
     a.call(imm(func));
+    
+    fprintf(stderr, "[Stub Utils] CALL instruction size : %ld\n",
+        a.getCodeSize() - sz);
 
     a.pop(r15); a.pop(r14); a.pop(r13); a.pop(r12);
     a.pop(r11); a.pop(r10); a.pop(r9); a.pop(r8);

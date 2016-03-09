@@ -187,7 +187,7 @@ void getFinalOverhead() {
 */
 
 #ifndef NO_INIT
-// __attribute__((constructor, no_instrument_function)) void initProfiler(); 
+__attribute__((constructor, no_instrument_function)) void initProfiler(); 
 
   void initProfiler() {
 

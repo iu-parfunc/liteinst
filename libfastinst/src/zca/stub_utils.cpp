@@ -5,12 +5,15 @@
 
 #include <cassert>
 #include <cstdio>
+#include <cstring>
 #include <iostream>
 #include <sys/mman.h>
 #include <errno.h>
 #include <unistd.h>
 #include <link.h>
-#include <asmjit.h>
+// #include <asmjit.h>
+
+extern void instrument_fn();
 
 namespace stubutils {
 
@@ -29,6 +32,123 @@ namespace stubutils {
     printf("[DEFAULT] Func id is : %lu\n", func_id);
   }
 
+  // The stub will do the following.
+  // 1. Save the context (registers).
+  // 2. Push argument to the register (RDI)
+  // 3. Call the trampoline function.
+  // 4. Restore the context (registers)
+  // 5. Jump to the next instruction at probe site
+  // -------------------------------------------------------------------
+  const uint8_t stub[] = 
+   { 0x56, /* push %rsi */
+     0x57, /* push %rdi */
+     0x50, /* push %rax */
+     0x51, /* push %rcx */
+     0x52, /* push %rdx */
+     0x41, 0x50, /* push %r8 */
+     0x41, 0x51, /* push %r9 */
+     0x41, 0x52, /* push %r10 */
+     0x41, 0x53, /* push %r11 */
+     0x41, 0x54, /* push %r12 */
+     0x41, 0x55, /* push %r13 */
+     0x41, 0x56, /* push %r14 */
+     0x41, 0x57, /* push %r15 */
+     0x48, 0x33, 0xff, /* xor %rdi,%rdi */
+     0x48, 0xc7, 0xc7, 0x00, 0x00, 0x00, 0x00, /* mov $00,%rdi */
+     0xff, 0x15, 0x1b, 0x00, 0x00, 0x00,       /* callq *0x1b(%rip) */
+     0x41, 0x5f, /* pop %r15 */
+     0x41, 0x5e, /* pop %r14 */
+     0x41, 0x5d, /* pop %r13 */
+     0x41, 0x5c, /* pop %r12 */
+     0x41, 0x5b, /* pop %r11 */
+     0x41, 0x5a, /* pop %r10 */
+     0x41, 0x59, /* pop %r9 */
+     0x41, 0x58, /* pop %r8 */
+     0x5a, /* pop %rdx */
+     0x59, /* pop %rcx */
+     0x58, /* pop %rax */
+     0x5f, /* pop %rdi */
+     0x5e, /* pop %rsi */
+     0x40, 0xe9, 0x00, 0x00, 0x00, 0x00, /* rex jmpq xx*/
+     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 /* trampoline fn address */};
+
+  const int mov_offset = 27;
+  const int jmp_offset = 60;
+  const int call_addr_offset = 64;
+
+  void setProbeFunctionArg(Address stub_address, ProbeArg arg) {
+    Address mov_address = stub_address + mov_offset;
+    *(uint32_t*)(mov_address) = (uint32_t)arg;
+  }
+
+  void genStubCode(Address stub_address, Address probe_address,
+      ProbeMetaData* pmd, InstrumentationFunc fn) {
+    memcpy(stub_address, (const void*) stub, sizeof(stub)); 
+
+    Address jmp_address = stub_address + jmp_offset;
+    int64_t relative = (int64_t) ((int64_t)(probe_address + PROBE_SIZE) 
+        - (int64_t)(stub_address + jmp_offset + 6 - 2));
+    *(uint32_t*)(jmp_address) = (int32_t)relative;
+  }
+
+  /*
+  void genStubCode(Address stub_address, Address probe_address,
+    ProbeMetaData* pmd, InstrumentationFunc fn) {
+    using namespace asmjit;
+    using namespace asmjit::x86;
+ 
+    int arg = 42;
+
+    // The stub will do the following.
+    // 1. Save the context (registers).
+    // 2. Push argument to the register (RDI)
+    // 3. Call the trampoline function.
+    // 4. Restore the context (registers)
+    // 5. Jump to the next instruction at probe site
+    // -------------------------------------------------------------------
+    JitRuntime runtime;
+    X86Assembler a(&runtime);
+
+#if LOGLEVEL >= DEBUG_LEVEL
+    FileLogger logger(stderr);
+    a.setLogger(&logger);
+    // a2.setLogger(&logger);
+#endif
+
+    // Push all volatile registers:
+    // a.push(rsi); a.push(rdi);a.push(rax); 
+    a.push(rcx); a.push(rdx);
+    a.push(r8); a.push(r9); a.push(r10); a.push(r11);
+    a.push(r12); a.push(r13); a.push(r14); a.push(r15);
+
+    // Push the argument
+    a.xor_(rdi,rdi);
+    a.mov(rdi, imm((size_t)arg));
+
+    size_t func = (size_t) print_fn;
+
+    fprintf(stderr, "[Stub Utils] Trampoline function : %p\n", 
+        (Address) func);
+
+    int sz = a.getCodeSize();
+
+    // Call the trampoline function
+    a.call(imm(func));
+    
+    fprintf(stderr, "[Stub Utils] CALL instruction size : %ld\n",
+        a.getCodeSize() - sz);
+
+    a.pop(r15); a.pop(r14); a.pop(r13); a.pop(r12);
+    a.pop(r11); a.pop(r10); a.pop(r9); a.pop(r8);
+    a.pop(rdx); a.pop(rcx); a.pop(rax); a.pop(rdi); a.pop(rsi); 
+
+    a.jmp(imm((size_t)(void*)(probe_address + PROBE_SIZE)));
+
+    a.relocCode(stub_address);
+  }
+  */
+
+/*
   int genStubCode(Address stub_address, Address probe_address,
       ZCAProbeMetaData* pmd, InstrumentationFunc func) {
     using namespace asmjit;
@@ -58,20 +178,24 @@ namespace stubutils {
     a.xor_(rdi,rdi);
     a.mov(rdx, imm((size_t)func_id));
 
-    pmd->probe_offset = a.getCodeSize();
+    // pmd->probe_offset = a.getCodeSize();
 
     func = (InstrumentationFunc) print_fn;
 
-    fprintf(stderr, "[Stub Utils] Probe Offset : %d\n", pmd->probe_offset);
+    // fprintf(stderr, "[Stub Utils] Probe Offset : %d\n", pmd->probe_offset);
+    fprintf(stderr, "[Stub Utils] Stub address : %p\n", stub_address);
     fprintf(stderr, "[Stub Utils] Instrumentation function : %p\n", 
         func);
 
-    a.call(imm((size_t)print_fn));
+    a.call(imm((size_t)func));
 
-    pmd->tramp_call_size = a.getCodeSize() - pmd->probe_offset;
-    fprintf(stderr, "[Stub Utils] Trampoline call instruction size: %d\n",
-        pmd->tramp_call_size);
-  
+    // pmd->tramp_call_size = a.getCodeSize() - pmd->probe_offset;
+    // fprintf(stderr, "[Stub Utils] Trampoline call instruction size: %d\n",
+    //    pmd->tramp_call_size);
+    // fprintf(stderr, "[Stub Utils] Relative offset of dest from " 
+    //     "starting addr: %p %p, 64 bit: %ld\n", stub_address + a.getCodeSize(), func, 
+    //    (long)stub_address + a.getCodeSize() - (long) func);
+ 
     a.pop(r15); a.pop(r14); a.pop(r13); a.pop(r12);
     a.pop(r11); a.pop(r10); a.pop(r9); a.pop(r8);
     a.pop(rdx); a.pop(rcx); a.pop(rax); a.pop(rdi); a.pop(rsi); 
@@ -79,7 +203,7 @@ namespace stubutils {
 
     a.jmp(imm((size_t)(void*)(probe_address + PROBE_SIZE)));
 
-    int codesz = a.getCodeSize();
+    // int codesz = a.getCodeSize();
     // This works just as well, don't need the function_cast magic:
     size_t code = a.relocCode(stub_address);
 
@@ -89,8 +213,9 @@ namespace stubutils {
     // Copy over the displaced probe bytes:
     // TODO: Recopy from archived version and see what's wrong with it
  
-    return (codesz);
+    return (code);
   }
+  */
 
 
   void fillStub(Address probe_address, Address stub_address, 
@@ -132,15 +257,11 @@ namespace stubutils {
       } 
     }
 
-    int stub_size = genStubCode(stub_address, probe_address, pmd, func);
+    genStubCode(stub_address, probe_address, pmd, func);
     // Plug in the relative jump
     // Size of the JMP we insert is 5. So +5 points to the following instruction.
     long relative = (long)(stub_address - (uint64_t)probe_address - 5);
     //printf ("[Modify Probe site] Jump distance is : %lu\n", relative);
-
-    fprintf(stderr, "[Zca Probe Provider] Relative offset of dest from " 
-        "starting addr: %p %p, 32 bit: %d\n", probe_address, stub_address, 
-        (int)relative);
 
     // TODO : Safe patch this using pointpatch
     probe_address[0] = 0xE9;
@@ -250,8 +371,8 @@ namespace stubutils {
 
     // This deals with initial memory island allocation for a given memory 
     // region
-    auto it =  mem_allocations.find(mem_chunk);
-    if (it != mem_allocations.end()) {
+    auto it =  mem_allocations->find(mem_chunk);
+    if (it != mem_allocations->end()) {
       // This is the first allocation of a memory island for this memory 
       // region.
       std::list<mem_island*>* mem_list = it->second;
@@ -294,7 +415,7 @@ namespace stubutils {
         current_alloc_unit = first_mem;
         num_islands ++;
         // We just print this message every time and take the last one:
-        fprintf(stderr, "[Zca Probe Provider] NUM_ISLANDS: %ld\n", num_islands);
+        // fprintf(stderr, "[Zca Probe Provider] NUM_ISLANDS: %ld\n", num_islands);
       } else {
         return -1;
         // Error. Log and return
@@ -318,8 +439,6 @@ namespace stubutils {
       int status = allocate_memory_for_stub(pmd->probe_addr, &stub_address);
 
       if (status != -1) {
-        printf(" [ZCA Probe Provider] Probe Context : %d\n", 
-            pmd->probe_context);
         if (pmd->probe_context == ProbeContext::ENTRY) {
           fillStub(pmd->probe_addr, stub_address, pmd, prolog);
         } else if (pmd->probe_context == ProbeContext::EXIT) {
@@ -329,32 +448,22 @@ namespace stubutils {
           throw -1;
         }
 
-        /*
-        switch(pmd->probe_context) {
-          case ProbeContext::ENTRY:
-            fillStub(pmd->probe_addr, stub_address, pmd, prolog);
-            break;
-          case ProbeContext::EXIT:
-            fillStub(pmd->probe_addr, stub_address, pmd, epilog);
-            break;
-          default:
-            fprintf(stderr, "[ZCA Probe Provider] Unknown ProbeContext found.."
-                " Escaping probe at : %p\n", pmd->probe_addr);
-            break;
-        }
-        */
-
         pmd->stub_address = stub_address;
+        pmd->call_addr_offset = call_addr_offset;
         pmd->type = ProbeType::ZCA;
         pmd->state = ProbeState::UNINITIALIZED; 
         pmd->provider = ins;
 
         ins->registerProbe(pmd);
+
+        setProbeFunctionArg(pmd->stub_address, pmd->probe_arg);
       } else {
         fprintf(stderr, "[ZCA Probe Provider] Stub allocation failed for %p\n", 
             pmd->probe_addr);
       }
     }
+
+    fprintf(stderr, "NUMBER_OF_PROBES: %lu\n", pmdVec->size());
   }
 
 }

@@ -6,7 +6,7 @@
 
 #include "fastinst.hpp"
 #include "lock.hpp"
-#include "calibrate.hpp"
+// #include "calibrate.hpp"
 #include "utils.hpp"
 
 #ifdef AUDIT_INIT_COST 
@@ -17,8 +17,8 @@ extern volatile int g_thread_counter;
 typedef struct ZCAProbeMetaData : ProbeMetaData {
 
   Address stub_address; // Address of the stub related to this probe
-  uint8_t probe_offset;  // Offset within the stub at which the original 
-                         // probe sequence could be found
+  uint8_t call_addr_offset;  // Offset within the stub at which the call address to 
+                         // instrumentation function be found
   const char* expr;      // Decoded annotation string
   uint8_t tramp_call_size; // CALL instruction size of the trampoline call
                            // within the stub

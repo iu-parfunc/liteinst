@@ -24,10 +24,7 @@ EXTRA_WARNS= -pedantic
 ARGS= -g -Wall $(EXTRA_WARNS) -I$(ROOT)/include -I$(ROOT)/common/include -I.
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 DEPS = $(INSTALL)/libfastinst.a
-LIBS =
-
-CC  ?= icc
-CXX ?= icpc
+LIBS = 
 
 CC+  = $(CC) $(ARGS)
 CXX+ = $(CXX) -std=c++11 $(ARGS)
@@ -64,7 +61,7 @@ install: libubiprof.a libubiprof.so
 	(mv libubiprof.a $(INSTALL))
 
 .cpp.o:
-	$(CXX+) -std=c++11 $(ARGS) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
+	$(CXX+) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
 
 clean:
 	$(RM) -f $(OBJ) *.a *.so $(INSTALL)/libubiprof.*

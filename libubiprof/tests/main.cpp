@@ -10,10 +10,14 @@ Address stub_address = 0;
 
 void foo() {
 
+  printf("In foo..\n");
   __asm__(nop); // 5 byte NOOP. Just enough for a relative jump.
   asm_label: 
   probe_address = (Address) &&asm_label-5; // Label as value here
 
+  // printf("Foo 2..\n");
+
+  /*
   if (stub_address && !initialized) {
     // relative distance is guaranteed to be within 2^32
     long relative = (long)(stub_address - (long)probe_address - 5);
@@ -24,6 +28,7 @@ void foo() {
 
     initialized = true;
   }
+  */
 
 }
 
@@ -39,7 +44,7 @@ int main() {
   foo();
 
   // This will call the trampoline function via the stub
-  foo();
+  // foo();
 
   return 0;
 

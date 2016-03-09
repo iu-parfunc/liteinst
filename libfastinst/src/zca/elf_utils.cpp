@@ -19,7 +19,7 @@ namespace elfutils {
 
   using namespace std;
 
-  mem_alloc_table mem_allocations;
+  mem_alloc_table* mem_allocations;
 
   void readZCAELFMetaData(ProbeVec* pmdVec) {
     // Get current directory
@@ -42,6 +42,8 @@ namespace elfutils {
   	Elf_Scn *scn = NULL;     // Section index struct
   	Elf_Data *data = NULL;   // Section index struct
   	Elf64_Shdr *shdr;        // Section strkkkuct
+
+    mem_allocations = new mem_alloc_table;
 
   	if(elf_version(EV_CURRENT)==EV_NONE)
   		errx(EXIT_FAILURE, "ELF library iinitialization failed: %s", elf_errmsg(-1));
@@ -142,6 +144,7 @@ namespace elfutils {
               char* temp = strdup(str);
               pmd->probe_id = i; 
               pmd->func_name = strtok_r(temp, ":", &tok);
+              fprintf(stderr, "FUNC NAME : %s\n", pmd->func_name.c_str());
 						  pmd->instrumentation_func = NULL; // TODO: This is set from profiler activate_function 
 					    pmd->expr = strdup(str);
               pmd->probe_addr = (Address)row->anchor;
@@ -176,7 +179,7 @@ namespace elfutils {
 					    // Calculate memory requirements for the stubs to be allocated related to probe spaces,
 					    // later during the JIT code generation phase
 					    mem_island* mem; // int counter=0;
-				  	  if (mem_allocations.find(mem_chunk) == mem_allocations.end()) {
+				  	  if (mem_allocations->find(mem_chunk) == mem_allocations->end()) {
 				  	  	list<mem_island*>* mem_list = new list<mem_island*>;
 				  	   	mem = new mem_island;
 				  	  	mem->start_addr = (Address)((chunk_start + CHUNK_SIZE) / 2); // We initially set this to the middle of the 2^32 chunk
@@ -184,11 +187,11 @@ namespace elfutils {
 				  	  	mem->mem_chunk = mem_chunk;
 
   					  	mem_list->push_back(mem);
-  					  	mem_allocations.insert(make_pair(mem_chunk, mem_list));
+  					  	mem_allocations->insert(map<uint32_t, std::list<mem_island*>*>::value_type(mem_chunk, mem_list));
   					  	// counter += 1;
   					  } else {
   					  	// counter += 1;
-  					  	list<mem_island*>* mem_list = mem_allocations.find(mem_chunk)->second;
+  					  	list<mem_island*>* mem_list = mem_allocations->find(mem_chunk)->second;
   					  	mem = mem_list->front(); // At this stage we only have one memory island in the list
   					  	if (mem != NULL) {
   					  		mem->size += STUB_SIZE; // Another stub for this memory island

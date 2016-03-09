@@ -150,7 +150,6 @@ void init_point_patcher() {
   g_newact.sa_flags = SA_SIGINFO;
   sigemptyset(& (g_newact.sa_mask));
 
-
   sigaction(SIGTRAP, &g_newact, &g_oldact);
 
   /* zero out patchlists */ 
@@ -317,6 +316,10 @@ long patch_get_wait(){
 
 /* is this location a straddler ? */
 inline bool is_straddler_64(void *addr){
+
+  if (!g_cache_lvl3_line_size) {
+    init_point_patcher();
+  }
 
   int offset = (uint64_t)addr % g_cache_lvl3_line_size;
 

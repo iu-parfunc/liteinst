@@ -17,7 +17,7 @@
 using namespace std;
 using namespace lock;
 using namespace utils;
-using namespace calibrate;
+// using namespace calibrate;
 using namespace stubutils;
 
 #ifdef AUDIT_PROBES 
@@ -42,14 +42,15 @@ void ZCAProbeProvider::initializeProvider(InstrumentationFunc prolog,
   thread_counter = 0;
   func_count = 0;
   // calibrateInstrumentationOverhead();
+  fprintf(stderr, "[ZCA Probe Provier] Done initializing the probe provider..\n");
 }
 
 void ZCAProbeProvider::calibrateInstrumentationOverhead() {
   Callback temp = this->callback; // Backup the current callback function
-  this->callback = calibrationCallback; // Sets a temporary callback to
+  // this->callback = calibrationCallback; // Sets a temporary callback to
   // initialize the special calibration function probes
 
-  this->instrumentationOverheadEstimate = getInstrumentationOverheadPerProbe();
+  // this->instrumentationOverheadEstimate = getInstrumentationOverheadPerProbe();
 
   this->callback = temp; // Restore the original callback
 
@@ -58,7 +59,7 @@ void ZCAProbeProvider::calibrateInstrumentationOverhead() {
 uint64_t ZCAProbeProvider::getNumberOfFunctions() {
   if (func_count == 0) {
     map<string, int> func_map;
-    for (auto it = probe_meta_data->begin(); it != probe_meta_data->begin(); 
+    for (auto it = probe_meta_data->begin(); it != probe_meta_data->end(); 
         ++it) {
       ZCAProbeMetaData* pmd = (ZCAProbeMetaData*) *it;
       func_map.insert(pair<string, int>(pmd->func_name, 1));
@@ -134,8 +135,9 @@ bool ZCAProbeProvider::activate(const ProbeId probe_id,
   if (func != pmd->instrumentation_func.load()) {
     pmd->instrumentation_func.store(func,
       std::memory_order_seq_cst);
-    Address stub_call_addr = pmd->stub_address + pmd->probe_offset; 
+    Address stub_call_addr = pmd->stub_address + pmd->call_addr_offset; 
 
+    /*
     uint64_t old_val = (uint64_t) *stub_call_addr;
     int64_t relative = (int64_t) ((Address)func - (uint64_t) stub_call_addr 
         - 5);
@@ -151,14 +153,15 @@ bool ZCAProbeProvider::activate(const ProbeId probe_id,
 
     *(uint32_t*)(new_val_ptr+1) = (int32_t)relative;
     new_val = new_val | msb;
+    */
 
     bool b;
 #if defined(INVOKE_PATCH_SYNC)
-    b = patch_64((void*) stub_call_addr, new_val);
+    b = patch_64((void*) stub_call_addr, (uint64_t)func);
 #elif defined(INVOKE_PATCH_CALL)
-    b = patch_call_64((void*) stub_call_addr, new_val); 
+    b = patch_call_64((void*) stub_call_addr, (uint64_t) func); 
 #else
-    b = patch_call_64((void*) stub_call_addr, new_val); // The default is callpatch
+    b = patch_call_64((void*) stub_call_addr, (uint64_t) func); // The default is callpatch
 #endif
   } 
 
@@ -215,8 +218,9 @@ bool ZCAProbeProvider::activate_async(ProbeId probe_id, InstrumentationFunc func
   if (func != pmd->instrumentation_func.load()) {
     pmd->instrumentation_func.store(func,
       std::memory_order_seq_cst);
-    Address stub_call_addr = pmd->stub_address + pmd->probe_offset; 
+    Address stub_call_addr = pmd->stub_address + pmd->call_addr_offset; 
 
+    /*
     uint64_t old_val = (uint64_t) *stub_call_addr;
     int64_t relative = (int64_t) ((Address)func - (uint64_t) stub_call_addr 
         - 5);
@@ -228,13 +232,13 @@ bool ZCAProbeProvider::activate_async(ProbeId probe_id, InstrumentationFunc func
 
     uint64_t new_val;
     uint8_t* new_val_ptr = (uint8_t*) & new_val;
-    new_val_ptr[0] = 0xE9;
 
-    *(uint32_t*)(new_val_ptr+1) = (int32_t)relative;
+    *(uint32_t*)(new_val_ptr) = (int32_t)relative;
     new_val = new_val | msb;
+    */
 
     bool b;
-    b = async_patch_64((void*) stub_call_addr, new_val);
+    b = async_patch_64((void*) stub_call_addr, (uint64_t)func);
 
     if (!b) {
       throw -1;

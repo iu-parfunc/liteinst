@@ -40,13 +40,11 @@ EXTRA_WARNS= -pedantic
 #-Wextra
 ## -Wformat-nonliteral -Wcast-align -Wpointer-arith -Wbad-function-cast -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Winline -Wundef -Wnested-externs -Wcast-qual -Wshadow -Wwrite-strings -Wno-unused-parameter -Wfloat-equal
 
-ARGS= -g -Wall $(EXTRA_WARNS) -I$(ROOT)/include -I$(ROOT)/deps/distorm/include -I$(ROOT)/deps/asmjit/src/asmjit -I$(ROOT)/common/include -Izca -I.
-LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
-DEPS = $(INSTALL)/libpointpatch.a $(INSTALL)/libcallpatch.a  $(DEPS_ROOT)/asmjit/build/libasmjit.a $(DEPS_ROOT)/asmjit/build/libasmjit.a
-LIBS =
+ARGS= -g -Wall $(EXTRA_WARNS) -I$(ROOT)/include -I$(ROOT)/deps/distorm/include -I$(ROOT)/common/include -Izca -Ifinstrument -I.
 
-CC  ?= icc
-CXX ?= icpc
+LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
+DEPS = $(INSTALL)/libpointpatch.a $(INSTALL)/libcallpatch.a
+LIBS = -lelf
 
 CC+  = $(CC) $(ARGS)
 CXX+ = $(CXX) -std=c++11 $(ARGS)
@@ -55,13 +53,16 @@ AR = ar
 RM = rm
 OPTS =
 
-COMMON = $(wildcard $(ROOT)/common/src/lock/*.cpp)
+COMMON = $(wildcard $(ROOT)/common/src/lock/*.cpp) probe_provider.cpp globals.cpp
 override COMMON +=  $(wildcard $(ROOT)/common/src/utils/*.cpp)
 COMMON_OBJ0 = $(COMMON:.cpp=.o)
 COMMON_OBJ  = $(COMMON_OBJ0:.c=.o)
 
-CODE = finstrument_probe_provider.cpp probe_provider.cpp cyg_functions.cpp globals.cpp calibrate.cpp asmjit.cpp 
-CODE += $(wildcard zca/*.cpp)
+CODE = $(wildcard zca/*.cpp)
+override CODE += $(wildcard finstrument/*.cpp)
+
+# CODE = finstrument_probe_provider.cpp probe_provider.cpp cyg_functions.cpp globals.cpp calibrate.cpp 
+# CODE += $(wildcard zca/*.cpp)
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 
@@ -76,8 +77,7 @@ asmjit:
 
 build: $(OBJ) $(COMMON_OBJ)
 
-
-libfastinst.a: build asmjit
+libfastinst.a: build # asmjit
 	if [ -d libfastinst.a ]; then $(RM) -f libfastinst.a; fi
 	if [ -d temp ]; then $(RM) -rf temp; fi
 	mkdir temp;cd temp; $(foreach dep,$(DEPS),$(AR) -x ../$(dep);) # for DEP in $(DEPS); do $(AR) -x ../${DEP}; done
@@ -92,7 +92,7 @@ install: libfastinst.a libfastinst.so
 	(cp libfastinst.a $(INSTALL))
 
 .cpp.o:
-	$(CXX+) -std=c++11 $(ARGS) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
+	$(CXX+) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
 
 clean:
 	$(RM) -f $(OBJ) *.so $(INSTALL)/libfastinst.*

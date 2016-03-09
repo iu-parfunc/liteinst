@@ -16,6 +16,7 @@ typedef std::unordered_map<Address, uint32_t> ProbeLookupMap;
 #ifdef AUDIT_INIT_COST 
 extern ticks** init_costs;
 extern volatile int g_thread_counter;
+extern volatile long g_num_probes;
 #endif
 
 class FinstrumentProbeProvider : public ProbeProvider {
@@ -163,6 +164,7 @@ class FinstrumentProbeProvider : public ProbeProvider {
       double total_deactivation_cost = 
         utils::getSecondsFromTicks(deactivation_costs); 
 
+      fprintf(stderr, "NUMBER_OF_PROBES: %lu\n", g_num_probes);
       fprintf(stderr, "ACTIVATION_COUNT: %lu\n", activation_count);
       fprintf(stderr, "DEACTIVATION_COUNT: %lu\n", deactivation_count);
       fprintf(stderr, "TOTAL_TOGGLE_COUNT: %lu\n", activation_count + deactivation_count);
