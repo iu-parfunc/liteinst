@@ -10,13 +10,13 @@
 
 /// This is used to specify which provider needs to be selected
 /// at initialization time.
-enum class ProviderType { ZCA, FINSTRUMENT, DTRACE, DYNINST };
+enum class ProviderType { ZCA, FINSTRUMENT, DTRACE, DYNINST, DYNPROBES };
 
 /// In the future we will aim to support an open universe of probe
 /// providers.  In the short term, we explicitly enumerate the probe
 /// providers.  Any use of this field violates the abstraction of the
 /// ProbeProvider by depending on implementation details.
-enum class ProbeType { ZCA, FINSTRUMENT, DTRACE, DYNINST };
+enum class ProbeType { ZCA, FINSTRUMENT, DTRACE, DYNINST, DYNPROBES };
 
 /// What is context of a particular probe location?  This is used by
 /// profilers to assign some semantic meaning to probe.
