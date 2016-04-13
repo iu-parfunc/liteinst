@@ -41,14 +41,14 @@ libaudit.a: build
 	$(RM) -rf temp
 
 libaudit.so: build
-	$(CXX+) $(LIBS) -shared -Wl,-soname,libaudit.so -Wl,-init,auditProbes -Wl,-init,init_point_patcher -o libaudit.so $(OBJ) $(COMMON_OBJ) $(DEPS) 
+	$(CXX+) $(LIBS) -shared -Wl,-soname,libaudit.so -Wl,-init,audit -Wl,-init,init_point_patcher -o libaudit.so $(OBJ) $(COMMON_OBJ) $(DEPS) 
 
 install: libaudit.a libaudit.so
 	(cp libaudit.so $(INSTALL))
 	(cp libaudit.a $(INSTALL))
 
 .cpp.o:
-	$(CXX+) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
+	$(CXX+) $(CFLAGS) $(ARGS) $(OPTS) -fPIC -c -Wall -o $@ $<
 
 clean:
 	$(RM) -f $(OBJ) *.a *.so $(INSTALL)/libaudit.*

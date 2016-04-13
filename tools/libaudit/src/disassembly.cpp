@@ -5,6 +5,8 @@
 
 namespace disassembly {
 
+  using namespace defs;
+
   Decoded disassembleRange(Address start, Address end) {
     uint64_t n_decode_bytes = (uint64_t)((uint64_t)end - (uint64_t)start);
 

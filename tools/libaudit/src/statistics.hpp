@@ -36,12 +36,14 @@ namespace statistics {
   } Statistics;
 
 
-  analysis::Function generateMetaData(Address start, Address end,  
+  analysis::Function generateMetaData(defs::Address start, defs::Address end,  
       analysis::BlockStructure bs, disassembly::Decoded d);
 
   Statistics generateStatistics(std::list<analysis::Function>* fns);
 
   void printStatistics(Statistics stats, FILE* fp, bool verbose) ;
+
+  void printBlockInfo(std::list<analysis::Function> fns, FILE* fp);
 
 }
 

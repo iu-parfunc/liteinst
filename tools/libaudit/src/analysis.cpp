@@ -5,10 +5,17 @@
 #include "assert.h"
 #include "analysis.hpp"
 
-using namespace std;
-using namespace disassembly;
-
 namespace analysis {
+
+  using std::set;
+  using std::list;
+  using std::vector;
+  using std::find;
+  using std::pair;
+  using std::iterator;
+
+  using namespace disassembly;
+  using namespace defs;
 
   /* Private type definitions */
   typedef struct {
@@ -17,7 +24,10 @@ namespace analysis {
     set<Address>* block_ends;
     set<uint32_t>* block_end_offsets;
 
-    list<ControlReturn>* returns;
+    list<ControlReturn*> returns;
+
+    Address fn_end;
+    uint64_t end_padding_size;
   } BlockBoundaries;
 
   typedef struct {
@@ -39,7 +49,7 @@ namespace analysis {
   }
 
   inline bool isFarJump(_DInst i) {
-    return (i.opcode = I_JMP_FAR);
+    return (i.opcode == I_JMP_FAR);
   }
 
   inline bool isJump(_DInst i) {
@@ -54,8 +64,8 @@ namespace analysis {
     return isReturn(i) || isJump(i);
   }
 
-  inline Address extractJumpTarget(_DInst instruction) {
-    return (Address) INSTRUCTION_GET_TARGET(&instruction);
+  inline Address extractJumpTarget(Address ip, _DInst instruction) {
+    return (ip + instruction.imm.addr + instruction.size);
   }
 
   inline Address extractFarJumpTarget(_DInst instruction) {
@@ -67,12 +77,12 @@ namespace analysis {
 
     _DInst* decoded = d.decoded_instructions;
     uint32_t offset = 0;
-    // Address ip = start;
+    Address ip = start;
     for (unsigned int i=0; i < d.n_instructions; i++) {
-      if ((Address) decoded[i].addr == addr) {
+      if (ip == addr) {
         return offset;
       }
-      // ip += decoded[i].size;
+      ip += decoded[i].size;
       offset++;
     }
 
@@ -88,16 +98,15 @@ namespace analysis {
     addrInfo.addr = NULL;
     _DInst* decoded = d.decoded_instructions;
     uint32_t offset = 0;
-    // Address ip = start;
+    Address ip = start;
     for(unsigned int i=0; i < d.n_instructions; i++) {
-      if ((i+1) < d.n_instructions &&
-          addr == (Address) decoded[i].addr + decoded[i].size) {
-        addrInfo.addr = (Address) decoded[i].addr;
+      if (addr == (ip + decoded[i].size)) {
+        addrInfo.addr = ip;
         addrInfo.offset = offset;
 
         return addrInfo;
       } else {
-        // ip += decoded[i].size;
+        ip += decoded[i].size;
         offset++;
       }
     }
@@ -111,7 +120,7 @@ namespace analysis {
     _DInst* decoded = d.decoded_instructions;
 
     Address ip = start;
-    list<ControlReturn>* returns = new list<ControlReturn>;
+    list<ControlReturn*> returns;
     bool prev_block_end = true;
 
     set<Address>* block_starts = new set<Address>;
@@ -119,38 +128,52 @@ namespace analysis {
     set<Address>* block_ends = new set<Address>;
     set<uint32_t>* block_end_offsets = new set<uint32_t>;
 
+    Address fn_end = end;
+    uint64_t end_padding_size = 0;
+    uint64_t current_block_size = 0;
+    Address last_inserted_block_start;
+    uint32_t last_inserted_block_start_offset;
     for (unsigned int i=0; i < d.n_instructions; i++) {
       if (prev_block_end) {
         block_starts->insert(ip);
         block_start_offsets->insert(i);
 
+        last_inserted_block_start = ip;
+        last_inserted_block_start_offset = i;
         prev_block_end = false;
+        current_block_size = 0;
       }
 
+      current_block_size += decoded[i].size;
       if (endsBasicBlock(decoded[i])) {
 
-        if (isReturn(decoded[i])) {
-          ControlReturn r;
-          r.addr = ip;
-          r.target =  (Address)__builtin_extract_return_addr(
-              __builtin_return_address(0)); 
-          r.type = RET; 
+        // Fix the padding space to be zero since there is no padding
+        // between this function end and the next function
+        if (i == d.n_instructions - 1) {
+          current_block_size = 0;
+        }
 
-          returns->push_back(r);
+        if (isReturn(decoded[i])) {
+          ControlReturn* r = new ControlReturn;
+          r->addr = ip;
+          r->target =  (Address) NULL; 
+          r->type = RET; 
+
+          returns.push_back(r);
 
         } else if (isJump(decoded[i])) {
 
           if (isRelativeJump(decoded[i])) {
-            Address addr = extractJumpTarget(decoded[i]);
+            Address addr = extractJumpTarget(ip, decoded[i]);
             // If the jmp target is not within the function then it must be a 
             // tail call
             if (addr <= start || addr >= end) {
-              ControlReturn r;
-              r.addr = ip;
-              r.target = addr;
-              r.type = TAIL_CALL;
+              ControlReturn* r = new ControlReturn;
+              r->addr = ip;
+              r->target = addr;
+              r->type = TAIL_CALL;
 
-              returns->push_back(r);
+              returns.push_back(r);
             } else {
               // If the jmp target is within the function then the target must
               // be a block leader
@@ -174,12 +197,12 @@ namespace analysis {
               }
             }
           } else if (isFarJump(decoded[i])) {
-            ControlReturn r;
-            r.addr = ip;
-            r.target = extractFarJumpTarget(decoded[i]);
-            r.type = TAIL_CALL;
+            ControlReturn* r = new ControlReturn;
+            r->addr = ip;
+            r->target = extractFarJumpTarget(decoded[i]);
+            r->type = TAIL_CALL;
 
-            returns->push_back(r);
+            returns.push_back(r);
           }
         }
 
@@ -187,6 +210,16 @@ namespace analysis {
         block_end_offsets->insert(i);
 
         prev_block_end = true;
+      } else {
+        // If this is the last instruction and it is not a block ending 
+        // instruction we've been reading padding space between the two 
+        // functions. Remove block start meta data for that block
+        if (i == d.n_instructions - 1) {
+          fn_end = last_inserted_block_start;
+          end_padding_size = current_block_size;
+          block_starts->erase(last_inserted_block_start);
+          block_start_offsets->erase(last_inserted_block_start_offset);
+        }
       }
 
       Address next_ip = ip + decoded[i].size;
@@ -212,11 +245,13 @@ namespace analysis {
     bb.block_ends = block_ends;
     bb.block_end_offsets = block_end_offsets;
     bb.returns = returns;
+    bb.fn_end = fn_end;
+    bb.end_padding_size = end_padding_size; 
 
     return bb;
   }
 
-  list<BasicBlock>* generateBasicBlocks(BlockBoundaries bb) {
+  list<BasicBlock*> generateBasicBlocks(BlockBoundaries bb) {
 
     assert(bb.block_starts->size() == bb.block_start_offsets->size());
     assert(bb.block_ends->size() == bb.block_end_offsets->size());
@@ -233,13 +268,16 @@ namespace analysis {
       vector<uint32_t>(bb.block_end_offsets->begin(), 
           bb.block_end_offsets->end());
 
-    list<BasicBlock>* bbl = new list<BasicBlock>();
+    list<BasicBlock*> bbl;
     for(unsigned int i=0; i < block_starts.size(); i++) {
-      BasicBlock bb;
-      bb.start = block_starts[i];
-      bb.end = block_ends[i];
+      BasicBlock* bb = new BasicBlock;
+      bb->start = block_starts[i];
+      bb->end = block_ends[i];
 
-      bbl->push_back(bb);
+      bb->start_ins_offset = block_start_offsets[i];
+      bb->end_ins_offset = block_end_offsets[i];
+
+      bbl.push_back(bb);
     }
 
     return bbl;
@@ -249,7 +287,6 @@ namespace analysis {
   BlockStructure getBlockStructure(Address start, Address end, Decoded d) {
 
     BlockStructure bs;
-    bs.bbl = NULL;
 
     if (d.decoded_instructions != NULL) {
 
@@ -258,6 +295,7 @@ namespace analysis {
       bs.bbl = generateBasicBlocks(bb);
       bs.returns = bb.returns;
       bs.fn_end = end;
+      bs.end_padding_size = bb.end_padding_size;
       // TODO : To detect correct function end in case there is some padding
       // between consecutive functions. As for now we just set what we get.
 

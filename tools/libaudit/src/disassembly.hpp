@@ -15,7 +15,7 @@ namespace disassembly {
     unsigned int n_instructions; 
   } Decoded; 
 
-  Decoded disassembleRange(Address start, Address end);
+  Decoded disassembleRange(defs::Address start, defs::Address end);
 
 }
 
