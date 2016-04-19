@@ -37,6 +37,10 @@ namespace analysis {
 
   /* Private helper functions */
 
+  inline bool isCall(_DInst i) {
+    return (i.opcode == I_CALL || i.opcode == I_CALL_FAR);
+  }
+
   inline bool isRelativeJump(_DInst i) {
     return (i.opcode == I_JA || i.opcode == I_JAE || 
       i.opcode == I_JB || i.opcode == I_JBE || i.opcode == I_JCXZ || 
@@ -56,12 +60,16 @@ namespace analysis {
     return isRelativeJump(i) || isFarJump(i);
   }
 
+  inline bool isHalt(_DInst i) {
+    return (i.opcode == I_HLT);
+  }
+
   inline bool isReturn(_DInst i) {
    return (i.opcode == I_RET);
   } 
 
   inline bool endsBasicBlock(_DInst i) {
-    return isReturn(i) || isJump(i);
+    return isReturn(i) || isJump(i) || isHalt(i);
   }
 
   inline Address extractJumpTarget(Address ip, _DInst instruction) {
@@ -75,6 +83,7 @@ namespace analysis {
   uint32_t findAddrOffset(Address start, Address addr, 
       Decoded d) {
 
+    // fprintf(stderr, "[findAddrOffset] Start : %p Addr : %p \n", start, addr);
     _DInst* decoded = d.decoded_instructions;
     uint32_t offset = 0;
     Address ip = start;
@@ -117,6 +126,7 @@ namespace analysis {
 
   BlockBoundaries generateBlockBoundaries(Address start, Address end, Decoded d) {
 
+    // fprintf(stderr, "[generateBlockBoundaries] Start : %p End : %p\n", start, end);
     _DInst* decoded = d.decoded_instructions;
 
     Address ip = start;
@@ -131,15 +141,12 @@ namespace analysis {
     Address fn_end = end;
     uint64_t end_padding_size = 0;
     uint64_t current_block_size = 0;
-    Address last_inserted_block_start;
-    uint32_t last_inserted_block_start_offset;
+
     for (unsigned int i=0; i < d.n_instructions; i++) {
       if (prev_block_end) {
         block_starts->insert(ip);
         block_start_offsets->insert(i);
 
-        last_inserted_block_start = ip;
-        last_inserted_block_start_offset = i;
         prev_block_end = false;
         current_block_size = 0;
       }
@@ -204,6 +211,13 @@ namespace analysis {
 
             returns.push_back(r);
           }
+        } else if (isHalt(decoded[i])) {
+          ControlReturn* r = new ControlReturn;
+          r->addr = ip;
+          r->target = NULL;
+          r->type = HALT;
+
+          returns.push_back(r);
         }
 
         block_ends->insert(ip);
@@ -211,14 +225,23 @@ namespace analysis {
 
         prev_block_end = true;
       } else {
-        // If this is the last instruction and it is not a block ending 
-        // instruction we've been reading padding space between the two 
-        // functions. Remove block start meta data for that block
+        // Function ends with a tail call
         if (i == d.n_instructions - 1) {
-          fn_end = last_inserted_block_start;
-          end_padding_size = current_block_size;
-          block_starts->erase(last_inserted_block_start);
-          block_start_offsets->erase(last_inserted_block_start_offset);
+          if (isCall(decoded[i])) {
+            ControlReturn* r = new ControlReturn;
+            r->addr = ip;
+            r->target = extractFarJumpTarget(decoded[i]);
+            r->type = TAIL_CALL;
+
+            returns.push_back(r);
+            block_ends->insert(ip);
+            block_end_offsets->insert(i);
+           } else {
+              // Function ends wtihout either a block ending instruction or a 
+              // control transfer in the form of a tail call. This should not 
+              // happen in our books. Fail fast.
+              assert(false);
+          }
         }
       }
 
@@ -284,18 +307,25 @@ namespace analysis {
   }
 
   /* Public API implementation */
-  BlockStructure getBlockStructure(Address start, Address end, Decoded d) {
+  BlockStructure getBlockStructure(Address fn_start, Address fn_end,
+     Address next_fn_start, Decoded d) {
 
     BlockStructure bs;
 
     if (d.decoded_instructions != NULL) {
 
-      BlockBoundaries bb = generateBlockBoundaries(start, end, d);
+      if (fn_start == (Address) 0x400548) {
+        fprintf(stderr, "Inside function _init..\n");
+      }
+
+      BlockBoundaries bb = generateBlockBoundaries(fn_start, fn_end, d);
 
       bs.bbl = generateBasicBlocks(bb);
+
       bs.returns = bb.returns;
-      bs.fn_end = end;
-      bs.end_padding_size = bb.end_padding_size;
+      bs.fn_start = fn_start;
+      bs.fn_end = fn_end;
+      bs.end_padding_size = (uint64_t) next_fn_start - (uint64_t) fn_end;
       // TODO : To detect correct function end in case there is some padding
       // between consecutive functions. As for now we just set what we get.
 

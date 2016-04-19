@@ -96,7 +96,7 @@ namespace analysis {
       }
   };
 
-  enum ReturnType { RET, TAIL_CALL };
+  enum ReturnType { RET, TAIL_CALL, HALT };
 
   class ControlReturn : public defs::Show {
     public:
@@ -110,8 +110,10 @@ namespace analysis {
         std::string type_str;
         if (type == RET) {
           type_str = "RETURN";
-        } else {
+        } else if (type == TAIL_CALL) {
           type_str = "TAIL CALL";
+        } else if (type == HALT) {
+          type_str = "HALT";
         }
 
         /*
@@ -187,12 +189,13 @@ namespace analysis {
     public:
       std::list<BasicBlock*> bbl;
       std::list<ControlReturn*> returns; 
+      defs::Address fn_start;
       defs::Address fn_end;
       uint64_t end_padding_size;
   };
 
-  BlockStructure getBlockStructure(defs::Address start, defs::Address end, 
-      disassembly::Decoded d);
+  BlockStructure getBlockStructure(defs::Address fn_start, defs::Address fn_end, 
+      defs::Address next_fn_start, disassembly::Decoded d);
 
 }
 
