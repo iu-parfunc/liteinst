@@ -16,9 +16,9 @@ namespace analysis {
       uint32_t probe_able_count;
       uint32_t pii_count;
       uint8_t start_instruction_size;
-      int32_t start_probe_able_inst_distance;
+      int64_t start_probe_able_inst_distance;
       uint8_t end_instruction_size;
-      int32_t end_probe_able_inst_distance;
+      int64_t end_probe_able_inst_distance;
 
       void show(FILE* fp, int nspaces) {
         std::string left_pad = getPadding(nspaces);
@@ -51,10 +51,10 @@ namespace analysis {
         fprintf(fp, "%sEnd instruction size : %d\n", 
             left_pad.c_str(), end_instruction_size); 
         fprintf(fp, "%sDistance to first probe able instruction " 
-            "from the start : %d\n", left_pad.c_str(), 
+            "from the start : %ld\n", left_pad.c_str(), 
             start_probe_able_inst_distance); 
         fprintf(fp, "%sDistance to first probe able instruction " 
-            "from the end : %d\n", left_pad.c_str(), 
+            "from the end : %ld\n", left_pad.c_str(), 
             end_probe_able_inst_distance); 
       }
   };

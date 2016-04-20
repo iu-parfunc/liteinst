@@ -9,6 +9,7 @@
 #include "analysis.hpp"
 #include "statistics.hpp"
 #include "utils.hpp"
+#include "counter.hpp"
 
 namespace statistics {
 
@@ -21,6 +22,9 @@ namespace statistics {
   /* Constants */
   const uint8_t probe_able_size = 5;
 
+  /* Global data */
+  Counter* single_byte_op_sequences = NULL;
+
   /* Private helper functions */
 
   inline bool isProbeAble(_DInst i) {
@@ -29,6 +33,10 @@ namespace statistics {
 
   /* Public API implementation */
   Function generateMetaDataForFunction(BlockStructure bs, Decoded d) {
+
+    if (single_byte_op_sequences == NULL) {
+      single_byte_op_sequences = new Counter();
+    }
 
     _DInst* decoded = d.decoded_instructions;
 
@@ -49,7 +57,7 @@ namespace statistics {
     fn_pmd.end_probe_able_inst_distance = 0;
 
     bool fn_start_block = true;
-    uint32_t last_probe_able_inst_distance = 0;
+    int64_t last_probe_able_inst_distance = 0;
     uint32_t last_instruction_size = 0;
 
     bool probe_able_ins_found = false;
@@ -59,6 +67,7 @@ namespace statistics {
     // assert(bs.bbl.size() > 0);
 
     for (BasicBlock* bb : bs.bbl) {
+      probe_able_ins_found = false;
       bb_pmd.total_instruction_count = 0;
       bb_pmd.probe_able_count= 0;
       bb_pmd.pii_count = 0;
@@ -67,11 +76,15 @@ namespace statistics {
       bb_pmd.end_instruction_size = 0;
       bb_pmd.end_probe_able_inst_distance = 0;
 
-      uint64_t offset = 0;
+      int64_t offset = 0;
 
       for (uint64_t i = bb->start_ins_offset; i <= bb->end_ins_offset; i++) {
         bb_pmd.total_instruction_count++;
         fn_pmd.total_instruction_count++;
+
+        if (decoded[i].size == 1 && i < (d.n_instructions-1)) {
+          single_byte_op_sequences->increment("1|" + to_string(decoded[i+1].size), 1);
+        }
 
         if (isProbeAble(decoded[i])) {
           bb_pmd.probe_able_count++;
@@ -113,8 +126,18 @@ namespace statistics {
         offset += decoded[i].size;
       }
 
-      bb_pmd.end_probe_able_inst_distance =  (uint64_t)(bb->end - bb->start) - 
-        last_probe_able_inst_distance;
+      if (last_probe_able_inst_ip >= bb->start) {
+        bb_pmd.end_probe_able_inst_distance =  (int64_t)(bb->end - bb->start) - 
+          last_probe_able_inst_distance;
+      } else {
+        bb_pmd.end_probe_able_inst_distance = -1;
+      }
+
+      /*
+      if (bb_pmd.end_probe_able_inst_distance > 1000000) {
+        fprintf(stderr, "[Block] End : %p  Start : %p Offset : %ld\n", 
+            bb->end, bb->start, last_probe_able_inst_distance);
+      }*/
 
       if (fn_start_block) {
         fn_start_block = false;
@@ -124,18 +147,28 @@ namespace statistics {
     }
 
     fn_pmd.end_instruction_size = last_instruction_size;
-    fn_pmd.end_probe_able_inst_distance = (uint64_t)fn.end - 
-      (uint64_t)fn.start - (uint64_t)last_probe_able_inst_ip;
+    
+    if (last_probe_able_inst_ip != NULL) {
+      fn_pmd.end_probe_able_inst_distance = (int64_t)fn.end - 
+        (int64_t)last_probe_able_inst_ip;
+    } else {
+      fn_pmd.end_probe_able_inst_distance = -1;
+    }
 
     if (fn_pmd.start_instruction_size == 0) {
       assert(false);
     }
 
+    /*
+    if (fn_pmd.end_probe_able_inst_distance > 100000) {
+      fprintf(stderr, "End : %p  Start : %p Offset : %ld\n", 
+          fn.end, fn.start, last_probe_able_inst_ip);
+    }*/
+
     fn.pmd = fn_pmd;
 
     // fn_pmd.show(stderr, 2);
     // fn.pmd.show(stderr, 0);
-
 
     return fn;
   }
@@ -165,17 +198,21 @@ namespace statistics {
       total_probe_able_count += fn.pmd.probe_able_count;
       total_pii_count += fn.pmd.pii_count;
 
-      fprintf(stderr, "Adding probe able count : %lu\n", fn.pmd.probe_able_count);
       stats.per_func_probe_able_count_hist->addItem(fn.pmd.probe_able_count);
       stats.per_func_pii_count_hist->addItem(fn.pmd.pii_count);
       stats.per_func_start_inst_size_hist->
         addItem(fn.pmd.start_instruction_size);
       stats.per_func_end_inst_size_hist->
         addItem(fn.pmd.end_instruction_size);
-      stats.per_func_start_probe_able_inst_distance_hist->
-        addItem(fn.pmd.start_probe_able_inst_distance);
-      stats.per_func_end_probe_able_inst_distance_hist->
-        addItem(fn.pmd.end_probe_able_inst_distance);
+      if (fn.pmd.start_probe_able_inst_distance >= 0) {
+        stats.per_func_start_probe_able_inst_distance_hist->
+          addItem(fn.pmd.start_probe_able_inst_distance);
+      }
+
+      if (fn.pmd.end_probe_able_inst_distance >=0) {
+        stats.per_func_end_probe_able_inst_distance_hist->
+          addItem(fn.pmd.end_probe_able_inst_distance);
+      }
 
       for (BasicBlock* bb : fn.bbl) {
         stats.per_bb_probe_able_count_hist->addItem(bb->pmd.probe_able_count);
@@ -184,10 +221,15 @@ namespace statistics {
           addItem(bb->pmd.start_instruction_size);
         stats.per_bb_end_inst_size_hist->
           addItem(bb->pmd.end_instruction_size);
-        stats.per_bb_start_probe_able_inst_distance_hist->
-          addItem(bb->pmd.start_probe_able_inst_distance);
-        stats.per_bb_end_probe_able_inst_distance_hist->
-          addItem(bb->pmd.end_probe_able_inst_distance);
+        if (bb->pmd.start_probe_able_inst_distance >=0) {
+          stats.per_bb_start_probe_able_inst_distance_hist->
+            addItem(bb->pmd.start_probe_able_inst_distance);
+        }
+
+        if (bb->pmd.end_probe_able_inst_distance >=0) {
+          stats.per_bb_end_probe_able_inst_distance_hist->
+            addItem(bb->pmd.end_probe_able_inst_distance);
+        }
       }
 
     }
@@ -210,6 +252,10 @@ namespace statistics {
     fprintf(fp, "Position independent instructions (%%) : %lu (%f)\n", 
         stats.total_pii_count, 
         (double) stats.total_pii_count / stats.total_instruction_count);
+    fprintf(fp, "Single byte instruction configurations : \n");
+    single_byte_op_sequences->show(fp, 0);
+
+    fprintf(fp, "\n");
 
     if (verbose) {
       fprintf(fp, "\n");

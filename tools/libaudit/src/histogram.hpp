@@ -110,7 +110,7 @@ class Histogram : public defs::Show {
       int PRINT_PRECISION = 2;
       std::list<Bin*> bins = getBins();
       for (Bin* bin : bins) {
-        fprintf(fp, "%s[%2lu-%2lu) ", left_pad.c_str(), bin->bin_range.start,
+        fprintf(fp, "%s[%4lu -%4lu) ", left_pad.c_str(), bin->bin_range.start,
             bin->bin_range.end);
         uint64_t num_bars = (uint64_t) ceil(bin->contribution/ PRINT_PRECISION);
         for (uint64_t j = 0; j < num_bars; j++) {
@@ -135,6 +135,5 @@ class Histogram : public defs::Show {
             (double) zero_count / total_items * 100); 
       }
     }
-
 
 };
