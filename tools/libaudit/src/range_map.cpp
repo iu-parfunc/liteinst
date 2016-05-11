@@ -25,7 +25,7 @@ namespace range {
   }
 
   bool RangeMap::updateRangeEntries(Range r, UpdateEntriesCallback cb) {
-    vector<RangeEntry*> block_entries = lockRange(r);
+    vector<BlockEntry*> block_entries = lockRange(r);
     if (block_entries.size() > 0) {
       cb(block_entries, r);
     }
@@ -38,12 +38,12 @@ namespace range {
     return (block_entries.size() > 0) ? true : false;
   }   
 
-  std::vector<RangeBlock> RangeMap::getRangeBlocks(Range r) {
-    vector<Range> partitions = r.getRangePartitions(block_size, true);
+  std::vector<BlockRange> RangeMap::getBlockedRangeMetaData(Range r) {
+    vector<Range> partitions = r.getBlockedRange(block_size, true);
 
-    vector<RangeBlock> blocks;
+    vector<BlockRange> blocks;
     for (Range partition : partitions) {
-      RangeBlock rb;
+      BlockRange rb;
       rb.range = partition;;
 
       blocks.push_back(rb);
@@ -52,8 +52,8 @@ namespace range {
     return blocks;
   }
 
-  vector<RangeEntry*> RangeMap::lockRange(Range r) {
-    std::vector<RangeBlock> range_blocks = getRangeBlocks(r);
+  vector<BlockEntry*> RangeMap::lockRange(Range r) {
+    std::vector<BlockRange> range_blocks = getBlockedRangeMetaData(r);
 
     assert(range_blocks.size() > 0);
 
@@ -62,7 +62,7 @@ namespace range {
     auto it = entries.lower_bound(range_blocks[0].range.start);
     uint32_t block_ptr = 0;
     for (; it != entries.end(); ++it) {
-      RangeEntry* entry = it->second;
+      BlockEntry* entry = it->second;
       while (range_blocks[block_ptr].range != entry->entry_range &&
           block_ptr < range_blocks.size()) {
         block_ptr++;
@@ -81,8 +81,8 @@ namespace range {
     // blocks within the range. This is so that we can release those range 
     // locks in order of acquisition when releasing them. This is important for 
     // avoiding deadlocks.
-    vector<RangeEntry*> block_entries;
-    for (RangeBlock rb : range_blocks) {
+    vector<BlockEntry*> block_entries;
+    for (BlockRange rb : range_blocks) {
       if (!rb.entry_present) {
         global_lock.lock();
         auto it = entries.find(rb.range.start);
@@ -93,11 +93,11 @@ namespace range {
           it->second->lock.lock();
           block_entries.push_back(it->second);
         } else {
-          RangeEntry* re = new RangeEntry;
+          BlockEntry * re = new BlockEntry;
           re->entry_range = rb.range;
           re->lock.lock();
 
-          entries.insert(pair<Address, RangeEntry*>(rb.range.start, re));
+          entries.insert(pair<Address, BlockEntry*>(rb.range.start, re));
           global_lock.unlock();
           block_entries.push_back(re);
         }
@@ -119,11 +119,11 @@ namespace range {
   }
 
   bool RangeMap::unlockRange(Range r) {
-    std::vector<RangeBlock> range_blocks = getRangeBlocks(r);
+    std::vector<BlockRange> range_blocks = getBlockedRangeMetaData(r);
 
     assert(range_blocks.size() > 0);
 
-    RangeBlock last_block = range_blocks.back();
+    BlockRange last_block = range_blocks.back();
 
     // Global lock is unnecesary here since all the range block entries are 
     // present due to the prior invocation of lockRange. Hence calling 
@@ -132,7 +132,7 @@ namespace range {
     // avoid deadlocks.
     auto it = entries.lower_bound(range_blocks[0].range.start);
     for (; it != entries.end(); ++it) {
-      RangeEntry* entry = it->second;
+      BlockEntry* entry = it->second;
       entry->lock.unlock();
 
       if (entry->entry_range == last_block.range) {

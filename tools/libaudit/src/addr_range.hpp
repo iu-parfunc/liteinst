@@ -26,7 +26,7 @@ namespace range {
        *                   Make it false to start the partitions from the range
        *                   start irrespective of its placement.
        */
-      std::vector<Range> getRangePartitions(int32_t block_size, bool aligned);
+      std::vector<Range> getBlockedRange(int32_t block_size, bool aligned);
 
       /// Checks if the given address is within the current range
       /* \param addr      The virtual address to check

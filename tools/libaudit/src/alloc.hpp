@@ -9,22 +9,22 @@
 
 namespace alloc {
 
+  /// Different allocator types available
   enum class AllocatorType {
-    FIXED,
-    ARENA
+    FIXED, ///< Fixed address allocator
+    ARENA  ///< Arena allocator
   };
 
+  /// A memory allocation strategy.
   class Allocator {
     friend class AllocatorFactory;
 
     public:
-      /// Gets memory chunk of given allocated at the given address.
-      /// May fail and return null if the memory requested has already been 
-      /// allocated.
-      /* \param address Fixed address to allocate memory at
-       * \param size    The size of the memory chunk to be allocated
-       */
-      virtual defs::Address getAllocation(defs::Address address, int32_t size) = 0;
+      /// Allocates memory chunk with a given size at/near given address.
+      /// Depending on the allocator the address can either be a hint or 
+      //mandatory.
+      virtual defs::Address getAllocation(defs::Address address, 
+          int32_t size) = 0;
 
       /// Free the alllocated memory.  
       /* \param address Address to release the previously allocated memory from.
@@ -33,6 +33,7 @@ namespace alloc {
 
   };
 
+  /// Creates a memory allocators
   class AllocatorFactory {
     public:
       std::unique_ptr<Allocator> getAllocator(AllocatorType type);

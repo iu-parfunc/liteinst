@@ -82,7 +82,7 @@ namespace alloc {
     // throw std::error
   }
 
-  bool FixedAllocator::allocationCallback(std::vector<RangeEntry*> entries, 
+  bool FixedAllocator::allocationCallback(std::vector<BlockEntry*> entries, 
       Range range) {
 
     /*

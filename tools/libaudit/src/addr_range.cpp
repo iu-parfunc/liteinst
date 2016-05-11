@@ -23,7 +23,7 @@ namespace range {
     }
   }
 
-  vector<Range> Range::getRangePartitions(int32_t block_size, bool aligned) {
+  vector<Range> Range::getBlockedRange(int32_t block_size, bool aligned) {
     Address initial_block_start = start - (uint64_t) start % block_size;
     Address final_block_end = end - (uint64_t) end % block_size;
 
