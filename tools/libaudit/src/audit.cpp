@@ -36,6 +36,7 @@ Sequences fn_start_sequences;
 Sequences fn_end_sequences; */
 
 FunctionSymbols* func_symbols;
+
 vector<string> fn_black_list = {"_init"}; // Functions not to be touched
 
 list<Function> auditFunctions(vector<string> fns) {
@@ -101,10 +102,10 @@ list<Function> auditFunctions() {
     /*
     fprintf(stderr, "Decoding function %s start : %p end : %p\n", 
       func_name.c_str(), start, fsi.end); */
+    /*
     bool is_black_listed = (find(fn_black_list.begin(), fn_black_list.end() , 
-        func_name) != fn_black_list.end());
+        func_name) != fn_black_list.end());*/
     if (start != (Address) NULL && start != fsi.end) {
-      fprintf(stderr, "Function name : %s\n", func_name.c_str());
       Decoded d = disassembleRange(start, fsi.end);
 
       BlockStructure bs = getBlockStructure(start, fsi.end, next_fn_start, d);
@@ -128,44 +129,12 @@ void readFunctionInfo() {
   for (FunctionSymbolInfo fsi : fsis) {
     func_symbols->insert(make_pair(fsi.start, fsi));
   }
-
-  /*
-  string line;
-  ifstream fp ("functions.txt");
-  std::string::size_type sz = 16;
-
-  if (fp.fail()) {
-    fprintf(stderr, "[DynProbes] ERROR : Failed opening "
-        "functions.txt. Exiting program\n");
-    throw -1;
-  }
-
-  if (fp.is_open()) {
-    while (getline (fp,line)){
-      string token;
-      istringstream iss(line);
-
-      vector<string> tokens;
-      int num_tokens = tokenize(line, tokens, ",");
-      if (num_tokens < 2) {
-        continue;
-      }
-
-      Address func_addr = (Address) strtoul(tokens[0].c_str(), NULL, 16);
-      string func_name = tokens[1];
-
-      if (func_addr != NULL) {
-        func_name_mappings->insert(make_pair(func_name, func_addr));
-        func_addr_mappings->insert(make_pair(func_addr, func_name));
-      }
-    }
-
-    fp.close();
-  }
-  */
 }
 
-__attribute__((constructor))
+
+extern "C" void audit();
+
+// __attribute__((constructor))
 void audit() {
 
   readFunctionInfo();

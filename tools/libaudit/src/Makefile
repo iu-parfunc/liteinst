@@ -2,15 +2,16 @@
 ROOT = ../../..
 INSTALL= $(ROOT)/build/lib
 DEPS_ROOT= $(ROOT)/deps
-CLFAGS = --std=c++11 -g 
+
+EXTRA_WARNS= -pedantic 
+
+CFLAGS = --std=c++11 -g -Wall $(EXTRA_WARNS) 
 # CFLAGS=-DPROBE_TRUE_EMPTY_ON -DPROBE_CPU_TIME
 # CFLAGS=-DPROBE_HIST_ON -DPROBE_CPU_TIME
 
 # Setup build macros from env variables
 
-EXTRA_WARNS= -pedantic 
-
-ARGS= -g -Wall $(EXTRA_WARNS) -I$(ROOT)/include -I$(ROOT)/common/include -I$(ROOT)/deps/distorm/include -I$(ROOT)/deps/elph/include
+ARGS= -I$(ROOT)/include -I$(ROOT)/common/include -I$(ROOT)/deps/distorm/include -I$(ROOT)/deps/elph/include
 
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 DEPS = $(INSTALL)/libpointpatch.a 
@@ -19,13 +20,14 @@ LIBS = -lelf -lrt -lstdc++ -pthread
 ELPH = $(DEPS_ROOT)/elph
 
 CC+  = $(CC) $(ARGS)
-CXX+ = $(CXX) -std=c++11 $(ARGS)
+CXX+ = $(CXX) $(ARGS)
 
 AR = ar
 RM = rm
 OPTS =
 
 CODE = $(wildcard *.cpp)
+override CODE += $(wildcard $(ROOT)/common/src/lock/*.cpp)
 
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)

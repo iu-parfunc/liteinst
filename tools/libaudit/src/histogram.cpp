@@ -12,7 +12,7 @@ void Histogram::addItem(uint64_t item) {
   if (it != bins.end()) {
     it->second->count++;
   } else {
-    Range r;
+    BinRange r;
     r.start = bin_index * bin_size;
     r.end = r.start + bin_size;
 

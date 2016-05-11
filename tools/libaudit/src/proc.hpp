@@ -1,4 +1,5 @@
 
+#include <string>
 #include <vector>
 
 #include "defs.hpp"
@@ -9,15 +10,16 @@ namespace proc {
     public:
       defs::Address start;
       defs::Address end;
-      char* file;
+      std::string file;
 
       void show(FILE* fp, int nspaces) {
         std::string left_pad = getPadding(nspaces);
 
-        fprintf(fp, "%s[%p-%p] %s\n", start, end, file);
+        fprintf(fp, "%s[%p-%p] %s\n", left_pad.c_str(), start, end, 
+            file.c_str());
       }
   };
 
-  std::vector<MappedRegion> readMappedRegions();
+  std::vector<MappedRegion>* readMappedRegions();
 
 }

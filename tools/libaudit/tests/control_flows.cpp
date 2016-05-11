@@ -1,4 +1,8 @@
 
+#include "proc.hpp"
+
+using namespace proc;
+
 long  for_func() {
   int sum = 0;
   for (int i=0; i < 10; i++) {
@@ -71,11 +75,12 @@ void empty() {
   return;
 }
 
-void audit();
+extern "C" void audit();
 
 int main() {
 
-  // audit();
+  // readMappedRegions();
+  audit();
 
   // Do nothing.. 
 

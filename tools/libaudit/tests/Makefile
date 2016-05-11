@@ -22,10 +22,10 @@ control_flows.exe:
 
 
 test: $(EXES)
-	LD_PRELOAD=$(ROOT)/build/lib/libaudit.so ./control_flows.exe
+	# LD_PRELOAD=$(ROOT)/build/lib/libaudit.so ./control_flows.exe
 	# LD_LIBRARY_PATH=../../build/lib:$(LD_LIBRARY_PATH) LD_PRELOAD=$(ROOT)/build/lib/libaudit.so ./h264ref
 	# LD_LIBRARY_PATH=../../build/lib:$(LD_LIBRARY_PATH) AUDIT_FUNCTIONS=_Z10while_funcv ./control_flows.exe
-	# LD_LIBRARY_PATH=../../../build/lib:$(LD_LIBRARY_PATH) ./test
+	LD_LIBRARY_PATH=../../../build/lib:$(LD_LIBRARY_PATH) ./control_flows.exe
 	
 clean:
 	rm -f *.o *.exe *.txt *.out

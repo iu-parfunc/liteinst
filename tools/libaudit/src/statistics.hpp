@@ -11,9 +11,18 @@
 namespace statistics {
 
   typedef struct {
+    uint64_t total_funcs;
+    uint64_t total_basic_blocks;
     uint64_t total_instruction_count;
     uint64_t total_probe_able_count;
     uint64_t total_pii_count;
+
+    uint64_t punning_ready_func_starts;
+    uint64_t punning_ready_bb_starts;
+    uint64_t probe_ready_func_starts;
+    uint64_t probe_ready_func_ends;
+    uint64_t probe_ready_bb_starts;
+    uint64_t probe_ready_bb_ends;
 
     Histogram* per_func_probe_able_count_hist;
     Histogram* per_func_pii_count_hist; 

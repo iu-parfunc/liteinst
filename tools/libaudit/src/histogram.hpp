@@ -9,11 +9,11 @@
 typedef struct {
   uint64_t start;
   uint64_t end;
-} Range;
+} BinRange;
 
 typedef struct {
   uint64_t index;
-  Range bin_range;
+  BinRange bin_range;
   uint64_t count;
   double contribution; // # of items in this bin out of total number of items 
                        // in all bins (as a %)
@@ -23,7 +23,7 @@ typedef struct {
 class Histogram : public defs::Show {
 
   private:
-    Range range;
+    BinRange range;
     uint64_t bin_size;
     uint64_t num_bins;
     uint64_t total_items;
@@ -126,7 +126,7 @@ class Histogram : public defs::Show {
           }
         }
 
-        fprintf(fp, " %.2f\n", bin->contribution);
+        fprintf(fp, " %.2f   %lu/%lu\n", bin->contribution, bin->count, total_items);
       } 
 
       if (zero_count > 0) {

@@ -19,6 +19,9 @@ namespace analysis {
       int64_t start_probe_able_inst_distance;
       uint8_t end_instruction_size;
       int64_t end_probe_able_inst_distance;
+      bool safe_patchable_start;
+      bool safe_patchable_end;
+      bool punnable_start;
 
       void show(FILE* fp, int nspaces) {
         std::string left_pad = getPadding(nspaces);
