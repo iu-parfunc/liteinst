@@ -19,9 +19,8 @@ namespace range {
 
     private:
       Range range;
-      bool entry_present = false; ///< If the corresponding block has been 
-                                  ///< mapped
-
+      bool entry_present = false; ///< If the corresponding block meta data 
+                                  ///< entry is present
   };
 
   /// Meta data about a block 
@@ -37,12 +36,12 @@ namespace range {
 
     public:
       Range entry_range;
-      BlockMetaData* meta;
+      BlockMetaData* metadata = NULL;
 
       BlockEntry(){}
       ~BlockEntry(){
-        if (meta != NULL) {
-          delete meta;
+        if (metadata != NULL) {
+          delete metadata;
         }
       }
 

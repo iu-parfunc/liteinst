@@ -36,7 +36,7 @@ namespace alloc {
   /// Creates a memory allocators
   class AllocatorFactory {
     public:
-      std::unique_ptr<Allocator> getAllocator(AllocatorType type);
+      static std::unique_ptr<Allocator> getAllocator(AllocatorType type);
   };
 
 }

@@ -19,12 +19,16 @@ namespace range {
 
       /// Get the range partitioned to blocks of given block_size.
       /* \param block_size The size of the block (typically page length)
-       * \param aligned    If the blocks are to be aligned to the block 
-       *                   boundaries. i.e: The first block would start at a 
+       * \param aligned    If the returned ranges are to be aligned to the block 
+       *                   boundaries (i.e: The first block would start at a 
        *                   block aligned address instead of the start of the 
-       *                   range if it happens to be lying inside a block.
-       *                   Make it false to start the partitions from the range
-       *                   start irrespective of its placement.
+       *                   range if it happens to be lying inside a block). Same
+       *                   for the range end (i.e last range would end at a 
+       *                   block boundary).
+       *                   Make it false to start the first range from the 
+       *                   actual range start irrespective of the start address 
+       *                   placement. Also the last range will not be aligned 
+       *                   to the last block boundary. 
        */
       std::vector<Range> getBlockedRange(int32_t block_size, bool aligned);
 

@@ -24,19 +24,35 @@ namespace range {
   }
 
   vector<Range> Range::getBlockedRange(int32_t block_size, bool aligned) {
-    Address initial_block_start = start - (uint64_t) start % block_size;
-    Address final_block_end = end - (uint64_t) end % block_size;
-
-    Address start_ptr = initial_block_start;
-    Address end_ptr;
     vector<Range> ranges;
-    while (end_ptr != final_block_end) {
-      end_ptr = start_ptr + block_size;
-      Range r;
-      r.start = start_ptr;
-      r.end = end_ptr;
+    if (aligned ) { 
+      Address initial_block_start = start - (uint64_t) start % block_size;
+      Address final_block_end;
+      if ((end - start) > block_size) {
+        final_block_end = end - (uint64_t) end % block_size;
+      } else {
+        final_block_end = initial_block_start + block_size;
+      }
 
-      ranges.push_back(r);
+      Address start_ptr = initial_block_start;
+      Address end_ptr;
+      while (end_ptr != final_block_end) {
+        end_ptr = start_ptr + block_size;
+        Range r;
+        r.start = start_ptr;
+        r.end = end_ptr;
+
+        ranges.push_back(r);
+      }
+    } else {
+      Address ptr = start;
+      while (ptr < end) {
+        Address next = ptr + block_size;
+        Range r = (next < end) ? Range(ptr, next) : Range(ptr, end);
+        ptr += block_size;
+
+        ranges.push_back(r);
+      }
     }
 
     return ranges;

@@ -2,6 +2,7 @@
 #include <iostream>
 #include <regex>
 #include <list>
+#include <array>
 
 #include <unistd.h>
 #include <sys/param.h> // MAXPATHLEN
@@ -16,16 +17,29 @@
 #include "counter.hpp"
 #include "proc.hpp"
 #include "range.hpp"
+#include "alloc.hpp"
 
 namespace statistics {
 
-  using namespace std;
   using namespace disassembly;
   using namespace analysis;
   using namespace defs;
   using namespace utils;
   using namespace proc;
   using namespace range;
+  using namespace alloc;
+  using std::to_string;
+
+  using std::vector;
+  using std::unique_ptr;
+  using std::array;
+  using std::list;
+  using std::string;
+  // using std::regex;
+
+  // Hack...
+  unique_ptr<alloc::Allocator> allocator = 
+    alloc::AllocatorFactory::getAllocator(AllocatorType::FIXED);
 
   typedef vector<MappedRegion> MappedRegions;
   MappedRegions* mem_regions = NULL;
@@ -34,8 +48,8 @@ namespace statistics {
   const uint8_t probe_able_size = 5;
   const uint32_t giga_bytes = 1 << 30;
   const uint64_t stack_allowance = 2 * giga_bytes;
-  const uint8_t invalid_opcodes [] = {0x06, 0x07, 0x0E, 0x16, 0x17, 0x1E, 0x1F, 
-    0x27, 0x2F, 0x37, 0x3F, 0x60, 0x61, 0x62};
+  const array<uint8_t, 14> invalid_opcodes = {0x06, 0x07, 0x0E, 0x16, 0x17,
+    0x1E, 0x1F, 0x27, 0x2F, 0x37, 0x3F, 0x60, 0x61, 0x62};
 
   /* Global data */
   Counter* single_byte_op_sequences = NULL;
@@ -125,24 +139,44 @@ namespace statistics {
 
     // rel_addr = swap_int32(rel_addr);
 
-    if (((uint8_t*)&rel_addr)[3] == 0xCC) {
-      // fprintf(stderr, "\n[swap] A : %p\n", rel_addr);
-      // fprintf(stderr, "[swap]Swapped MSB..\n");
-      ((uint8_t*)&rel_addr)[3] = 0x62;
-      // fprintf(stderr, "[swap] B : %p\n\n", rel_addr);
+    fprintf(stderr, "\n[Allocator] Trying punning targets for : %p\n", ip);
+    Address target;
+    for (int i = invalid_opcodes.size() - 1; i >= 0 ; i--) {
+      for (int j = clobbered_instruction_count - 2; j >= 0 ; j--) {
+        int32_t rel_copy = rel_addr;
+        if (((uint8_t*)&rel_addr)[ins_boundaries[j]] == 0xCC) {
+          // fprintf(stderr, "\n[swap] A : %p\n", rel_addr);
+          // fprintf(stderr, "[swap]Swapped MSB..\n");
+          ((uint8_t*)&rel_copy)[ins_boundaries[j]] = invalid_opcodes[i];
+          // fprintf(stderr, "[swap] B : %p\n\n", rel_addr);
+        }
+
+        target = ip + decoded[index].size + rel_copy;
+        if ((int64_t) target > 0 && target > text.end) {
+          if (!(stack.withinRange(target, true) 
+              || heap.withinRange(target, true))) {
+            fprintf(stderr, "[Allocator] Trying : %p\n", target);
+            unique_ptr<Allocator> allocator = 
+              AllocatorFactory::getAllocator(AllocatorType::FIXED);
+
+            bool success = allocator->getAllocation(target, 90);
+
+            if (success) {
+              fprintf(stderr, "[Allocator] SUCCESS AT : %p\n", target);
+              return true;
+            }
+          }
+        }
+      }
     }
 
-
-    Address target = ip + decoded[index].size + rel_addr;
-
-    if ((int64_t) target < 0) {
-      fprintf(stderr, "[alloc] Negative target address recieved : %p\n",
-          target);
-    }
+    fprintf(stderr, "[Allocator] FAILED PUNNING AT : %p\n", ip);
+    return false;
 
     // fprintf(stderr, "[alloc] Address : %p Relative address : %p\n", ip, 
     //     rel_addr);
 
+    /*
     long page_size = sysconf(_SC_PAGESIZE); 
     long alloc_size = page_size;
     Address page_start = target - (uint64_t) target % page_size; // align it to a page boundary
@@ -150,7 +184,7 @@ namespace statistics {
     if ((page_size - (uint64_t) target % page_size) < 72) {
       fprintf(stderr, "[alloc] NEED TO GET THE NEXT PAGE AS WELL..\n");
       alloc_size = page_size * 2;
-    }
+    }*/
 
     /*
     for (auto r : *mem_regions) {
@@ -163,6 +197,7 @@ namespace statistics {
     }
     */
 
+    /*
     fprintf(stderr, "[mmap] Trying to allocate a stub at : %p\n", target);
     fprintf(stderr, "[mmap] Also Trying to allocate the next page at : %p\n", 
         page_start + page_size);
@@ -206,6 +241,7 @@ namespace statistics {
         stub_address + 90);
 
     return true;
+    */
   }
 
   inline bool isProbeAble(_DInst i) {

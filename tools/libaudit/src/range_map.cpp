@@ -14,7 +14,8 @@ namespace range {
   // RangeEntries RangeMap::entries;
   // UpdateEntriesCallback RangeMap::cb;
 
-  RangeMap::RangeMap(int32_t block_size) : entries() { 
+  RangeMap::RangeMap(int32_t block_size) : block_size(block_size), entries() { 
+    fprintf(stderr, "[rangemap] BLOCK SIZE : %d\n", block_size);
   }
 
   RangeMap::~RangeMap() {
@@ -96,6 +97,7 @@ namespace range {
           BlockEntry * re = new BlockEntry;
           re->entry_range = rb.range;
           re->lock.lock();
+          re->metadata = NULL;
 
           entries.insert(pair<Address, BlockEntry*>(rb.range.start, re));
           global_lock.unlock();

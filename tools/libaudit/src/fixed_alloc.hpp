@@ -13,7 +13,7 @@ namespace alloc {
   /// Memory page allocation meta data
   class PageMetaData : public range::BlockMetaData {
     public:
-      bool allocated;
+      bool allocated; ///< If this page has been mapped yet
       std::vector<range::Range> occupied; ///< Occupied sub ranges within the
                                           ///< memory page
   };
