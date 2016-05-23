@@ -1,6 +1,4 @@
 
-
-
 #include <stdio.h> 
 #include <stdlib.h> 
 #include <memory.h>
@@ -74,6 +72,7 @@ int relocate_function(unsigned char *dst, unsigned char *src,size_t n) {
 
      Add cases here for each instruction that needs 
      special relocation treatment. 
+     call/jmp/jcc/mov
      
    */   
   for (int i = 0; i < decodedInstructionsCount; i++) { 

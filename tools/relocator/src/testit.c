@@ -71,13 +71,13 @@ void main() {
 
   int a = ((int (*)(void))&fun[0])();
 
-  printf("value of a computed by fun: %d \n", a); 
+  printf("value of \"a\" computed by fun: %d \n", a); 
  
   relocate_function(fun_data, fun, 64); 
 
   a = ((int (*)(void))&fun_data[0])();
 
-  printf("value of a computed by relocated fun: %d \n", a); 
+  printf("value of \"a\" computed by relocated fun: %d \n", a); 
   
 
 
