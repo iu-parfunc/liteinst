@@ -81,7 +81,9 @@ int relocate_function(unsigned char *dst, unsigned char *src,size_t n) {
     case I_CALL: 
       /* Call will need to be modified in the dst */ 
      
-      
+    case I_RET: 
+      /* check if this return is located after all forward jmp targets.
+         If yes, copy to dst and exit */ 
       
     default: 
       memcpy(dst + dst_offset,src+dst_offset,decodedInstructions[i].size);
