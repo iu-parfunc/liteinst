@@ -13,18 +13,19 @@ using std::pair;
 // RangeEntries RangeMap::entries;
 // UpdateEntriesCallback RangeMap::cb;
 
-RangeMap::RangeMap(int32_t block_size) : block_size(block_size), entries() { 
+BlockRangeMap::BlockRangeMap(int32_t block_size) : block_size(block_size), 
+  entries() { 
   fprintf(stderr, "[rangemap] BLOCK SIZE : %d\n", block_size);
 }
 
-RangeMap::~RangeMap() {
+BlockRangeMap::~BlockRangeMap() {
   for (auto it : entries) {
     delete it.second;
   }
   // Let RAII take care of the map itself
 }
 
-bool RangeMap::updateRangeEntries(Range r, UpdateEntriesCallback cb) {
+bool BlockRangeMap::updateRangeEntries(Range r, UpdateEntriesCallback cb) {
   vector<BlockEntry*> block_entries = lockRange(r);
   if (block_entries.size() > 0) {
     cb(block_entries, r);
@@ -38,7 +39,7 @@ bool RangeMap::updateRangeEntries(Range r, UpdateEntriesCallback cb) {
   return (block_entries.size() > 0) ? true : false;
 }   
 
-std::vector<BlockRange> RangeMap::getBlockedRangeMetaData(Range r) {
+std::vector<BlockRange> BlockRangeMap::getBlockedRangeMetaData(Range r) {
   vector<Range> partitions = r.getBlockedRange(block_size, true);
 
   vector<BlockRange> blocks;
@@ -52,7 +53,7 @@ std::vector<BlockRange> RangeMap::getBlockedRangeMetaData(Range r) {
   return blocks;
 }
 
-vector<BlockEntry*> RangeMap::lockRange(Range r) {
+vector<BlockEntry*> BlockRangeMap::lockRange(Range r) {
   std::vector<BlockRange> range_blocks = getBlockedRangeMetaData(r);
 
   assert(range_blocks.size() > 0);
@@ -119,7 +120,7 @@ vector<BlockEntry*> RangeMap::lockRange(Range r) {
   return block_entries;
 }
 
-bool RangeMap::unlockRange(Range r) {
+bool BlockRangeMap::unlockRange(Range r) {
   std::vector<BlockRange> range_blocks = getBlockedRangeMetaData(r);
 
   assert(range_blocks.size() > 0);

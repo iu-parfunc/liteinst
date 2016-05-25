@@ -16,7 +16,7 @@ namespace rprobes {
 /// Range information corresponding to a block with some additional meta data
 /// added for RangeMap internal use. 
 class BlockRange {
-  friend class RangeMap;
+  friend class BlockRangeMap;
 
   private:
   Range range;
@@ -34,7 +34,7 @@ class BlockMetaData {
 
 /// Meta data container for a given block 
 class BlockEntry {
-  friend class RangeMap;
+  friend class BlockRangeMap;
 
   public:
   Range entry_range;
@@ -63,11 +63,11 @@ typedef std::map<Address, BlockEntry*> BlockEntries;
 typedef std::function<bool(std::vector<BlockEntry*>, Range range)> 
 UpdateEntriesCallback;
 
-/// RangeMap is a concurrent map holding information about ranges partitioned 
+/// BlockRangeMap is a concurrent map holding information about ranges partitioned 
 /// according to a given block size.   
-class RangeMap {
+class BlockRangeMap {
   public:
-    RangeMap(int32_t block_size);
+    BlockRangeMap(int32_t block_size);
 
     /** \brief Updates the block entries corresponding to the given range. 
      *  \param r  The range to be updated.
@@ -77,7 +77,7 @@ class RangeMap {
      *  given callback.
      */
     bool updateRangeEntries(Range r, UpdateEntriesCallback cb);   
-    ~RangeMap();
+    ~BlockRangeMap();
 
   private:
     BlockEntries entries;      ///< Block entry mappings

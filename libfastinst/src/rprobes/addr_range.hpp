@@ -54,7 +54,7 @@ class Range {
      *
      *  Range boundaries are included in the check.
      */
-    bool overlapsWith(Range r);
+    bool overlapsWith(const Range r);
 
     /// Overloaded comparison operators for ranges
     bool operator<(const Range& r);

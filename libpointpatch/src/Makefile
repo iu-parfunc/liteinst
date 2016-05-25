@@ -38,7 +38,7 @@ libpointpatch.a: build distorm
 	$(RM) -rf temp
 
 libpointpatch.so: build distorm
-	$(CXX) $(LIBS) -shared -Wl,-soname,libpointpatch.so -o libpointpatch.so $(OBJ) $(COMMON_OBJ) $(DEPS)
+	$(CXX) $(LIBS) -shared -Wl,-soname,libpointpatch.so -Wl,-init,init_point_patcher -o libpointpatch.so $(OBJ) $(COMMON_OBJ) $(DEPS)
 
 install: libpointpatch.so libpointpatch.a
 	if [ ! -d $(BUILD) ]; then mkdir $(BUILD); fi

@@ -15,7 +15,7 @@ namespace rprobes {
  *         gather meta data about the current process.
  *
  * Following methods are used to gather information. 
- *  - Reading ELF symbol tables for reading function symbol meta data. 
+ *  - Reading ELF symbol tables for reading function symbol meta data (Linux).
  *  - Reading /proc/self/maps for discovering mapped memory regions (Linux).
  * 
  */
@@ -25,17 +25,17 @@ class ProcessAnalyzer {
     /** \brief Gets the functions within the current process.
      *  \return A mapping from function start address to function information.
      */
-    std::map<Address, Function> getFunctions();
+    virtual std::map<Address, Function> getFunctions();
 
     /** \brief Gets the mapped regions within the current process.
      *  \return A mapping from region start address to region information.
      */
-    std::map<Address, MappedRegion> getMappedRegions();
+    virtual std::map<Address, MappedRegion> getMappedRegions();
 
     /** \brief Gets the path of the executable of current process.
      *  \return The path of the executable
      */
-    std::string getProgramPath();
+    virtual std::string getProgramPath();
 
   private:
     std::string program_path;

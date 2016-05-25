@@ -15,7 +15,8 @@ namespace rprobes {
 using std::string;
 using std::vector;
 
-RangeMap FixedAllocator::allocations = RangeMap(sysconf(_SC_PAGESIZE));
+BlockRangeMap FixedAllocator::allocations = 
+  BlockRangeMap(sysconf(_SC_PAGESIZE));
 
 FixedAllocator::FixedAllocator() : Allocator() {
 }

@@ -23,15 +23,15 @@ class FixedAllocator : public Allocator {
   friend AllocatorFactory;
 
   private:
-  static RangeMap allocations; 
+  static BlockRangeMap allocations; 
 
   FixedAllocator();
 
   public:
-  /** /brief Gets memory chunk of given size allocated at the given address.
-   *  /param address Fixed address to allocate memory at
-   *  /param size    The size of the memory chunk to be allocated
-   *  /return        The address at which memory was allocated or null in 
+  /** \brief Gets memory chunk of given size allocated at the given address.
+   *  \param address Fixed address to allocate memory at
+   *  \param size    The size of the memory chunk to be allocated
+   *  \return        The address at which memory was allocated or null in 
    *  case of allocation failure.
    *
    * May fail and return null if the memory address requested has already 

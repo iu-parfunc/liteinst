@@ -3,7 +3,9 @@
 #define _UTILS_HPP_
 
 #include <unistd.h>
+#include <sys/param.h> // MAXPATHLEN
 #include <cstdint>
+#include <cstdlib>
 #include <string>
 #include <vector>
 #include "cycle.h"
@@ -11,9 +13,27 @@
 
 namespace utils {
 
+  /// Gets the executable path
+  inline char* getProgramPath() {
+    if (program_path == NULL) {
+      program_path = (char*) malloc(sizeof(char) * MAXPATHLEN);
+      ssize_t len = 0;
+      if (program_path != NULL) {
+        if ((len = readlink("/proc/self/exe", program_path, sizeof(char) *
+                MAXPATHLEN)) == -1) {
+          free(program_path);
+          program_path = NULL;
+          return NULL;
+        }
+      }
+      program_path[len] = '\0';
+    }
+    return program_path;
+  }
+
   /// Gets estimated seconds value from cycles
   /* \param duration The cycle count to be converted to seconds
-   */
+  */
   double getSecondsFromTicks(ticks duration);
 
   /// Tokenize a given string according to provided delimiter
