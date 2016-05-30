@@ -1,0 +1,91 @@
+
+/*
+  Benchmark description:
+  Measures average initialization cost of a probe via Finstrumentor ProbeProvider API.
+   */
+
+#include "fastinst.hpp"
+#include "cycle.h"
+#include "funcs.hpp"
+
+#include <string>
+#include <cassert>
+#include <cstdlib>
+
+using namespace std;
+
+long DEFAULT_FUNC_ID = 1;
+long NUM_FUNCS = 10000;
+
+long invoke_count;
+
+void instrumentation(ProbeArg func_id)
+  __attribute__((no_instrument_function));
+void callback(const ProbeMetaData* pmd)
+  __attribute__((no_instrument_function));
+
+void instrumentation(ProbeArg func_id) {
+  invoke_count++;
+}
+
+void callback(const ProbeMetaData* pmd) {
+
+  PROBE_PROVIDER->initialize(pmd->probe_id, DEFAULT_FUNC_ID);
+  try {
+    PROBE_PROVIDER->activate(pmd->probe_id, instrumentation);
+  } catch (int e) {
+    fprintf(stderr, "Error while activating probe of function : %s.\n",
+        pmd->func_name.c_str());
+    exit(EXIT_FAILURE);
+  }
+
+}
+
+int main(int argc, char* argv[]) {
+
+  fprintf(stderr, "Benchmark probe initialization..\n");
+
+  if (argc == 1) {
+    printf("NO ARGS: Running with default NUM_FUNCS : %ld..\n", NUM_FUNCS); 
+  } else {
+    NUM_FUNCS = atoi(argv[1]);
+    printf("Running with NUM_FUNCS : %ld..\n", NUM_FUNCS); 
+  }
+
+  ProbeProvider* p;
+  try {
+    p = initializeGlobalProbeProvider(ProviderType::FINSTRUMENT, callback);
+  } catch (int e) {
+    fprintf(stderr, "ProbeProvider already initialized. Getting the existing"
+        " one..\n");
+    p = getGlobalProbeProvider();
+  }
+
+  if (p == NULL) {
+    fprintf(stderr, "Unable to initialize probe provider..\n");
+    exit(EXIT_FAILURE);
+  }
+
+  ticks start = getticks();
+  for (int i=0; i<NUM_FUNCS; i++) {
+    emptyFunc();
+  }
+  ticks end = getticks();
+  ticks single_func_elapsed_time = end - start;
+
+  start = getticks();
+  emptyFunc0();
+  end = getticks();
+  ticks different_funcs_elapsed_time = end - start;
+
+  fprintf(stderr, "Num invocations : %ld\n", invoke_count);
+  assert(invoke_count == NUM_FUNCS*2*2); 
+
+  fprintf(stderr, "Initialization cost estimate (cycles) : %llu\n", 
+      (different_funcs_elapsed_time - single_func_elapsed_time) / (NUM_FUNCS-1));
+
+  delete(p);
+
+  exit(EXIT_SUCCESS);
+
+}

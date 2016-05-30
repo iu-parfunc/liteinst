@@ -1,0 +1,59 @@
+
+typedef uint64_t ProbeGroupId;
+
+enum class ProbeContextType {
+  FUNCTION,
+  LOOP,
+  BASIC_BLOCK,
+  ADDRESS,
+  LINE_NUM
+};
+
+enum class ProbePlacement {
+  ENTRY,
+  EXIT,
+  CALL
+};
+
+class ProbeContextConfig {
+  public:
+    ProbeGroupConfig
+    void setInstrumentation(ProbePlacement placement,
+      InstrumentationFunc func);
+
+  private:
+    ProbeContextType type;
+    ProbeContextId ctx_id;
+    std::map<ProbePlacement, InstrumentationFunc> instrumentations;
+};
+
+class Probe {
+  public:
+    ProbeId id;
+    ProbeLocation placement;
+    Address address;
+    Address target;
+};
+
+class ProbeGroup {
+  public:
+    ProbeGroupId id;
+    std::string name;
+    Module module;
+    Function function;
+    Loop loop;
+    BasicBlock basic_block;
+    Offset offset;
+    ProbePlacement placement;
+
+    ProbeContextConfiguration config;
+    std::vector<Probe> probes;
+};
+
+class ProbeInstrumentation {
+  public:
+    ProbeId id;
+    ProbeLocation placement;
+    Address address;
+    std::unordered_map<std::vector<Address>, Address> trampolines;
+};
