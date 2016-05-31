@@ -7,3 +7,6 @@
 [submodule "deps/elph"]
 	path = deps/elph
 	url = git@github.com:iu-parfunc/elph.git
+[submodule "deps/bandit"]
+	path = deps/bandit
+	url = git@github.com:joakimkarlsson/bandit.git
