@@ -94,11 +94,11 @@ bool Range::operator!=(const Range& r) {
 }
 
 bool Range::operator<=(const Range& r) {
-  return !(*this > r) ? true : false;
+  return (*this < r) || (*this == r) ? true : false;
 }
 
 bool Range::operator>=(const Range& r) {
-  return !(*this < r) ? true : false;
+  return (*this > r) || (*this == r) ? true : false;
 }
 
 } // End rprobes
