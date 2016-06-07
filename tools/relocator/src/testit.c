@@ -73,7 +73,11 @@ void main() {
 
   printf("value of \"a\" computed by fun: %d \n", a); 
  
-  relocate_function(fun_data, fun, 64); 
+  unsigned int count = count_relocatable(fun, 64); 
+  
+  printf("count_relocatable: %d\n", count); 
+
+  relocate(fun_data, fun, 64); 
 
   a = ((int (*)(void))&fun_data[0])();
 
