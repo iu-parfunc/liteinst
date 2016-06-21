@@ -2,6 +2,7 @@
 #include <stdio.h> 
 #include <stdlib.h> 
 #include <memory.h>
+#include <stdint.h> 
 
 #include "relocator.h"
 #include "distorm.h"
@@ -13,6 +14,18 @@ void relocate_info() {
   printf("diStorm version: %u.%u.%u\n", (dver >> 16), ((dver) >> 8) & 0xff, dver & 0xff);
 
 } 
+
+
+char *op_types[] = {"O_NONE", 
+		    "O_REG", 
+		    "O_IMM", 
+		    "O_IMM1", 
+		    "O_IMM2", 
+		    "O_DISP", 
+		    "O_SMEM", 
+		    "O_OMEM", 
+		    "O_PC",
+		    "O_PTR"};
 
 
 int relocate(unsigned char *dst, unsigned char *src,size_t nRelocateInstr) { 
@@ -29,17 +42,6 @@ int relocate(unsigned char *dst, unsigned char *src,size_t nRelocateInstr) {
   ci.dt = Decode64Bits;   
   ci.codeOffset = 0x0; 
   
-  /* decode a block  
-   
-     TODO: Later repeat the procedure 
-     * decode a block 
-     * relocate that block 
-     * keep track of jumps ahead (to find how far to decode) 
-     * break out of loop when finding a "return" after the 
-       maximum jump ahead distance. 
-   
-  */
-     
   res = distorm_decompose(&ci, 
 			  decodedInstructions, 
 			  nDecodeBytes,  
@@ -63,7 +65,6 @@ int relocate(unsigned char *dst, unsigned char *src,size_t nRelocateInstr) {
     return -1; 
   }
 
-
   printf("decoded %d instructions\n", decodedInstructionsCount); 
 
   unsigned int dst_offset = 0; 
@@ -85,10 +86,56 @@ int relocate(unsigned char *dst, unsigned char *src,size_t nRelocateInstr) {
      call/jmp/jcc/mov
      
   */   
+  int call_type;
+  int offset_bits; 
 
   for (int i = 0; i < decodedInstructionsCount; i++) { 
     switch (decodedInstructions[i].opcode) {
     case I_CALL: 
+      offset_bits = decodedInstructions[i].ops[0].size; 
+      call_type   = decodedInstructions[i].ops[0].type;
+
+      /* is this a PC relative call with a 32 bit displacement? */       
+      if ( call_type == O_PC && offset_bits == 32) { 
+	/* this is an E8 call */ 
+	uint32_t offset; 
+	uint32_t new_offset; 
+	offset = decodedInstructions[i].imm.addr;
+	printf("%d offset %d \n", i, offset); 
+	printf("%d distance %d \n", i, (uint32_t)distance); 
+
+	/* compute new relative address */ 
+	new_offset = distance + offset; 
+	
+        /* prepare to access the bytes of the 32bit new_offset */ 
+	unsigned char *np = (unsigned char *)&new_offset; 
+
+	/* create a new call instruction with new_offset */ 
+	unsigned char newcall[5] = {0xe8,np[0],np[1],np[2],np[3]}; 
+	
+	/* copy generated call to dst and update src location pointers */ 
+	memcpy(dst + dst_offset,newcall,decodedInstructions[i].size);
+	dst_offset += decodedInstructions[i].size;
+
+	
+      } else { 
+	/* TODO: Figure out how to handle more kinds of calls */ 
+	fprintf(stderr,"Error: unsupported Call instr"); 	
+      }
+      break; 
+      
+      /* printf("Call instruction: \n");  */
+      /* for (int j = 0; j < 4; j++) {  */
+      /* 	printf("operand type %d: %s\n",j,  */
+      /*     op_types[decodedInstructions[i].ops[j].type]);  */
+      /* 	printf("operand size %d: %d bits\n",j,  */
+      /* 	       decodedInstructions[i].ops[j].size);  */
+      /* } */
+     
+      
+      /* exit(-1);  */
+
+
       /* Call will need to be modified in the dst */ 
      
     case I_RET: 
@@ -134,6 +181,7 @@ static int position_independent(_DInst *instr ) {
   case I_JRCXZ:
   case I_JS:
   case I_JZ:
+  case I_CALL:
     return 0; 
   /* Many instructions can use RIP relative addressing... */ 
   
