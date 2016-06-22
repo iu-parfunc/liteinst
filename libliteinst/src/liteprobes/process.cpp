@@ -3,10 +3,11 @@
 #include "analysis.hpp"
 
 namespace liteinst { 
-namespace rprobes { 
+namespace liteprobes { 
 
 using std::vector;
 using std::string;
+using utils::Address;
 
 Process::Process() {
 
@@ -71,6 +72,10 @@ vector<Function> Process::getFunctions() {
   return fns;
 }
 
+int Process::getNumberOfFunctions() {
+  return functions.size();
+}
+
 MappedRegion Process::getMappedRegion(Address addr) {
   auto it = mapped.find(addr);
   if (it != mapped.end()) {
@@ -127,5 +132,5 @@ void Process::show(FILE* fp, int nspaces) {
   fprintf(fp, "\n");
 }
 
-} // End rprobes 
+} // End liteprobes 
 } // End liteinst 

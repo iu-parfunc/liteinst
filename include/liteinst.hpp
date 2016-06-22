@@ -7,14 +7,21 @@
 #include <atomic>
 #include <string>
 #include <cstdio>
+#include <unordered_map>
+
+#include "concurrency.hpp"
 
 // TODO: Make this work for x86
-#define LITEINST_GET_ARGS (pg_id, i_id, p_id) \
+#define LITEINST_SET_PROBE_CONTEXT (ctx) \
   do { \
     asm ("movq %%rdi, %0\n" \
          "movq %%rsi, %1\n" \
          "movq %%rdx, %2\n" \
-       : "=m"(pg_id), "=m"(i_id), "=m"(p_id) \
+         "movq %%r10, %3\n" \
+         "movq %%r8, %4\n" \
+         "movq %%r9, %5\n" \
+       : "=m"(ctx.pg_id), "=m"(ctx.i_id), "=m"(ctx.p_id), "=m"(ctx.placement), \
+         "=m"(ctx.u_regs) \
   } while (0) 
 
 namespace liteinst {
@@ -29,65 +36,92 @@ enum class ProviderType { ZCA, FINSTRUMENT, DTRACE, DYNINST, RPROBES };
 /// ProbeProvider by depending on implementation details.
 enum class ProbeType { ZCA, FINSTRUMENT, DTRACE, DYNINST, RPROBES }; 
 
+/// Opaque identifier for a ProbeGroup
+typedef uint64_t ProbeGroupId;
+
+/// Opaque identifier for a Probe
+typedef uint64_t ProbeId;
+
+/// Opaque identifier for an Instrumentor instance
+typedef uint64_t InstrumentationId;
+
 /// The probe groupings available. 
 enum ProbeGroupType { 
   FUNCTION,
   LOOP,
   BASIC_BLOCK,
   OFFSET,
-  LINE_NUM
+  LINE_NUM, 
+  INS_TYPE
 };
 
 /// The placement of probes within a given probe grouping.
 enum ProbePlacement { 
   ENTRY,
   EXIT,
-  CALL
+  BOUNDARY /* ENTRY + EXIT */
 };
 
-class Module {
-  public:
-    Module(std::string name = "") : name(name) {
-    }
-
-  private:
-    std::string name;
+struct ProbeContext {
+  ProbeId p_id;
+  ProbeGroupId pg_id;
+  InstrumentationId i_id;
+  ProbePlacement placement;
 };
 
-class Function {
+class ProbeAxis {
   public:
-    Function(std::string name = "") : name(name) {
+    ProbeAxis(std::string spec) : spec(spec) {
+
     }
 
-  private:
-    std::string name;
+    virtual void setPlacement(ProbePlacement p) {
+      placement = p;
+    }
+
+    virtual std::string getSpec() {
+      return spec;
+    }
+
+  protected:
+    std::string spec;
+    ProbePlacement placement;
 };
 
-class Loop {
+class Module : public ProbeAxis {
   public:
-    Loop(std::string offset = "") : offset(offset) {
+    Module(std::string spec = "") : ProbeAxis(spec) {
     }
-
-  private:
-    std::string offset;
 };
 
-class BasicBlock {
+class Function : public ProbeAxis {
   public:
-    BasicBlock(std::string offset = "") : offset(offset) {
+    Function(std::string spec = "") : ProbeAxis(spec) {
     }
-
-  private:
-    std::string offset;
 };
 
-class Offset {
+class Loop : public ProbeAxis {
   public:
-    Offset(std::string offset = "") : offset(offset) {
+    Loop(std::string spec = "") : ProbeAxis(spec) {
     }
+};
 
-  private:
-    std::string offset;
+class BasicBlock : public ProbeAxis {
+  public:
+    BasicBlock(std::string spec = "") : ProbeAxis(spec) {
+    }
+};
+
+class Offset : public ProbeAxis {
+  public:
+    Offset(std::string spec = "") : ProbeAxis(spec) {
+    }
+};
+
+class InstructionType : public ProbeAxis {
+  public:
+    InstructionType(std::string spec = "") : ProbeAxis(spec) {
+    } 
 };
 
 class ProbeGroup {
@@ -106,139 +140,100 @@ class ProbeGroup {
 typedef uint64_t ProbeGroupId;
 
 /// The type of the instrumentation function.
-typedef void (*InstrumentationFunc) ();
+typedef void (*InstrumentationFunction) ();
 
 
-class Instrumentation {
+class InstrumentationProvider {
   public:
-    Instrumentation(std::string name) : name(name) {
+    InstrumentationProvider(std::string name, InstrumentationFunction entry, 
+        InstrumentationFunction exit) : name(name), entry(entry), exit(exit) {
     }
 
-    void addProbeInstrumetation(ProbePlacement placement, 
-        InstrumentationFunction function) {
-      functions.insert(std::pair<ProbePlacement, InstrumentationFunction>(
-            placement, function));
+    InstrumentationFunction getEntryInstrumentation() {
+      return entry;
+    }
+
+    InstrumentationFunction getExitInstrumentation() {
+      return exit;
+    }
+
+    std::string getName() {
+      return name;
     }
 
   private:
     std::string name;
-    std::map<ProbePlacement, InstrumentationFunc> functions;
+    InstrumentationFunction entry = NULL;
+    InstrumentationFunction exit = NULL;
 };
 
 class Coordinates {
   public:
-    Coordinates setModule(Module module) {
-      this.module = module;
-      return this; 
+    Coordinates& setModule(Module m) {
+      module = m;
+      return *this; 
     }
 
-    Coordinates setFunction(Function function) {
-      this.function = function;
-      return this; 
+    Coordinates& setFunction(Function f) {
+      function = f;
+      return *this; 
     }
 
-    Coordinates setLoop(Loop loop) {
-      this.loop = loop;
-      return this; 
+    Coordinates& setLoop(Loop l) {
+      loop = l;
+      return *this; 
     }
 
-    Coordinates setBasicBlock(BasicBlock basic_block) {
-      this.basic_block = basic_block;
-      return this; 
+    Coordinates& setBasicBlock(BasicBlock bb) {
+      basic_block = bb;
+      return *this; 
     }
 
-    Coordinates setOffset(Offset offset) {
-      this.offset = offset;
-      return this; 
+    Coordinates& setOffset(Offset o) {
+      offset = o;
+      return *this; 
+    }
+
+    Coordinates& setInstructionType(InstructionType i) {
+      ins_type = i;
+      return *this;
+    }
+
+    Coordinates& setProbePlacement(ProbePlacement placement) {
+      if (!ins_type.getSpec().compare("")) {
+        ins_type.setPlacement(placement);
+      } else if (!offset.getSpec().compare("")) {
+        offset.setPlacement(placement);
+      } else if (!basic_block.getSpec().compare("")) {
+        basic_block.setPlacement(placement);
+      } else if (!loop.getSpec().compare("")) {
+        loop.setPlacement(placement);
+      } else if (!function.getSpec().compare("")) {
+        function.setPlacement(placement);
+      } else if (!module.getSpec().compare("")) {
+        module.setPlacement(placement);
+      } else {
+        throw std::invalid_argument("At least one probe coordinate must be" 
+            " specified");
+      }
     }
 
   private:
     Module module;
     Function function;
-    Loop loop;
+    Loop loop; 
     BasicBlock basic_block;
     Offset offset;
+    InstructionType ins_type;
 };
 
-/// probeId -> probeGroupId
-///   
+class ProbeRegistration {
 
-/// [Module]:Function:[Loop]:[Basic Block]:[Offset]:Entry
-/// Module:Function:Loop:Basic Block:Offset:*
-/// [Module]:Function:[Loop]:[Basic Block]:[Offset]:*
-/// /* $exit != offset1&offset2 & $granularity == LOOP*/
-class ProbeProvider {
-  public:
-    void registerInstrumentationProvider(
-        InstrumentationProvider instrumentation);
-    ProbeRegistration configure(Coordinates coords, 
-        std::string instrumentation_provider, bool force);
-
-    // Per probe group operations
-    bool activate(ProbeGroupId pg_id, Instrumentationid i_id, 
-        std::string instrumentation_provider);
-    bool deactivate(ProbeGroupId pg_id, InstrumentationId i_id,  
-        std::string instrumentation_provider);
-
-    // Bulk operations
-    bool activate(ProbeRegistration registration);
-    bool deactivate(ProbeRegistration registraiton);
 };
 
-/// Probes are a four-state finite automata, and all transitions
-/// between states must be atomic (i.e. have serialization points in
-/// the code).
-enum class ProbeState { UNINITIALIZED, INITIALIZING, ACTIVE, DEACTIVATED ,
-  ACTIVATING, DEACTIVATING };
+class ProbeMetaData {
 
-/// An opaque, unique context identifier.  Do not depend on the
-/// representation of this value.
-typedef uint64_t ContextId;
-
-/// An opaque, unique probe identifier.  Do not depend on the
-/// representation of this value.
-typedef uint64_t ProbeId;
-
-/// A byte addressible data type
-typedef uint8_t* Address;
-
-/// A byte sequence of 8 bytes
-typedef uint64_t Sequence;
-
-/// This is the type of function pointers for dynamically injected
-/// function calls.  The job of the ProbeProvider
-typedef void (*InstrumentationFunc) (ContextId ctx_id, ProbeId probe_id);
-
-/// Atomic reference to an InstrumentationFunc function pointer
-typedef std::atomic<InstrumentationFunc> InstrumentationFuncAtomic;
-
-// Forward declare ProbeProvider class to be used inside ProbeMetaData
-class ProbeProvider;
-
-/// Everything we need to know about a newly discovered probe.
-typedef struct ProbeMetaData {
-  FuncId func_id;
-  std::string func_name;
-  ProbeId probe_id;
-  std::string probe_name;
-  Address probe_addr;
-  ProbeType type;
-  ProbeState state;
-  ProbeContext probe_context;
-  ProbeLoc     probe_loc;
-  ProbeArg     probe_arg;
-  Sequence active_seq;
-  Sequence inactive_seq;
-  InstrumentationFuncAtomic instrumentation_func;
-  bool is_straddler;
-  int  straddle_point;
-
-  // The provider that "owns" this probe:
-  ProbeProvider* provider;
-} ProbeMetaData;
-
-/// Probe meta data vector data type
-typedef std::vector<ProbeMetaData*> ProbeVec;
+};
 
 /// The signature for a callback that registers a newly discovered
 /// probe.  The ProbeProvider owns the ProbeMetadata record, so the
@@ -256,282 +251,81 @@ typedef std::vector<ProbeMetaData*> ProbeVec;
 /// through the ProbeMetadata pointer itself.
 typedef void (*Callback) (const ProbeMetaData* pmd);
 
-#ifdef AUDIT_PROBES
-/// Audit interfaces. This data structure is used to keep statistics
-/// about probe toggling.
-typedef struct ToggleStatistics {
-  uint64_t deactivation_count;
-  uint64_t activation_count;
-  ticks deactivation_costs;
-  ticks activation_costs;
-} ToggleStatistics;
-#endif
+/// probeId -> probeGroupId
+///   
 
-/// Implements an object that discovers probes and subsequently
-/// provides the ability to toggle those probes.  When active, a
-/// client-provided function-pointer is called from the probe site.
+/// [Module]:Function:[Loop]:[Basic Block]:[Offset]:[Ins]:Entry
+/// Module:Function:Loop:Basic Block:Offset:Ins:*
+/// [Module]:Function:[Loop]:[Basic Block]:[Offset]:*
+/// /* $exit != offset1&offset2 & $granularity == LOOP*/
 class ProbeProvider {
+  public:
+    ProbeProvider(Callback cb) : callback(cb) {
+      // probe_meta_data = new ProbeVec;
+    }
+
+    InstrumentationId registerInstrumentationProvider(
+        InstrumentationProvider instrumentation) {
+
+      ProviderEntry pe(instrumentation.getName());
+      auto it = i_providers.find(pe);
+      if (it != i_providers.end()) {
+        throw std::invalid_argument("Provider with the same name already " 
+            "exists");
+      } else {
+        lock.lock();
+        pe.provider_id = i_provider_counter++;
+        i_providers.insert(
+            std::pair<ProviderEntry, InstrumentationProvider>(pe, 
+              instrumentation));
+        lock.unlock();
+        return pe.provider_id;
+      }
+    }
+
+    virtual ProbeRegistration configure(Coordinates coords, 
+        std::string instrumentation_provider) = 0;
+
+    // Per probe operations
+    virtual bool activate(ProbeContext ctx) = 0;
+    virtual bool deactivate(ProbeContext ctx) = 0;
+
+    // Bulk operations
+    virtual bool activate(ProbeRegistration registration) = 0;
+    virtual bool deactivate(ProbeRegistration registraiton) = 0;
 
   protected:
     Callback callback;
-    ProbeVec* probe_meta_data;
 
-  public:
+  private:
+    class ProviderEntry {
+      public:
+        int provider_id;
+        std::string provider_name;
 
-    /// Probe provider constructor
-    /* Initialises with the callback
-     * \param callback The callback function invoked at each probe discovery
-     */
-    ProbeProvider(Callback cb) : callback(cb) {
-      probe_meta_data = new ProbeVec;
-    }
+        ProviderEntry(std::string name) : provider_name(name) {
 
-    /// This method can be used to do probe provider specific further
-    /// intializations.
-    /* \param prolog Prolog instrumentation function pointer
-     * \param epilog Epilog instrumentation function pointer
-     * Specially any initialization which might require the
-     * ProbeProvider instance to have been fully constructed. The default
-     * implementation is empty. On demand instrumentors can ignore the 
-     * prolog and epilog information until delayed activation of probes 
-     * happen at a later time during the program runtime. 
-     *
-     */
-    virtual void initializeProvider(InstrumentationFunc prolog, 
-        InstrumentationFunc epilog) {
-    };
-
-
-    /// This method registers a newly discovered probe with the proider.
-    /* This is typically done by calling the registered probe callback.
-     * The probe initialzation call will be done inside the callback.
-     * \param pmd The probe metadata entry
-     */
-    virtual void registerProbe(ProbeMetaData* pmd) {
-      (*callback)(pmd);
-    };
-
-    /// Move from UNINITIALIZED to INITIALIZING state.
-    /* Begin initializing the probe, moving from UNINITIALIZED to
-     * INITIALIZING state.  This function should not be called
-     * concurrently, it should only be called on a single thread, and
-     * specifically should be called from the probe discovery
-     * Callback.
-     *
-     * This function cannot fail, but it may raise an exception if
-     * preconditions are violated either in terms of the wrong
-     * starting state or detection of contention.
-     *
-     * \param probe_arg A constant argument that is passed to EVERY
-     * subsequent probe invocation, that is, every
-     * Instrumentation_func which the probe is activated with.
-     *
-     */
-    virtual void initialize(ProbeId probe_id, ProbeArg probe_arg) = 0;
-
-    /// Activates the given probe.
-    /* Activates the probe with given instrumentation function.
-     *
-     * Returns a code indicating success or failure.  If true is
-     * returned, then the probe was successfully activated with the
-     * given function.
-     *
-     * Failure can happen for a number of reasons.  Another thread may
-     * have beat us to modifying the probe.  Also, this revision of
-     * the API does not allow transitions *between* active states.
-     * The probe must first be deactivated, before it may be activated
-     * with a different instrumentation function.  This may be relaxed
-     * in the future.
-     *
-     * It is an error to call this function before initialize
-     * (UNINITIALIZED state).  INITIALIZING or DEACTIVATED states are
-     * fine.
-     *
-     * \param probe_id The probe id opaque identifier
-     * \param func The instrumentation function
-     *
-     * \return A boolean indicating success or failure.  True implies
-     * that the probe was successfully activated.
-     */
-    virtual bool activate(ProbeId probe_id, InstrumentationFunc func) = 0;
-
-    /// Activates the given probe asynchronously
-    /* Activates the probe with given instrumentation function.
-     *
-     * \param probe_id The probe id opaque identifier
-     * \param func The instrumentation function
-     *
-     * \return TODO
-     * 
-     */
-    virtual bool activate_async(ProbeId probe_id, 
-        InstrumentationFunc func) = 0;
-
-    /// Force asynchronous probe activation to finish before returning
-    /* Wait until the asynchronous protocol gets finished
-     *
-     * \param  The probe id: an opaque identifier.
-     *
-     * \return TODO
-     */
-    virtual void activate_async_finish(ProbeId probe_id) = 0;
-
-    /// Deactivates the given probe
-    /* Deactivate the probe, restoring the original functioality of
-     * the machine code at the probe point.
-     *
-     * It is an error to call this function before initialize
-     * (UNINITIALIZED state).  INITIALIZING or ACTIVE states are fine.
-     *
-     * \param  The probe id: an opaque identifier.
-     *
-     * \return A boolean indicating success or failure.  True implies
-     * that the probe was successfully deactivated.
-     */
-    virtual bool deactivate(ProbeId probe_id) = 0;
-
-    /// Deactivates the given probe
-    /* Deactivate the probe, restoring the original functioality of
-     * the machine code at the probe point.
-     *
-     * The deactivation protocol completion happens asyncronously.
-     * Once the top half of the protocol is completed probe would transition to
-     * DEACTIVATING. Once the bottom half is run probe will be in DEACTIVATED
-     * state.
-     *
-     * \param  The probe id: an opaque identifier.
-     *
-     * \return TODO
-     */
-    virtual bool deactivate_async(ProbeId probe_id) = 0;
-
-    /// Force asynchronous probe deactivation to finish before returning
-    /* Wait until the asynchronous protocol gets finished
-     *
-     * \param  The probe id: an opaque identifier.
-     *
-     * \return TODO
-     */
-    virtual void deactivate_async_finish(ProbeId probe_id) = 0;
-
-    /// Gets the number of functions in the application
-    /*  Usually probe providers are privy to this information by reading
-     *  ELF tables during the processing of probe sites. This method
-     *  exposes the number of functions found during such initialization
-     *  to the client. This can be really useful for initialization of
-     *  client data structures for gathering statistics related to each
-     *  function in more efficient manner (e.g: array instead
-     *  of list) since the size of the data structure is known before hand.
-     *  \return The number of functions discovered durig probe provider
-     *  initialization. Returns -1 if the particular provider isn't capable
-     *  of enumerating functions.
-     */
-    virtual uint64_t getNumberOfFunctions() = 0;
-
-    /// Gets the probe meta data information
-    ProbeVec* getProbeMetaData() {
-      return probe_meta_data;
-    }
-
-    virtual ~ProbeProvider() {
-#ifdef AUDIT_PROBES
-      uint64_t num_straddlers = 0;
-      uint64_t num_probes     = probe_meta_data->size();
-      uint64_t straddler_hist[8] = {0};
-      uint64_t entry_straddlers = 0;
-      uint64_t exit_straddlers  = 0;
-      for (auto it = probe_meta_data->begin(); it != probe_meta_data->end();
-          ++it) {
-        ProbeMetaData* pmd = *it;
-        if (pmd->is_straddler) {
-          num_straddlers++;
-          straddler_hist[pmd->straddle_point]++;
-
-          if (pmd->probe_context == ProbeContext::ENTRY) {
-            entry_straddlers++;
-          } else if (pmd->probe_context == ProbeContext::EXIT) {
-            exit_straddlers++;
-          }
         }
-      }
 
-      FILE* fp = fopen("probe.audit", "a");
-
-      fprintf(fp, "Straddler Report \n");
-      fprintf(fp, "================ \n");
-      fprintf(fp, "Straddlers (out of total probes)  : %lu/%lu\n",
-          num_straddlers, num_probes);
-      fprintf(fp, "Straddlers % (out of total probes) : %.2lf\n",
-          (double) num_straddlers * 100/ num_probes);
-      fprintf(fp, "Entry straddlers : %lu\n", entry_straddlers);
-      fprintf(fp, "Exit straddlers : %lu\n", exit_straddlers);
-      fprintf(fp, "Straddler histogram by straddle point\n");
-      fprintf(fp, "-------------------------------------\n");
-      for (int i=1; i < 8; i++) {
-        fprintf(fp, "%d  :  %lu\n", i, straddler_hist[i]);
-      }
-
-      fclose(fp);
-#endif
-
-      // Release probe meta data entries
-      for (auto it = probe_meta_data->begin(); it != probe_meta_data->end();
-          ++it) {
-        ProbeMetaData* pmd = *it;
-        delete pmd;
-      }
-
-      delete probe_meta_data;
+        bool operator==(const ProviderEntry& other) const { 
+          return (provider_name == other.provider_name);
+        }
     };
 
-    /// Gets the estimate of overhead induced by the instrumentation mechanism.
-    /* This represents a current estimate of the time (in cycles)
-     * required to get to and from the Instrumentation_func from the
-     * application thread in which the probe is embedded.  Thus total
-     * overhead to the application thread should be the time consumed
-     * by the Instrumentation_func itself, plus this additional
-     * (estimated) overhead.
-     *
-     */
-    uint64_t instrumentationOverheadEstimate;
-    // virtual uint64_t getInstrumentationOverheadEstimate(uint64_t num_invocations) = 0;
-    /* This still needs some thinking over. Tricky to expose overhead of
-     * probe providers such as ZCA since we don't have a hook function to account
-     * for that before the control transfers to the instrumentation function.
-     */
+    class ProviderEntryHasher {
+      public:
+        std::size_t operator()(const ProviderEntry& k) const {
+          return (std::hash<std::string>()(k.provider_name));
+        }
+    };
+
+    std::unordered_map<ProviderEntry, InstrumentationProvider, 
+      ProviderEntryHasher> i_providers;
+    int32_t i_provider_counter;
+    utils::concurrency::SpinLock lock;
 
 };
 
-// ================================================================================
-// Global probe provider object for profiling libraries and other use cases.
-
-/// Initializes a global ProbeProvider instance of requested type.
-/*  This implements one possible policy for creating a probe provider
- *  at application startup time.  This approach is limited because it
- *  recognized only a closed set of probe provider implementations.
- *
- *  It's an error to call this method more than once.
- *
- *  \param type The type of the ProbeProvider needed.
- *  \param callback The probe discovery callback.
- *  \param prolog Prolog instrumentation function pointer
- *  \param epilog Epilog instrumentation function pointer
- *  \return A reference to initialized ProbeProvider instance.
- */
-extern ProbeProvider* initializeGlobalProbeProvider(ProviderType type, Callback callback, 
-    InstrumentationFunc prolog, InstrumentationFunc epilog);
-
-/// Accessor function
-/*  Gets the reference to ProbeProvider instance.
- *  \return A reference to ProbeProvider instance.
- *          The reference will be NULL if initializeGlobalProbeProvider has not been called.
- */
-extern ProbeProvider* getGlobalProbeProvider();
-
-
-/// Global probe provider instance. Allows plain C functions to accesss instrumentor
-/// functions at runtime.
-extern ProbeProvider* PROBE_PROVIDER;
 
 } /* End liteinst */
 

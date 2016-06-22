@@ -13,12 +13,13 @@
 #include <cstdint>
 
 namespace liteinst {
-namespace rprobes {
+namespace liteprobes {
 
 using std::map;
 using std::pair;
 using std::string;
 using std::sort;
+using utils::Address;
 
 std::map<Address, Function> ProcessAnalyzer::getFunctions() {
   ELF *bin = elf64_read((char*)getProgramPath().c_str());
@@ -93,5 +94,5 @@ string ProcessAnalyzer::getProgramPath() {
   return program_path;
 }
 
-} // End rprobes
+} // End liteprobes 
 } // End liteinst 

@@ -8,7 +8,7 @@
 #include "utils.hpp"
 
 namespace liteinst {
-namespace rprobes {
+namespace liteprobes {
 
 /// Different allocator types available
 enum class AllocatorType {
@@ -31,14 +31,15 @@ class Allocator {
      * (i.e: Not being able to allocate at given address amounting to faliure
      * for allocation).
      */
-    virtual Address getAllocation(Address address, int32_t size) = 0;
+    virtual utils::Address getAllocation(utils::Address address, 
+        int32_t size) = 0;
 
     /** \brief Frees allocated memory. 
      *  \param address Address to release the previously allocated memory 
      *   from.
      *  \return If the removal was successful
      */
-    virtual bool removeAllocation(Address address) = 0;
+    virtual bool removeAllocation(utils::Address address) = 0;
 
 };
 
@@ -52,7 +53,7 @@ class AllocatorFactory {
     static std::unique_ptr<Allocator> getAllocator(AllocatorType type);
 };
 
-} // End rprobes
+} // End liteprobes 
 } // End liteinst 
 
 #endif /*ALLOC_H*/

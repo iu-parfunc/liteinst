@@ -7,6 +7,7 @@
 #include <thread>
 #include <functional> 
 #include <map>
+#include <utility>
 
 namespace utils {
 namespace concurrency {
@@ -17,39 +18,73 @@ namespace concurrency {
  */
 class SpinLock {
   public:
-    SpinLock() {
+    SpinLock(bool is_reentrant = true) : is_reentrant(is_reentrant) {
       std::atomic_flag_clear_explicit(&cas_lock, std::memory_order_release);
     }
 
     inline bool tryLock() {
-      if (owner != std::this_thread::get_id()) {
-        return !std::atomic_flag_test_and_set_explicit(&cas_lock, 
+      if (is_reentrant) {
+        if (owner != std::this_thread::get_id()) {
+          is_set = !std::atomic_flag_test_and_set_explicit(&cas_lock, 
             std::memory_order_acquire);
+        }
+      } else {
+        is_set = !std::atomic_flag_test_and_set_explicit(&cas_lock, 
+          std::memory_order_acquire);
       }
-      return true;
+
+      return is_set;
     }
 
     inline void lock() {
-      if (owner != std::this_thread::get_id()) {
+      if (is_reentrant) {
+        if (owner != std::this_thread::get_id()) {
+          while (std::atomic_flag_test_and_set_explicit(&cas_lock, 
+              std::memory_order_acquire));
+          owner = std::this_thread::get_id();
+          is_set = true;
+        } 
+      } else {
         while (std::atomic_flag_test_and_set_explicit(&cas_lock, 
             std::memory_order_acquire));
-        owner = std::this_thread::get_id();
-      } 
+        is_set = true;
+      }
+
     }
 
     inline void unlock() {
-      if (owner == std::this_thread::get_id()) {
+      if (is_reentrant) {
+        if (owner == std::this_thread::get_id()) {
+          std::atomic_flag_clear_explicit(&cas_lock, std::memory_order_release);
+          is_set = false;
+        }
+      } else {
         std::atomic_flag_clear_explicit(&cas_lock, std::memory_order_release);
+        is_set = false;
+      }
+    }
+
+    inline bool isSet() {
+      return is_set;
+    }
+
+    inline bool isOwner() {
+      if (is_reentrant) {
+        return (owner == std::this_thread::get_id());
+      } else {
+        // throw invalid_argument
       }
     }
 
   private:
+    bool is_reentrant;
+    bool is_set = false;
     std::thread::id owner;
     // Buddhika : std::atomic version not working at the moment.
     // Revertng plain __sync_compare_and_swap
     // std::atomic<uint32_t> cas_lock;
     // uint32_t cas_lock_raw;
-    std::atomic_flag cas_lock;
+    std::atomic_flag cas_lock = ATOMIC_FLAG_INIT;
 };
 
 /** \brief A non blocking readers writers lock.
@@ -60,6 +95,12 @@ class SpinLock {
 class ReadWriteLock {
   public:
     inline void readLock() {
+      /*
+      if (tx_lock.isSet() && tx_lock.isOwner()) {
+        // Short circuit. We already have the exclusive lock.
+        return;
+      }*/
+
       r_lock.lock();
       while (num_writers != 0); 
 
@@ -74,6 +115,12 @@ class ReadWriteLock {
     }
 
     inline void readUnlock() {
+      /*
+      if (tx_lock.isSet() && tx_lock.isOwner()) {
+        // Short circuit. We already have the exclusive lock.
+        return;
+      }*/
+
       r_lock.lock();
       num_readers--;
       if (num_readers == 0) {
@@ -84,20 +131,46 @@ class ReadWriteLock {
     }
 
     inline void writeLock() {
+      /*
+      if (tx_lock.isSet() && tx_lock.isOwner()) {
+        // Short circuit. We already have the exclusive lock.
+        return;
+      }*/
+
       w_lock.lock();
       num_writers++;
       assert(num_writers == 1);
     }
 
     inline void writeUnlock() {
+      /*
+      if (tx_lock.isSet() && tx_lock.isOwner()) {
+        // Short circuit. We already have the exclusive lock.
+        return;
+      }*/
+
       num_writers--;
       assert(num_writers == 0);
       w_lock.unlock();
     }
 
+    /*
+    inline void exclusiveLock() {
+      w_lock.lock();
+      tx_lock.lock();
+    }
+
+    inline void exclusiveLock() {
+      tx_lock.unlock();
+      w_lock.unlock();
+    }
+
+    */
+
   private:
     SpinLock r_lock;
     SpinLock w_lock;
+    // SpinLock tx_lock(true);
     int32_t num_readers = 0;
     int32_t num_writers = 0;
 };
@@ -133,6 +206,14 @@ class ConcurrentMap {
       rw_lock.writeUnlock();
     }
 
+    template<class... Args>
+    InsertResult emplace(Args&&... args) {
+      rw_lock.writeLock();
+      InsertResult res = map.emplace(std::forward<Args>(args)...);
+      rw_lock.writeUnlock();
+      return res;
+    }
+
     Iterator find(Key k) {
       rw_lock.readLock();
       auto result = map.find(k);
@@ -165,6 +246,18 @@ class ConcurrentMap {
 
     int size() {
       return map.size();
+    }
+
+    Iterator lower_bound(const Key& k) {
+      rw_lock.readLock();
+      map.lower_bound(k);
+      rw_lock.readUnlock();
+    }
+
+    Iterator upper_bound(const Key& k) {
+      rw_lock.readLock();
+      map.upper_bound(k);
+      rw_lock.readUnlock();
     }
 
   private:

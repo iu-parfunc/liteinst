@@ -1,15 +1,14 @@
 
-#ifndef _DEFS_HPP_
-#define _DEFS_HPP_
+#ifndef _UTILS_HPP_
+#define _UTILS_HPP_
 
 #include <ostream>
 #include <cstdint>
 #include <string>
 
-namespace fastinst {
+#include "defs.hpp"
 
-  /// A byte addressible data type
-  typedef uint8_t* Address;
+namespace liteinst {
 
   /// An implementable marker interface for printing data members of a class
   class Show {
@@ -44,6 +43,6 @@ namespace fastinst {
        bool isValid = true; ///< Is this reference valid?
    }; 
 
-}
+} /* End liteinst */
 
-#endif /* _DEFS_HPP_ */
+#endif /* _UTILS_HPP_ */

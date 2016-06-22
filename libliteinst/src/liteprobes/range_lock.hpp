@@ -3,13 +3,13 @@
 #define RANGE_LOCK_H
 
 #include "addr_range.hpp"
-#include "lock.hpp"
+#include "concurrency.hpp"
 
 #include <map>
 #include <memory>
 
 namespace liteinst {
-namespace rprobes {
+namespace liteprobes {
 
 class RangeComparator {
   public:
@@ -35,13 +35,15 @@ class RangeLock {
     void unlockRange(Range r);
 
   private:
-    lock::CASLock range_map_lock; ///< Lock to protect range_map insertions
-    std::map<Range, std::unique_ptr<lock::CASLock>, RangeComparator> range_map;
+    utils::concurrency::SpinLock range_map_lock; ///< Lock to protect range_map
+                                                 ///< insertions
+    std::map<Range, std::unique_ptr<utils::concurrency::SpinLock>, 
+      RangeComparator> range_map;
     ///< Existing range lock mappings. If two ranges overlap with each other
     ///< they are considered equal.
 };
 
-} /* End rprobes */
+} /* End liteprobes */
 } /* End liteinst */
 
 #endif /*RANGE_H*/

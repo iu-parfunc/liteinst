@@ -9,7 +9,7 @@
 #include "assembly.hpp"
 
 namespace liteinst { 
-namespace rprobes {
+namespace liteprobes {
 
 /** \brief Analyses both program executable on disk and process image to 
  *         gather meta data about the current process.
@@ -25,12 +25,12 @@ class ProcessAnalyzer {
     /** \brief Gets the functions within the current process.
      *  \return A mapping from function start address to function information.
      */
-    virtual std::map<Address, Function> getFunctions();
+    virtual std::map<utils::Address, Function> getFunctions();
 
     /** \brief Gets the mapped regions within the current process.
      *  \return A mapping from region start address to region information.
      */
-    virtual std::map<Address, MappedRegion> getMappedRegions();
+    virtual std::map<utils::Address, MappedRegion> getMappedRegions();
 
     /** \brief Gets the path of the executable of current process.
      *  \return The path of the executable
@@ -69,7 +69,7 @@ class FunctionAnalyzer {
 
 };
 
-} // End rprobes
+} // End liteprobes
 } // End fastinst
 
 #endif /*ANALYSIS_H*/

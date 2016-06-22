@@ -2,11 +2,12 @@
 #include "process.hpp"
 
 namespace liteinst {
-namespace rprobes {
+namespace liteprobes {
 
 using std::map;
 using std::vector;
 using std::pair;
+using utils::Address;
 
 BasicBlock Function::getBasicBlock(Address addr) {
   auto it = basic_blocks.lower_bound(addr);
@@ -58,5 +59,5 @@ void Function::show(FILE* fp, int nspaces) {
   fprintf(fp, "\n");
 }
 
-} // End rprobes
+} // End liteprobes 
 } // End liteinst 

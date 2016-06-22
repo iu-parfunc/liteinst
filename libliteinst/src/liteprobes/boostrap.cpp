@@ -11,9 +11,10 @@
 #include "process.hpp"
 
 namespace liteinst {
-namespace rprobes {
+namespace liteprobes {
 
 using std::map;
+using utils::Address;
 
 void* g_main_ptr; // Start address of the main function
 
@@ -170,5 +171,5 @@ void rprobesPremain() {
     rprobesInfectMain();
 }
 
-} // End rprobes
+} // End liteprobes 
 } // End liteinst 

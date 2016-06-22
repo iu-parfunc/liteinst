@@ -2,9 +2,10 @@
 #include "addr_range.hpp"
 
 namespace liteinst {
-namespace rprobes {
+namespace liteprobes {
 
 using std::vector;
+using utils::Address;
 
 Range::Range() : start(NULL), end(NULL) {
 
@@ -101,5 +102,5 @@ bool Range::operator>=(const Range& r) {
   return (*this > r) || (*this == r) ? true : false;
 }
 
-} // End rprobes
+} // End liteprobes 
 } // End liteinst 

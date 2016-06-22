@@ -8,15 +8,16 @@
 #include "alloc.hpp"
 #include "fixed_alloc.hpp"
 #include "range.hpp"
+#include "defs.hpp"
 
 namespace liteinst {
-namespace rprobes {
+namespace liteprobes {
 
 using std::string;
 using std::vector;
+using utils::Address;
 
-BlockRangeMap FixedAllocator::allocations = 
-  BlockRangeMap(sysconf(_SC_PAGESIZE));
+BlockRangeMap FixedAllocator::allocations(sysconf(_SC_PAGESIZE));
 
 FixedAllocator::FixedAllocator() : Allocator() {
 }
@@ -160,5 +161,5 @@ bool FixedAllocator::allocationCallback(std::vector<BlockEntry*> entries,
   return true;
 }
 
-} // End rprobes
+} // End liteprobes 
 } // End liteinst 

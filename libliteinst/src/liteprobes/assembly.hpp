@@ -39,7 +39,7 @@ class Assembler {
 /// Decodes a sequence of encoded instructions
 class Disassembler {
   public:
-    virtual Sequence disassemble(Address start, Address end);
+    virtual Sequence disassemble(utils::Address start, utils::Address end);
 
 };
 

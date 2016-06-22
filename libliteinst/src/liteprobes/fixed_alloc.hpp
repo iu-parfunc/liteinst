@@ -8,7 +8,7 @@
 #include "range.hpp"
 
 namespace liteinst { 
-namespace rprobes {
+namespace liteprobes {
 
 /// Memory page allocation meta data
 class PageMetaData : public BlockMetaData {
@@ -37,13 +37,13 @@ class FixedAllocator : public Allocator {
    * May fail and return null if the memory address requested has already 
    * been allocated.
    */
-  Address getAllocation(Address address, int32_t size);
+  utils::Address getAllocation(utils::Address address, int32_t size);
 
   /** \brief Free the alllocated memory.    
    *  \param address Address to release the previously allocated memory 
    *  from.
    */
-  bool removeAllocation(Address address);
+  bool removeAllocation(utils::Address address);
 
   /** \brief Internal callback used to reserve memory and allocate it.
    *  \param entries Memory page blocks the given range occupies
@@ -53,7 +53,7 @@ class FixedAllocator : public Allocator {
       Range range); 
 };
 
-} // End rprobes
+} // End liteprobes 
 } // End liteinst 
 
 #endif /*FIXED_ALLOC_H*/

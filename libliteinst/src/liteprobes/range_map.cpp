@@ -5,10 +5,11 @@
 #include "range_map.hpp"
 
 namespace liteinst { 
-namespace rprobes {
+namespace liteprobes {
 
 using std::vector;
 using std::pair;
+using utils::Address;
 
 // RangeEntries RangeMap::entries;
 // UpdateEntriesCallback RangeMap::cb;
@@ -145,6 +146,6 @@ bool BlockRangeMap::unlockRange(Range r) {
   return true;
 }
 
-} // End rprobes
+} // End liteprobes 
 } // End liteinst 
 

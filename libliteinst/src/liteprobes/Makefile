@@ -11,7 +11,7 @@ CFLAGS = --std=c++11 -g -Wall $(EXTRA_WARNS)
 
 # Setup build macros from env variables
 
-ARGS= -I.. -I$(ROOT)/include -I$(ROOT)/common/include -I$(ROOT)/deps/distorm/include -I$(ROOT)/deps/elph/include
+ARGS= -I.. -I$(ROOT)/include -I$(ROOT)/utils/include -I$(ROOT)/deps/distorm/include -I$(ROOT)/deps/elph/include
 
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 DEPS = $(INSTALL)/libpointpatch.a 
@@ -27,7 +27,7 @@ RM = rm
 OPTS =
 
 CODE = $(wildcard *.cpp)
-override CODE += $(wildcard $(ROOT)/common/src/lock/*.cpp)
+# override CODE += $(wildcard $(ROOT)/utils/src/lock/*.cpp)
 
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)

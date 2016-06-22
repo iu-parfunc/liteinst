@@ -1,7 +1,8 @@
 
-#include "fastinst.hpp"
-#include "finstrument/finstrument_probe_provider.hpp"
-#include "zca/zca_probe_provider.hpp"
+#include "liteinst.hpp"
+// #include "finstrument/finstrument_probe_provider.hpp"
+// #include "zca/zca_probe_provider.hpp"
+#include "liteprobes/lite_probe_provider.hpp"
 
 ProbeProvider* PROBE_PROVIDER = NULL;
 

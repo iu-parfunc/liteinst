@@ -8,10 +8,10 @@
 #include <map>
 
 #include "utils.hpp"
-#include "lock.hpp"
+#include "concurrency.hpp"
 
 namespace liteinst { 
-namespace rprobes { 
+namespace liteprobes { 
 
 /// Different types of control return from within a function
 enum class ReturnType { 
@@ -24,8 +24,8 @@ enum class ReturnType {
 /// process
 class MappedRegion : public Show, public Optional {
   public:
-    Address start;    ///< Start address of the mapped region
-    Address end;      ///< Ending address of the mapped region
+    utils::Address start;    ///< Start address of the mapped region
+    utils::Address end;      ///< Ending address of the mapped region
     std::string file; ///< Backing file for this mapped region
 
     /** /brief Prints mapped region information to given file descriptor
@@ -41,8 +41,8 @@ class MappedRegion : public Show, public Optional {
 /// Holds meta data related to a control return from within a function
 class ControlReturn : public Show, public Optional {
   public:
-    Address addr;    ///< Return instruction address 
-    Address target;  /**< Control transfer target.
+    utils::Address addr;    ///< Return instruction address 
+    utils::Address target;  /**< Control transfer target.
                       *   May be null for indirect jumps where target is 
                       *   only known at runtime. */
     ReturnType type; ///< Return type
@@ -72,8 +72,8 @@ class ControlReturn : public Show, public Optional {
 /// Holds metadata related to a basic block
 class BasicBlock : public Show, public Optional {
   public:
-    Address start; ///< Start address of the basic block
-    Address end;   ///< Ending address of the basic block
+    utils::Address start; ///< Start address of the basic block
+    utils::Address end;   ///< Ending address of the basic block
 
     /** /brief Prints basic block information to given file descriptor
      */
@@ -92,18 +92,20 @@ class BasicBlock : public Show, public Optional {
 class Function : public Show, public Optional {
   public:
     std::string name;    ///< Mangled name of the function
-    Address start;       ///< Start address of the function
-    Address end;         ///< Ending address of the function
-    Address next;        ///< Starting address of the next function after this
+    utils::Address start;       ///< Start address of the function
+    utils::Address end;         ///< Ending address of the function
+    utils::Address next;        ///< Starting address of the next function after this
     int64_t end_padding; ///< The padding space between the current and next 
                          ///< functions
 
-    std::map<Address, BasicBlock> basic_blocks; ///< Basic block start address
+    std::map<utils::Address, BasicBlock> basic_blocks; ///< Basic block start
+                                                       ///< address
                                                 ///< mappings
     std::vector<ControlReturn> returns;         ///< Control returns of this 
                                                 ///< function
-    std::vector<Address> probe_ready_sites;     ///< Probe ready instruction 
-                                                ///< sites of this function
+    std::vector<utils::Address> probe_ready_sites;     ///< Probe ready 
+                                                       ///< instruction sites of
+                                                       ///< this function
 
     /** /brief Gets the basic block starting with given address
      *  /param addr The starting address of a baisc block
@@ -111,7 +113,7 @@ class Function : public Show, public Optional {
      *    start address the returned basic block instance would contain the
      *    invalid flag.
      */
-    BasicBlock getBasicBlock(Address addr);
+    BasicBlock getBasicBlock(utils::Address addr);
 
     /** /brief Gets the basic blocks contained within the current function.
      *  /return     The list of basic blocks of current function.
@@ -131,10 +133,11 @@ class Function : public Show, public Optional {
 /// Holds meta data related to the program process image
 class Process : public Show, public Optional {
   public:
-    static std::map<Address, Function> functions;  ///< Function start address 
-                                                   ///< mappings
-    static std::map<Address, MappedRegion> mapped; ///< Memory region start 
-                                                   ///< address mappings
+    static std::map<utils::Address, Function> functions;  ///< Function start 
+                                                          ///< address mappings
+    static std::map<utils::Address, MappedRegion> mapped; ///< Memory region 
+                                                          ///< start address
+                                                          ///< mappings
 
     Process();
     ~Process();
@@ -146,7 +149,7 @@ class Process : public Show, public Optional {
      *    any associated function the returned function instance would contain
      *    the invalid flag.
      */
-    Function getContainedFunction(Address addr);
+    Function getContainedFunction(utils::Address addr);
 
     /** /brief Gets the function starting with given address. 
      *  /param addr The starting address of a function 
@@ -154,12 +157,17 @@ class Process : public Show, public Optional {
      *    start address the returned function instance would contain the 
      *    invalid flag.
      */
-    Function getFunction(Address addr);
+    Function getFunction(utils::Address addr);
 
     /** /brief Gets the functions associated with the current process. 
-     *  /return     The list of functions current process.
+     *  /return     The list of functions in the current process.
      */
     std::vector<Function> getFunctions();
+
+    /** /brief Gets the number of functions associate with the current process.
+     *  /return The number of functions in the current processs.
+     */
+    int getNumberOfFunctions();
 
     /** /brief Gets the mapped region which the given address is in.
      *  /param addr The address to for which the containing region needs to 
@@ -172,7 +180,7 @@ class Process : public Show, public Optional {
      *  the time the return value is used however, since mapping 
      *  information are only read at the start of the process execution.
      */
-    MappedRegion getContainedMappedRegion(Address addr);
+    MappedRegion getContainedMappedRegion(utils::Address addr);
 
     /** /brief Gets the region starting with given address. 
      *  /param addr The starting address of a region 
@@ -184,7 +192,7 @@ class Process : public Show, public Optional {
      *  the time the return value is used however, since mapping 
      *  information are only read at the start of the process execution.
      */
-    MappedRegion getMappedRegion(Address addr);
+    MappedRegion getMappedRegion(utils::Address addr);
 
     /** /brief Gets the regions associated with the current process at the 
      *   process start.
@@ -197,13 +205,13 @@ class Process : public Show, public Optional {
     void show(FILE* fp, int nspaces);
 
   private:
-    lock::CASLock init_lock;
+    utils::concurrency::SpinLock init_lock;
     bool is_initialized = false;
 
 };
 
 
-} // End rprobes
+} // End liteprobes 
 } // End liteinst 
 
 #endif /*PROCESS_H*/

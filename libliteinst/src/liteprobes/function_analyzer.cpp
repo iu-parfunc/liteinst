@@ -12,7 +12,7 @@
 #include "mnemonics.h"
 
 namespace liteinst {
-namespace rprobes {
+namespace liteprobes {
 
 using std::set;
 using std::list;
@@ -20,6 +20,7 @@ using std::vector;
 using std::find;
 using std::pair;
 using std::iterator;
+using utils::Address;
 
 
 const int FunctionAnalyzer::PROBE_READY_INSTRUCTION_SIZE = 5;
@@ -352,5 +353,5 @@ void FunctionAnalyzer::analyzeFunction(Function& func) {
 
 /********************** End public API implementation *************************/
 
-} // End rprobes
+} // End liteprobes 
 } // End liteinst 

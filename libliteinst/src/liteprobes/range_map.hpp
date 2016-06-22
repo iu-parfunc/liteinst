@@ -8,10 +8,10 @@
 
 #include "addr_range.hpp"
 #include "utils.hpp"
-#include "lock.hpp"
+#include "concurrency.hpp"
 
 namespace liteinst { 
-namespace rprobes { 
+namespace liteprobes { 
 
 /// Range information corresponding to a block with some additional meta data
 /// added for RangeMap internal use. 
@@ -52,12 +52,12 @@ class BlockEntry {
    * would mess things up since we assume all the lock related operations are
    * happening under the control of RangeMap. Hence the callback mechanism. */
   private:
-  lock::CASLock lock;
+    utils::concurrency::SpinLock lock;
 };
 
 /// Mapping from block start addresses to block metadata. 
 /// RangeEntry is a pointer type since we need it to be downcastable. 
-typedef std::map<Address, BlockEntry*> BlockEntries;
+typedef std::map<utils::Address, BlockEntry*> BlockEntries;
 
 /// Callback type for updating block entries corresponding to a given range.
 typedef std::function<bool(std::vector<BlockEntry*>, Range range)> 
@@ -80,10 +80,10 @@ class BlockRangeMap {
     ~BlockRangeMap();
 
   private:
-    BlockEntries entries;      ///< Block entry mappings
     int32_t block_size;        ///< Size of a block 
-    lock::CASLock global_lock; ///< Lock to ensure mutual exclusive access to
-                               ///< entries map
+    BlockEntries entries;      ///< Block entry mappings
+    utils::concurrency::SpinLock global_lock; ///< Lock to ensure mutual 
+                               ///< exclusive access to entries map
 
     /** \brief Gets meta data for the blocked range
      *  \param r The range to be blocked according to block_size
@@ -101,7 +101,7 @@ class BlockRangeMap {
     bool unlockRange(Range r);
 };
 
-} // End rprobes
+} // End liteprobes 
 } // End liteinst
 
 #endif /*RANGE_MAP_H*/

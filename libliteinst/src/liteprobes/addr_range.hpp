@@ -7,16 +7,16 @@
 #include "utils.hpp"
 
 namespace liteinst {
-namespace rprobes {
+namespace liteprobes {
 
 /// Describes a range in virtual memory address space.
 class Range {
   public:
-    Address start;   ///< Start address of the range
-    Address end;     ///< Ending address of the range
+    utils::Address start;   ///< Start address of the range
+    utils::Address end;     ///< Ending address of the range
 
     Range();
-    Range(Address start_addr, Address end_addr);
+    Range(utils::Address start_addr, utils::Address end_addr);
 
     /** \brief Get the range partitioned to blocks of given block_size.
      *  \param block_size The size of the block (typically page length)
@@ -40,14 +40,14 @@ class Range {
      *                  boundaries
      *  \return If the given address is within the range
      */
-    bool withinRange(Address addr, bool inclusive);
+    bool withinRange(utils::Address addr, bool inclusive);
 
     /** \brief Gets the distance from the current range. 
      *  \param addr  The address to get the distance from
      *  \return The distance from the current range. A negative value indicates
      *    that the address is lower in address space than the range.    
      */
-    int64_t distanceFromRange(Address addr);
+    int64_t distanceFromRange(utils::Address addr);
 
     /** \brief Checks if the given range overlaps with the current range.
      *  \param r The range to check
@@ -70,7 +70,7 @@ class Range {
     bool operator>=(const Range& r);
 };
 
-} // End rprobes
+} // End liteprobes 
 } // End liteinst 
 
 #endif /*ADDR_RANGE_H*/
