@@ -35,7 +35,7 @@ int foo() {
 } 
 
 
-inline bool set_page_rwe(void *addr,size_t nbytes) { 
+bool set_page_rwe(void *addr,size_t nbytes) { 
 
   uint64_t start = (uint64_t)addr - (((uint64_t)addr)%g_page_size); 
 
@@ -52,7 +52,7 @@ inline bool set_page_rwe(void *addr,size_t nbytes) {
   else return false; 
 }
 
-void main() { 
+int main() { 
   g_page_size = sysconf(_SC_PAGESIZE);
   int i; 
 
@@ -84,5 +84,5 @@ void main() {
   printf("value of \"a\" computed by relocated fun: %d \n", a); 
   
 
-
+  return 0; 
 } 
