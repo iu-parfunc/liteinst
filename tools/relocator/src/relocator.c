@@ -95,6 +95,21 @@ int relocate(unsigned char *dst, unsigned char *src,size_t nRelocateInstr) {
       offset_bits = decodedInstructions[i].ops[0].size; 
       call_type   = decodedInstructions[i].ops[0].type;
 
+      /*
+      printf("Call instruction: \n");
+      for (int j = 0; j < 4; j++) {
+      	printf("operand type %d: %s\n",j,
+          op_types[decodedInstructions[i].ops[j].type]);
+      	printf("operand size %d: %d bits\n",j,
+      	       decodedInstructions[i].ops[j].size);
+      }
+     
+      
+      exit(-1);
+      */
+
+
+      
       /* is this a PC relative call with a 32 bit displacement? */       
       if ( call_type == O_PC && offset_bits == 32) { 
 	/* this is an E8 call */ 
@@ -124,18 +139,6 @@ int relocate(unsigned char *dst, unsigned char *src,size_t nRelocateInstr) {
       }
       break; 
       
-      /* printf("Call instruction: \n");  */
-      /* for (int j = 0; j < 4; j++) {  */
-      /* 	printf("operand type %d: %s\n",j,  */
-      /*     op_types[decodedInstructions[i].ops[j].type]);  */
-      /* 	printf("operand size %d: %d bits\n",j,  */
-      /* 	       decodedInstructions[i].ops[j].size);  */
-      /* } */
-     
-      
-      /* exit(-1);  */
-
-
       /* Call will need to be modified in the dst */ 
      
     case I_RET: 
