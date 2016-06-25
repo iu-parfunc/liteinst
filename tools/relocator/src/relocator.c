@@ -37,7 +37,13 @@ char *op_types[] = {"O_NONE",
        does need ot have the address altered. 
      - The above goes for functions as well. 
        But most relocations are going to be on a sub function-sized part of code.  
-  
+
+
+     - Test cases: 
+       * Perform small relocations within function. Move a small number of 
+         instructions to elsewhere, put a jmp at old place to new place and 
+         affix a jmp at the end of relocated code back to end of old code. 
+       * Function pointers to get indirect jmps/calls
       
  */ 
 int relocate(unsigned char *dst, unsigned char *src,size_t nRelocateInstr) { 
@@ -154,8 +160,8 @@ int relocate(unsigned char *dst, unsigned char *src,size_t nRelocateInstr) {
       /* Call will need to be modified in the dst */ 
      
     case I_RET: 
-      /* check if this return is located after all forward jmp targets.
-         If yes, copy to dst and exit */ 
+      /* no special treatment! Just relocate */ 
+      
       
     default: 
       memcpy(dst + dst_offset,src+dst_offset,decodedInstructions[i].size);
