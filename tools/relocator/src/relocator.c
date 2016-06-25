@@ -16,6 +16,7 @@ void relocate_info() {
 } 
 
 
+/* For printing */ 
 char *op_types[] = {"O_NONE", 
 		    "O_REG", 
 		    "O_IMM", 
@@ -28,6 +29,17 @@ char *op_types[] = {"O_NONE",
 		    "O_PTR"};
 
 
+/* TODO: 
+     - What to do about jumps: 
+       A relative jump with target addr within the relocated are 
+       does not need to have that address tweaked. 
+       A relative jump to the outside of the relocated code 
+       does need ot have the address altered. 
+     - The above goes for functions as well. 
+       But most relocations are going to be on a sub function-sized part of code.  
+  
+      
+ */ 
 int relocate(unsigned char *dst, unsigned char *src,size_t nRelocateInstr) { 
 
   _DecodeResult res; 
