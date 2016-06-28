@@ -53,36 +53,40 @@ bool set_page_rwe(void *addr,size_t nbytes) {
 }
 
 int main() { 
-  g_page_size = sysconf(_SC_PAGESIZE);
-  int i; 
 
+  printf("Testing relocation of entire function containing simple arithmetic\n"); 
+  
+  g_page_size = sysconf(_SC_PAGESIZE);
+ 
   relocate_info(); 
   
   unsigned char *fun_data = (unsigned char*)malloc(100); 
-  //memcpy(fun_data, fun, 90); 
+ 
   set_page_rwe(&fun[0], 1024); 
   set_page_rwe(&fun_data[0], 1024); 
-
-  //  for (i = 0; i < 90; i ++) { 
-  //  printf("%x ", fun[i]); 
-  //}
-  //printf("\n"); 
-  
+ 
 
   int a = ((int (*)(void))&fun[0])();
 
-  printf("value of \"a\" computed by fun: %d \n", a); 
+  //  printf("value of \"a\" computed by fun: %d \n", a); 
  
   unsigned int count = count_relocatable(fun, 64); 
   
-  printf("count_relocatable: %d\n", count); 
+  //printf("count_relocatable: %d\n", count); 
 
-  relocate(fun_data, fun, 64); 
+  relocate(fun_data, fun, count); 
 
-  a = ((int (*)(void))&fun_data[0])();
+  int b = ((int (*)(void))&fun_data[0])();
 
-  printf("value of \"a\" computed by relocated fun: %d \n", a); 
+  // printf("value of \"a\" computed by relocated fun: %d \n", a); 
   
+  if (a == b) { 
+    printf("SUCCESS\n"); 
+    return 1; 
+  } else {
+    printf("FAILURE\n"); 
+    return 0;
+  }
 
   return 0; 
 } 

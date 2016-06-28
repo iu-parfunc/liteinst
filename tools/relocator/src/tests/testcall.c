@@ -13,24 +13,17 @@ long g_page_size;
 
 
 int foo() { 
-  int a = 3; 
-  int b = 1; 
-  int c = a + b;
-  int i;
- 
-  for (i = 0; i < 10; i ++) { 
 
-   printf("Hello from FOO!\n"); 
-
+  int sum = 0; 
   
-   printf("Hello again from FOO!\n"); 
- 
+  for (int i = 0; i < 10; i ++) { 
+   printf(".");    
+   sum += i; 
   }  
-  
-  
-  
+  printf("\n"); 
 
-  return c; 
+  
+  return sum; 
 } 
 
 
@@ -52,8 +45,10 @@ bool set_page_rwe(void *addr,size_t nbytes) {
 }
 
 int main() { 
+
+  printf("Testing relocation of entire function containing loop and call\n"); 
+
   g_page_size = sysconf(_SC_PAGESIZE);
-  int i; 
 
   relocate_info(); 
   
@@ -63,19 +58,24 @@ int main() {
   set_page_rwe(&fun_data[0], 1024); 
 
   int a = foo(); 
-
-  printf("value computed by fun: %d \n", a); 
  
   unsigned int count = count_relocatable((unsigned char *)foo, 64); 
   
-  printf("count_relocatable: %d\n", count); 
+  //  printf("count_relocatable: %d\n", count); 
 
-  relocate(fun_data, (unsigned char *)foo, 64); 
+  relocate(fun_data, (unsigned char*)foo, count); 
 
   int b = ((int (*)(void))&fun_data[0])();
 
-  printf("value computed by relocated fun: %d \n", b); 
+  // printf("value computed by relocated fun: %d \n", b); 
   
-
-  return 0; 
+  
+  free(fun_data); 
+  if (a == b) {  
+    printf("SUCCESS\n"); 
+    return 1; 
+  } else { 
+    return 0; 
+  } 
+  
 } 
