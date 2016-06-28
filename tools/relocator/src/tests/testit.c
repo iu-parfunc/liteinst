@@ -74,7 +74,7 @@ int main() {
   
   //printf("count_relocatable: %d\n", count); 
 
-  relocate(fun_data, fun, count); 
+  relocate(fun_data, fun, NULL,0,count); 
 
   int b = ((int (*)(void))&fun_data[0])();
 

@@ -5,7 +5,12 @@
 #include <stdlib.h> 
 #include <memory.h>
 
-extern int relocate(unsigned char *dst, unsigned char *src,size_t n);
+extern int relocate(unsigned char *dst, 
+		    unsigned char *src,
+		    unsigned char *epilogue, 
+		    size_t epilogue_size, 
+		    size_t n);
+
 extern unsigned int count_relocatable(unsigned char *addr,size_t nMax); 
 extern void relocate_info();
 

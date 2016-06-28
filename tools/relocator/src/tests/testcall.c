@@ -63,7 +63,7 @@ int main() {
   
   //  printf("count_relocatable: %d\n", count); 
 
-  relocate(fun_data, (unsigned char*)foo, count); 
+  relocate(fun_data, (unsigned char*)foo, NULL, 0, count); 
 
   int b = ((int (*)(void))&fun_data[0])();
 

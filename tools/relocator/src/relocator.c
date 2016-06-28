@@ -46,7 +46,11 @@ char *op_types[] = {"O_NONE",
        * Function pointers to get indirect jmps/calls
       
  */ 
-int relocate(unsigned char *dst, unsigned char *src,size_t nRelocateInstr) { 
+int relocate(unsigned char *dst, 
+             unsigned char *src,
+             unsigned char *epilogue,
+	     size_t epilogue_size,
+             size_t nRelocateInstr) { 
 
   _DecodeResult res; 
   _DInst *decodedInstructions = (_DInst*)malloc(nRelocateInstr * sizeof(_DecodedInst)); 
@@ -170,10 +174,15 @@ int relocate(unsigned char *dst, unsigned char *src,size_t nRelocateInstr) {
     }
     
   }
+
+  /* Attach epilogue to end of relocated instr stream */ 
+  if (epilogue && epilogue_size > 0) { 
+    memcpy(dst + dst_offset,epilogue,epilogue_size);
+  } 
   
 
 
-  return 0; 
+  return decodedInstructionsCount; 
 
 }
 
