@@ -9,7 +9,8 @@ EXTRA_WARNS=
 CFLAGS = --std=c99 -g -Wall $(EXTRA_WARNS) -I../
 
 TARG = testit.exe \
-       testcall.exe 
+       testcall.exe \
+       test_small1.exe
 
 all: $(TARG)
 

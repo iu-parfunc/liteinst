@@ -224,7 +224,7 @@ static int position_independent(_DInst *instr ) {
 
 /* A very pessimistic count_relocatable function 
    Answers in bytes*/ 
-unsigned int count_relocatable(unsigned char *addr, size_t nMax) { 
+int count_relocatable(unsigned char *addr, size_t nMax) { 
   
   _DecodeResult res; 
   _DInst *decodedInstructions = (_DInst*)malloc(nMax * sizeof(_DecodedInst)); 
@@ -275,5 +275,58 @@ unsigned int count_relocatable(unsigned char *addr, size_t nMax) {
   }
   
   return relocatableBytes;
+
+} 
+
+
+
+
+/* Collect information about instruction start addresses  */ 
+int instruction_offsets(unsigned char *addr, 
+                                   uint32_t *offs, 
+                                   size_t nMax) { 
+  
+  _DecodeResult res; 
+  _DInst *decodedInstructions = (_DInst*)malloc(nMax * sizeof(_DecodedInst)); 
+  
+  unsigned int decodedInstructionsCount = 0;
+  unsigned int nDecodeBytes = nMax * 8; // Assume 8 bytes per instr
+
+  _CodeInfo ci = {0}; 
+  ci.code = (uint8_t*)addr; 
+  ci.codeLen = nDecodeBytes; 
+  ci.dt = Decode64Bits;   
+  ci.codeOffset = 0x0; 
+       
+  res = distorm_decompose(&ci, 
+			  decodedInstructions, 
+			  nMax,  
+			  &decodedInstructionsCount);
+
+  /* Check for decode error */ 
+  if (res == DECRES_INPUTERR) {	      
+    // fprintf(stderr,"Instruction decode error\n");
+    return -1;
+  }
+
+  /* decoded way too many instructions ?*/ 
+  if (decodedInstructionsCount >= nMax) { 
+    /* if too many, just repair by truncating */ 
+    decodedInstructionsCount = nMax; 
+  } 
+  /* Or way too few ? */ 
+  else { 
+    /* did not manage to decode as many instructions 
+       as the user asked for */
+    return -1; 
+  }
+  
+  for (int i = 0; i < decodedInstructionsCount; i++) { 
+    
+    uint32_t a = decodedInstructions[i].addr; 
+    offs[i] = a; 
+  }
+  
+  return decodedInstructionsCount;
 
 } 
