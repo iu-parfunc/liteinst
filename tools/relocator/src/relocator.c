@@ -16,6 +16,7 @@ void relocate_info() {
 } 
 
 
+/* For printing */ 
 char *op_types[] = {"O_NONE", 
 		    "O_REG", 
 		    "O_IMM", 
@@ -28,7 +29,28 @@ char *op_types[] = {"O_NONE",
 		    "O_PTR"};
 
 
-int relocate(unsigned char *dst, unsigned char *src,size_t nRelocateInstr) { 
+/* TODO: 
+     - What to do about jumps: 
+       A relative jump with target addr within the relocated are 
+       does not need to have that address tweaked. 
+       A relative jump to the outside of the relocated code 
+       does need ot have the address altered. 
+     - The above goes for functions as well. 
+       But most relocations are going to be on a sub function-sized part of code.  
+
+
+     - Test cases: 
+       * Perform small relocations within function. Move a small number of 
+         instructions to elsewhere, put a jmp at old place to new place and 
+         affix a jmp at the end of relocated code back to end of old code. 
+       * Function pointers to get indirect jmps/calls
+      
+ */ 
+int relocate(unsigned char *dst, 
+             unsigned char *src,
+             unsigned char *epilogue,
+	     size_t epilogue_size,
+             size_t nRelocateInstr) { 
 
   _DecodeResult res; 
   _DInst *decodedInstructions = (_DInst*)malloc(nRelocateInstr * sizeof(_DecodedInst)); 
@@ -65,7 +87,7 @@ int relocate(unsigned char *dst, unsigned char *src,size_t nRelocateInstr) {
     return -1; 
   }
 
-  printf("decoded %d instructions\n", decodedInstructionsCount); 
+  // printf("decoded %d instructions\n", decodedInstructionsCount); 
 
   unsigned int dst_offset = 0; 
   
@@ -116,8 +138,8 @@ int relocate(unsigned char *dst, unsigned char *src,size_t nRelocateInstr) {
 	uint32_t offset; 
 	uint32_t new_offset; 
 	offset = decodedInstructions[i].imm.addr;
-	printf("%d offset %d \n", i, offset); 
-	printf("%d distance %d \n", i, (uint32_t)distance); 
+	//printf("%d offset %d \n", i, offset); 
+	//printf("%d distance %d \n", i, (uint32_t)distance); 
 
 	/* compute new relative address */ 
 	new_offset = distance + offset; 
@@ -142,8 +164,8 @@ int relocate(unsigned char *dst, unsigned char *src,size_t nRelocateInstr) {
       /* Call will need to be modified in the dst */ 
      
     case I_RET: 
-      /* check if this return is located after all forward jmp targets.
-         If yes, copy to dst and exit */ 
+      /* no special treatment! Just relocate */ 
+      
       
     default: 
       memcpy(dst + dst_offset,src+dst_offset,decodedInstructions[i].size);
@@ -152,10 +174,15 @@ int relocate(unsigned char *dst, unsigned char *src,size_t nRelocateInstr) {
     }
     
   }
+
+  /* Attach epilogue to end of relocated instr stream */ 
+  if (epilogue && epilogue_size > 0) { 
+    memcpy(dst + dst_offset,epilogue,epilogue_size);
+  } 
   
 
 
-  return 0; 
+  return decodedInstructionsCount; 
 
 }
 
@@ -197,7 +224,7 @@ static int position_independent(_DInst *instr ) {
 
 /* A very pessimistic count_relocatable function 
    Answers in bytes*/ 
-unsigned int count_relocatable(unsigned char *addr, size_t nMax) { 
+int count_relocatable(unsigned char *addr, size_t nMax) { 
   
   _DecodeResult res; 
   _DInst *decodedInstructions = (_DInst*)malloc(nMax * sizeof(_DecodedInst)); 
@@ -248,5 +275,58 @@ unsigned int count_relocatable(unsigned char *addr, size_t nMax) {
   }
   
   return relocatableBytes;
+
+} 
+
+
+
+
+/* Collect information about instruction start addresses  */ 
+int instruction_offsets(unsigned char *addr, 
+                                   uint32_t *offs, 
+                                   size_t nMax) { 
+  
+  _DecodeResult res; 
+  _DInst *decodedInstructions = (_DInst*)malloc(nMax * sizeof(_DecodedInst)); 
+  
+  unsigned int decodedInstructionsCount = 0;
+  unsigned int nDecodeBytes = nMax * 8; // Assume 8 bytes per instr
+
+  _CodeInfo ci = {0}; 
+  ci.code = (uint8_t*)addr; 
+  ci.codeLen = nDecodeBytes; 
+  ci.dt = Decode64Bits;   
+  ci.codeOffset = 0x0; 
+       
+  res = distorm_decompose(&ci, 
+			  decodedInstructions, 
+			  nMax,  
+			  &decodedInstructionsCount);
+
+  /* Check for decode error */ 
+  if (res == DECRES_INPUTERR) {	      
+    // fprintf(stderr,"Instruction decode error\n");
+    return -1;
+  }
+
+  /* decoded way too many instructions ?*/ 
+  if (decodedInstructionsCount >= nMax) { 
+    /* if too many, just repair by truncating */ 
+    decodedInstructionsCount = nMax; 
+  } 
+  /* Or way too few ? */ 
+  else { 
+    /* did not manage to decode as many instructions 
+       as the user asked for */
+    return -1; 
+  }
+  
+  for (int i = 0; i < decodedInstructionsCount; i++) { 
+    
+    uint32_t a = decodedInstructions[i].addr; 
+    offs[i] = a; 
+  }
+  
+  return decodedInstructionsCount;
 
 } 
