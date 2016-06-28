@@ -83,7 +83,7 @@ int relocate(unsigned char *dst, unsigned char *src,size_t nRelocateInstr) {
     return -1; 
   }
 
-  printf("decoded %d instructions\n", decodedInstructionsCount); 
+  // printf("decoded %d instructions\n", decodedInstructionsCount); 
 
   unsigned int dst_offset = 0; 
   
@@ -134,8 +134,8 @@ int relocate(unsigned char *dst, unsigned char *src,size_t nRelocateInstr) {
 	uint32_t offset; 
 	uint32_t new_offset; 
 	offset = decodedInstructions[i].imm.addr;
-	printf("%d offset %d \n", i, offset); 
-	printf("%d distance %d \n", i, (uint32_t)distance); 
+	//printf("%d offset %d \n", i, offset); 
+	//printf("%d distance %d \n", i, (uint32_t)distance); 
 
 	/* compute new relative address */ 
 	new_offset = distance + offset; 
