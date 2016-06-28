@@ -16,10 +16,6 @@ const int NUM_RUNNERS = 32;
 
 typedef uint8_t* Address;
 
-/* control */
-volatile int g_running = 1; 
-volatile int g_first_run = 1;
-
 int g_page_size=sysconf(_SC_PAGESIZE);
 
 Address func = NULL;
@@ -53,7 +49,6 @@ void* activator(void *arg) {
   static constexpr uint8_t jmp_Opcode = 0xE9;
 
   while(true) { 
-    // patch_64((void*)g_call_addr, g_orig_call);
     *reinterpret_cast<uint32_t *>(sled + 2) = func_id;
     *reinterpret_cast<uint8_t *>(sled + 6) = call_Opcode;
     *reinterpret_cast<uint32_t *>(sled + 7) = reinterpret_cast<int64_t>(stub) -
@@ -70,7 +65,6 @@ void* deactivator(void *arg) {
 
     static constexpr uint16_t jmp_seq = 0x09EB;
 
-    // patch_64((void*)g_call_addr, g_nop_patch);
     *reinterpret_cast<uint64_t*>(sled + 2) = 0x00020000841F0F66; 
     *reinterpret_cast<uint8_t*>(sled + 10) = 0x00;
 
@@ -88,7 +82,6 @@ void* toggler(void* arg) {
 void* runner(void *arg) { 
 
   while(true){
-    /* the call site that we patch is within fun */ 
     ((void (*)(void ))func)(); 
   }
 
@@ -192,8 +185,6 @@ int main(int argc, char** argv) {
   for (int i = 0; i < NUM_RUNNERS; i ++) { 
     pthread_join(runners[i],NULL); 
   }
-
-  ((void (*)(void ))func)();
 
 }
 
