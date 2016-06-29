@@ -16,7 +16,7 @@
 
 using std::cout;
 
-constexpr int NUM_RUNNERS = 32;
+constexpr int NUM_RUNNERS = 10;
 
 typedef uint8_t* Address;
 
@@ -140,10 +140,18 @@ int main(int argc, char** argv) {
   if (argc == 2){ /* if there is an argument */
     straddler_point = atoi(argv[1]);
 
-    if (straddler_point < 2 || straddler_point > 10) {
+    if (straddler_point < 2) {
+      cout << "[Warning] Deviating from xray protocol\n";
+    } else if (straddler_point > 10) {
+      cout << "[Warning] Checking non straddling locations\n";
+    }
+
+    /*
+    if (straddler_point > 10) {
       cout << "Straddling point should be within 2 and 10\n";
       exit(-1);
     }
+    */
   } 
 
   cout << "Setting straddler point at "<< straddler_point << 
@@ -204,7 +212,7 @@ int main(int argc, char** argv) {
 
   jit_func(); // JIT the function
  
-  for (int i = 1; i < NUM_RUNNERS; i ++) { 
+  for (int i = 0; i < NUM_RUNNERS; i ++) { 
     pthread_create(&runners[i],
 		   NULL, 
 		   runner, 
