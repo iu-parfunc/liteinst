@@ -34,8 +34,6 @@ bool set_page_rwe(Address addr,size_t nbytes) {
   uint64_t offset_into_page = ((reinterpret_cast<uint64_t>(addr))%g_page_size);
   size_t bytes = offset_into_page + nbytes;
 
-  /* Doesn't handle the case where the buffer straddles two
-   * pages for now. Need to be more sophisticated here */
   int r = mprotect(start, bytes,
       PROT_READ | PROT_WRITE | PROT_EXEC);
   if (r == 0) return true;
