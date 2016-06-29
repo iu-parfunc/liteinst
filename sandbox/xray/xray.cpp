@@ -3,7 +3,6 @@
    Testing out Google X-Ray patching protocol 
    */ 
 #include <unistd.h>
-#include <stdio.h> 
 #include <memory.h>
 #include <cstdint> 
 #include <cstdlib>
@@ -11,6 +10,10 @@
 #include <sys/mman.h>
 
 #include <pthread.h> 
+
+#include <iostream>
+
+using std::cout;
 
 constexpr int NUM_RUNNERS = 32;
 constexpr int PAGE_SIZE = 4096;
@@ -23,7 +26,7 @@ Address func = NULL;
 Address sled = NULL;
 
 void stub() {
-  // printf("Inside stub..\n");
+  // cout << "Inside stub..\n";
 }
 
 bool set_page_rwe(Address addr,size_t nbytes) {
@@ -138,13 +141,13 @@ int main(int argc, char** argv) {
     straddler_point = atoi(argv[1]);
 
     if (straddler_point < 2 || straddler_point > 10) {
-      printf("Straddling point should be within 2 and 10\n");
+      cout << "Straddling point should be within 2 and 10\n";
       exit(-1);
     }
   } 
 
-  printf("Setting straddler point at %d (distance in byte into the sled)\n", 
-      straddler_point);
+  cout << "Setting straddler point at "<< straddler_point << 
+    "(distance in byte into the sled)\n";
 
   pthread_t thread1, thread2; 
   int r1,r2; 
@@ -172,13 +175,13 @@ int main(int argc, char** argv) {
   
   set_page_rwe(buf, 1024);
 
-  /* find a straddling position within fun */
+  /* find a straddling position within buf */
   uint64_t buf_address = (uint64_t)buf; 
   size_t cache_line_size=sysconf(_SC_LEVEL3_CACHE_LINESIZE);
 
   /* how many bytes into a cache line does the buffer block begin */ 
   int64_t buf_offset = buf_address % cache_line_size; 
-  printf("BUF_OFFSET = %ld\n",buf_offset);
+  cout << "BUF_OFFSET = " << buf_offset << "\n";
 
   int64_t closest_straddler_offset = (cache_line_size - buf_offset);
 
@@ -192,9 +195,10 @@ int main(int argc, char** argv) {
   func = cache_line_boundary - 4 - straddler_point; // JITTed func address
   sled = func + 4; // Address of the entry sled within the JITTed function
 
-  printf("func start addr = %p\n", func);
-  printf("sled start addr = %p\n", sled);
-  printf("cache line boundary = %p\n", cache_line_boundary);
+  cout << "func start addr = " << reinterpret_cast<void*>(func) << "\n";
+  cout << "sled start addr = " << reinterpret_cast<void*>(sled) << "\n";
+  cout << "cache line boundary = " << 
+    reinterpret_cast<void*>(cache_line_boundary) << "\n";
 
   jit_func(); // JIT the function
  
@@ -208,6 +212,8 @@ int main(int argc, char** argv) {
   for (int i = 0; i < NUM_RUNNERS; i ++) { 
     pthread_join(runners[i],NULL); 
   }
+
+  delete buf;
 
 }
 
