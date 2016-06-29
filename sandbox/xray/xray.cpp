@@ -4,6 +4,7 @@
    */ 
 #include <unistd.h>
 #include <memory.h>
+#include <assert.h>
 #include <cstdint> 
 #include <cstdlib>
 #include <atomic>
@@ -16,7 +17,6 @@
 using std::cout;
 
 constexpr int NUM_RUNNERS = 32;
-constexpr int PAGE_SIZE = 4096;
 
 typedef uint8_t* Address;
 
@@ -173,7 +173,7 @@ int main(int argc, char** argv) {
   Address buf = new uint8_t[1024]; 
   memset(buf,0x90,1024); 
   
-  set_page_rwe(buf, 1024);
+  assert(set_page_rwe(buf, 1024));
 
   /* find a straddling position within buf */
   uint64_t buf_address = (uint64_t)buf; 
