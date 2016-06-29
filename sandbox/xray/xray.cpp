@@ -72,12 +72,12 @@ void* deactivator(void *arg) {
 
     static constexpr uint16_t jmp_seq = 0x09EB;
 
-    *reinterpret_cast<uint64_t*>(sled + 2) = 0x00020000841F0F66; 
-    *reinterpret_cast<uint8_t*>(sled + 10) = 0x00;
-
     std::atomic_store_explicit(
       reinterpret_cast<std::atomic<uint16_t> *>(sled), jmp_seq,
       std::memory_order_release);
+
+    *reinterpret_cast<uint64_t*>(sled + 2) = 0x00020000841F0F66; 
+    *reinterpret_cast<uint8_t*>(sled + 10) = 0x00;
 
     if (!spin) {
       break;
