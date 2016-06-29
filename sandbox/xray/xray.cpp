@@ -178,6 +178,8 @@ int main(int argc, char** argv) {
   /* find a straddling position within buf */
   uint64_t buf_address = (uint64_t)buf; 
   size_t cache_line_size=sysconf(_SC_LEVEL3_CACHE_LINESIZE);
+  cout << "page size = " << g_page_size << "\n";
+  cout << "cache line size = " << cache_line_size << "\n";
 
   /* how many bytes into a cache line does the buffer block begin */ 
   int64_t buf_offset = buf_address % cache_line_size; 
