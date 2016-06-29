@@ -108,7 +108,7 @@ void* toggler(void* arg) {
 void* runner(void *arg) { 
 
   while(true){
-    ((void (*)(void ))func)(); 
+    (reinterpret_cast<void (*)(void )>(func))(); 
   }
 
 }
