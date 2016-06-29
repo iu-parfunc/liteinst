@@ -12,7 +12,8 @@
 
 #include <pthread.h> 
 
-const int NUM_RUNNERS = 32;
+constexpr int NUM_RUNNERS = 32;
+constexpr int PAGE_SIZE = 4096;
 
 typedef uint8_t* Address;
 
@@ -43,6 +44,7 @@ bool set_page_rwe(Address addr,size_t nbytes) {
 
 void* activator(void *arg) { 
 
+  bool spin = *(bool*)arg;
   int32_t func_id = 1;
   static constexpr uint8_t call_Opcode = 0xE8;
   static constexpr uint16_t movR10_Seq = 0xBA41;
@@ -56,11 +58,16 @@ void* activator(void *arg) {
     std::atomic_store_explicit(
       reinterpret_cast<std::atomic<uint16_t> *>(sled), movR10_Seq,
       std::memory_order_release);
+
+    if (!spin) {
+      break;
+    }
   }  
 } 
 
 void* deactivator(void *arg) { 
 
+  bool spin = *(bool*)arg;
   while (true) { 
 
     static constexpr uint16_t jmp_seq = 0x09EB;
@@ -71,12 +78,30 @@ void* deactivator(void *arg) {
     std::atomic_store_explicit(
       reinterpret_cast<std::atomic<uint16_t> *>(sled), jmp_seq,
       std::memory_order_release);
+
+    if (!spin) {
+      break;
+    }
   }
 }
 
 void* toggler(void* arg) {
-  activator(arg);
-  deactivator(arg);
+
+  /*
+    // Do toggling once. If both patch and unpatch operations are accuate
+    // it should call stub for a while initially and then the calls
+    // should stop forever.
+    bool spin = false;
+    activator(&spin);
+    sleep(4);
+    deactivator(&spin);
+    */
+
+  while(true) {
+    bool spin = false;
+    activator(&spin);
+    deactivator(&spin);
+  }
 }
 
 void* runner(void *arg) { 
@@ -114,7 +139,7 @@ int main(int argc, char** argv) {
   if (argc == 2){ /* if there is an argument */
     straddler_point = atoi(argv[1]);
 
-    if (straddler_point < 2) {
+    if (straddler_point < 2 || straddler_point > 10) {
       printf("Straddling point should be within 2 and 10\n");
       exit(-1);
     }
