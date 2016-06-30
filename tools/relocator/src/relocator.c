@@ -211,12 +211,13 @@ static int position_independent(_DInst *instr ) {
   case I_JRCXZ:
   case I_JS:
   case I_JZ:
-  case I_CALL:
     return 0; 
   /* Many instructions can use RIP relative addressing... */ 
   
-
-  default: 
+  case I_CALL:
+    return 1; /* should be possible to handle now */
+    
+  default:
     return 1;
   }
 } 
@@ -263,7 +264,6 @@ int count_relocatable(unsigned char *addr, size_t nMax) {
 
   
   unsigned int relocatableBytes = 0; 
-
   
   for (int i = 0; i < decodedInstructionsCount; i++) { 
 
@@ -277,6 +277,72 @@ int count_relocatable(unsigned char *addr, size_t nMax) {
   return relocatableBytes;
 
 } 
+
+
+int relocatable(unsigned char *addr, 
+		size_t nMax, 
+		unsigned int  *n_relocatable, 
+		unsigned int  *n_relocatable_bytes
+		) { 
+
+  _DecodeResult res; 
+  _DInst *decodedInstructions = (_DInst*)malloc(nMax * sizeof(_DecodedInst)); 
+  
+  unsigned int decodedInstructionsCount = 0;
+  unsigned int nDecodeBytes = nMax * 8; // Assume 8 bytes per instr
+
+  _CodeInfo ci = {0}; 
+  ci.code = (uint8_t*)addr; 
+  ci.codeLen = nDecodeBytes; 
+  ci.dt = Decode64Bits;   
+  ci.codeOffset = 0x0; 
+       
+  res = distorm_decompose(&ci, 
+			  decodedInstructions, 
+			  nMax,  
+			  &decodedInstructionsCount);
+
+  /* Check for decode error */ 
+  if (res == DECRES_INPUTERR) {	      
+    // fprintf(stderr,"Instruction decode error\n");
+    return 0;
+  }
+
+  /* decoded way too many instructions ?*/ 
+  if (decodedInstructionsCount >= nMax) { 
+    /* if too many, just repair by truncating */ 
+    decodedInstructionsCount = nMax; 
+  } 
+  /* Or way too few ? */ 
+  else { 
+    /* did not manage to decode as many instructions 
+       as the user asked for */
+    return 0; 
+  }
+
+  
+  unsigned int relocatableBytes = 0; 
+  /* think about answering in instrs */ 
+  unsigned int relocatableInst = 0; 
+
+  
+  for (int i = 0; i < decodedInstructionsCount; i++) { 
+
+    if ( position_independent(&decodedInstructions[i]) ) { 
+      relocatableInst ++; 
+      relocatableBytes += decodedInstructions[i].size;
+    } else { 
+      break; 
+    }
+  }
+  
+  
+  *n_relocatable = relocatableInst; 
+  *n_relocatable_bytes = relocatableBytes;
+
+  return 1;
+ 
+}
 
 
 

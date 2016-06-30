@@ -16,13 +16,27 @@ int foo() {
 
   int sum = 0; 
   
-  for (int i = 0; i < 10; i ++) { 
-   printf(".");    
-   sum += i; 
-  }  
-  printf("\n"); 
+  printf("%d\n",sum); 
+  sum += 1; 
+  printf("%d\n",sum); 
+  sum += 1; 
+  printf("%d\n",sum); 
+  sum += 1; 
+  printf("%d\n",sum); 
+  sum += 1; 
+  printf("%d\n",sum); 
+  sum += 1; 
+  printf("%d\n",sum);  
+  sum += 1; 
+  printf("%d\n",sum);  
+  sum += 1; 
+  printf("%d\n",sum);  
+  sum += 1; 
+  printf("%d\n",sum);  
+  sum += 1; 
+  printf("%d\n",sum);  
+  sum += 1; 
 
-  
   return sum; 
 } 
 
@@ -52,43 +66,73 @@ int main() {
 
   relocate_info(); 
   
-  unsigned char *fun_data = (unsigned char*)malloc(100); 
+  unsigned char *fun_data = (unsigned char*)malloc(390); 
+  memset(fun_data,0,390); 
 
   uint32_t *addresses = (uint32_t*)malloc(10*sizeof(uint64_t)); 
   
   unsigned int count = instruction_offsets((unsigned char*)foo, addresses, 10); 
 
   printf("Count: %d\n", count); 
-  printf("Base address: %llx\n", (unsigned char *)foo);
+  printf("foo Base address: %llx\n", (uint64_t)foo);
+  printf("fun_data Base address: %llx\n", (uint64_t)fun_data); 
   for (int i = 0; i < count; i ++) { 
     
     printf("%x\n", addresses[i]);     
   }					
 				
-  
+  /* pich out an instruction to start relocating from */ 
+  unsigned int instr_offset = addresses[4]; 
+  unsigned int num_relocate = 100; 
 
-  /* set_page_rwe(foo, 1024);  */
-  /* set_page_rwe(&fun_data[0], 1024);  */
+  set_page_rwe(foo, 1024);  
+  set_page_rwe(&fun_data[0], 1024); 
 
-  /* int a = foo();  */
+  int a = foo(); 
  
-  /* unsigned int count = count_relocatable((unsigned char *)foo, 64);  */
   
+  unsigned int relocatable_instr; 
+  unsigned int relocatable_bytes;
+
+  relocatable((unsigned char *)(foo), 
+	      num_relocate, 
+	      &relocatable_instr, 
+	      &relocatable_bytes);  
+
+  
+  printf("%d bytes relocatable\n", relocatable_bytes); 
+  printf("%d instructions relocatable\n",relocatable_instr); 
+
   /* //  printf("count_relocatable: %d\n", count);  */
+ 
+  unsigned char ret = 0xc3; 
+  uint32_t jmp_addr =  ((uint64_t)fun_data + relocatable_bytes+6) - (uint64_t)foo;
+  unsigned char *jmp_addr_ = (unsigned char*)&jmp_addr;
+  unsigned char jmp_back[6] = {0xe9,0xcd,jmp_addr_[0],jmp_addr_[1],jmp_addr_[2],jmp_addr_[3]}; 
+  printf("Jump-back address: %llx\n", jmp_addr); 
 
-  /* relocate(fun_data, (unsigned char*)foo, NULL, 0, count);  */
+  count = relocate(fun_data, 
+		   (unsigned char*)foo, 
+		   &ret, //jmp_back, 
+		   1, // 6, 
+		   num_relocate);  
 
-  /* int b = ((int (*)(void))&fun_data[0])(); */
+  printf("Relocated %d instructions\n", count); 
+
+  int b = ((int (*)(void))&fun_data[0])(); 
 
   /* // printf("value computed by relocated fun: %d \n", b);  */
+    
   
-  
-  /* free(fun_data);  */
-  /* if (a == b) {   */
-  /*   printf("SUCCESS\n");  */
-  /*   return 1;  */
-  /* } else {  */
-  /*   return 0;  */
-  /* }  */
+  printf("RESULT:%d\n", a); 
+  printf("RESULT:%d\n", b); 
+
+  free(fun_data); 
+  if (a == b) {   
+    printf("SUCCESS\n");  
+    return 1;  
+  } else {  
+    return 0;  
+  }  
   
 } 
