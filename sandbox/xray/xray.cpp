@@ -16,7 +16,7 @@
 
 using std::cout;
 
-constexpr int NUM_RUNNERS = 32;
+constexpr int NUM_RUNNERS = 1;
 
 typedef uint8_t* Address;
 
@@ -101,6 +101,10 @@ void* toggler(void* arg) {
   while(true) {
     bool spin = false;
     activator(&spin);
+    
+    /* trying to make this system not fail */ 
+    usleep(1); 
+    
     deactivator(&spin);
   }
 }
@@ -140,10 +144,10 @@ int main(int argc, char** argv) {
   if (argc == 2){ /* if there is an argument */
     straddler_point = atoi(argv[1]);
 
-    if (straddler_point < 2 || straddler_point > 10) {
-      cout << "Straddling point should be within 2 and 10\n";
-      exit(-1);
-    }
+    //if (straddler_point < 2 || straddler_point > 10) {
+    //  cout << "Straddling point should be within 2 and 10\n";
+    //  exit(-1);
+    //}
   } 
 
   cout << "Setting straddler point at "<< straddler_point << 
