@@ -11,7 +11,7 @@ run: $(EXES)
 	./xray.exe
 
 %.exe: %.cpp
-	$(CPP)  -std=c++11 -g $(CFLAGS) $< -o $@  -pthread
+	$(CPP)  -std=c++11 -ggdb3 $(CFLAGS) $< -o $@  -pthread
 
 clean:
-	rm -f *.exe
+	rm -f *.exe core
