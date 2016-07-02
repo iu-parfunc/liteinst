@@ -8,88 +8,90 @@
 #include <functional> 
 #include <map>
 #include <utility>
+#include <stdexcept>
 
 namespace utils {
 namespace concurrency {
 
-/** \brief A non blocking spin lock.
- * 
- * Lock is reentrant.
- */
 class SpinLock {
   public:
-    SpinLock(bool is_reentrant = true) : is_reentrant(is_reentrant) {
-      std::atomic_flag_clear_explicit(&cas_lock, std::memory_order_release);
+    SpinLock() : lock_owner(lock_is_free), is_latched(false), lock_count(0) {
     }
 
     inline bool tryLock() {
-      if (is_reentrant) {
-        if (owner != std::this_thread::get_id()) {
-          is_set = !std::atomic_flag_test_and_set_explicit(&cas_lock, 
-            std::memory_order_acquire);
+      if (lock_owner != std::this_thread::get_id()) {
+        bool non_latched_value = false;
+        bool locked = is_latched.compare_exchange_strong(non_latched_value, 
+            true, std::memory_order_acquire, std::memory_order_relaxed);
+        if (locked) {
+          lock_count++;
         }
-      } else {
-        is_set = !std::atomic_flag_test_and_set_explicit(&cas_lock, 
-          std::memory_order_acquire);
+        return locked;
       }
 
-      return is_set;
+      lock_count++;
+      return true;
     }
 
     inline void lock() {
-      if (is_reentrant) {
-        if (owner != std::this_thread::get_id()) {
-          while (std::atomic_flag_test_and_set_explicit(&cas_lock, 
-              std::memory_order_acquire));
-          owner = std::this_thread::get_id();
-          is_set = true;
-        } 
-      } else {
-        while (std::atomic_flag_test_and_set_explicit(&cas_lock, 
-            std::memory_order_acquire));
-        is_set = true;
+      if (lock_owner != std::this_thread::get_id()) {
+
+        bool non_latched_value = false;
+        // Test until we see a potential unlocked state
+        while(is_latched.load(std::memory_order_relaxed) != non_latched_value) {
+          __asm__("pause"); // Gentle spinning.
+        }
+
+        // Now try test and set
+        while(!is_latched.compare_exchange_weak(non_latched_value,
+              true, std::memory_order_acquire,
+              std::memory_order_relaxed)) {
+          non_latched_value = false;
+          // Again test until we a potential unlocked state
+          while(is_latched.load(std::memory_order_relaxed) != non_latched_value) {
+            __asm__("pause"); // Gentle spinning.  
+          }
+        }
+
+        lock_owner = std::this_thread::get_id();
       }
 
+      lock_count++;
     }
 
     inline void unlock() {
-      if (is_reentrant) {
-        if (owner == std::this_thread::get_id()) {
-          std::atomic_flag_clear_explicit(&cas_lock, std::memory_order_release);
-          is_set = false;
-        }
-      } else {
-        std::atomic_flag_clear_explicit(&cas_lock, std::memory_order_release);
-        is_set = false;
-      }
-    }
+      assert(lock_owner == std::this_thread::get_id());
+      assert(lock_count != 0);
 
-    inline bool isSet() {
-      return is_set;
+      --lock_count;
+
+      // There can be a window of is_latched locked but without any owner due 
+      // to non atomicity of this update. But that doesn't negatively affect 
+      // the correctness of the lock.      
+      lock_owner = lock_is_free;
+      if (lock_count == 0) {
+        is_latched.store(false, std::memory_order_release);
+      }
     }
 
     inline bool isOwner() {
-      if (is_reentrant) {
-        return (owner == std::this_thread::get_id());
-      } else {
-        // throw invalid_argument
-      }
+      return lock_owner == std::this_thread::get_id();
+    }
+
+    inline bool isSet() {
+      return is_latched.load(std::memory_order_relaxed);
     }
 
   private:
-    bool is_reentrant;
-    bool is_set = false;
-    std::thread::id owner;
-    // Buddhika : std::atomic version not working at the moment.
-    // Revertng plain __sync_compare_and_swap
-    // std::atomic<uint32_t> cas_lock;
-    // uint32_t cas_lock_raw;
-    std::atomic_flag cas_lock = ATOMIC_FLAG_INIT;
+    std::thread::id lock_is_free;
+    std::thread::id lock_owner;
+    std::atomic<bool> is_latched;
+    int lock_count;
 };
 
 /** \brief A non blocking readers writers lock.
  *  
- *  1. The lock is reentrant.
+ *  1. The lock is recursive.
  *  2. The lock implmentation gives weak priority to writers.
  */
 class ReadWriteLock {
@@ -138,8 +140,14 @@ class ReadWriteLock {
       }*/
 
       w_lock.lock();
+      assert(w_lock.isOwner());
+      assert(w_lock.isSet());
+      if (num_writers >= 1) {
+        // printf("Is already owned : %d Is already set : %d \n", is_already_owned, isSet);
+        abort();
+      }
       num_writers++;
-      assert(num_writers == 1);
+      assert(num_writers == 1 && w_lock.isSet());
     }
 
     inline void writeUnlock() {
@@ -152,6 +160,15 @@ class ReadWriteLock {
       num_writers--;
       assert(num_writers == 0);
       w_lock.unlock();
+    }
+
+    inline void clear() {
+      writeLock();
+      writeUnlock();
+    }
+
+    inline bool isSet() {
+      return r_lock.isSet() && w_lock.isSet();
     }
 
     /*

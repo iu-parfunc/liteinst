@@ -3,7 +3,7 @@ ROOT=../..
 UTILS=..
 CFLAGS = --std=c++11 -g -Wall $(EXTRA_WARNS) 
 
-ARGS= -I. -I$(UTILS)/include -I$(ROOT)/deps/bandit
+ARGS= -I. -I$(UTILS)/include
 
 CC+  = $(CC) $(ARGS)
 CXX+ = $(CXX) $(ARGS)
@@ -13,7 +13,7 @@ RM = rm
 OPTS =
 
 CODE = $(wildcard *.cpp)
-# override CODE += $(wildcard $(ROOT)/common/src/concurrency/*.cpp)
+override CODE += $(wildcard $(ROOT)/utils/src/*.cpp)
 
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
@@ -23,13 +23,13 @@ OBJ  = $(OBJ0:.c=.o)
 all: build
 
 build: $(OBJ)
-	$(CXX+) $(OBJ) -o maptest
+	$(CXX+) $(OBJ) -o tests -pthread
 
 test: build
-	./maptest
+	./tests -s
 
 .cpp.o:
 	$(CXX+) $(CFLAGS) $(ARGS) $(OPTS) -c -Wall -o $@ $<
 
 clean:
-	$(RM) -f $(OBJ) *.a *.so 
+	$(RM) -f $(OBJ) *.a *.so tests 
