@@ -29,7 +29,7 @@ TEST_CASE("+ Synchronous signal handler registration test") {
   SignalHandlerRegistry::registerSignalHandler(reg);
 
   // Generate a signal
-  // asm("int3");
+  // __asm__("int3");
   raise(SIGTRAP);
 
   CHECK(signalled == 1);
@@ -42,3 +42,13 @@ TEST_CASE("+ Synchronous signal handler registration test") {
   CHECK(newact.sa_handler == SIG_DFL);
 
 }
+
+// + Asynchronous signal handler registration test
+// + Multiple synchronous handler registration test
+// + Multiple asynchroous handler registration test
+// + Multiple synchronous and asynchrounous handler registration test
+// + Multiple synchronous handler registration with priority test
+// + Multiple asynchronous handler registration with priority test
+// + Multiple synchronous and asynchronous handler registration with priority test
+// + sigaction registration priority handling test
+// + sigaction registration override test
