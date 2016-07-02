@@ -20,8 +20,10 @@ compileit() {
 
 } 
 
+fails=0; 
+succs=0; 
 
-for (( i=2;i<=N_TESTS;i++ )); do 
+for (( i=0;i<=N_TESTS;i++ )); do 
    
     echo -e "\nTesting Straddler Position "$i
     echo ""
@@ -30,15 +32,21 @@ for (( i=2;i<=N_TESTS;i++ )); do
     make clean
     make all 
     	 
-    time timeout 4h $EXEC $i
+    time timeout 1m $EXEC $i
     if [ $? -eq 124 ]; then 
 	echo "OK"
-	echo "Safe wait setting: $i"
-	exit 0
+	#echo "Safe wait setting: $i"
+	succs=$((succs+1)); 
+	#exit 0
 
     else 
 	echo "FAILURE: $i"
+	fails=$((fails+1)); 
     fi; 
 done;  
 
 
+
+
+echo "passed tests: $succs"
+echo "failed tests: $fails"

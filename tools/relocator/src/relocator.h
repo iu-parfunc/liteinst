@@ -13,6 +13,11 @@ extern int relocate(unsigned char *dst,
 		    size_t n);
 
 extern int count_relocatable(unsigned char *addr,size_t nMax); 
+extern int relocatable(unsigned char *addr, 
+		       size_t nMax, 
+		       unsigned int  *n_relocatable, 
+		       unsigned int  *n_relocatable_bytes
+		       );
 
 extern int instruction_offsets(unsigned char *addr, 
                                         uint32_t *offs, 

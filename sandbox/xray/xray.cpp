@@ -16,7 +16,8 @@
 
 using std::cout;
 
-constexpr int NUM_RUNNERS = 10;
+
+constexpr int NUM_RUNNERS = 1;
 
 typedef uint8_t* Address;
 
@@ -101,6 +102,10 @@ void* toggler(void* arg) {
   while(true) {
     bool spin = false;
     activator(&spin);
+    
+    /* trying to make this system not fail */ 
+    usleep(1); 
+    
     deactivator(&spin);
   }
 }
@@ -140,18 +145,12 @@ int main(int argc, char** argv) {
   if (argc == 2){ /* if there is an argument */
     straddler_point = atoi(argv[1]);
 
+
     if (straddler_point < 2) {
       cout << "[Warning] Deviating from xray protocol\n";
     } else if (straddler_point > 10) {
       cout << "[Warning] Checking non straddling locations\n";
     }
-
-    /*
-    if (straddler_point > 10) {
-      cout << "Straddling point should be within 2 and 10\n";
-      exit(-1);
-    }
-    */
   } 
 
   cout << "Setting straddler point at "<< straddler_point << 
