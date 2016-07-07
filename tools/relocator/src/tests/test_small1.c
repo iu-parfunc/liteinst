@@ -69,9 +69,9 @@ int main() {
   unsigned char *fun_data = (unsigned char*)malloc(390); 
   memset(fun_data,0,390); 
 
-  uint32_t *addresses = (uint32_t*)malloc(10*sizeof(uint64_t)); 
+  uint32_t *addresses = (uint32_t*)malloc(100*sizeof(uint32_t)); 
   
-  unsigned int count = instruction_offsets((unsigned char*)foo, addresses, 10); 
+  unsigned int count = instruction_offsets((unsigned char*)foo, addresses, 100); 
 
   printf("Count: %d\n", count); 
   printf("foo Base address: %llx\n", (uint64_t)foo);
@@ -81,9 +81,11 @@ int main() {
     printf("%x\n", addresses[i]);     
   }					
 				
-  /* pich out an instruction to start relocating from */ 
-  unsigned int instr_offset = addresses[4]; 
+  /* pick out an instruction to start relocating from */ 
+  unsigned int instr_offset = addresses[8]; 
   unsigned int num_relocate = 100; 
+
+  /* printf("Instr offset: %x\n", instr_offset); */ 
 
   set_page_rwe(foo, 1024);  
   set_page_rwe(&fun_data[0], 1024); 
@@ -94,7 +96,7 @@ int main() {
   unsigned int relocatable_instr; 
   unsigned int relocatable_bytes;
 
-  relocatable((unsigned char *)(foo), 
+  relocatable((unsigned char *)(foo + instr_offset), 
 	      num_relocate, 
 	      &relocatable_instr, 
 	      &relocatable_bytes);  
@@ -106,20 +108,38 @@ int main() {
   /* //  printf("count_relocatable: %d\n", count);  */
  
   unsigned char ret = 0xc3; 
-  uint32_t jmp_addr =  ((uint64_t)fun_data + relocatable_bytes+6) - (uint64_t)foo;
-  unsigned char *jmp_addr_ = (unsigned char*)&jmp_addr;
-  unsigned char jmp_back[6] = {0xe9,0xcd,jmp_addr_[0],jmp_addr_[1],jmp_addr_[2],jmp_addr_[3]}; 
-  printf("Jump-back address: %llx\n", jmp_addr); 
+
+  /* jmp back from relocated code */ 
+  uint32_t jmp_addr = (((uint64_t)foo) + addresses[18]) - 
+                      (((uint64_t)fun_data) + addresses[18]) - 5;
+  //  unsigned char *jmp_addr_ = (unsigned char*)&jmp_addr;
+  unsigned char jmp_back[5] = {0xe9,0,0,0,0};
+  *(uint32_t*)(&jmp_back[1]) = jmp_addr; 
+  
+
+  /* jump into relocated code */ 
+  uint32_t jmp_reloc = ((uint64_t)fun_data) - 
+                       (((uint64_t)foo) + instr_offset) - 5; 
+  //unsigned char *jmp_reloc_ = (unsigned char*)&jmp_reloc; 
+  unsigned char jmp_reloc_instr[5] = {0xe9,0,0,0,0};
+  *(uint32_t*)(&jmp_reloc_instr[1]) = jmp_reloc; 
+ 
+  printf("Jump-back address: %lx\n", jmp_addr); 
+  printf("jump-forward addr: %lx\n", jmp_reloc); 
 
   count = relocate(fun_data, 
-		   (unsigned char*)foo, 
-		   &ret, //jmp_back, 
-		   1, // 6, 
-		   num_relocate);  
+		   ((unsigned char*)foo)+instr_offset, 
+		   jmp_back, 
+		   5, 
+		   10);  
 
+
+  /* write jmp_reloc_instr into foo */ 
+  memcpy(((unsigned char *)foo)+instr_offset,jmp_reloc_instr,5); 
+  
   printf("Relocated %d instructions\n", count); 
 
-  int b = ((int (*)(void))&fun_data[0])(); 
+  int b = foo(); // ((int (*)(void))&fun_data[0])(); 
 
   /* // printf("value computed by relocated fun: %d \n", b);  */
     

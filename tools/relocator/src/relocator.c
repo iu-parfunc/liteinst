@@ -341,16 +341,24 @@ int relocatable(unsigned char *addr,
   *n_relocatable_bytes = relocatableBytes;
 
   return 1;
- 
+- 
 }
 
 
 
 
-/* Collect information about instruction start addresses  */ 
+/* Collect information about instruction start addresses  
+   
+   It seems distorm and gdb does not fully agree on 
+   what the start addresses of instructions are. 
+   TODO: Investigate the source of this problem. 
+    (test_small1.exe is an indicator)
+*/ 
+
+
 int instruction_offsets(unsigned char *addr, 
-                                   uint32_t *offs, 
-                                   size_t nMax) { 
+                        uint32_t *offs, 
+			size_t nMax) { 
   
   _DecodeResult res; 
   _DInst *decodedInstructions = (_DInst*)malloc(nMax * sizeof(_DecodedInst)); 
@@ -387,10 +395,14 @@ int instruction_offsets(unsigned char *addr,
     return -1; 
   }
   
+  unsigned int offset = 0; 
+  
   for (int i = 0; i < decodedInstructionsCount; i++) { 
+    offs[i] = offset; 
     
-    uint32_t a = decodedInstructions[i].addr; 
-    offs[i] = a; 
+    uint32_t s = decodedInstructions[i].size;
+    offset += s;  
+
   }
   
   return decodedInstructionsCount;
