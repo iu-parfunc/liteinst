@@ -5,9 +5,10 @@
 #include <cstdint>
 #include <vector>
 
-#include "utils.hpp"
+#include "defs.hpp"
 
-namespace liteinst {
+namespace utils {
+namespace assembly {
 
 /// An encoded instruction sequence
 class Code {
@@ -43,6 +44,7 @@ class Disassembler {
 
 };
 
-} // End liteinst 
+} // End assembly
+} // End utils
 
 #endif /*ASSEMBLY_H*/

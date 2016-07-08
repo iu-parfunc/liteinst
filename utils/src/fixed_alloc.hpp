@@ -7,14 +7,15 @@
 #include "alloc.hpp"
 #include "range.hpp"
 
-namespace liteinst { 
-namespace liteprobes {
+namespace utils { 
+namespace alloc {
 
 /// Memory page allocation meta data
-class PageMetaData : public BlockMetaData {
+class PageMetaData : public utils::range::BlockMetaData {
   public:
     bool allocated; ///< If this page has been mapped yet
-    std::vector<Range> occupied; /**< Occupied sub ranges within the
+    std::vector<utils::range::Range> occupied; 
+                                        /**< Occupied sub ranges within the
                                          *   memory page*/
 };
 
@@ -23,7 +24,7 @@ class FixedAllocator : public Allocator {
   friend AllocatorFactory;
 
   private:
-  static BlockRangeMap allocations; 
+  static utils::range::BlockRangeMap allocations; 
 
   FixedAllocator();
 
@@ -49,11 +50,11 @@ class FixedAllocator : public Allocator {
    *  \param entries Memory page blocks the given range occupies
    *  \param range   The memory address range to be allocated
    */ 
-  bool allocationCallback(std::vector<BlockEntry*> entries, 
-      Range range); 
+  bool allocationCallback(std::vector<utils::range::BlockEntry*> entries, 
+      utils::range::Range range); 
 };
 
-} // End liteprobes 
-} // End liteinst 
+} // End alloc 
+} // End utils 
 
 #endif /*FIXED_ALLOC_H*/

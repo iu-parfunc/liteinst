@@ -1,13 +1,13 @@
 
 #include "addr_range.hpp"
 
-namespace liteinst {
-namespace liteprobes {
+namespace utils {
+namespace range {
 
 using std::vector;
 using utils::Address;
 
-Range::Range() : start(NULL), end(NULL) {
+Range::Range() : start(nullptr), end(nullptr) {
 
 }
 

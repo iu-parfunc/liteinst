@@ -8,8 +8,8 @@
 #include <map>
 #include <memory>
 
-namespace liteinst {
-namespace liteprobes {
+namespace utils {
+namespace range {
 
 class RangeComparator {
   public:
@@ -43,7 +43,7 @@ class RangeLock {
     ///< they are considered equal.
 };
 
-} /* End liteprobes */
-} /* End liteinst */
+} /* End range */
+} /* End utils */
 
 #endif /*RANGE_H*/

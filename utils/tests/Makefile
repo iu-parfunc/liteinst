@@ -32,4 +32,4 @@ test: build
 	$(CXX+) $(CFLAGS) $(ARGS) $(OPTS) -c -Wall -o $@ $<
 
 clean:
-	$(RM) -f $(OBJ) *.a *.so tests 
+	$(RM) -f $(OBJ) *.o *.a *.so tests 

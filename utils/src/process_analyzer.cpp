@@ -12,46 +12,52 @@
 #include <algorithm>
 #include <cstdint>
 
-namespace liteinst {
-namespace liteprobes {
+namespace utils {
+namespace process {
 
 using std::map;
 using std::pair;
 using std::string;
+using std::unique_ptr;
+using std::shared_ptr;
+using std::weak_ptr;
 using std::sort;
 using utils::Address;
 
-std::map<Address, Function> ProcessAnalyzer::getFunctions() {
+void ProcessAnalyzer::populateFunctions(FunctionsByAddress& fn_by_addr,
+    FunctionsByName& fn_by_name) {
   ELF *bin = elf64_read((char*)getProgramPath().c_str());
   unsigned int nb_sym = bin->symtab_num;
   Elf64_Sym **tab = bin->symtab;
   Elf64_Half strtab_idx = get_section_idx(bin, ".strtab");
   Elf64_Off strtab_offset = bin->shr[strtab_idx]->sh_offset;
 
-  map<Address, Function> fns;
-
   for (unsigned int i=0; i < nb_sym; i++) {
     if ((tab[i]->st_info & 0x0F) == STT_FUNC) {
       char* s_name = get_sym_name(bin->file, tab[i], strtab_offset);
 
-      Function fn;
-      fn.start = (Address) tab[i]->st_value;
-      fn.end = (Address) fn.start + tab[i]->st_size;
-      fn.name = string(s_name);
+      Function* fn = new Function();
+      fn->start = (Address) tab[i]->st_value;
+      fn->end = (Address) fn->start + tab[i]->st_size;
+      fn->name = string(s_name);
 
-      fns.insert(pair<Address, Function>(fn.start, fn));
+      unique_ptr<Function> fn_ptr(fn);
+      fn_by_name.insert(pair<string, unique_ptr<Function>>(fn->name, move(fn_ptr)));
+      // range_map.insert(pair<Range, unique_ptr<SpinLock>>(r, move(lock)));
+
+      // fn_by_name.emplace(fn->name, unique_ptr<Function>(fn));
+      fn_by_addr.emplace(fn->start, fn);
     }
   }
 
   fclose(bin->file);
   free(bin);
-  return fns;
 }
 
-std::map<Address, MappedRegion> ProcessAnalyzer::getMappedRegions() {
+void ProcessAnalyzer::populateMappedRegions(MappedRegionsByAddress& mapped) {
   unsigned long long addr, endaddr, offset, inode;
   char permissions[8], device[8];
-  char* filename = (char*) malloc(sizeof(char) * MAXPATHLEN);
+  char* filename = new char[MAXPATHLEN];
 
   FILE* fp;
   if ((fp = fopen ("/proc/self/maps", "r")) == NULL) {
@@ -61,20 +67,21 @@ std::map<Address, MappedRegion> ProcessAnalyzer::getMappedRegions() {
   char* line = NULL;
   size_t len = 0;
   ssize_t read;
-  map<Address, MappedRegion> regions;
   while ((read = getline(&line, &len, fp)) != -1) {
-    MappedRegion mr;
+    MappedRegion* mr = new MappedRegion;
     sscanf (line,  "%llx-%llx %s %llx %s %llx %s", 
         &addr, &endaddr, permissions, &offset, device, &inode, filename);
-    mr.start = (Address) addr;
-    mr.end = (Address) endaddr;
-    mr.file = string(filename);
-    regions.insert(pair<Address, MappedRegion>(mr.start, mr));
+    mr->start = (Address) addr;
+    mr->end = (Address) endaddr;
+    mr->file = string(filename);
+
+    unique_ptr<MappedRegion> mr_ptr(mr);
+    mapped.insert(pair<Address, unique_ptr<MappedRegion>>(mr->start, move(mr_ptr)));
+
+    // mapped.emplace(mr->start, unique_ptr<MappedRegion>(mr));
   }
 
-  free(line);
-
-  return regions;
+  delete[] filename;
 }
 
 string ProcessAnalyzer::getProgramPath() {
@@ -94,5 +101,5 @@ string ProcessAnalyzer::getProgramPath() {
   return program_path;
 }
 
-} // End liteprobes 
-} // End liteinst 
+} // End process 
+} // End utils 

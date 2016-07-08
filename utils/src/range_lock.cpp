@@ -5,8 +5,8 @@
 #include <cassert>
 #include <map>
 
-namespace liteinst {
-namespace liteprobes {
+namespace utils {
+namespace range {
 
 using std::pair;
 using std::unique_ptr;
@@ -18,7 +18,7 @@ void RangeLock::lockRange(Range r) {
     it->second.get()->lock();
   } else {
     range_map_lock.lock();
-    unique_ptr<SpinLock> lock(new SpinLock(true));
+    unique_ptr<SpinLock> lock(new SpinLock);
     range_map.insert(pair<Range, unique_ptr<SpinLock>>(r, move(lock)));
     range_map_lock.unlock();
   }
@@ -27,7 +27,7 @@ void RangeLock::lockRange(Range r) {
 void RangeLock::unlockRange(Range r) {
   auto it = range_map.find(r);
   if (it != range_map.end()) {
-    it->second.get()->unlock();
+    it->second->unlock();
   } else {
     assert(false); // lockRange needs to be called before unlockRange
   }

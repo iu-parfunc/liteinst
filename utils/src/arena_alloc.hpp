@@ -12,8 +12,8 @@
 #include "concurrency.hpp"
 #include "defs.hpp"
 
-namespace liteinst { 
-namespace liteprobes {
+namespace utils { 
+namespace alloc {
 
 // Estimate of an average trampoline size
 const int TRAMPOLINE_SIZE = 90; 
@@ -96,7 +96,7 @@ class ArenaAllocator : public Allocator {
 
 };
 
-} // End liteprobes 
-} // End liteinst 
+} // End alloc 
+} // End utils 
 
 #endif /*ARENA_ALLOC_H*/

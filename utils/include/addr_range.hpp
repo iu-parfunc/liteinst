@@ -4,10 +4,10 @@
 
 #include <vector>
 
-#include "utils.hpp"
+#include "defs.hpp"
 
-namespace liteinst {
-namespace liteprobes {
+namespace utils {
+namespace range {
 
 /// Describes a range in virtual memory address space.
 class Range {
@@ -70,7 +70,7 @@ class Range {
     bool operator>=(const Range& r);
 };
 
-} // End liteprobes 
-} // End liteinst 
+} // End range 
+} // End utils 
 
 #endif /*ADDR_RANGE_H*/

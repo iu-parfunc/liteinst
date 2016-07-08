@@ -8,8 +8,15 @@
 #include "process.hpp"
 #include "assembly.hpp"
 
-namespace liteinst { 
-namespace liteprobes {
+namespace utils { 
+namespace process {
+
+typedef std::map<std::string, std::unique_ptr<Function>> FunctionsByName;
+typedef std::map<utils::Address, Function*> FunctionsByAddress;
+typedef std::map<utils::Address, std::unique_ptr<MappedRegion>> 
+  MappedRegionsByAddress;
+typedef std::map<utils::Address, std::unique_ptr<BasicBlock>> 
+  BasicBlocksByAddress;
 
 /** \brief Analyses both program executable on disk and process image to 
  *         gather meta data about the current process.
@@ -22,15 +29,14 @@ namespace liteprobes {
 class ProcessAnalyzer {
   public:
 
-    /** \brief Gets the functions within the current process.
-     *  \return A mapping from function start address to function information.
+    /** \brief Populate function meta data of the current process.
      */
-    virtual std::map<utils::Address, Function> getFunctions();
+    virtual void populateFunctions(FunctionsByAddress& fn_by_addr,
+        FunctionsByName& fn_by_name);
 
-    /** \brief Gets the mapped regions within the current process.
-     *  \return A mapping from region start address to region information.
+    /** \brief Populate the mapped region meta data within the current process.
      */
-    virtual std::map<utils::Address, MappedRegion> getMappedRegions();
+    virtual void populateMappedRegions(MappedRegionsByAddress& mapped);
 
     /** \brief Gets the path of the executable of current process.
      *  \return The path of the executable
@@ -65,11 +71,11 @@ class FunctionAnalyzer {
     void analyzeFunction(Function& func);
 
   private:
-    Disassembler disas;
+    utils::assembly::Disassembler disas;
 
 };
 
-} // End liteprobes
-} // End fastinst
+} // End utils 
+} // End process 
 
 #endif /*ANALYSIS_H*/

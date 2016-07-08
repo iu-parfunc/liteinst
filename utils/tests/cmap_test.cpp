@@ -52,6 +52,30 @@ TEST_CASE("+ Erase test") {
   CHECK(map.size() == 0);
 }
 
+TEST_CASE("+ Lower bound test") {
+  ConcurrentMap<int, string> map;
+  map.insert(1, "Hello");
+  map.insert(2, "World");
+  map.insert(3, "And you too!");
+
+  auto it = map.lower_bound(2);
+  CHECK(it != map.end());
+  CHECK(it->first == 2);
+  CHECK(!string("World").compare(it->second));
+}
+
+TEST_CASE("+ Upper bound test") {
+  ConcurrentMap<int, string> map;
+  map.insert(1, "Hello");
+  map.insert(2, "World");
+  map.insert(3, "And you too!");
+
+  auto it = map.upper_bound(2);
+  CHECK(it != map.end());
+  CHECK(it->first == 3);
+  CHECK(!string("And you too!").compare(it->second));
+}
+
 TEST_CASE("+ Find test") {
   ConcurrentMap<int, string> map;
   map.insert(2, "Hello");
@@ -60,7 +84,7 @@ TEST_CASE("+ Find test") {
     auto it = map.find(2);
     CHECK(it != map.end());
     CHECK(it->first == 2);
-    CHECK(string("hello").compare(it->second));
+    CHECK(!string("Hello").compare(it->second));
   }
 
   SUBCASE("++ Non existing element") {

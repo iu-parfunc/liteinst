@@ -10,8 +10,10 @@
 #include "range.hpp"
 #include "defs.hpp"
 
-namespace liteinst {
-namespace liteprobes {
+namespace utils {
+namespace alloc {
+
+using namespace utils::range;
 
 using std::string;
 using std::vector;
@@ -161,5 +163,5 @@ bool FixedAllocator::allocationCallback(std::vector<BlockEntry*> entries,
   return true;
 }
 
-} // End liteprobes 
+} // End alloc 
 } // End liteinst 

@@ -7,11 +7,12 @@
 #include <sys/mman.h> // mprotect
 #include <assert.h>  
 
-#include "analysis.hpp"
 #include "process.hpp"
 
 namespace liteinst {
 namespace liteprobes {
+
+using namespace utils::process;
 
 using std::map;
 using utils::Address;
@@ -72,11 +73,10 @@ void initializeRprobes() {
 }
 
 void rprobesInfectMain() {
-  ProcessAnalyzer pa;
-  map<Address, Function> fnMap = pa.getFunctions();
-  for (auto it : fnMap) {
-    if (!it.second.name.compare("main")) {
-      g_main_ptr = (void*) it.second.start;
+  Process p;
+  for (Function* f: p.getFunctions()) {
+    if (!f->name.compare("main")) {
+      g_main_ptr = (void*) f->start;
       break;
     }
   }
