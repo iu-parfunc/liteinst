@@ -110,8 +110,8 @@ int main() {
   unsigned char ret = 0xc3; 
 
   /* jmp back from relocated code */ 
-  uint32_t jmp_addr = (((uint64_t)foo) + addresses[18]) - 
-                      (((uint64_t)fun_data) + addresses[18]) - 5;
+  uint32_t jmp_addr = (((uint64_t)foo) + addresses[19]) - 
+                      (((uint64_t)fun_data) + addresses[20]) + 5;
   //  unsigned char *jmp_addr_ = (unsigned char*)&jmp_addr;
   unsigned char jmp_back[5] = {0xe9,0,0,0,0};
   *(uint32_t*)(&jmp_back[1]) = jmp_addr; 
