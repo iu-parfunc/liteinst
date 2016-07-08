@@ -20,8 +20,8 @@ extern int relocatable(unsigned char *addr,
 		       );
 
 extern int instruction_offsets(unsigned char *addr, 
-                                        uint32_t *offs, 
-                                        size_t nMax);
+			       uint32_t *offs, 
+			       size_t nMax);
 
 
 extern void relocate_info();
