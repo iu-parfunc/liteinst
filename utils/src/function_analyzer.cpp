@@ -11,17 +11,19 @@
 #include "distorm.h"
 #include "mnemonics.h"
 
-namespace liteinst {
-namespace liteprobes {
+namespace utils {
+namespace process {
+
+using namespace  utils::assembly;
 
 using std::set;
 using std::list;
+using std::unique_ptr;
 using std::vector;
 using std::find;
 using std::pair;
 using std::iterator;
 using utils::Address;
-
 
 const int FunctionAnalyzer::PROBE_READY_INSTRUCTION_SIZE = 5;
 
@@ -34,7 +36,7 @@ typedef struct {
   set<Address> block_ends;
   set<uint32_t> block_end_offsets;
 
-  list<ControlReturn> returns;
+  list<ControlReturn*> returns;
 
   Address fn_end;
   uint64_t end_padding_size;
@@ -139,7 +141,7 @@ BlockBoundaries generateBlockBoundaries(Address start, Address end,
   _DInst* decoded = static_cast<_DInst*>(seq.instructions);
 
   Address ip = start;
-  list<ControlReturn> returns;
+  list<ControlReturn*> returns;
   bool prev_block_end = true;
 
   set<Address> block_starts;
@@ -170,10 +172,10 @@ BlockBoundaries generateBlockBoundaries(Address start, Address end,
       }
 
       if (isReturn(decoded[i])) {
-        ControlReturn r;
-        r.addr = ip;
-        r.target =  (Address) NULL; 
-        r.type = ReturnType::RET; 
+        ControlReturn* r = new ControlReturn;
+        r->addr = ip;
+        r->target =  (Address) NULL; 
+        r->type = ReturnType::RET; 
 
         returns.push_back(r);
 
@@ -184,10 +186,10 @@ BlockBoundaries generateBlockBoundaries(Address start, Address end,
           // If the jmp target is not within the function then it must be a 
           // tail call
           if (addr <= start || addr >= end) {
-            ControlReturn r;
-            r.addr = ip;
-            r.target = addr;
-            r.type = ReturnType::TAIL_CALL;
+            ControlReturn* r = new ControlReturn;
+            r->addr = ip;
+            r->target = addr;
+            r->type = ReturnType::TAIL_CALL;
 
             returns.push_back(r);
           } else {
@@ -213,18 +215,18 @@ BlockBoundaries generateBlockBoundaries(Address start, Address end,
             }
           }
         } else if (isFarJump(decoded[i])) {
-          ControlReturn r;
-          r.addr = ip;
-          r.target = extractFarJumpTarget(decoded[i]);
-          r.type = ReturnType::TAIL_CALL;
+          ControlReturn* r = new ControlReturn;
+          r->addr = ip;
+          r->target = extractFarJumpTarget(decoded[i]);
+          r->type = ReturnType::TAIL_CALL;
 
           returns.push_back(r);
         }
       } else if (isHalt(decoded[i])) {
-        ControlReturn r;
-        r.addr = ip;
-        r.target = NULL;
-        r.type = ReturnType::HALT;
+        ControlReturn* r = new ControlReturn;
+        r->addr = ip;
+        r->target = NULL;
+        r->type = ReturnType::HALT;
 
         returns.push_back(r);
       }
@@ -237,10 +239,10 @@ BlockBoundaries generateBlockBoundaries(Address start, Address end,
       // Function ends with a tail call
       if (i == seq.n_instructions - 1) {
         if (isCall(decoded[i])) {
-          ControlReturn r;
-          r.addr = ip;
-          r.target = extractFarJumpTarget(decoded[i]);
-          r.type = ReturnType::TAIL_CALL;
+          ControlReturn* r = new ControlReturn;
+          r->addr = ip;
+          r->target = extractFarJumpTarget(decoded[i]);
+          r->type = ReturnType::TAIL_CALL;
 
           returns.push_back(r);
           block_ends.insert(ip);
@@ -283,7 +285,7 @@ BlockBoundaries generateBlockBoundaries(Address start, Address end,
   return bb;
 }
 
-list<BasicBlock> generateBasicBlocks(BlockBoundaries bb) {
+list<BasicBlock*> generateBasicBlocks(BlockBoundaries bb) {
 
   assert(bb.block_starts.size() == bb.block_start_offsets.size());
   assert(bb.block_ends.size() == bb.block_end_offsets.size());
@@ -299,11 +301,14 @@ list<BasicBlock> generateBasicBlocks(BlockBoundaries bb) {
     vector<uint32_t>(bb.block_end_offsets.begin(), 
         bb.block_end_offsets.end());
 
-  list<BasicBlock> bbl;
+  list<BasicBlock*> bbl;
   for(unsigned int i=0; i < block_starts.size(); i++) {
-    BasicBlock bb;
-    bb.start = block_starts[i];
-    bb.end = block_ends[i];
+    BasicBlock* bb = new BasicBlock;
+    bb->start = block_starts[i];
+    bb->end = block_ends[i];
+
+    vector<Address> ends;
+    ends.push_back(block_ends[i]);
 
     bbl.push_back(bb);
   }
@@ -317,10 +322,14 @@ void populateStructuralInformation(Function& func, Sequence seq) {
 
     BlockBoundaries bb = generateBlockBoundaries(func.start, func.end, seq);
 
-    list<BasicBlock> bbl = generateBasicBlocks(bb);
-    for (BasicBlock bb : bbl) {
-      func.basic_blocks.insert(pair<Address, BasicBlock>(bb.start, bb));
+    list<BasicBlock*> bbl = generateBasicBlocks(bb);
+    for (BasicBlock* bb : bbl) {
+      func.basic_blocks.emplace(bb->start, unique_ptr<BasicBlock>(bb));
     }
+
+    for (ControlReturn* r : bb.returns) {
+      func.returns.emplace_back(unique_ptr<ControlReturn>(r));
+    } 
 
     func.end_padding = (int64_t) func.next - (int64_t) func.end;
     // TODO : To detect correct function end in case there is some padding
@@ -353,5 +362,5 @@ void FunctionAnalyzer::analyzeFunction(Function& func) {
 
 /********************** End public API implementation *************************/
 
-} // End liteprobes 
-} // End liteinst 
+} // End process 
+} // End utils 

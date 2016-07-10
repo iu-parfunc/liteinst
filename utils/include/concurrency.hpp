@@ -267,14 +267,16 @@ class ConcurrentMap {
 
     Iterator lower_bound(const Key& k) {
       rw_lock.readLock();
-      map.lower_bound(k);
+      Iterator it = map.lower_bound(k);
       rw_lock.readUnlock();
+      return it;
     }
 
     Iterator upper_bound(const Key& k) {
       rw_lock.readLock();
-      map.upper_bound(k);
+      Iterator it = map.upper_bound(k);
       rw_lock.readUnlock();
+      return it;
     }
 
   private:

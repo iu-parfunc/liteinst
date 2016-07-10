@@ -6,6 +6,8 @@
 #include <vector>
 #include <atomic>
 #include <string>
+#include <list>
+#include <memory>
 #include <cstdio>
 #include <unordered_map>
 
@@ -45,8 +47,11 @@ typedef uint64_t ProbeId;
 /// Opaque identifier for an Instrumentor instance
 typedef uint64_t InstrumentationId;
 
+/// Opaque identifier for a probe registration
+typedef uint64_t RegistrationId;
+
 /// The probe groupings available. 
-enum ProbeGroupType { 
+enum class ProbeGroupType { 
   FUNCTION,
   LOOP,
   BASIC_BLOCK,
@@ -56,7 +61,7 @@ enum ProbeGroupType {
 };
 
 /// The placement of probes within a given probe grouping.
-enum ProbePlacement { 
+enum class ProbePlacement { 
   ENTRY,
   EXIT,
   BOUNDARY /* ENTRY + EXIT */
@@ -67,6 +72,11 @@ struct ProbeContext {
   ProbeGroupId pg_id;
   InstrumentationId i_id;
   ProbePlacement placement;
+};
+
+struct ProbeMetaData {
+  utils::Address address;
+  std::string fn_name;
 };
 
 class ProbeAxis {
@@ -81,6 +91,10 @@ class ProbeAxis {
 
     virtual std::string getSpec() {
       return spec;
+    }
+
+    ProbePlacement getPlacement() {
+      return placement;
     }
 
   protected:
@@ -169,6 +183,8 @@ class InstrumentationProvider {
 
 class Coordinates {
   public:
+
+    // Setters
     Coordinates& setModule(Module m) {
       module = m;
       return *this; 
@@ -218,6 +234,31 @@ class Coordinates {
       }
     }
 
+    // Getters
+    Module getModule() {
+      return module;
+    }
+
+    Function getFunction() {
+      return function;
+    }
+
+    Loop getLoop() {
+      return loop;
+    }
+
+    BasicBlock getBasicBlock() {
+      return basic_block;
+    }
+
+    Offset getOffset() {
+      return offset;
+    }
+
+    InstructionType getInstructionType() {
+      return ins_type;
+    }
+
   private:
     Module module;
     Function function;
@@ -227,12 +268,38 @@ class Coordinates {
     InstructionType ins_type;
 };
 
-class ProbeRegistration {
+class ProbeGroupInfo {
+  public:
+    ProbeGroupId id;
+    std::string name;
+    utils::Address start;
 
+    ProbeGroupInfo(ProbeGroupId id, std::string name) : id(id), name(name) {
+    }
 };
 
-class ProbeMetaData {
+class ProbeRegistration {
+  public:
+    RegistrationId reg_id;
+    std::map<std::string, std::vector<ProbeGroupInfo>> pg_by_function;
+    std::list<ProbeGroupInfo> conflicts;
 
+    std::vector<ProbeGroupInfo> getProbeGroupsForFunction(std::string name) {
+      auto it = pg_by_function.find(name);
+      if (it != pg_by_function.end()) {
+        return it->second;
+      }
+
+      return std::vector<ProbeGroupInfo>();
+    }
+
+    std::vector<std::string> getProbedFunctions() {
+      std::vector<std::string> fns;
+      for (auto it = pg_by_function.begin(); it != pg_by_function.end(); it++) {
+        fns.push_back(it->first);
+      }
+      return fns;
+    }
 };
 
 /// The signature for a callback that registers a newly discovered
@@ -254,7 +321,7 @@ typedef void (*Callback) (const ProbeMetaData* pmd);
 /// probeId -> probeGroupId
 ///   
 
-/// [Module]:Function:[Loop]:[Basic Block]:[Offset]:[Ins]:Entry
+/// [Module]:Function:[Loop]:[Basic Block]\([Offset]|[Ins])@Entry
 /// Module:Function:Loop:Basic Block:Offset:Ins:*
 /// [Module]:Function:[Loop]:[Basic Block]:[Offset]:*
 /// /* $exit != offset1&offset2 & $granularity == LOOP*/
@@ -283,7 +350,7 @@ class ProbeProvider {
       }
     }
 
-    virtual ProbeRegistration configure(Coordinates coords, 
+    virtual ProbeRegistration registerProbes(Coordinates coords, 
         std::string instrumentation_provider) = 0;
 
     // Per probe operations

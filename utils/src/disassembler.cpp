@@ -3,7 +3,8 @@
 #include "distorm.h"
 #include "mnemonics.h"
 
-namespace liteinst {
+namespace utils {
+namespace assembly {
 
 using utils::Address;
 
@@ -38,4 +39,5 @@ Sequence Disassembler::disassemble(Address start, Address end) {
   return seq;
 }
 
+} // End assembly
 } // End liteinst 

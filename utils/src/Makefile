@@ -1,5 +1,5 @@
 
-ROOT = ../../..
+ROOT = ../..
 INSTALL= $(ROOT)/build/lib
 DEPS_ROOT= $(ROOT)/deps
 
@@ -11,7 +11,7 @@ CFLAGS = --std=c++11 -g -Wall $(EXTRA_WARNS)
 
 # Setup build macros from env variables
 
-ARGS= -I.. -I$(ROOT)/include -I$(ROOT)/utils/include -I$(ROOT)/deps/distorm/include -I$(ROOT)/deps/elph/include
+ARGS= -I. -I$(ROOT)/include -I$(ROOT)/utils/include -I$(ROOT)/deps/distorm/include -I$(ROOT)/deps/elph/include
 
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 DEPS = $(INSTALL)/libpointpatch.a 

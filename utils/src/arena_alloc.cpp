@@ -11,8 +11,11 @@
 #include "range.hpp"
 #include "process.hpp"
 
-namespace liteinst {
-namespace liteprobes {
+namespace utils {
+namespace alloc {
+
+using namespace utils::range;
+using namespace utils::process;
 
 using std::string;
 using std::vector;

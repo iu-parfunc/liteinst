@@ -5,10 +5,10 @@
 #include <cstdint>
 #include <memory>
 
-#include "utils.hpp"
+#include "defs.hpp"
 
-namespace liteinst {
-namespace liteprobes {
+namespace utils {
+namespace alloc {
 
 /// Different allocator types available
 enum class AllocatorType {
@@ -50,7 +50,7 @@ class AllocatorFactory {
      *  \param type The type of allocator to be returned.
      *  \return Allocator A reference to the allocator instance.
      */
-    static std::unique_ptr<Allocator> getAllocator(AllocatorType type);
+    static Allocator* getAllocator(AllocatorType type);
 };
 
 } // End liteprobes 

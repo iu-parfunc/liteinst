@@ -31,20 +31,21 @@ class PatchPoint {
     uint8_t patched_seq;
 };
 
-enum class ControlTransferType {
+enum class ControlTransferTypeV1 {
   TRAMPOLINE,
-  SPRINGBOARD
+  SUPERTRAMPOLINE 
 };
 
-class ControlTransfer {
+class ControlTransferV1 {
   public:
-    Range range; 
-    Range relocation_range;
+    Range displaced; 
+    Range relocated;
+    int relocation_offsetsp[];
     PatchPoint patch_point; 
     ControlTransferType type;
 };
 
-class SpringBoard : ControlTransfer {
+class SuperTrampoline : ControlTransferV1 {
   public:
     int num_trampolines;
     int active_trampolines;
@@ -71,6 +72,19 @@ class CalloutContainer {
     std::shared_ptr<CalloutContainer> previous;
     std::shared_ptr<CalloutContainer> next;
     std::vector<PatchPoint> callouts;
+};
+
+class TrampolineV1 {
+  Range displaced_range;
+  Range relocated_range;
+  int reroute_offsets[];
+  bool is_easily_relocatable;
+};
+
+class ProbeInstrumentation {
+  ProbeGroupId pg_id;
+  InstrumentationId i_id;
+  ProbePlacement placement;
 };
 
 class Trampoline : ControlTransfer {

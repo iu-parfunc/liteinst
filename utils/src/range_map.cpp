@@ -4,8 +4,8 @@
 
 #include "range_map.hpp"
 
-namespace liteinst { 
-namespace liteprobes {
+namespace utils { 
+namespace range {
 
 using std::vector;
 using std::pair;

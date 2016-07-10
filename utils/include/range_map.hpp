@@ -6,12 +6,12 @@
 #include <vector>
 #include <functional>
 
+#include "defs.hpp"
 #include "addr_range.hpp"
-#include "utils.hpp"
 #include "concurrency.hpp"
 
-namespace liteinst { 
-namespace liteprobes { 
+namespace utils { 
+namespace range { 
 
 /// Range information corresponding to a block with some additional meta data
 /// added for RangeMap internal use. 
@@ -101,7 +101,7 @@ class BlockRangeMap {
     bool unlockRange(Range r);
 };
 
-} // End liteprobes 
-} // End liteinst
+} // End range 
+} // End utils 
 
 #endif /*RANGE_MAP_H*/

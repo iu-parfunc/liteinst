@@ -6,12 +6,13 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <memory>
 
-#include "utils.hpp"
 #include "concurrency.hpp"
+#include "defs.hpp"
 
-namespace liteinst { 
-namespace liteprobes { 
+namespace utils { 
+namespace process { 
 
 /// Different types of control return from within a function
 enum class ReturnType { 
@@ -98,14 +99,21 @@ class Function : public Show, public Optional {
     int64_t end_padding; ///< The padding space between the current and next 
                          ///< functions
 
-    std::map<utils::Address, BasicBlock> basic_blocks; ///< Basic block start
-                                                       ///< address
-                                                ///< mappings
-    std::vector<ControlReturn> returns;         ///< Control returns of this 
-                                                ///< function
+    /// Basic block start address mappings
+    std::map<utils::Address, std::unique_ptr<BasicBlock>> basic_blocks; 
+    /// Control returns of this function
+    std::vector<std::unique_ptr<ControlReturn>> returns; 
     std::vector<utils::Address> probe_ready_sites;     ///< Probe ready 
                                                        ///< instruction sites of
                                                        ///< this function
+    static utils::concurrency::SpinLock init_lock;
+    static bool is_initialized;
+
+    static std::unique_ptr<BasicBlock> invalid_bb;
+    static std::unique_ptr<ControlReturn> invalid_cr;
+
+    Function();
+    ~Function();
 
     /** /brief Gets the basic block starting with given address
      *  /param addr The starting address of a baisc block
@@ -113,17 +121,17 @@ class Function : public Show, public Optional {
      *    start address the returned basic block instance would contain the
      *    invalid flag.
      */
-    BasicBlock getBasicBlock(utils::Address addr);
+    BasicBlock* getBasicBlock(utils::Address addr);
 
     /** /brief Gets the basic blocks contained within the current function.
      *  /return     The list of basic blocks of current function.
      */
-    std::vector<BasicBlock> getBasicBlocks();
+    std::vector<BasicBlock*> getBasicBlocks();
 
     /** /brief Gets the control returns contained within the current function.
      *  /return     The list of control returns of current function.
      */
-    std::vector<ControlReturn> getReturns();
+    std::vector<ControlReturn*> getReturns();
 
     /** /brief Prints function information to given file descriptor
      */
@@ -133,11 +141,6 @@ class Function : public Show, public Optional {
 /// Holds meta data related to the program process image
 class Process : public Show, public Optional {
   public:
-    static std::map<utils::Address, Function> functions;  ///< Function start 
-                                                          ///< address mappings
-    static std::map<utils::Address, MappedRegion> mapped; ///< Memory region 
-                                                          ///< start address
-                                                          ///< mappings
 
     Process();
     ~Process();
@@ -149,7 +152,7 @@ class Process : public Show, public Optional {
      *    any associated function the returned function instance would contain
      *    the invalid flag.
      */
-    Function getContainedFunction(utils::Address addr);
+    Function* getContainedFunction(utils::Address addr);
 
     /** /brief Gets the function starting with given address. 
      *  /param addr The starting address of a function 
@@ -157,12 +160,21 @@ class Process : public Show, public Optional {
      *    start address the returned function instance would contain the 
      *    invalid flag.
      */
-    Function getFunction(utils::Address addr);
+    Function* getFunction(utils::Address addr);
+
+    /** /brief Gets the function starting with given function name. 
+     *  /param name The name of a function 
+     *  /return     The function starting with the address. For an invalid 
+     *    name the returned function instance would contain the 
+     *    invalid flag.
+     */
+    Function* getFunction(std::string name);
+
 
     /** /brief Gets the functions associated with the current process. 
      *  /return     The list of functions in the current process.
      */
-    std::vector<Function> getFunctions();
+    std::vector<Function*> getFunctions();
 
     /** /brief Gets the number of functions associate with the current process.
      *  /return The number of functions in the current processs.
@@ -180,7 +192,7 @@ class Process : public Show, public Optional {
      *  the time the return value is used however, since mapping 
      *  information are only read at the start of the process execution.
      */
-    MappedRegion getContainedMappedRegion(utils::Address addr);
+    MappedRegion* getContainedMappedRegion(utils::Address addr);
 
     /** /brief Gets the region starting with given address. 
      *  /param addr The starting address of a region 
@@ -192,26 +204,37 @@ class Process : public Show, public Optional {
      *  the time the return value is used however, since mapping 
      *  information are only read at the start of the process execution.
      */
-    MappedRegion getMappedRegion(utils::Address addr);
+    MappedRegion* getMappedRegion(utils::Address addr);
 
     /** /brief Gets the regions associated with the current process at the 
      *   process start.
      *  /return     The list of mapped region for the current process.
      */
-    std::vector<MappedRegion> getMappedRegions();
+    std::vector<MappedRegion*> getMappedRegions();
 
     /** /brief Prints process information to given file descriptor
      */
     void show(FILE* fp, int nspaces);
 
   private:
-    utils::concurrency::SpinLock init_lock;
-    bool is_initialized = false;
+    static utils::concurrency::SpinLock init_lock;
+    static bool is_initialized;
+    static std::unique_ptr<MappedRegion> invalid_mr;
+    static std::unique_ptr<Function> invalid_fn;
+
+    /// Function start address mappings
+    static std::map<utils::Address, Function*> fn_by_address;  
+
+    /// Function name mappings
+    static std::map<std::string, std::unique_ptr<Function>> fn_by_name;  
+
+    /// Memory region start address mappings
+    static std::map<utils::Address, std::unique_ptr<MappedRegion>> mapped; 
+
 
 };
 
-
-} // End liteprobes 
-} // End liteinst 
+} // End process 
+} // End utils 
 
 #endif /*PROCESS_H*/
