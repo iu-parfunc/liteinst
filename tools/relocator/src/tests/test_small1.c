@@ -15,7 +15,6 @@ long g_page_size;
 int foo() { 
 
   int sum = 0; 
-  
   printf("%d\n",sum); 
   sum += 1; 
   printf("%d\n",sum); 
