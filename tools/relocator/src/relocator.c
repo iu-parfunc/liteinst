@@ -9,7 +9,7 @@
 #include "mnemonics.h" 
 
 
-const char *op_to_str(uint16_t instr); 
+const char *opcode_to_str(uint16_t instr); 
 
 void relocate_info() { 
   unsigned int dver = distorm_version();
@@ -422,7 +422,7 @@ int instruction_offsets(unsigned char *addr,
 
 
 
-const char *op_to_str(uint16_t instr) { 
+const char *opcode_to_str(uint16_t instr) { 
 switch(instr) {
 case 0 : return "I_UNDEFINED";
 case 66 : return "I_AAA";
