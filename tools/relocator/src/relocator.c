@@ -9,7 +9,7 @@
 #include "mnemonics.h" 
 
 
-const char *opcode_to_str(uint16_t instr); 
+
 
 void relocate_info() { 
   unsigned int dver = distorm_version();
@@ -17,6 +17,9 @@ void relocate_info() {
 
 } 
 
+/* ------------------------------------------------------------ 
+   Printing 
+   ------------------------------------------------------------ */ 
 
 /* For printing */ 
 char *op_types[] = {"O_NONE", 
@@ -30,10 +33,58 @@ char *op_types[] = {"O_NONE",
 		    "O_PC",
 		    "O_PTR"};
 
+/* opcode value to mnemonic as string */
+const char *opcode_to_str(uint16_t instr); 
+
+/* ------------------------------------------------------------ 
+   Disassembling
+   ------------------------------------------------------------ */ 
+   
+_DInst *disassemble(unsigned char *addr,size_t nInstr, size_t *nDecodedInstr){ 
+  
+  _DecodeResult res; 
+  _DInst *decodedInstructions = NULL; 
+  
+  decodedInstructions = (_DInst*)malloc(nInstr * sizeof(_DecodedInst)); 
+  if (!decodedInstructions) return NULL; 
+  
+  
+  unsigned int decodedInstructionsCount = 0;
+  // Assume max/avg 8 bytes per instr
+  unsigned int nDecodeBytes = nInstr * 8; 
+
+  _CodeInfo ci = {0}; 
+  ci.code = (uint8_t*)addr; 
+  ci.codeLen = nDecodeBytes; 
+  ci.dt = Decode64Bits;   
+  ci.codeOffset = 0x100000; 
+  
+  res = distorm_decompose(&ci, 
+			  decodedInstructions, 
+			  nInstr,   
+			  &decodedInstructionsCount);
+  
+ 
+  /* Check for decode error */ 
+  if (res == DECRES_INPUTERR) {	      
+    free(decodedInstructions); 
+    return NULL;
+  }
+
+  /* How many instructions have been decoded */ 
+  if (nDecodedInstr) 
+    *nDecodedInstr = decodedInstructionsCount; 
+
+  return decodedInstructions; 
+  
+} 
 
 
 
 
+/* ------------------------------------------------------------ 
+   Relocating 
+   ------------------------------------------------------------ */ 
 
 /* TODO: 
      - What to do about jumps: 
