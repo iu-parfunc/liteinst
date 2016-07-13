@@ -2,67 +2,34 @@
 ROOT = ../..
 INSTALL= $(ROOT)/build/lib
 DEPS_ROOT= $(ROOT)/deps
+
+EXTRA_WARNS= -pedantic 
+
+CFLAGS = --std=c++11 -g -Wall $(EXTRA_WARNS) 
 # CFLAGS=-DPROBE_TRUE_EMPTY_ON -DPROBE_CPU_TIME
 # CFLAGS=-DPROBE_HIST_ON -DPROBE_CPU_TIME
 
 # Setup build macros from env variables
-ifeq ($(ARG_PATCH),ARG_PATCH_SYNC)
-override CFLAGS += -DARG_PATCH_SYNC
-endif
 
-ifeq ($(ARG_PATCH),ARG_PATCH_ASYNC)
-override CFLAGS += -DARG_PATCH_ASYNC
-endif
-
-ifeq ($(INVOKE_PATCH),INVOKE_PATCH_SYNC)
-override CFLAGS += -DINVOKE_PATCH_SYNC
-endif
-
-ifeq ($(INVOKE_PATCH),INVOKE_PATCH_CALL)
-override CFLAGS += -DINVOKE_PATCH_CALL
-endif
-
-ifeq ($(AUDIT_PROBES),AUDIT_PROBES)
-override CFLAGS += -DAUDIT_PROBES 
-endif
-
-ifeq ($(AUDIT_INIT_COST),AUDIT_INIT_COST)
-override CFLAGS += -DAUDIT_INIT_COST
-endif
-
-ifeq ($(PROBE_TOGGLING),DISABLE_STRADDLERS)
-override CFLAGS += -DDISABLE_STRADDLERS
-else ifeq ($(PROBE_TOGGLING),DISABLE_ALL_PROBES)
-override CFLAGS += -DDISABLE_ALL_PROBES
-endif
-
-EXTRA_WARNS= -pedantic 
-#-Wextra
-## -Wformat-nonliteral -Wcast-align -Wpointer-arith -Wbad-function-cast -Wmissing-prototypes -Wstrict-prototypes -Wmissing-declarations -Winline -Wundef -Wnested-externs -Wcast-qual -Wshadow -Wwrite-strings -Wno-unused-parameter -Wfloat-equal
-
-ARGS= -g -Wall $(EXTRA_WARNS) -I$(ROOT)/include -I$(ROOT)/deps/distorm/include -I$(ROOT)/common/include -Izca -Ifinstrument -I.
+ARGS= -I.. -I$(ROOT)/include -I$(ROOT)/utils/include -I$(ROOT)/deps/distorm/include # -I$(ROOT)/deps/elph/include
 
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
-DEPS = $(INSTALL)/libpointpatch.a $(INSTALL)/libcallpatch.a
-LIBS = -lelf
+POINTPATCH = $(INSTALL)/libpointpatch.a 
+UTILS = $(INSTALL)/libutils.a 
+DEPS = $(POINTPATCH) $(UTILS) 
+LIBS = -lelf -lrt -lstdc++ -pthread
+
+ELPH = $(DEPS_ROOT)/elph
 
 CC+  = $(CC) $(ARGS)
-CXX+ = $(CXX) -std=c++11 $(ARGS)
+CXX+ = $(CXX) $(ARGS)
 
 AR = ar
 RM = rm
 OPTS =
 
-COMMON = $(wildcard $(ROOT)/common/src/lock/*.cpp) probe_provider.cpp globals.cpp
-override COMMON +=  $(wildcard $(ROOT)/common/src/utils/*.cpp)
-COMMON_OBJ0 = $(COMMON:.cpp=.o)
-COMMON_OBJ  = $(COMMON_OBJ0:.c=.o)
+CODE = $(wildcard liteprobes/*.cpp)
 
-CODE = $(wildcard zca/*.cpp)
-override CODE += $(wildcard finstrument/*.cpp)
-
-# CODE = finstrument_probe_provider.cpp probe_provider.cpp cyg_functions.cpp globals.cpp calibrate.cpp 
-# CODE += $(wildcard zca/*.cpp)
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 
@@ -70,29 +37,28 @@ OBJ  = $(OBJ0:.c=.o)
 
 all: build
 
-asmjit:
-	(cd $(DEPS_ROOT)/asmjit/;\
-		rm -rf build; mkdir build;\
-		cd build; cmake ..; make VERBOSE=1)
+build: $(OBJ) deps
 
-build: $(OBJ) $(COMMON_OBJ)
+deps: 
+	if [ ! -d $(UTILS) ]; then (cd $(ROOT)/utils/src; make install); fi
+	if [ ! -d $(POINTPATCH) ]; then (cd $(ROOT)/libpointpatch/src; make install); fi
 
-libfastinst.a: build # asmjit
-	if [ -d libfastinst.a ]; then $(RM) -f libfastinst.a; fi
+libliteinst.a: build 
+	if [ -d libliteinst.a ]; then $(RM) -f libliteinst.a; fi
 	if [ -d temp ]; then $(RM) -rf temp; fi
-	mkdir temp;cd temp; $(foreach dep,$(DEPS),$(AR) -x ../$(dep);) # for DEP in $(DEPS); do $(AR) -x ../${DEP}; done
-	$(AR) rc libfastinst.a  $(OBJ) $(COMMON_OBJ) temp/*.o
+	mkdir temp;cd temp; $(foreach dep,$(DEPS),$(AR) -x ../$(dep);) 
+	$(AR) rc libliteinst.a  $(OBJ) temp/*.o
 	$(RM) -rf temp
 
-libfastinst.so: build
-	$(CC+) $(LIBS) -shared -Wl,-soname,libfastinst.so -Wl,-init,premain -o libfastinst.so $(OBJ) $(COMMON_OBJ) $(DEPS) -ldl
+libliteinst.so: build 
+	$(CXX+) $(LIBS) -shared -Wl,-soname,libliteinst.so -Wl,-init,boostrap -Wl,-init,init_point_patcher -o libliteinst.so $(OBJ) $(DEPS) 
 
-install: libfastinst.a libfastinst.so
-	(cp libfastinst.so $(INSTALL))
-	(cp libfastinst.a $(INSTALL))
+install: libliteinst.a libliteinst.so
+	(cp libliteinst.so $(INSTALL))
+	(cp libliteinst.a $(INSTALL))
 
 .cpp.o:
-	$(CXX+) $(CFLAGS) $(OPTS) -fPIC -c -Wall -o $@ $<
+	$(CXX+) $(CFLAGS) $(ARGS) $(OPTS) -fPIC -c -Wall -o $@ $<
 
 clean:
-	$(RM) -f $(OBJ) *.so $(INSTALL)/libfastinst.*
+	$(RM) -f $(OBJ) *.o *.a *.so $(INSTALL)/libliteinst.* 
