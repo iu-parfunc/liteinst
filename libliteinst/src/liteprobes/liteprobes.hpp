@@ -1,131 +1,119 @@
 
-#include "liteinst.hpp"
-#include "range.hpp"
+#ifndef _LITEPROBES_HPP_
+#define _LITEPROBES_HPP_
 
-#include <functional>
-#include <cstdint> 
 #include <string>
+#include <list>
+#include <cstdint>
 #include <map>
-#include <memory> // shared_ptr
+#include <memory>
 
-// Probe context definitions
-#define ENTRY 0x01          // Function entry context
-#define EXIT  0x02          // Function exit context
-#define OUTCALL_ENTRY 0x04  // Function entry contexts for functions called within
-                            // current function
-#define OUTCALL_EXIT  0x08  // Function exit contexts for functions called within
-                            // current function
-#define LINE_NUM      0x10  // Line number context 
-#define ADDRESS       0x20  // Instruction aligned address within function
-#define BB_ENTRY      0x40  // Basic block entry context
-#define BB_EXIT       0x80  // Basic block exit context 
+#include "defs.hpp"
+#include "process.hpp"
+#include "addr_range.hpp"
+#include "liteinst.hpp"
 
 namespace liteinst {
 namespace liteprobes {
 
-class PatchPoint {
-  public:
-    utils::Address addr;
-    bool is_patched;
-    uint8_t original_seq;
-    uint8_t patched_seq;
+typedef int offset_t;
+
+struct ShortCircuit {
+  utils::Address start;
+  int size;
+  int jump_length;
 };
 
-enum class ControlTransferTypeV1 {
+struct ContextSave {
+  utils::Address start;
+  int size;
+};
+
+struct Args {
+  utils::Address start;
+  offset_t pg_id_offset;
+  offset_t p_id_offset;
+  offset_t i_id_offset;
+  offset_t placement_offset;
+  offset_t u_regs_offset;
+  int size;
+};
+
+struct Call {
+  utils::Address start;
+  utils::Address target;
+  int size;
+};
+
+struct ContextRestore {
+  utils::Address start;
+  int size;
+};
+
+struct Callout {
+  utils::Address start;
+  ShortCircuit short_circuit;
+  ContextSave ctx_save;
+  Args args;
+  Call call;
+  ContextRestore ctx_restore;
+};
+
+class ProbeGroup {
+  public:
+    std::string name;
+    ProbeGroupId pg_id;
+    utils::process::Function* fn;
+    std::list<utils::Address> probes;
+    utils::Address start;
+
+    ProbeGroup(std::string name) : name(name) {
+    }
+};
+
+class Trampoline {
+};
+
+enum class SpringboardType {
   TRAMPOLINE,
-  SUPERTRAMPOLINE 
+  SUPER_TRAMPOLINE
 };
 
-class ControlTransferV1 {
+class Springboard {
   public:
-    Range displaced; 
-    Range relocated;
-    int relocation_offsetsp[];
-    PatchPoint patch_point; 
-    ControlTransferType type;
+    SpringboardType type;
+    utils::Address base;
+    int32_t relative_jump;
+    int32_t probe_length;    
+    bool is_probe_ready;
+    std::list<utils::Address> probed_addrs;
+    utils::range::Range displaced;
+    utils::range::Range range;
+    uint8_t punned_bytes[8];
+    uint8_t original_bytes[8];
+    uint8_t instruction_marked_bytes[8];
+    int* relocation_offsets;
+    std::map<utils::Address, std::unique_ptr<Callout>> callouts;
+    // PatchPoint patch_point;
 };
 
-class SuperTrampoline : ControlTransferV1 {
+
+class Probe {
   public:
-    int num_trampolines;
-    int active_trampolines;
-
-    // Contains patch points to enable and disable instrumentation for
-    // instructions contained with the springboard. The key is the address of 
-    // an instruction in the original program.
-    std::map<utils::Address, PatchPoint> inst_points; 
-    // Patch point to next chained springboard.
-    PatchPoint next_springboard_ptr;
-    std::shared_ptr<SpringBoard> previous;
-    std::shared_ptr<SpringBoard> next; 
+    ProbeId p_id;
+    ProbeContext context;
+    Trampoline* trampoline;
 };
 
-// Protect with a reader/writer lock
-std::map<Range, std::shared_ptr<ControlTransfer>> transfers; 
-
-class CalloutContainer {
+class CoalescedProbes {
   public:
-    Range range;
-    int available_slots = 4;
-    int occupied_slots;
-    PatchPoint next_callout_container_ptr;
-    std::shared_ptr<CalloutContainer> previous;
-    std::shared_ptr<CalloutContainer> next;
-    std::vector<PatchPoint> callouts;
+    std::list<utils::Address> probes;
+    utils::range::Range range;
+    std::list<Springboard*> springboards;
 };
 
-class TrampolineV1 {
-  Range displaced_range;
-  Range relocated_range;
-  int reroute_offsets[];
-  bool is_easily_relocatable;
-};
 
-class ProbeInstrumentation {
-  ProbeGroupId pg_id;
-  InstrumentationId i_id;
-  ProbePlacement placement;
-};
+} // End liteprobes
+} // End liteinst
 
-class Trampoline : ControlTransfer {
-  public:
-    std::vector<PatchPoint> callout_bypasses;
-    std::unordered_map<utils::Address, PatchPoint> patch_points; 
-    // Key instrumentation fn address
-};
-
-// ProbeGroup * -> Probe * -> Sprinboard * -> Trampoline -> Instrumentation
-//                        -> Trampoline * -> Instrumentation
-
-class ProbeInstrumentation {
-  public:
-    utils::Address addr;
-    ProbeId probe_id;
-    std::vector<ProbeContext> contexts;
-    Trampoline current;
-    std::vector<Trampoline> trampolines;
-    ControlTransfer control_transfer;
-    ControlTransferType transfer_type;
-};
-
-class ProbeGroupInstrumentation {
-  public:
-    ProbeGroupId group_id;
-    std::vector<ProbeId> probes;
-};
-
-typedef void (*ProbeFn)(utils::Address fn_addr, utils::Address call_site_addr);
-
-typedef void (*CallbackFn)();
-
-/// Type definition for probe context. e.g: What is the context of a 
-/// particular probe location within a function?  
-typedef uint8_t ProbeContext;
-
-void initialize(CallbackFn cb);
-void injectProbe(utils::Address addr);
-// Probes* injectProbesAtFunction(std::string function, ProbeContext ctx); 
-// Probes* injectProbesAtFunction(Address func_addr, ProbeContext ctx); 
-
-}
-}
+#endif /* _LITEPROBES_HPP_ */

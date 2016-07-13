@@ -1,10 +1,13 @@
 
+#ifndef _LITEPROBE_PROVIDER_HPP_
+#define _LITEPROBE_PROVIDER_HPP_
+
 #include <atomic>
 #include <stack>
 #include <unordered_map>
 
-#include "liteprobes_v1.hpp"
-#include "range.hpp"
+#include "liteprobes.hpp"
+#include "addr_range.hpp"
 
 namespace liteinst {
 namespace liteprobes {
@@ -83,3 +86,5 @@ class LiteProbeProvider : public ProbeProvider {
 
 } /* End liteprobes */
 } /* End liteinst */
+
+#endif /* _LITEPROBE_PROVIDER_HPP_ */
