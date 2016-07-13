@@ -12,6 +12,7 @@
 #include <unordered_map>
 
 #include "concurrency.hpp"
+#include "defs.hpp"
 
 // TODO: Make this work for x86
 #define LITEINST_SET_PROBE_CONTEXT (ctx) \
@@ -45,13 +46,13 @@ typedef uint64_t ProbeGroupId;
 typedef uint64_t ProbeId;
 
 /// Opaque identifier for an Instrumentor instance
-typedef uint64_t InstrumentationId;
+typedef uint16_t InstrumentationId;
 
 /// Opaque identifier for a probe registration
 typedef uint64_t RegistrationId;
 
 /// The probe groupings available. 
-enum class ProbeGroupType { 
+enum class ProbeGroupType : uint8_t { 
   FUNCTION,
   LOOP,
   BASIC_BLOCK,
@@ -61,7 +62,7 @@ enum class ProbeGroupType {
 };
 
 /// The placement of probes within a given probe grouping.
-enum class ProbePlacement { 
+enum class ProbePlacement : uint8_t { 
   ENTRY,
   EXIT,
   BOUNDARY /* ENTRY + EXIT */
