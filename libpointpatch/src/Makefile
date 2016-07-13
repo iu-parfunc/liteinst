@@ -19,7 +19,7 @@ OBJ  = $(OBJ0:.c=.o)
 COMMON = $(wildcard $(ROOT)/common/src/patch/*.c)
 COMMON_OBJ = $(COMMON:.c=.o)
 
-INCLUDES = -I$(ROOT)/include -I$(ROOT)/common/include -I$(ROOT)/deps/distorm/include
+INCLUDES = -I$(ROOT)/include -I$(ROOT)/utils/include -I$(ROOT)/deps/distorm/include
 
 LIBS =
 DEPS = ../../deps/distorm/distorm3.a
