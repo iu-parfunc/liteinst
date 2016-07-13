@@ -7,12 +7,15 @@
 #include <sys/mman.h> // mprotect
 #include <assert.h>  
 
+#include "control_flow_router.hpp"
 #include "process.hpp"
+#include "signals.hpp"
 
 namespace liteinst {
 namespace liteprobes {
 
 using namespace utils::process;
+using namespace utils::signals;
 
 using std::map;
 using utils::Address;
@@ -68,13 +71,23 @@ uint8_t g_rip_indirect_jump[] =
 uint8_t g_saved_main_prolog[sizeof(g_rip_indirect_jump)/
   sizeof(g_rip_indirect_jump[0])];
 
-void initializeRprobes() {
+void initializeLiteprobes() {
+
+  // Register the SIGILL handler
+  struct sigaction act;
+  act.sa_sigaction = liteprobes_sigill_handler;
+
+  HandlerRegistration reg;
+  reg.signum = SIGILL;
+  reg.act = act;
+
+  SignalHandlerRegistry::registerSignalHandler(reg);
 
 }
 
-void rprobesInfectMain() {
+void liteprobesInfectMain() {
   Process p;
-  for (Function* f: p.getFunctions()) {
+  for (utils::process::Function* f: p.getFunctions()) {
     if (!f->name.compare("main")) {
       g_main_ptr = (void*) f->start;
       break;
@@ -119,7 +132,7 @@ void rprobesInfectMain() {
   fprintf(stderr, "[premain] Trampoline function offset : %d\n",
       trampoline_fn_offset);
   *(uint64_t*)&((uint8_t*)stub)[trampoline_fn_offset] =
-    (uint64_t) initializeRprobes;
+    (uint64_t) initializeLiteprobes;
 
   fprintf(stderr, "[premain] Inject return jump address to the stub..\n");
   // Inject return jump address to the stub
@@ -167,8 +180,8 @@ void rprobesInfectMain() {
 }
 
 __attribute__((constructor))
-void rprobesPremain() {
-    rprobesInfectMain();
+void boostrap() {
+    liteprobesInfectMain();
 }
 
 } // End liteprobes 
