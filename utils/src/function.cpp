@@ -11,9 +11,6 @@ using std::move;
 using std::unique_ptr;
 using utils::Address;
 
-utils::concurrency::SpinLock Process::init_lock;
-bool Process::is_initialized = false;
-
 Function::Function() {
 
   if (is_initialized) {
