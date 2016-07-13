@@ -10,6 +10,7 @@
 
 #include "concurrency.hpp"
 #include "defs.hpp"
+#include "addr_range.hpp"
 
 namespace utils { 
 namespace process { 
@@ -207,10 +208,27 @@ class Process : public Show, public Optional {
     MappedRegion* getMappedRegion(utils::Address addr);
 
     /** /brief Gets the regions associated with the current process at the 
-     *   process start.
+     *   first initialization of Process. 
      *  /return     The list of mapped region for the current process.
      */
     std::vector<MappedRegion*> getMappedRegions();
+
+    /** /brief Gets the range that the stack occupies at the first 
+     *   initialization of Process.
+     *  /return The stack range
+     */
+    utils::range::Range getStack();
+
+    /** /brief Gets the range that the heap occupies at the first
+     *   initialization of Process. 
+     *  /return The heap range
+     */
+    utils::range::Range getHeap();
+
+    /** /brief Gets the range that the text occupies.
+     *  /return The range of text
+     */
+    utils::range::Range getText();
 
     /** /brief Prints process information to given file descriptor
      */
@@ -221,6 +239,10 @@ class Process : public Show, public Optional {
     static bool is_initialized;
     static std::unique_ptr<MappedRegion> invalid_mr;
     static std::unique_ptr<Function> invalid_fn;
+
+    static utils::range::Range text;
+    static utils::range::Range stack;
+    static utils::range::Range heap;
 
     /// Function start address mappings
     static std::map<utils::Address, Function*> fn_by_address;  

@@ -10,6 +10,7 @@ using std::string;
 using utils::Address;
 using std::unique_ptr;
 using std::move;
+using utils::range::Range;
 
 utils::concurrency::SpinLock Process::init_lock;
 bool Process::is_initialized = false;
@@ -36,6 +37,32 @@ Process::Process() {
     ProcessAnalyzer pa;
     pa.populateFunctions(fn_by_address, fn_by_name);
     pa.populateMappedRegions(mapped);
+
+    // Finds text, stack and heap ranges
+    bool first_region = true;
+    Address text_start = nullptr;
+    Address prev_end = nullptr;
+    for (auto& it : mapped) {
+      MappedRegion* mr = it.second.get();
+      if (first_region) {
+        text_start = mr->start;
+        first_region = false;
+      }
+
+      if (string("[heap]").compare(mr->file)) {
+        text = Range(text_start, prev_end);
+        heap = Range(mr->start, mr->end);
+      }
+
+      if (string("[stack]").compare(mr->file)) {
+        stack = Range(mr->start, mr->end);
+        // stack_reserved = Range(mr->start - stack_allowance, mr->end);
+      }
+    }
+
+    assert(text.start != nullptr);
+    assert(heap.start != nullptr);
+    assert(stack.start != nullptr);
 
     FunctionAnalyzer fa;
     for (auto& it : fn_by_address) {

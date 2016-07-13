@@ -92,13 +92,13 @@ Address extractFarJumpTarget(_DInst instruction) {
   return (Address) instruction.imm.ptr.off;
 }
 
-uint32_t findAddrOffset(Address start, Address addr, Sequence seq) {
+uint32_t findAddrOffset(Address start, Address addr, const Sequence* seq) {
 
   // fprintf(stderr, "[findAddrOffset] Start : %p Addr : %p \n", start, addr);
-  _DInst* decoded = static_cast<_DInst*>(seq.instructions);
+  _DInst* decoded = static_cast<_DInst*>(seq->instructions);
   uint32_t offset = 0;
   Address ip = start;
-  for (int i=0; i < seq.n_instructions; i++) {
+  for (int i=0; i < seq->n_instructions; i++) {
     if (ip == addr) {
       return offset;
     }
@@ -111,14 +111,14 @@ uint32_t findAddrOffset(Address start, Address addr, Sequence seq) {
 }
 
 AddressInfo findPrevInstructionAddressInfo(Address start, Address addr, 
-    Sequence seq) {
+    const Sequence* seq) {
 
   AddressInfo addrInfo;
   addrInfo.addr = NULL;
-  _DInst* decoded = static_cast<_DInst*>(seq.instructions);
+  _DInst* decoded = static_cast<_DInst*>(seq->instructions);
   uint32_t offset = 0;
   Address ip = start;
-  for(int i=0; i < seq.n_instructions; i++) {
+  for(int i=0; i < seq->n_instructions; i++) {
     if (addr == (ip + decoded[i].size)) {
       addrInfo.addr = ip;
       addrInfo.offset = offset;
@@ -135,10 +135,10 @@ AddressInfo findPrevInstructionAddressInfo(Address start, Address addr,
 }
 
 BlockBoundaries generateBlockBoundaries(Address start, Address end,
-    Sequence seq) {
+    const Sequence* seq) {
 
   // fprintf(stderr, "[generateBlockBoundaries] Start : %p End : %p\n", start, end);
-  _DInst* decoded = static_cast<_DInst*>(seq.instructions);
+  _DInst* decoded = static_cast<_DInst*>(seq->instructions);
 
   Address ip = start;
   list<ControlReturn*> returns;
@@ -153,7 +153,7 @@ BlockBoundaries generateBlockBoundaries(Address start, Address end,
   uint64_t end_padding_size = 0;
   uint64_t current_block_size = 0;
 
-  for (int i=0; i < seq.n_instructions; i++) {
+  for (int i=0; i < seq->n_instructions; i++) {
     if (prev_block_end) {
       block_starts.insert(ip);
       block_start_offsets.insert(i);
@@ -167,7 +167,7 @@ BlockBoundaries generateBlockBoundaries(Address start, Address end,
 
       // Fix the padding space to be zero since there is no padding
       // between this function end and the next function
-      if (i == seq.n_instructions - 1) {
+      if (i == seq->n_instructions - 1) {
         current_block_size = 0;
       }
 
@@ -237,7 +237,7 @@ BlockBoundaries generateBlockBoundaries(Address start, Address end,
       prev_block_end = true;
     } else {
       // Function ends with a tail call
-      if (i == seq.n_instructions - 1) {
+      if (i == seq->n_instructions - 1) {
         if (isCall(decoded[i])) {
           ControlReturn* r = new ControlReturn;
           r->addr = ip;
@@ -316,9 +316,9 @@ list<BasicBlock*> generateBasicBlocks(BlockBoundaries bb) {
   return bbl;
 }
 
-void populateStructuralInformation(Function& func, Sequence seq) {
+void populateStructuralInformation(Function& func, const Sequence* seq) {
 
-  if (seq.n_instructions > 0) {
+  if (seq->n_instructions > 0) {
 
     BlockBoundaries bb = generateBlockBoundaries(func.start, func.end, seq);
 
@@ -337,10 +337,10 @@ void populateStructuralInformation(Function& func, Sequence seq) {
   }
 }
 
-void populateProbeReadinessInformation(Function& func, Sequence seq) {
-  _DInst* decoded = static_cast<_DInst*>(seq.instructions);
+void populateProbeReadinessInformation(Function& func, const Sequence* seq) {
+  _DInst* decoded = static_cast<_DInst*>(seq->instructions);
   Address ip = func.start;
-  for (int i=0; i < seq.n_instructions; i++) {
+  for (int i=0; i < seq->n_instructions; i++) {
     if (decoded[i].size >= FunctionAnalyzer::PROBE_READY_INSTRUCTION_SIZE) {
       func.probe_ready_sites.push_back(ip);
     }
@@ -355,7 +355,7 @@ void populateProbeReadinessInformation(Function& func, Sequence seq) {
 
 void FunctionAnalyzer::analyzeFunction(Function& func) {
 
-  Sequence seq = disas.disassemble(func.start, func.end);
+  const Sequence* seq = disas.disassemble(func.start, func.end);
   populateStructuralInformation(func, seq);
   populateProbeReadinessInformation(func, seq);
 }

@@ -14,7 +14,7 @@ CFLAGS = --std=c++11 -g -Wall $(EXTRA_WARNS)
 ARGS= -I. -I$(ROOT)/include -I$(ROOT)/utils/include -I$(ROOT)/deps/distorm/include -I$(ROOT)/deps/elph/include
 
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
-DEPS = $(INSTALL)/libpointpatch.a 
+# DEPS = $(INSTALL)/libpointpatch.a 
 LIBS = -lelf -lrt -lstdc++ -pthread
 
 ELPH = $(DEPS_ROOT)/elph
@@ -46,22 +46,19 @@ build: $(OBJ) elph
 elph:
 	(cd $(ELPH); make);
 
-libaudit.a: build 
-	if [ -d libaudit.a ]; then $(RM) -f libaudit.a; fi
+libutils.a: build elph
+	if [ -d libutils.a ]; then $(RM) -f libutils.a; fi
 	if [ -d temp ]; then $(RM) -rf temp; fi
-	mkdir temp;cd temp; $(foreach dep,$(DEPS),$(AR) -x ../$(dep);) 
-	$(AR) rc libaudit.a  $(OBJ) $(DEP_OBJ) temp/*.o
+	# mkdir temp;cd temp; $(foreach dep,$(DEPS),$(AR) -x ../$(dep);) 
+	$(AR) rc libutils.a  $(OBJ) $(DEP_OBJ) # temp/*.o
 	$(RM) -rf temp
 
-libaudit.so: build elph
-	$(CXX+) $(LIBS) -shared -Wl,-soname,libaudit.so -Wl,-init,audit -Wl,-init,init_point_patcher -o libaudit.so $(OBJ) $(DEP_OBJ) $(DEPS) 
-
-install: libaudit.a libaudit.so
-	(cp libaudit.so $(INSTALL))
-	(cp libaudit.a $(INSTALL))
+install: libutils.a 
+	if [ ! -d $(INSTALL) ]; then mkdir -p $(INSTALL); fi
+	(cp libutils.a $(INSTALL))
 
 .cpp.o:
 	$(CXX+) $(CFLAGS) $(ARGS) $(OPTS) -fPIC -c -Wall -o $@ $<
 
 clean:
-	$(RM) -f $(OBJ) *.o *.a *.so $(INSTALL)/libaudit.* $(DEP_OBJ)
+	$(RM) -f $(OBJ) *.o *.a *.so $(INSTALL)/libutils.* $(DEP_OBJ)

@@ -1,19 +1,18 @@
 
 #include "assembly.hpp"
-#include "distorm.h"
-#include "mnemonics.h"
+
+#include <cassert>
 
 namespace utils {
 namespace assembly {
 
 using utils::Address;
 
-Sequence Disassembler::disassemble(Address start, Address end) {
+const Sequence* Disassembler::disassemble(Address start, Address end) {
   uint64_t n_decode_bytes = (uint64_t)((uint64_t)end - (uint64_t)start);
 
-  Sequence seq;
+  Sequence* seq = new Sequence;
 
-  // malloc(sizeof(_DInst) * n_decode_bytes);
   _DInst* result = new _DInst[n_decode_bytes]; 
   unsigned int instruction_count = 0;
 
@@ -27,17 +26,33 @@ Sequence Disassembler::disassemble(Address start, Address end) {
   _DecodeResult res = distorm_decompose(&ci, result, n_decode_bytes, 
       &instruction_count);
   if (res != DECRES_SUCCESS) {
-    seq.n_instructions = 0;
+    seq->n_instructions = 0;
     delete[] result;
 
     return seq;
   }
 
-  seq.n_instructions = instruction_count;
-  seq.instructions = static_cast<void*>(result);
+  seq->n_instructions = instruction_count;
+  seq->instructions = static_cast<void*>(result);
+  seq->start = start;
+  seq->end = end;
 
   return seq;
 }
+
+int findInstructionIndex(Address addr, const Sequence* seq) {
+  _DInst* decoded = static_cast<_DInst*>(seq->instructions);
+  Address ip = seq->start;
+  int index = 0;
+  while (ip < addr) {
+    ip += decoded[index++].size;
+  }
+
+  assert(ip == addr);
+  return index;
+}
+
+  // malloc(sizeof(_DInst) * n_decode_bytes);
 
 } // End assembly
 } // End liteinst 

@@ -2,8 +2,9 @@
 ROOT=../..
 UTILS=..
 CFLAGS = --std=c++11 -g -Wall $(EXTRA_WARNS) 
+DEPS = $(ROOT)/build/lib/libutils.a
 
-ARGS= -I. -I$(UTILS)/include
+ARGS= -I. -I$(UTILS)/include -I$(ROOT)/deps/distorm/include -I$(ROOT)/deps/elph/include
 
 CC+  = $(CC) $(ARGS)
 CXX+ = $(CXX) $(ARGS)
@@ -13,7 +14,7 @@ RM = rm
 OPTS =
 
 CODE = $(wildcard *.cpp)
-override CODE += $(wildcard $(ROOT)/utils/src/*.cpp)
+# override CODE += $(wildcard $(ROOT)/utils/src/*.cpp)
 
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
@@ -22,8 +23,11 @@ OBJ  = $(OBJ0:.c=.o)
 
 all: build
 
-build: $(OBJ)
-	$(CXX+) $(OBJ) -o tests -pthread
+utils:
+	(cd ../src; make install); 
+
+build: $(OBJ) utils
+	$(CXX+) $(OBJ) $(DEPS) -o tests -pthread
 
 test: build
 	./tests -s

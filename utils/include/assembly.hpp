@@ -6,6 +6,8 @@
 #include <vector>
 
 #include "defs.hpp"
+#include "distorm.h"
+#include "mnemonics.h"
 
 namespace utils {
 namespace assembly {
@@ -22,6 +24,8 @@ class Sequence {
   public:
     int n_instructions;
     void* instructions;
+    utils::Address start;
+    utils::Address end;
 
     Sequence(){};
 
@@ -40,7 +44,10 @@ class Assembler {
 /// Decodes a sequence of encoded instructions
 class Disassembler {
   public:
-    virtual Sequence disassemble(utils::Address start, utils::Address end);
+    virtual const Sequence* disassemble(utils::Address start,
+        utils::Address end);
+    virtual int findInstructionIndex(utils::Address instruction, 
+        const Sequence* seq);
 
 };
 

@@ -12,12 +12,13 @@ namespace alloc {
 using std::unique_ptr;
 using std::invalid_argument;
 
-Allocator* AllocatorFactory::getAllocator(AllocatorType type) {
+unique_ptr<Allocator> AllocatorFactory::getAllocator(AllocatorType type) {
   switch(type) {
     case AllocatorType::FIXED:
-      return new FixedAllocator;
+      return unique_ptr<Allocator>(new FixedAllocator);
     case AllocatorType::ARENA:
-      return new ArenaAllocator(PROT_READ | PROT_WRITE | PROT_EXEC);
+      return unique_ptr<Allocator>(new ArenaAllocator(PROT_READ | PROT_WRITE |
+            PROT_EXEC));
     default:
       throw invalid_argument("Invalid allocator type provided..\n");
   }

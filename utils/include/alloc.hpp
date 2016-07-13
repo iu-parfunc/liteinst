@@ -50,7 +50,7 @@ class AllocatorFactory {
      *  \param type The type of allocator to be returned.
      *  \return Allocator A reference to the allocator instance.
      */
-    static Allocator* getAllocator(AllocatorType type);
+    static std::unique_ptr<Allocator> getAllocator(AllocatorType type);
 };
 
 } // End liteprobes 

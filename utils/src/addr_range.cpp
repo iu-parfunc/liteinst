@@ -78,6 +78,15 @@ bool Range::overlapsWith(Range r) {
   return false;
 }
 
+void Range::unionRange(const Range r) {
+  this->start = (this->start <= r.start) ? this->start : r.start;
+  this->end = (this->end >= r.start) ? this->end : r.end;
+}
+
+int64_t Range::size() {
+  return (this->end - this->start);
+}
+
 bool Range::operator<(const Range& r) {
   return (this->end < r.start) ? true : false;
 }

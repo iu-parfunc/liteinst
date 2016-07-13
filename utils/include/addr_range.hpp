@@ -56,6 +56,18 @@ class Range {
      */
     bool overlapsWith(const Range r);
 
+    /** \brief Unions the given range with the current one. 
+     *  \param r The range to be unioned to the current one.
+     *
+     *  Current range boundaries are modified in order contain the union of 
+     *  given range and the existing range.
+     */ 
+    void unionRange(const Range r);
+
+    /** \brief Gets the size of the range.
+     */
+    int64_t size();
+
     /// Overloaded comparison operators for ranges
     bool operator<(const Range& r);
 
