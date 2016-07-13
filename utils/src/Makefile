@@ -5,7 +5,7 @@ DEPS_ROOT= $(ROOT)/deps
 
 EXTRA_WARNS= -pedantic 
 
-CFLAGS = --std=c++11 -g -Wall $(EXTRA_WARNS) 
+override CFLAGS += --std=c++11 -g -Wall $(EXTRA_WARNS) 
 # CFLAGS=-DPROBE_TRUE_EMPTY_ON -DPROBE_CPU_TIME
 # CFLAGS=-DPROBE_HIST_ON -DPROBE_CPU_TIME
 
@@ -20,13 +20,14 @@ LIBS = -lelf -lrt -lstdc++ -pthread
 ELPH = $(DEPS_ROOT)/elph
 
 CC+  = $(CC) $(ARGS)
-CXX+ = $(CXX) $(ARGS)
+CXX+ = $(CXX) $(ARGS) $(CFLAGS)
 
 AR = ar
 RM = rm
 OPTS =
 
 CODE = $(wildcard *.cpp)
+override CODE += $(wildcard patch/*.c)
 # override CODE += $(wildcard $(ROOT)/utils/src/lock/*.cpp)
 
 OBJ0 = $(CODE:.cpp=.o)
@@ -58,7 +59,10 @@ install: libutils.a
 	(cp libutils.a $(INSTALL))
 
 .cpp.o:
-	$(CXX+) $(CFLAGS) $(ARGS) $(OPTS) -fPIC -c -Wall -o $@ $<
+	$(CXX+) -fPIC -c -Wall -o $@ $<
+
+.c.o:
+	$(CC+) -fPIC -c -Wall -o $@ $<
 
 clean:
 	$(RM) -f $(OBJ) *.o *.a *.so $(INSTALL)/libutils.* $(DEP_OBJ)

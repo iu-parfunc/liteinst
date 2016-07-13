@@ -114,11 +114,11 @@ struct timespec g_wait_time;
 /* -----------------------------------------------------------------
    internally used
    ----------------------------------------------------------------- */
-bool set_page_rwe(void *addr, size_t nBytes);
-uint64_t get_msb_mask_64(int nbyte);
-uint64_t get_lsb_mask_64(int nbytes);
-uint32_t get_msb_mask_32(int nbytes);
-uint32_t get_lsb_mask_32(int nbytes);
+// bool set_page_rwe(void *addr, size_t nBytes);
+// uint64_t get_msb_mask_64(int nbyte);
+// uint64_t get_lsb_mask_64(int nbytes);
+// uint32_t get_msb_mask_32(int nbytes);
+// uint32_t get_lsb_mask_32(int nbytes);
 bool reg_equal(_RegisterType reg1, _RegisterType reg2);
 
 

@@ -1,11 +1,11 @@
 
-ROOT = ../..
+ROOT= ../..
 INSTALL= $(ROOT)/build/lib
 DEPS_ROOT= $(ROOT)/deps
 
 EXTRA_WARNS= -pedantic 
 
-CFLAGS = --std=c++11 -g -Wall $(EXTRA_WARNS) 
+override CFLAGS += --std=c++11 -g -Wall $(EXTRA_WARNS) 
 # CFLAGS=-DPROBE_TRUE_EMPTY_ON -DPROBE_CPU_TIME
 # CFLAGS=-DPROBE_HIST_ON -DPROBE_CPU_TIME
 
@@ -22,7 +22,7 @@ LIBS = -lelf -lrt -lstdc++ -pthread
 ELPH = $(DEPS_ROOT)/elph
 
 CC+  = $(CC) $(ARGS)
-CXX+ = $(CXX) $(ARGS)
+CXX+ = $(CXX) $(ARGS) $(CFLAGS) 
 
 AR = ar
 RM = rm
@@ -59,7 +59,7 @@ install: libliteinst.a libliteinst.so
 	(cp libliteinst.a $(INSTALL))
 
 .cpp.o:
-	$(CXX+) $(CFLAGS) $(ARGS) $(OPTS) -fPIC -c -Wall -o $@ $<
+	$(CXX+) -fPIC -c -Wall -o $@ $<
 
 clean:
 	$(FIND) . \( -name '*.o' -o -name '*.a' -o -name '*.so' \) -type f -delete

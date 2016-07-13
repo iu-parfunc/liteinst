@@ -22,7 +22,7 @@ COMMON_OBJ = $(COMMON:.c=.o)
 INCLUDES = -I$(ROOT)/include -I$(ROOT)/utils/include -I$(ROOT)/deps/distorm/include
 
 LIBS =
-DEPS = ../../deps/distorm/distorm3.a
+DEPS = $(ROOT)/deps/distorm/distorm3.a $(BUILD)/lib/libutils.a
 
 AR = ar
 RM = rm
@@ -33,11 +33,12 @@ build: $(OBJ) $(COMMON_OBJ)
 
 libpointpatch.a: build distorm
 	if [ -d libpointpatch.a ]; then $(RM) -f libpointpatch.a; fi
-	mkdir temp;cd temp; $(AR) -x ../$(DEPS)
+	if [ -d temp ]; then $(RM) -rf temp; fi
+	mkdir temp;cd temp; $(foreach dep,$(DEPS),$(AR) -x ../$(dep);) 
 	$(AR) rc libpointpatch.a  $(OBJ) $(COMMON_OBJ) temp/*.o
 	$(RM) -rf temp
 
-libpointpatch.so: build distorm
+libpointpatch.so: build distorm 
 	$(CXX) $(LIBS) -shared -Wl,-soname,libpointpatch.so -Wl,-init,init_point_patcher -o libpointpatch.so $(OBJ) $(COMMON_OBJ) $(DEPS)
 
 install: libpointpatch.so libpointpatch.a
@@ -48,6 +49,9 @@ install: libpointpatch.so libpointpatch.a
 
 .c.o:
 	  $(CC) -std=gnu99 $(INCLUDES) $(CFLAGS) $(OPTS) -fPIC -c -Wall  -o $@ $<
+
+utils:
+	if [ ! -d $(BUILD)/lib/libutils.a ]; then (cd utils/src; make install); fi
 
 distorm:
 	(cd ../../deps/distorm/make/linux/ && make clean && make CC=$(CC));

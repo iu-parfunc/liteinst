@@ -24,16 +24,10 @@ lib:
 	$(CC) --version || echo ok
 
 #       Ugh, something above wipes the build/ directory... FIXME
-	(cd libpointpatch/src && make CC=$(CC) CXX=$(CXX) CFLAGS="$(CFLAGS) -DNDEBUG" && make install )
-	(cd libcallpatch/src && make CC=$(CC) CXX=$(CXX) CFLAGS="$(CFLAGS) -DNDEBUG" && make install )
-	(cd libfastinst/src   && make CC=$(CC) CXX=$(CXX) CFLAGS='$(CFLAGS) -DNDEBUG' && make install )
-	(cd libubiprof/src   && make CC=$(CC) CXX=$(CXX) CFLAGS='$(CFLAGS) -DNDEBUG' && make install )
-	(cd libnoprof/src    && make CC=$(CC) CXX=$(CXX) CFLAGS='-DNDEBUG' && make install)
-
-
-libdebug:
-	(cd instrumentors/finstrument/src/ && make)
-	(cd profilers/src/ && make install)
+# (cd libpointpatch/src && make CC=$(CC) CXX=$(CXX) CFLAGS="$(CFLAGS) -DNDEBUG" && make install )
+	(cd libliteinst/src   && make CC=$(CC) CXX=$(CXX) CFLAGS='$(CFLAGS) -DNDEBUG' && make install )
+# (cd libcallpatch/src && make CC=$(CC) CXX=$(CXX) CFLAGS="$(CFLAGS) -DNDEBUG" && make install )
+# (cd libubiprof/src   && make CC=$(CC) CXX=$(CXX) CFLAGS='$(CFLAGS) -DNDEBUG' && make install )
 
 # Extracts all documentation from source files.
 devdoc:
@@ -49,14 +43,14 @@ doc:
 
 microbench : lib
 # 	(cd microbenchmarks && make run)
-	(cd libfastinst/microbenchmarks && make run)
+# 	(cd libfastinst/microbenchmarks && make run)
 
 # Run all available tests, this is our regression testing / continuous
 # integration target:
 test: quicktest
 
 # Only the fast-running tests:
-quicktest: lib callpatch_tests fastinst_tests
+quicktest: lib utils_tests # pointpatch_tests liteinst_tests
 # pointpatch_tests ... need to make these fast!
 # prof_tests -- RRN: What's the deal with this one?
 
@@ -68,11 +62,14 @@ quicktest: lib callpatch_tests fastinst_tests
 # 	(cd profilers/tests/unit && make check)
 # 	(cd profilers/tests/integration && make check)
 
+utils_tests:
+	(cd utils/tests && make test)
+
 pointpatch_tests:
 	(cd libpointpatch/tests && make test )
 
-fastinst_tests:
-	(cd libfastinst/tests && make test)
+liteinst_tests:
+	(cd libliteinst/tests && make test)
 
 callpatch_tests:
 	(cd libcallpatch/tests && make test)
