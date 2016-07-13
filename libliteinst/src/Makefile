@@ -27,6 +27,7 @@ CXX+ = $(CXX) $(ARGS)
 AR = ar
 RM = rm
 OPTS =
+FIND = find
 
 CODE = $(wildcard liteprobes/*.cpp)
 
@@ -61,4 +62,5 @@ install: libliteinst.a libliteinst.so
 	$(CXX+) $(CFLAGS) $(ARGS) $(OPTS) -fPIC -c -Wall -o $@ $<
 
 clean:
-	$(RM) -f $(OBJ) *.o *.a *.so $(INSTALL)/libliteinst.* 
+	$(FIND) . \( -name '*.o' -o -name '*.a' -o -name '*.so' \) -type f -delete
+	$(RM) $(INSTALL)/libliteinst.*
