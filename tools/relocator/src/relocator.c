@@ -165,14 +165,14 @@ int relocate(unsigned char *dst,
      call/jmp/jcc/mov
      
   */   
-  int call_type;
+  int type;
   int offset_bits; 
 
   for (int i = 0; i < decodedInstructionsCount; i++) { 
     switch (decodedInstructions[i].opcode) {
     case I_CALL: 
       offset_bits = decodedInstructions[i].ops[0].size; 
-      call_type   = decodedInstructions[i].ops[0].type;
+      type   = decodedInstructions[i].ops[0].type;
 
       /*
       printf("Call instruction: \n");
@@ -190,7 +190,7 @@ int relocate(unsigned char *dst,
 
       
       /* is this a PC relative call with a 32 bit displacement? */       
-      if ( call_type == O_PC && offset_bits == 32) { 
+      if ( type == O_PC && offset_bits == 32) { 
 	/* this is an E8 call */ 
 	uint32_t offset; 
 	uint32_t new_offset; 
@@ -214,11 +214,28 @@ int relocate(unsigned char *dst,
 	
       } else { 
 	/* TODO: Figure out how to handle more kinds of calls */ 
-	fprintf(stderr,"Error: unsupported Call instr"); 	
+	fprintf(stderr,"Error: unsupported Call instr\n"); 	
       }
       break; 
-      
-      /* Call will need to be modified in the dst */ 
+    case I_JMP:
+      offset_bits = decodedInstructions[i].ops[0].size; 
+      type   = decodedInstructions[i].ops[0].type;
+
+      if ( type == O_PC && offset_bits == 32) { 
+	uint32_t offset; 
+	uint32_t new_offset; 
+	offset = decodedInstructions[i].imm.addr; 
+	new_offset = distance + offset; 
+	unsigned char *np = (unsigned char*)&new_offset; 
+	unsigned char newjmp[5] = {0xe9,np[0],np[1],np[2],np[3]}; 
+	memcpy(dst + dst_offset,newjmp,decodedInstructions[i].size);
+	dst_offset += decodedInstructions[i].size;
+      } else { 
+	fprintf(stderr,"Error: unsupported jmp instr\n"); 
+      }
+      break; 
+	
+
      
     case I_RET: 
       /* no special treatment! Just relocate */ 

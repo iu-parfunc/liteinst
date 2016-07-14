@@ -45,7 +45,7 @@ namespace liteprobes {
     //  Some instructions that need changes in displacements. 
     //  These are handled by specific cases. 
     
-    int call_type; 
+    int type; 
     int offset_bits; 
     
     int curr_instr_offset = 0; 
@@ -56,11 +56,15 @@ namespace liteprobes {
       curr_instr_offset += decodedInstructions[i].size; 
       
       switch (decodedInstructions[i].opcode) { 
+	
+	// //////////////////////////////////////////////////
+	// CALL 
+	// //////////////////////////////////////////////////
       case I_CALL: 
 	offset_bits = decodedInstructions[i].ops[0].size; 
-	call_type   = decodedInstructions[i].ops[0].type; 
+	type   = decodedInstructions[i].ops[0].type; 
 
-	if ( call_type == O_PC && offset_bits == 32) { 
+	if ( type == O_PC && offset_bits == 32) { 
 	  // This is an 0xE8 call instruction  
 	  uint32_t offset; 
 	  uint32_t new_offset; 
@@ -76,10 +80,40 @@ namespace liteprobes {
 	  // Create a new call instruction with new_offset 
 	  unsigned char newcall[5] = {0xe8,np[0],np[1],np[2],np[3]};
 
+	  // TODO: Check that the decodedInstr.size really is 5 bytes. 
 	  memcpy(target + dst_offset,newcall,decodedInstructions[i].size);
 	  dst_offset += decodedInstructions[i].size;
 	} else { 
-	  fprintf(stderr,"Error: unsupported call instruction\n"); 
+	  // Return a result that indicates failure to relocate 
+	  r.n_instructions = 0; 
+	  delete(r.relocation_offsets); 
+	  r.relocation_offsets = NULL; 
+	  return r;
+	 
+	}
+	break; 
+
+	// //////////////////////////////////////////////////
+	// JMP
+	// //////////////////////////////////////////////////
+      case I_JMP:
+	offset_bits = decodedInstructions[i].ops[0].size; 
+	type   = decodedInstructions[i].ops[0].type;
+
+	if ( type == O_PC && offset_bits == 32) { 
+	  uint32_t offset; 
+	  uint32_t new_offset; 
+	  offset = decodedInstructions[i].imm.addr; 
+	  new_offset = distance + offset; 
+	  unsigned char *np = (unsigned char*)&new_offset; 
+	  unsigned char newjmp[5] = {0xe9,np[0],np[1],np[2],np[3]}; 
+	  memcpy(target + dst_offset,newjmp,decodedInstructions[i].size);
+	  dst_offset += decodedInstructions[i].size;
+	} else { 
+	  r.n_instructions = 0; 
+	  delete(r.relocation_offsets); 
+	  r.relocation_offsets = NULL; 
+	  return r;
 	}
 	break; 
 
