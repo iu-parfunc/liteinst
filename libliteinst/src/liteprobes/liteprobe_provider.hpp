@@ -31,7 +31,7 @@ class LiteProbeProvider : public ProbeProvider {
   public:
     static std::unordered_map<utils::Address, Probe*> probes;
 
-    LiteProbeProvider(Callback cb) : LiteProbeProvider(cb) {
+    LiteProbeProvider(Callback cb) : ProbeProvider(cb) {
       /*
       if (!is_initialized) {
         init_lock.lock();
