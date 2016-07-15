@@ -31,7 +31,7 @@ class LiteProbeProvider : public ProbeProvider {
   public:
     static std::unordered_map<utils::Address, Probe*> probes;
 
-    LiteProbeProvider(Callback cb) : LiteProbeProvider(cb) {
+    LiteProbeProvider(Callback cb) : ProbeProvider(cb) {
       /*
       if (!is_initialized) {
         init_lock.lock();
@@ -46,17 +46,14 @@ class LiteProbeProvider : public ProbeProvider {
     ProbeRegistration registerProbes(Coordinates coords,
         std::string instrumentation_provider);
 
-    bool activate(ProbeContext ctx);
-    bool deactivate(ProbeContext ctx);
+    bool activate(ProbeInfo ctx);
+    bool deactivate(ProbeInfo ctx);
+
+    bool activate(ProbeGroupInfo ctx);
+    bool deactivate(ProbeGroupInfo ctx);
 
     bool activate(ProbeRegistration registration);
     bool deactivate(ProbeRegistration registraiton);
-
-    ProbeGroup* getProbeGroup(ProbeGroupId pg_id);
-    ProbeGroup* getProbeGroup(std::string pg_name);
-
-    ProbeGroupId getUniqueProbeGroupId();
-    ProbeId getUniqueProbeId();
 
   private:
     static ProbeGroupVec probe_groups;
