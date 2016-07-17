@@ -53,6 +53,7 @@ namespace liteprobes {
     _DInst *decodedInstructions = static_cast<_DInst*>(seq->instructions);
       
     unsigned int dst_offset = 0; 
+    unsigned int src_offset = 0; 
     
     // Find the distance between the source and destination addresses
     // Maybe this should be an Int64_t ? 
@@ -106,7 +107,11 @@ namespace liteprobes {
 
 	  // TODO: Check that the decodedInstr.size really is 5 bytes. 
 	  memcpy(target + dst_offset,newcall,decodedInstructions[i].size);
+
+	  // update dst and src pointers 
 	  dst_offset += decodedInstructions[i].size;
+	  src_offset += decodedInstructions[i].size; 
+
 	} else { 
 	  // Return a result that indicates failure to relocate 
 	  r.n_instructions = 0; 
@@ -123,22 +128,68 @@ namespace liteprobes {
       case I_JMP:
 	offset_bits = decodedInstructions[i].ops[0].size; 
 	type   = decodedInstructions[i].ops[0].type;
-
+	uint32_t offset; 
+	uint32_t new_offset; 
+	// 32 bit displacement jmp ? 
 	if ( type == O_PC && offset_bits == 32) { 
-	  uint32_t offset; 
-	  uint32_t new_offset; 
 	  offset = decodedInstructions[i].imm.addr; 
 	  new_offset = distance + offset; 
 	  unsigned char *np = (unsigned char*)&new_offset; 
 	  unsigned char newjmp[5] = {0xe9,np[0],np[1],np[2],np[3]}; 
 	  memcpy(target + dst_offset,newjmp,decodedInstructions[i].size);
+
 	  dst_offset += decodedInstructions[i].size;
+	  src_offset += decodedInstructions[i].size;
+
+	  // 8 bit displacement jmp ? 
 	} else if (type == O_PC && offset_bits == 8) { 
 	  
-	  int displacement_size = bytesNeeded(distance); 
-	  fprintf(stderr,"8 bit displacement JMP detected\nNew displacement size needed: %d Bytes", displacement_size);
+	  //	  fprintf(stderr,"8 bit displacement JMP detected\nNew displacement size needed: %d Bytes", displacement_size);
+
+	  offset = decodedInstructions[i].imm.addr; 
+	  new_offset = distance + offset; 
+
+	  // double check if this is correct 
+	  uint64_t jmp_target = (uint64_t) start + src_offset + offset;
 	  
-	  exit(-1); 
+	  if ( jmp_target >= (uint64_t)start && jmp_target < (uint64_t)end) { 
+	    // jmp is within relocation, do nothing special 
+	    memcpy(target + dst_offset,
+		   start+src_offset,
+		   decodedInstructions[i].size);
+
+	    dst_offset += decodedInstructions[i].size;
+	    src_offset += decodedInstructions[i].size;
+	    break; 
+	  } else { 
+	    // jmp is to outside of relocation.
+	    // This needs to be improved if displacement is huge 
+	    int displacement_size = bytesNeeded(new_offset);   
+	    if (displacement_size == 1) { 
+	      r.n_instructions = 0; 
+	      delete(r.relocation_offsets); 
+	      r.relocation_offsets = NULL; 
+	      return r;	      
+	    } else if (displacement_size == 2) { 
+	      r.n_instructions = 0; 
+	      delete(r.relocation_offsets); 
+	      r.relocation_offsets = NULL; 
+	      return r;	      
+	    } else if (displacement_size == 4) { 
+	      unsigned char *np = (unsigned char*)&new_offset; 
+	      unsigned char newjmp[5] = {0xe9,np[0],np[1],np[2],np[3]}; 
+	      memcpy(target + dst_offset,newjmp,decodedInstructions[i].size);
+	      
+	      dst_offset += 5; 
+	      src_offset += decodedInstructions[i].size;
+	    } else if (displacement_size == 8) { 
+	      r.n_instructions = 0; 
+	      delete(r.relocation_offsets); 
+	      r.relocation_offsets = NULL; 
+	      return r;
+	    }
+	  }
+	  
 	} else { 
 	  r.n_instructions = 0; 
 	  delete(r.relocation_offsets); 
@@ -151,8 +202,10 @@ namespace liteprobes {
 	// No special treatment 
 	 
       default: 
-	memcpy(target + dst_offset,start+dst_offset,decodedInstructions[i].size);
+	memcpy(target + dst_offset,start+src_offset,decodedInstructions[i].size);
+
 	dst_offset += decodedInstructions[i].size;
+	src_offset += decodedInstructions[i].size;
 	break; 
 	
       } // end opcode switch 
