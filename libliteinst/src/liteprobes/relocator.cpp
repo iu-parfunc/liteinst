@@ -134,7 +134,10 @@ namespace liteprobes {
 	  memcpy(target + dst_offset,newjmp,decodedInstructions[i].size);
 	  dst_offset += decodedInstructions[i].size;
 	} else if (type == O_PC && offset_bits == 8) { 
-	  fprintf(stderr,"8 bit displacement JMP detected\n"); 
+	  
+	  int displacement_size = bytesNeeded(distance); 
+	  fprintf(stderr,"8 bit displacement JMP detected\nNew displacement size needed: %d", displacement_size);
+	  
 	  exit(-1); 
 	} else { 
 	  r.n_instructions = 0; 
