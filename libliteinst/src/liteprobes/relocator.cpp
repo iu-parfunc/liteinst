@@ -12,6 +12,29 @@ using namespace utils::assembly;
 
 namespace liteinst { 
 namespace liteprobes {
+
+  
+  int  bytesNeeded(int64_t v) { 
+    
+    
+    uint64_t vabs = abs(v); 
+    
+    uint64_t mask8 = 0xFFFFFFFF00000000; 
+    uint64_t mask4 = 0x00000000FFFF0000; 
+    uint64_t mask2 = 0x000000000000FF00; 
+    uint64_t mask1 = 0x00000000000000FF; 
+    
+    if ( vabs & mask8 ) return 8; 
+    if ( vabs & mask4 ) return 4; 
+    if ( vabs & mask2 ) return 2; 
+    if ( vabs & mask1 ) return 1; 
+   
+    return 0; 
+  }
+  
+  
+
+
   
   Relocations  Relocator::relocate( utils::Address start,
 				    utils::Address end, 
@@ -32,7 +55,8 @@ namespace liteprobes {
     unsigned int dst_offset = 0; 
     
     // Find the distance between the source and destination addresses
-    uint64_t distance = start - target; 
+    // Maybe this should be an Int64_t ? 
+    int64_t distance = start - target; 
     // We may need to check the magnitude of this distance 
     // as it will influence how to jit new jmps.
     // For example some jmps will will need to be converted
@@ -109,9 +133,9 @@ namespace liteprobes {
 	  unsigned char newjmp[5] = {0xe9,np[0],np[1],np[2],np[3]}; 
 	  memcpy(target + dst_offset,newjmp,decodedInstructions[i].size);
 	  dst_offset += decodedInstructions[i].size;
-	} else if {type == O_PC && offset_bits == 8) { 
+	} else if (type == O_PC && offset_bits == 8) { 
 	  fprintf(stderr,"8 bit displacement JMP detected\n"); 
-	  exit(-1) 
+	  exit(-1); 
 	} else { 
 	  r.n_instructions = 0; 
 	  delete(r.relocation_offsets); 
