@@ -109,6 +109,9 @@ namespace liteprobes {
 	  unsigned char newjmp[5] = {0xe9,np[0],np[1],np[2],np[3]}; 
 	  memcpy(target + dst_offset,newjmp,decodedInstructions[i].size);
 	  dst_offset += decodedInstructions[i].size;
+	} else if {type == O_PC && offset_bits == 8) { 
+	  fprintf(stderr,"8 bit displacement JMP detected\n"); 
+	  exit(-1) 
 	} else { 
 	  r.n_instructions = 0; 
 	  delete(r.relocation_offsets); 
