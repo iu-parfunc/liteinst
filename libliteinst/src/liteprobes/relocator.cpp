@@ -136,7 +136,7 @@ namespace liteprobes {
 	} else if (type == O_PC && offset_bits == 8) { 
 	  
 	  int displacement_size = bytesNeeded(distance); 
-	  fprintf(stderr,"8 bit displacement JMP detected\nNew displacement size needed: %d", displacement_size);
+	  fprintf(stderr,"8 bit displacement JMP detected\nNew displacement size needed: %d Bytes", displacement_size);
 	  
 	  exit(-1); 
 	} else { 
