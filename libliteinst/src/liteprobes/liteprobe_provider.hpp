@@ -55,7 +55,7 @@ class LiteProbeProvider : public ProbeProvider {
     bool activate(ProbeRegistration registration);
     bool deactivate(ProbeRegistration registraiton);
 
-  private:
+  // private:
     static ProbeGroupVec probe_groups;
     static ProbeGroupByName pg_by_name;
     static ProbeRegistrationVec probe_registrations;

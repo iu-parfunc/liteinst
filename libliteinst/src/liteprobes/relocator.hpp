@@ -20,9 +20,10 @@ class Relocator {
 
     /** /brief Relocates the region of code from start to end (exclusive) to 
      *    target address      
-     *  /param start Start address of the region
-     *  /param end   End address of the region (exclusive)
-     *  /return      Relocation information 
+     *  /param start   Start address of the region
+     *  /param end     End address of the region (exclusive)
+     *  /param target  Relocation buffer
+     *  /return        Relocation information 
      */
     Relocations relocate(utils::Address start, utils::Address end,
         utils::Address target);

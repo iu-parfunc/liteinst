@@ -28,8 +28,9 @@ BlockRangeMap::~BlockRangeMap() {
 
 bool BlockRangeMap::updateRangeEntries(Range r, UpdateEntriesCallback cb) {
   vector<BlockEntry*> block_entries = lockRange(r);
+  bool result = false;
   if (block_entries.size() > 0) {
-    cb(block_entries, r);
+    result = cb(block_entries, r);
   }
 
   bool unlocked = unlockRange(r);
@@ -37,7 +38,8 @@ bool BlockRangeMap::updateRangeEntries(Range r, UpdateEntriesCallback cb) {
     // throw std::runtime_error;
   }
 
-  return (block_entries.size() > 0) ? true : false;
+  return result;
+  // return (block_entries.size() > 0) ? true : false;
 }   
 
 std::vector<BlockRange> BlockRangeMap::getBlockedRangeMetaData(Range r) {

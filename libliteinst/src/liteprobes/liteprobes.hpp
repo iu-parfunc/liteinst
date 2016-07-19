@@ -50,6 +50,12 @@ struct ContextRestore {
   int size;
 };
 
+struct Return {
+  utils::Address start;
+  utils::Address target;
+  int size;
+};
+
 struct Callout {
   utils::Address start;
   ShortCircuit short_circuit;
@@ -59,19 +65,35 @@ struct Callout {
   ContextRestore ctx_restore;
 };
 
+class Springboard; // Forward declaration 
+
+class Probe {
+  public:
+    ProbeId p_id;
+    utils::Address address;
+    ProbeContext context;
+    Springboard* trampoline;
+};
+
 class ProbeGroup {
   public:
     std::string name;
     ProbeGroupId pg_id;
     utils::process::Function* fn;
-    std::list<utils::Address> probes;
+    std::map<utils::Address, ProbePlacement> probe_sites;
+    std::map<utils::Address, Probe*> probes;
     utils::Address start;
 
     ProbeGroup(std::string name) : name(name) {
     }
 };
 
-class Trampoline {
+class CoalescedProbes {
+  public:
+    std::map<utils::Address, Probe*> probes;
+    utils::range::Range range;
+    std::list<Springboard*> springboards;
+    bool is_end_a_control_transfer;
 };
 
 enum class SpringboardType {
@@ -86,32 +108,27 @@ class Springboard {
     int32_t relative_jump;
     int32_t probe_length;    
     bool is_probe_ready;
-    std::list<utils::Address> probed_addrs;
+    std::map<utils::Address, Probe*> probes;
     utils::range::Range displaced;
     utils::range::Range range;
-    uint8_t punned_bytes[8];
-    uint8_t original_bytes[8];
+    uint64_t punned;
+    uint64_t original;
     uint8_t instruction_marked_bytes[8];
+    int n_relocated;
     int* relocation_offsets;
+    int* instruction_offsets;
     std::map<utils::Address, std::unique_ptr<Callout>> callouts;
+    Return control_return;
     // PatchPoint patch_point;
+
+    Springboard() {
+    }
+
+    ~Springboard() {
+      printf("Destroying springboard..\n");
+      fflush(stdout);
+    }
 };
-
-
-class Probe {
-  public:
-    ProbeId p_id;
-    ProbeContext context;
-    Trampoline* trampoline;
-};
-
-class CoalescedProbes {
-  public:
-    std::list<utils::Address> probes;
-    utils::range::Range range;
-    std::list<Springboard*> springboards;
-};
-
 
 } // End liteprobes
 } // End liteinst

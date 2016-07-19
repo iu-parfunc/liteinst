@@ -15,6 +15,11 @@ class Range {
     utils::Address start;   ///< Start address of the range
     utils::Address end;     ///< Ending address of the range
 
+    static const uint8_t START;
+    static const uint8_t END;
+    static const uint8_t EXCLUSIVE;
+    static const uint8_t INCLUSIVE;
+
     Range();
     Range(utils::Address start_addr, utils::Address end_addr);
 
@@ -36,11 +41,13 @@ class Range {
 
     /** \brief Checks if the given address is within the current range
      *  \param addr      The virtual address to check
-     *  \param inclusive If the the range check is inclusive of range 
-     *                  boundaries
+     *  \param inclusive If the the range check is inclusive of current range 
+     *                  boundaries. INCLUSIVE, EXCLUSIVE, START and END flags or 
+     *                  combination thereof are valid inputs.
+     *
      *  \return If the given address is within the range
      */
-    bool withinRange(utils::Address addr, bool inclusive);
+    bool withinRange(utils::Address addr, uint8_t inclusive);
 
     /** \brief Gets the distance from the current range. 
      *  \param addr  The address to get the distance from
@@ -50,11 +57,14 @@ class Range {
     int64_t distanceFromRange(utils::Address addr);
 
     /** \brief Checks if the given range overlaps with the current range.
-     *  \param r The range to check
+     *  \param r         The range to check
+     *  \param inclusive If the the range check is inclusive of current range 
+     *                  boundaries. INCLUSIVE, EXCLUSIVE, START and END flags or 
+     *                  combination thereof are valid inputs.
      *
-     *  Range boundaries are included in the check.
+     *  \return If the given range overlaps with the current range
      */
-    bool overlapsWith(const Range r);
+    bool overlapsWith(const Range r, uint8_t inclusive);
 
     /** \brief Unions the given range with the current one. 
      *  \param r The range to be unioned to the current one.

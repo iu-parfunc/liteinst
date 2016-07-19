@@ -31,12 +31,12 @@ class ProcessAnalyzer {
 
     /** \brief Populate function meta data of the current process.
      */
-    virtual void populateFunctions(FunctionsByAddress& fn_by_addr,
-        FunctionsByName& fn_by_name);
+    virtual void populateFunctions(FunctionsByAddress* fn_by_addr,
+        FunctionsByName* fn_by_name);
 
     /** \brief Populate the mapped region meta data within the current process.
      */
-    virtual void populateMappedRegions(MappedRegionsByAddress& mapped);
+    virtual void populateMappedRegions(MappedRegionsByAddress* mapped);
 
     /** \brief Gets the path of the executable of current process.
      *  \return The path of the executable

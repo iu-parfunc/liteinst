@@ -3,6 +3,7 @@
 #include "assembly.hpp"
 #include "relocator.hpp"
 
+#include <map>
 #include <cstring>
 
 namespace liteinst {
@@ -11,6 +12,7 @@ namespace liteprobes {
 using namespace utils::assembly;
 
 using std::unique_ptr;
+using std::map;
 using std::list;
 using std::memcpy;
 using utils::Address;
@@ -50,8 +52,9 @@ uint8_t g_args[] =
 int g_args_size = sizeof(g_args) / sizeof(uint8_t);
 
 uint8_t g_call[] = 
-{ 0xff, 0x15, 0x00, 0x00, 0x00, 0x00,  /* callq *0x00(%rip) */
-  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 /* trampoline fn address */
+{ 
+  0x48, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* movabs $00,%rax */ 
+  0x48, 0xff, 0xd0 /* call %rax */
 };
 int g_call_size = sizeof(g_call) / sizeof(uint8_t); 
 
@@ -73,6 +76,12 @@ uint8_t g_context_restore[] =
   0x9d /* popfq */
 };
 int g_context_restore_size = sizeof(g_context_restore)/ sizeof(uint8_t);
+
+uint8_t g_control_return[] = 
+{ 
+  0xe9, 0x00, 0x00, 0x00, 0x00 /* jmp $00 */
+};
+int g_control_return_size = sizeof(g_control_return) / sizeof(uint8_t);
 
 inline ShortCircuit emitShortCircuit(Address start) {
   memcpy(start, g_short_circuit_near, 
@@ -117,12 +126,12 @@ inline Args emitArgs(Address start, const ProbeContext& context) {
   return args;
 } 
 
-inline Call emitCall(Address start, InstrumentationFunction fn) {
+inline Call emitCall(Address start, const InstrumentationFunction fn) {
   memcpy(start, g_call, g_call_size);
 
   Call call;
   call.start = start;
-  call.target = start + 6;
+  call.target = start + 2;
   call.size = g_call_size;
 
   *reinterpret_cast<uint64_t*>(call.target) = reinterpret_cast<uint64_t>(fn);
@@ -140,35 +149,68 @@ inline ContextRestore emitContextRestore(Address start) {
   return cr;
 }
 
+inline Return emitControlReturn(Address start, Address target) {
+  memcpy(start, g_control_return, g_control_return_size);
+
+  Return cr;
+  cr.start = start;
+  cr.target = start + 1;
+  cr.size = g_control_return_size;
+
+  *reinterpret_cast<int32_t*>(cr.target) = (int32_t)(target - start - 
+      g_control_return_size);
+
+  return cr;
+}
+
 unique_ptr<Springboard> CodeJitter::emitSpringboard(const CoalescedProbes& cp, 
-    Address target, ProbeContext& context, InstrumentationFunction fn) {
-  list<Address> addrs = cp.probes;
+    Address target, const InstrumentationProvider& provider) {
+  map<Address, Probe*> probes = cp.probes;
   for (Springboard* sb : cp.springboards) {
-    addrs.insert(addrs.end(), sb->probed_addrs.begin(), sb->probed_addrs.end());
+    probes.insert(sb->probes.begin(), sb->probes.end());
   }
 
-  addrs.sort();
-  assert(addrs.size() > 0);
+  assert(probes.size() > 0);
 
   Disassembler disas;
   const Sequence* seq = disas.disassemble(cp.range.start, cp.range.end);
+  _DInst* decoded = static_cast<_DInst*>(seq->instructions);
 
   Springboard* sb = new Springboard;
   sb->base = cp.range.start;
-  sb->type = (addrs.size() > 1) ? SpringboardType::SUPER_TRAMPOLINE : 
+  sb->type = (probes.size() > 1) ? SpringboardType::SUPER_TRAMPOLINE : 
     SpringboardType::TRAMPOLINE;
-  sb->probed_addrs = addrs;
-  sb->range = cp.range;
+  sb->probes = probes;
+  sb->displaced = cp.range;
+  sb->instruction_offsets = new int[seq->n_instructions];
+  sb->n_relocated = seq->n_instructions;
+
+  int offset = 0;
+  for (int i = 0; i < seq->n_instructions; i++) {
+    sb->instruction_offsets[i] = offset;
+    offset += decoded[i].size;
+  }
+
+  int probe_size = 0;
+  int index = 0;
+  while (probe_size < 5 && index < seq->n_instructions) {
+    probe_size += decoded[index++].size;
+  }
+
+  assert(probe_size >= 5);
+  
+  sb->probe_length = probe_size;
 
   Relocator relocator;
   int* relocation_offsets = new int[seq->n_instructions];
   int relocation_ptr = 0;
   Address tramp_ip = target;
-  Address code_ip = target;
+  Address code_ip = cp.range.start;
 
   Relocations relocations;
-  for (auto it = addrs.begin();  it != addrs.end(); ++it) {
-    Address probed_addr = *it;
+  for (auto it = probes.begin();  it != probes.end(); ++it) {
+    Address probed_addr = it->first;
+    ProbeContext context = it->second->context;  
 
     relocations = relocator.relocate(code_ip, probed_addr, tramp_ip);
 
@@ -180,7 +222,7 @@ unique_ptr<Springboard> CodeJitter::emitSpringboard(const CoalescedProbes& cp,
       }
     
       memcpy(&relocation_offsets[relocation_ptr], relocations.relocation_offsets, 
-          relocations.n_instructions);
+          relocations.n_instructions * sizeof(int));
       relocation_ptr += relocations.n_instructions;
     }
 
@@ -198,6 +240,10 @@ unique_ptr<Springboard> CodeJitter::emitSpringboard(const CoalescedProbes& cp,
 
     Args args = emitArgs(tramp_ip, context);
     tramp_ip += args.size;
+
+    const InstrumentationFunction fn = 
+      (context.placement == ProbePlacement::ENTRY) ?
+      provider.getEntryInstrumentation() : provider.getExitInstrumentation();
 
     Call call = emitCall(tramp_ip, fn);
     tramp_ip += call.size;
@@ -227,15 +273,48 @@ unique_ptr<Springboard> CodeJitter::emitSpringboard(const CoalescedProbes& cp,
     }
 
     memcpy(&relocation_offsets[relocation_ptr], relocations.relocation_offsets, 
-        relocations.n_instructions);
+        relocations.n_instructions * sizeof(int));
     relocation_ptr += relocations.n_instructions;
   }
 
+  tramp_ip += (cp.range.end - code_ip);
+
   assert(relocation_ptr == seq->n_instructions);
 
+  Return ret;
+  if (!cp.is_end_a_control_transfer) {
+    ret = emitControlReturn(tramp_ip, cp.range.end);
+    sb->control_return = ret;
+  }
+
+  tramp_ip += ret.size;
+
   sb->relocation_offsets = relocation_offsets;
+  sb->range = Range(target, tramp_ip);
 
   return unique_ptr<Springboard>(sb);
+}
+
+int64_t CodeJitter::getSpringboardSize(const CoalescedProbes& cp) {
+  int64_t relocation_size = cp.range.end - cp.range.start;
+
+  map<Address, Probe*> probes = cp.probes;
+  for (Springboard* sb : cp.springboards) {
+    probes.insert(sb->probes.begin(), sb->probes.end());
+  }
+
+  int num_trampolines = probes.size();
+  int64_t trampoline_size = g_short_circuit_near_size + g_context_save_size + 
+    g_args_size + g_call_size +  g_context_restore_size;  
+  
+  int64_t springboard_size = relocation_size + num_trampolines * 
+    trampoline_size;
+
+  if(!cp.is_end_a_control_transfer) {
+    springboard_size += g_control_return_size;
+  }
+
+  return springboard_size;
 }
 
 }  

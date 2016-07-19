@@ -245,13 +245,13 @@ class Process : public Show, public Optional {
     static utils::range::Range heap;
 
     /// Function start address mappings
-    static std::map<utils::Address, Function*> fn_by_address;  
+    static std::map<utils::Address, Function*>* fn_by_address;  
 
     /// Function name mappings
-    static std::map<std::string, std::unique_ptr<Function>> fn_by_name;  
+    static std::map<std::string, std::unique_ptr<Function>>* fn_by_name;  
 
     /// Memory region start address mappings
-    static std::map<utils::Address, std::unique_ptr<MappedRegion>> mapped; 
+    static std::map<utils::Address, std::unique_ptr<MappedRegion>>* mapped; 
 
 
 };

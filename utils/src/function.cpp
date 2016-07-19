@@ -11,6 +11,13 @@ using std::move;
 using std::unique_ptr;
 using utils::Address;
 
+utils::concurrency::SpinLock Function::init_lock;
+bool Function::is_initialized;
+
+std::unique_ptr<BasicBlock> Function::invalid_bb;
+std::unique_ptr<ControlReturn> Function::invalid_cr;
+
+
 Function::Function() {
 
   if (is_initialized) {

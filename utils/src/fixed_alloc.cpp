@@ -83,7 +83,7 @@ bool FixedAllocator::allocationCallback(std::vector<BlockEntry*> entries,
 
     // Strictly not necessary since blocks and meta should iterate in 
     // lockstep. Just a sanity check
-    if (be->entry_range.overlapsWith(block)) {
+    if (be->entry_range.overlapsWith(block, Range::INCLUSIVE)) {
       PageMetaData* meta = (PageMetaData*) be->metadata;
 
       if (meta != NULL && meta->allocated) {
@@ -92,7 +92,7 @@ bool FixedAllocator::allocationCallback(std::vector<BlockEntry*> entries,
           // If any of the occupied sub ranges overlaps with this part of the
           // range that we want to allocate we cannot do this allocation since
           // it would conflict with an existing allocation. Fail fast.
-          if (occupiedRange.overlapsWith(block)) {
+          if (occupiedRange.overlapsWith(block, Range::INCLUSIVE)) {
             return false;
           }
         }
@@ -130,7 +130,7 @@ bool FixedAllocator::allocationCallback(std::vector<BlockEntry*> entries,
               " recieved : %p\n", be->entry_range.start, addr);
 
           // Rollback. 
-          int ret = munmap(be->entry_range.start, 
+          int ret = munmap(addr, 
               (be->entry_range.end - be->entry_range.end));
           if (ret == -1) {
             perror(string("[munmap]").c_str());
@@ -153,7 +153,7 @@ bool FixedAllocator::allocationCallback(std::vector<BlockEntry*> entries,
     BlockEntry* be = entries[i];
     PageMetaData* meta = (PageMetaData*) be->metadata;
 
-    if (blocks[i].overlapsWith(be->entry_range)) {
+    if (blocks[i].overlapsWith(be->entry_range, Range::INCLUSIVE)) {
       meta->occupied.push_back(blocks[i]);
     } else {
       assert(false);

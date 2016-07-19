@@ -12,21 +12,35 @@ class RangeKey {
     int start;
     int end; 
 
+    static const uint8_t START = 0x01;
+    static const uint8_t END = 0x02;
+    static const uint8_t EXCLUSIVE = 0x00;
+    static const uint8_t INCLUSIVE = 0x04;
+
     RangeKey(int start, int end) : start(start), end(end) {
 
     }
 
-    bool withinRange(int value, bool inclusive) const {
-      if (inclusive) {
-        return (value >= start && value <= end);
-      } else {
-        return (value > start && value < end);
+    bool Range::withinRange(Address addr, uint8_t inclusive) {
+      bool start_inclusive = false;
+      bool end_inclusive = false;
+
+      if (inclusive & START) {
+        start_inclusive = true;
+      } else if (inclusive & END) {
+        end_inclusive = true;
+      } else if (inclusive & INCLUSIVE) {
+        start_inclusive = true;
+        end_inclusive = true;
       }
+
+      return (start_inclusive ? addr >= start : addr > start)
+        && (end_inclusive ? addr <= end : addr < end);
     }
 
     bool overlapsWith(const RangeKey& r) const {
-      if (r.withinRange(start, true) ||
-          r.withinRange(end, true) || 
+      if (r.withinRange(start, INCLUSIVE) ||
+          r.withinRange(end, INCLUSIVE) || 
           (start < r.start && end > r.end)) {
         return true;
       } 
@@ -51,26 +65,41 @@ class Key {
     int start;
     int end;
 
+    static const uint8_t START = 0x01;
+    static const uint8_t END = 0x02;
+    static const uint8_t EXCLUSIVE = 0x00;
+    static const uint8_t INCLUSIVE = 0x04;
+
+
     Key() {
 
     }
 
     Key(int start_addr, int end_addr) : start(start_addr), 
-      end(end_addr) {
-  
+    end(end_addr) {
+
     }
 
-    bool withinRange(int addr, bool inclusive) const {
-      if (inclusive) {
-        return (addr >= start && addr <= end);
-      } else {
-        return (addr > start && addr < end);
+    bool Range::withinRange(Address addr, uint8_t inclusive) {
+      bool start_inclusive = false;
+      bool end_inclusive = false;
+
+      if (inclusive & START) {
+        start_inclusive = true;
+      } else if (inclusive & END) {
+        end_inclusive = true;
+      } else if (inclusive & INCLUSIVE) {
+        start_inclusive = true;
+        end_inclusive = true;
       }
+
+      return (start_inclusive ? addr >= start : addr > start)
+        && (end_inclusive ? addr <= end : addr < end);
     }
 
     bool overlapsWith(const Key& r) const {
-      if (r.withinRange(start, true) ||
-          r.withinRange(end, true) || 
+      if (r.withinRange(start, INCLUSIVE) ||
+          r.withinRange(end, INCLUSIVE) || 
           (start < r.start && end > r.end)) {
         return true;
       } 

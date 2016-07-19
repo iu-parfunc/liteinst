@@ -24,8 +24,8 @@ using std::weak_ptr;
 using std::sort;
 using utils::Address;
 
-void ProcessAnalyzer::populateFunctions(FunctionsByAddress& fn_by_addr,
-    FunctionsByName& fn_by_name) {
+void ProcessAnalyzer::populateFunctions(FunctionsByAddress* fn_by_addr,
+    FunctionsByName* fn_by_name) {
   ELF *bin = elf64_read((char*)getProgramPath().c_str());
   unsigned int nb_sym = bin->symtab_num;
   Elf64_Sym **tab = bin->symtab;
@@ -42,11 +42,11 @@ void ProcessAnalyzer::populateFunctions(FunctionsByAddress& fn_by_addr,
       fn->name = string(s_name);
 
       unique_ptr<Function> fn_ptr(fn);
-      fn_by_name.insert(pair<string, unique_ptr<Function>>(fn->name, move(fn_ptr)));
+      fn_by_name->insert(pair<string, unique_ptr<Function>>(fn->name, move(fn_ptr)));
       // range_map.insert(pair<Range, unique_ptr<SpinLock>>(r, move(lock)));
 
       // fn_by_name.emplace(fn->name, unique_ptr<Function>(fn));
-      fn_by_addr.emplace(fn->start, fn);
+      fn_by_addr->emplace(fn->start, fn);
     }
   }
 
@@ -54,7 +54,7 @@ void ProcessAnalyzer::populateFunctions(FunctionsByAddress& fn_by_addr,
   free(bin);
 }
 
-void ProcessAnalyzer::populateMappedRegions(MappedRegionsByAddress& mapped) {
+void ProcessAnalyzer::populateMappedRegions(MappedRegionsByAddress* mapped) {
   unsigned long long addr, endaddr, offset, inode;
   char permissions[8], device[8];
   char* filename = new char[MAXPATHLEN];
@@ -76,7 +76,7 @@ void ProcessAnalyzer::populateMappedRegions(MappedRegionsByAddress& mapped) {
     mr->file = string(filename);
 
     unique_ptr<MappedRegion> mr_ptr(mr);
-    mapped.insert(pair<Address, unique_ptr<MappedRegion>>(mr->start, move(mr_ptr)));
+    mapped->insert(pair<Address, unique_ptr<MappedRegion>>(mr->start, move(mr_ptr)));
 
     // mapped.emplace(mr->start, unique_ptr<MappedRegion>(mr));
   }

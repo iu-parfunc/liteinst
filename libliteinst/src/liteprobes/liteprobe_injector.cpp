@@ -1,6 +1,7 @@
 
 #include "liteprobe_injector.hpp"
 #include "control_flow_router.hpp"
+#include "patcher.h"
 #include "assembly.hpp"
 #include "process.hpp"
 #include "addr_range.hpp"
@@ -34,7 +35,10 @@ using std::invalid_argument;
 
 const array<uint8_t, 14> invalid_opcodes = {0x06, 0x07, 0x0E, 0x16, 0x17,
         0x1E, 0x1F, 0x27, 0x2F, 0x37, 0x3F, 0x60, 0x61, 0x62};
-// map<Address, unique_ptr<Probe>> LiteProbeInjector::probes;
+
+map<Address, Probe*> LiteProbeInjector::probes_by_addr;
+vector<unique_ptr<Probe>> LiteProbeInjector::probes;
+map<Address, unique_ptr<Springboard>> LiteProbeInjector::relocations;
 
 Address punAddress(Address addr, int64_t size,
     const Sequence* seq, int index) {
@@ -75,16 +79,17 @@ Address punAddress(Address addr, int64_t size,
         // fprintf(stderr, "[swap] B : %p\n\n", rel_addr);
       }
 
-      target = addr + decoded[index].size + rel_copy;
+      target = addr + 5 + rel_copy;
       if ((int64_t) target > 0 && target > text.end) {
-        if (!(stack.withinRange(target, true) 
-            || heap.withinRange(target, true))) {
+        if (!(stack.withinRange(target, Range::INCLUSIVE) 
+            || heap.withinRange(target, Range::INCLUSIVE))) {
           // fprintf(stderr, "[Allocator] Trying : %p\n", target);
           unique_ptr<Allocator> allocator = 
             AllocatorFactory::getAllocator(AllocatorType::FIXED);
 
           target = allocator->getAllocation(target, size);
           if (target != nullptr) {
+            printf("Trampoline at : %p\n", target);
             goto exit;
           }
         }
@@ -97,25 +102,30 @@ exit:
 }
 
 unique_ptr<Springboard> makeSpringboard(const CoalescedProbes& cp, 
-     ProbeContext& context, InstrumentationFunction fn, 
-     const Sequence* seq) {
+     const Sequence* seq, const InstrumentationProvider& provider) {
 
-  Address addr = cp.probes.front();
+  Address addr = cp.range.start;
 
   Disassembler disas;
   int index = disas.findInstructionIndex(addr, seq);
   _DInst* decoded = static_cast<_DInst*>(seq->instructions);
 
   CodeJitter cj;
-  int64_t trampoline_size = cj.getTrampolineSize(cp.range.end - cp.range.start);
+  int64_t springboard_size = cj.getSpringboardSize(cp);
 
-  Address target = punAddress(addr, trampoline_size, seq, index);
+  Address target = punAddress(addr, springboard_size, seq, index);
   if (target != nullptr) {
-    int32_t relative = target - addr - decoded[index].size;
+    int32_t relative = target - addr - 5;
+    uint64_t punned = *reinterpret_cast<uint64_t*>(addr);
+    *reinterpret_cast<uint8_t*>(&punned) = 0xe9; 
+    *reinterpret_cast<uint32_t*>(&(reinterpret_cast<uint8_t*>(&punned)[1])) = 
+      relative; 
     
-    unique_ptr<Springboard> sb = cj.emitSpringboard(cp, target, context, fn);
-    sb->relative_jump = relative;
-    return sb;
+    unique_ptr<Springboard> sb = cj.emitSpringboard(cp, target, provider);
+    sb->punned = punned;
+    sb->original = *reinterpret_cast<uint64_t*>(addr);
+
+    return move(sb);
     // patch addr
     //
   } else {
@@ -123,38 +133,68 @@ unique_ptr<Springboard> makeSpringboard(const CoalescedProbes& cp,
   }
 }
 
-list<CoalescedProbes> coalesceProbes(utils::process::Function* fn,
-    vector<Address>& addrs, const Sequence* seq) {
+list<CoalescedProbes> LiteProbeInjector::coalesceProbes(
+    utils::process::Function* fn, vector<Address>& addrs, const Sequence* seq) {
 
   _DInst* decoded = static_cast<_DInst*>(seq->instructions);
   list<CoalescedProbes> cps;
 
   Disassembler disas;
   // Coalesce probes by proximity
-  for (unsigned i = addrs.size()-2; i >= 0; i--) {
+  for (int i = (int) addrs.size()-1; i >= 0; i--) {
     CoalescedProbes cp;
-    list<Address> probes;
-    probes.push_back(addrs[i]);
+    map<Address, Probe*> probes;
+
+    Probe* p = probes_by_addr.find(addrs[i])->second;
+    probes.emplace(addrs[i], p);
+
     int index = disas.findInstructionIndex(addrs[i], seq);
     cp.range.end = addrs[i] + decoded[index].size ;
     Address start = addrs[i];
     while (i > 0 && addrs[i] - addrs[i-1] <= 5) {
-      probes.push_back(addrs[i-1]);
+      p = probes_by_addr.find(addrs[i])->second;
+      probes.emplace(addrs[i-1], p);
       start = addrs[i-1];
       i--;
     }
+
     cp.range.start = start;
+
+    if (cp.range.end - cp.range.start < 5) {
+      int probe_size = cp.range.end - cp.range.start;
+      if (cp.range.start - fn->start < 5) {
+        int index = disas.findInstructionIndex(cp.range.end, seq);
+        while (probe_size < 5 && index < seq->n_instructions) {
+          probe_size += decoded[index++].size;
+        }
+
+        assert(probe_size >= 5);
+
+        cp.range.end = cp.range.start + probe_size;
+      } else {
+        int index = disas.findInstructionIndex(cp.range.start, seq);
+        while (probe_size < 5 && index > 0) {
+          probe_size += decoded[--index].size;
+        }
+
+        assert(probe_size >= 5);
+
+        cp.range.start = cp.range.end - probe_size;
+      } 
+    }
+
     cp.probes = probes;
     cps.push_back(cp);
   }
 
+  /*
   // Handle the last probe separately because it might need more space
   // if it happens to be near the end of the function.
   Address last = addrs.back();
   int index = disas.findInstructionIndex(last, seq);
 
   Address last_probe_start = last;
-  while (last_probe_start - fn->end < 5 && index >= 0) {
+  while (fn->end - last_probe_start < 5 && index >= 0) {
     last_probe_start -= decoded[--index].size;
   }
 
@@ -171,22 +211,27 @@ list<CoalescedProbes> coalesceProbes(utils::process::Function* fn,
 
   Address last_probe_end = last + probe_size;
 
-
   // If an existing coalesced probe (has to be the first one since we are 
   // at the end of the function and we are inserting probes in reverse order of
   // addresses) overlaps with the last probes range coalesce 
   // it with that coalsced probe. If not just create a new coalesced probe.
   if (cps.front().range.withinRange(last_probe_start, true)) {
     cps.front().range.end = last + decoded[index].size;
+    Probe* p = probes_by_addr.find(last)->second;
+    cps.front().probes.emplace(last, p);
   } else {
     CoalescedProbes cp;
-    list<Address> probes;
-    probes.push_back(last);
+    map<Address, Probe*> probes;
+
+    Probe* p = probes_by_addr.find(last)->second;
+    probes.emplace(last, p);
+
     cp.range = Range(last_probe_start, last_probe_end);
     cp.probes = probes;
     // Add it to the front since we want later probes first
     cps.push_front(cp);
   }
+  */
   
   ControlFlowRouter router;
   // Now do a second iteration of coalescing of any existing springboards 
@@ -194,9 +239,8 @@ list<CoalescedProbes> coalesceProbes(utils::process::Function* fn,
   for (CoalescedProbes& cp : cps) {
     list<Springboard*> sbs = router.getOverlappingSpringboards(cp.range); 
     for (Springboard* sb : sbs) {
-      cp.range.unionRange(sb->range);
-      cp.probes.insert(cp.probes.end(), sb->probed_addrs.begin(),
-          sb->probed_addrs.end());
+      cp.range.unionRange(sb->displaced);
+      cp.probes.insert(sb->probes.begin(), sb->probes.end());
       cp.springboards.push_back(sb);
     }
   }
@@ -205,39 +249,56 @@ list<CoalescedProbes> coalesceProbes(utils::process::Function* fn,
   // with each other due to coalescing with springboards.
   for (auto it = cps.begin(); it != cps.end(); ) {
     CoalescedProbes& cp = *it;
-    while (++it != cps.end() && (*it).range.overlapsWith(cp.range)) {
+    while (++it != cps.end() && (*it).range.overlapsWith(cp.range, 
+          Range::EXCLUSIVE)) {
      cp.range.unionRange((*it).range); 
-     cp.probes.insert(cp.probes.end(), (*it).probes.begin(), (*it).probes.end());
+     cp.probes.insert((*it).probes.begin(), (*it).probes.end());
      cp.springboards.insert(cp.springboards.end(), (*it).springboards.begin(), 
          (*it).springboards.end());
      cps.erase(it++);
     }
   }
 
-  // Now remove duplicates
+  // Now remove duplicates and add some more meta data
   for (CoalescedProbes& cp : cps) {
-    cp.probes.sort();
-    cp.probes.unique();
     cp.springboards.sort();
     cp.springboards.unique();
+
+    int index = disas.findInstructionIndex(cp.range.end, seq);
+    cp.is_end_a_control_transfer = disas.isControlTransferInstruction(seq, 
+        --index);
   }
 
   return cps;
 
 }
 
-bool LiteProbeInjector::injectProbes(list<Address>& addresses, 
-    ProbeContext& context, InstrumentationFunction trampoline_fn) {
-  addresses.sort();
+bool LiteProbeInjector::injectProbes(map<Address, ProbeContext>& locs,
+    const InstrumentationProvider& provider) {
   vector<Address> addrs;
-  for(auto it = addresses.rbegin(); it != addresses.rend(); it++) {
-    Address addr = *it;
+  for(auto it = locs.begin(); it != locs.end(); it++) {
+    Address addr = it->first;
 
     addrs.push_back(addr);
     auto it1 = probes_by_addr.find(addr);
     if (it1 != probes_by_addr.end()) {
       return false;
     }
+  }
+
+  for(auto it : locs) {
+    Probe* probe = new Probe;
+
+    meta_data_lock.writeLock();
+    probe->p_id = static_cast<RegistrationId>(probes.size());
+    probes.emplace_back(unique_ptr<Probe>(probe));
+    meta_data_lock.writeUnlock();
+
+    probe->address = it.first;
+    probe->context = it.second;
+    probe->context.p_id = probe->p_id;
+    probe->context.i_id = provider.id;
+    probes_by_addr.emplace(it.first, probe);
   }
 
   Process p;
@@ -265,9 +326,9 @@ bool LiteProbeInjector::injectProbes(list<Address>& addresses,
   list<unique_ptr<Springboard>> sbs;
   map<Address, const CoalescedProbes> cps_map;
   for (const CoalescedProbes& cp : cps) {
+
     // Create the new springboard for this coalesced probe
-    unique_ptr<Springboard> sb = makeSpringboard(cp, context, trampoline_fn, 
-        seq);
+    unique_ptr<Springboard> sb = makeSpringboard(cp, seq, provider);
 
     if (sb == nullptr) {
       // Release all the created springboards
@@ -276,8 +337,9 @@ bool LiteProbeInjector::injectProbes(list<Address>& addresses,
       // then try to do back tracking while also considering current coalesced
       // probes.
     } else {
+      Springboard* temp_ptr = sb.get();
       sbs.push_back(move(sb));
-      cps_map.insert(pair<Address, const CoalescedProbes>(sb->base, cp));
+      cps_map.insert(pair<Address, const CoalescedProbes>(temp_ptr->base, cp));
     }
   }
 
@@ -288,7 +350,15 @@ bool LiteProbeInjector::injectProbes(list<Address>& addresses,
     // Making a temporary non owning copy before we transfer ownership to 
     // ControlFlowRouter
     Springboard* sb = springboard.get();
-    router.addSpringboard(unique_ptr<Springboard>(sb));
+    router.addSpringboard(move(springboard));
+
+    init_patch_site(sb->base, (sb->displaced.end - sb->displaced.start));
+
+    // patch in the the springboard jump 
+    patch_64(sb->base, sb->punned);
+    // *reinterpret_cast<uint64_t*>(sb->base) = sb->punned;
+
+    assert(*reinterpret_cast<uint64_t*>(sb->base) == sb->punned);
 
     CoalescedProbes cp;
     auto res = cps_map.find(sb->base);
@@ -324,7 +394,7 @@ bool LiteProbeInjector::injectProbes(list<Address>& addresses,
       if (no_springboards) {
         while (ip < cp.range.end && index < seq->n_instructions) {
           *ip = 0x62; // Single byte write. Should be safe. 
-          ip += decoded[++index].size;
+          ip += decoded[index++].size;
         }
 
         assert(ip == cp.range.end);
@@ -337,6 +407,8 @@ bool LiteProbeInjector::injectProbes(list<Address>& addresses,
       }
 
       assert(ip == (*it)->base);
+
+      *ip = 0x62; // Single byte write. Should be safe. 
 
       // Remove the springboard from the consideration of router
       router.removeSpringboard(*it);
@@ -369,6 +441,14 @@ fail:
     // }
 
 
+}
+
+Probe* LiteProbeInjector::getProbe(Address address) {
+  auto it = probes_by_addr.find(address);
+  if (it != probes_by_addr.end()) {
+    return it->second;
+  } 
+  return nullptr;
 }
 
 }

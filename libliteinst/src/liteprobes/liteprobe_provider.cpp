@@ -1,6 +1,7 @@
 
 #include "liteprobe_provider.hpp"
-// #include "strings.hpp"
+#include "liteprobe_injector.hpp"
+#include "strings.hpp"
 #include <string>
 #include <stack>
 #include <map>
@@ -16,7 +17,7 @@ namespace liteinst {
 namespace liteprobes {
 
 using namespace utils::process;
-// using namespace utils::string;
+using namespace utils::strings;
 
 using std::string;
 using std::stack;
@@ -61,20 +62,20 @@ ProbeGroup* LiteProbeProvider::generateProbeGroupForBasicBlock(
     utils::process::Function* fn, utils::process::BasicBlock* bb, 
     Coordinates coord, string probe_group_name) {
   ProbePlacement placement = coord.getBasicBlock().getPlacement();
-  list<Address> probe_addresses;
+  map<Address, ProbePlacement> probe_sites;
   switch (placement) {
     case ProbePlacement::ENTRY:
       probe_group_name += "/ENTRY/";
-      probe_addresses.push_back(bb->start);
+      probe_sites.emplace(bb->start, placement);
       break;
     case ProbePlacement::EXIT:
       probe_group_name += "/EXIT/";
-      probe_addresses.push_back(bb->end);
+      probe_sites.emplace(bb->end, placement);
       break;
     case ProbePlacement::BOUNDARY:
       probe_group_name += "/BOUNDARY/";
-      probe_addresses.push_back(bb->start);
-      probe_addresses.push_back(bb->end);
+      probe_sites.emplace(bb->start, ProbePlacement::ENTRY);
+      probe_sites.emplace(bb->end, ProbePlacement::EXIT);
       break;
     default:
       throw invalid_argument("Unrecognized probe placement..\n");
@@ -87,12 +88,12 @@ ProbeGroup* LiteProbeProvider::generateProbeGroupForBasicBlock(
   } else {
     pg = new ProbeGroup(probe_group_name);
     pg->fn = fn;
-    pg->probes = probe_addresses;
+    pg->probe_sites = probe_sites;
 
     meta_data_lock.writeLock();
-    probe_groups.emplace_back(unique_ptr<ProbeGroup>(pg));
     // Vector index is the id for efficient access
     pg->pg_id = static_cast<ProbeGroupId>(probe_groups.size()); 
+    probe_groups.emplace_back(unique_ptr<ProbeGroup>(pg));
     pg_by_name.emplace(probe_group_name, pg);
     meta_data_lock.writeUnlock();
   }
@@ -104,28 +105,30 @@ ProbeGroup* LiteProbeProvider::generateProbeGroupForFunction(
     utils::process::Function* fn, 
     Coordinates coord, string probe_group_name) {
   ProbePlacement placement = coord.getFunction().getPlacement();
-  list<Address> probe_addresses;
+  map<Address, ProbePlacement> probe_sites;
   switch (placement) {
     case ProbePlacement::ENTRY:
       probe_group_name += "/ENTRY/";
-      probe_addresses.push_back(fn->start);
+      probe_sites.emplace(fn->start, placement);
       break;
     case ProbePlacement::EXIT:
       probe_group_name += "/EXIT/";
       for (ControlReturn* r : fn->getReturns()) {
-        probe_addresses.push_back(r->addr);
+        probe_sites.emplace(r->addr, placement);
       }
       break;
     case ProbePlacement::BOUNDARY:
       probe_group_name += "/BOUNDARY/";
-      probe_addresses.push_back(fn->start);
+      probe_sites.emplace(fn->start, ProbePlacement::ENTRY);
       for (ControlReturn* r : fn->getReturns()) {
-        probe_addresses.push_back(r->addr);
+        probe_sites.emplace(r->addr, ProbePlacement::EXIT);
       }
       break;
     default:
       throw invalid_argument("Unrecognized probe placement..\n");
   }
+
+  printf("Generating probe groups for : %s\n", probe_group_name.c_str());
 
   auto it = pg_by_name.find(probe_group_name);
   if (it != pg_by_name.end()) {
@@ -133,10 +136,7 @@ ProbeGroup* LiteProbeProvider::generateProbeGroupForFunction(
   } else {
     ProbeGroup* pg = new ProbeGroup(probe_group_name);
     pg->fn = fn;
-
-    probe_addresses.sort();
-    pg->probes = probe_addresses;
-    pg->start = probe_addresses.front();
+    pg->probe_sites = probe_sites;
 
     meta_data_lock.writeLock();
     pg->pg_id = static_cast<ProbeGroupId>(probe_groups.size()); 
@@ -162,18 +162,20 @@ list<ProbeGroup*> LiteProbeProvider::generateProbeGroups(Coordinates original,
       if (!original.getFunction().getSpec().compare("*")) {
         vector<utils::process::Function*> fns = p.getFunctions();
         for (utils::process::Function* fn : fns) {
+          string name = probe_group_name;
           Coordinates new_specific = specific;
-          Function f(fn->name);
+          Function f = original.getFunction();
+          f.setSpec(fn->name);
           new_specific.setFunction(f);
-          probe_group_name += "func(" + f.getSpec() + ")";
+          name += "func(" + f.getSpec() + ")";
 
           if (block_coords.empty()) {
             ProbeGroup* pg = generateProbeGroupForFunction(fn, new_specific,
-              probe_group_name);
+              name);
             pg_list.push_back(pg);
           } else {
             list<ProbeGroup*> fn_pg_list = generateProbeGroups(original, 
-              new_specific, block_coords, probe_group_name);
+              new_specific, block_coords, name);
             std::copy(fn_pg_list.begin(), fn_pg_list.end(),
               std::back_insert_iterator<std::list<ProbeGroup*>>(pg_list));
           }
@@ -202,23 +204,26 @@ list<ProbeGroup*> LiteProbeProvider::generateProbeGroups(Coordinates original,
         utils::process::Function* fn = p.getFunction( // TODO : Get function by name at Process
             specific.getFunction().getSpec());
         vector<utils::process::BasicBlock*> bbs = fn->getBasicBlocks();
+        string name = probe_group_name;
         for (utils::process::BasicBlock* bb : bbs) {
           Coordinates new_specific = specific;
-          // BasicBlock b(int_to_hex_str(bb->start));
-          BasicBlock b(""); // TODO : Fix this
+          BasicBlock b = original.getBasicBlock();
+          b.setSpec(int_to_hex_str(bb->start));
+          // BasicBlock b(""); // TODO : Fix this
           new_specific.setBasicBlock(b);
-          probe_group_name += "bb(" + b.getSpec() + ")";
+          name += "bb(" + b.getSpec() + ")";
 
           ProbeGroup* pg = generateProbeGroupForBasicBlock(fn, bb, new_specific,
-              probe_group_name);
+              name);
           pg_list.push_back(pg);
         } 
       } else {
         utils::process::Function* fn = p.getFunction( // TODO : Get function by name at Process
             specific.getFunction().getSpec());
-        // BasicBlock* bb = fn->getBasicBlock(
-        //    hex_str_to_int(original.getBasicBlock().getSpec()));
-        utils::process::BasicBlock* bb; // TODO: Fix this        
+        utils::process::BasicBlock* bb = fn->getBasicBlock(
+           reinterpret_cast<Address>(hex_str_to_int(original.getBasicBlock().
+               getSpec())));
+        // utils::process::BasicBlock* bb; // TODO: Fix this        
         specific.setBasicBlock(original.getBasicBlock());
         probe_group_name += "bb(" + original.getBasicBlock().getSpec() + ")";
 
@@ -242,12 +247,12 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
   stack<CoordinateType> block_coords;
   CoordinateType point_coord;
   bool is_point_coord_set = false;
-  if (!coords.getInstructionType().getSpec().compare("")) {
+  if (coords.getInstructionType().getSpec().compare("")) {
     point_coord = CoordinateType::INS_TYPE;
     is_point_coord_set = true;
   }
   
-  if (!coords.getOffset().getSpec().compare("")) {
+  if (coords.getOffset().getSpec().compare("")) {
     if (is_point_coord_set) {
       throw invalid_argument("Only one point coordinate type can be given..\n");
     }
@@ -256,29 +261,31 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
     is_point_coord_set = true;
   } 
 
-  if (!coords.getBasicBlock().getSpec().compare("")) {
+  if (coords.getBasicBlock().getSpec().compare("")) {
     block_coords.push(CoordinateType::BASIC_BLOCK);
   } 
   
-  if(!coords.getLoop().getSpec().compare("")) {
+  if(coords.getLoop().getSpec().compare("")) {
     block_coords.push(CoordinateType::LOOP);
   } 
   
-  if (!coords.getFunction().getSpec().compare("")) {
+  if (coords.getFunction().getSpec().compare("")) {
     block_coords.push(CoordinateType::FUNCTION);
   }
 
   Coordinates specific;
   list<ProbeGroup*> pgs = generateProbeGroups(coords, specific, block_coords); 
 
+  printf("After generating probe groups..\n");
+
   ProbeRegistration* pr = new ProbeRegistration;
   for (ProbeGroup* pg : pgs) {
     auto it = pr->pg_by_function.find(pg->fn->name);
     if (it != pr->pg_by_function.end()) {
-      it->second.emplace_back(pg->pg_id, pg->name);
+      it->second.emplace_back(pg->pg_id, pg->name, pg->start);
     } else {
       vector<ProbeGroupInfo> pgs;
-      pgs.emplace_back(pg->pg_id, pg->name);
+      pgs.emplace_back(pg->pg_id, pg->name, pg->start);
       pr->pg_by_function.emplace(pg->fn->name, pgs);
     }
   }
@@ -296,8 +303,57 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
           });
   }
 
+  printf("After generating probe registration..\n");
+
+  LiteProbeInjector lpi;
+  InstrumentationProvider instrumentation = getInstrumentationProvider(
+      instrumentation_provider);
   // Probe injection for each function
-    
+  for (auto it = pr->pg_by_function.begin(); it != pr->pg_by_function.end(); 
+      it++) {
+    vector<ProbeGroupInfo> pgis = it->second;
+    map<Address, ProbeContext> locs;
+    for (ProbeGroupInfo pgi : pgis) {
+      printf("Injecting probes for %s\n", pgi.name.c_str());
+      ProbeGroup* pg = probe_groups[pgi.id].get();
+
+      for (auto it : pg->probe_sites) {
+        ProbeContext context;
+        context.pg_id = pg->pg_id;
+        context.i_id = instrumentation.id;
+        context.placement = it.second;
+        locs.emplace(it.first, context);
+      }
+
+      lpi.injectProbes(locs, instrumentation);
+    }
+  }   
+
+  return *pr;
+}
+
+bool LiteProbeProvider::activate(ProbeInfo ctx) {
+
+}
+
+bool LiteProbeProvider::deactivate(ProbeInfo ctx) {
+
+}
+
+bool LiteProbeProvider::activate(ProbeGroupInfo pg) {
+
+}
+
+bool LiteProbeProvider::deactivate(ProbeGroupInfo pg) {
+
+}
+
+bool LiteProbeProvider::activate(ProbeRegistration registration) {
+
+}
+
+bool LiteProbeProvider::deactivate(ProbeRegistration registraiton) {
+
 }
 
 } /* End liteprobe */

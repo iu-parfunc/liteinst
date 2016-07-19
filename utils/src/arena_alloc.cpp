@@ -24,6 +24,9 @@ using std::make_shared;
 using std::invalid_argument;
 using utils::Address;
 
+utils::concurrency::ConcurrentMap<utils::Address, std::shared_ptr<ArenaPool>> 
+  ArenaAllocator::pools;
+
 /*** ArenaAllocator Implementation **/
 
 ArenaAllocator::ArenaAllocator(int prot) : Allocator(), prot(prot) {
@@ -108,7 +111,7 @@ Arena::Arena(Address addr, int prot) {
   }
 
   Range r = Range(addr, addr + (2LL << 32));
-  if (!r.withinRange(start, true)) {
+  if (!r.withinRange(start, Range::INCLUSIVE)) {
     munmap(start, arena_size);
     throw std::bad_alloc();
   } 

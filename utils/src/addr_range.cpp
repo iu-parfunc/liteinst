@@ -7,6 +7,11 @@ namespace range {
 using std::vector;
 using utils::Address;
 
+const uint8_t Range::START = 0x01;
+const uint8_t Range::END = 0x02;
+const uint8_t Range::EXCLUSIVE = 0x00;
+const uint8_t Range::INCLUSIVE = 0x04;
+
 Range::Range() : start(nullptr), end(nullptr) {
 
 }
@@ -16,12 +21,21 @@ Range::Range(Address start_addr, Address end_addr) :
 
 }
 
-bool Range::withinRange(Address addr, bool inclusive) {
-  if (inclusive) {
-    return (addr >= start && addr <= end);
-  } else {
-    return (addr > start && addr < end);
+bool Range::withinRange(Address addr, uint8_t inclusive) {
+  bool start_inclusive = false;
+  bool end_inclusive = false;
+
+  if (inclusive & START) {
+    start_inclusive = true;
+  } else if (inclusive & END) {
+    end_inclusive = true;
+  } else if (inclusive & INCLUSIVE) {
+    start_inclusive = true;
+    end_inclusive = true;
   }
+
+  return (start_inclusive ? addr >= start : addr > start)
+    && (end_inclusive ? addr <= end : addr < end);
 }
 
 vector<Range> Range::getBlockedRange(int32_t block_size, bool aligned) {
@@ -60,7 +74,7 @@ vector<Range> Range::getBlockedRange(int32_t block_size, bool aligned) {
 }
 
 int64_t Range::distanceFromRange(Address addr) {
-  if ((withinRange(addr, true))) {
+  if ((withinRange(addr, INCLUSIVE))) {
     return 0;
   } else if (addr < start) {
     return (int64_t) addr - (int64_t) start;
@@ -69,10 +83,11 @@ int64_t Range::distanceFromRange(Address addr) {
   }
 }
 
-bool Range::overlapsWith(Range r) {
-  if (r.withinRange(start, true) ||
-      r.withinRange(end, true) || 
-      (start < r.start && end > r.end)) {
+bool Range::overlapsWith(Range r, uint8_t inclusive) {
+  if (withinRange(r.start, inclusive) ||
+      withinRange(r.end, inclusive) || 
+      (start < r.start && end > r.end) ||
+      (start > r.start && end < r.end)) {
     return true;
   } 
   return false;

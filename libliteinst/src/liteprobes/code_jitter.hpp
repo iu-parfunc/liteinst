@@ -12,8 +12,8 @@ namespace liteprobes {
 class CodeJitter {
   public:
     std::unique_ptr<Springboard> emitSpringboard(const CoalescedProbes& cp, 
-        utils::Address target, ProbeContext& context, InstrumentationFunction fn);
-    int64_t getTrampolineSize(int64_t relocation_size);
+        utils::Address target, const InstrumentationProvider& provider);
+    int64_t getSpringboardSize(const CoalescedProbes& cp);
 
 };
 

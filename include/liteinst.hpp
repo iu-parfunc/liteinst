@@ -31,7 +31,7 @@ namespace liteinst {
 
 /// This is used to specify which provider needs to be selected
 /// at initialization time.
-enum class ProviderType { ZCA, FINSTRUMENT, DTRACE, DYNINST, RPROBES };
+enum class ProviderType { ZCA, FINSTRUMENT, DTRACE, DYNINST, LITEPROBES };
 
 /// In the future we will aim to support an open universe of probe
 /// providers.  In the short term, we explicitly enumerate the probe
@@ -65,6 +65,7 @@ enum class ProbeGroupType : uint8_t {
 enum class ProbePlacement : uint8_t { 
   ENTRY,
   EXIT,
+  NONE,
   BOUNDARY /* ENTRY + EXIT */
 };
 
@@ -75,15 +76,20 @@ struct ProbeContext {
   ProbePlacement placement;
 };
 
-struct ProbeMetaData {
+struct ProbeInfo {
   utils::Address address;
-  std::string fn_name;
+  ProbeContext ctx;
 };
 
 class ProbeAxis {
   public:
-    ProbeAxis(std::string spec) : spec(spec) {
+    ProbeAxis(std::string spec, ProbePlacement placement) : spec(spec),
+      placement(placement) {
 
+    }
+
+    virtual void setSpec(std::string ss) {
+      spec = ss;
     }
 
     virtual void setPlacement(ProbePlacement p) {
@@ -105,40 +111,47 @@ class ProbeAxis {
 
 class Module : public ProbeAxis {
   public:
-    Module(std::string spec = "") : ProbeAxis(spec) {
+    Module(std::string spec = "", ProbePlacement p = ProbePlacement::NONE) : 
+      ProbeAxis(spec, p) {
     }
 };
 
 class Function : public ProbeAxis {
   public:
-    Function(std::string spec = "") : ProbeAxis(spec) {
+    Function(std::string spec = "", ProbePlacement p = ProbePlacement::NONE) : 
+      ProbeAxis(spec, p) {
     }
 };
 
 class Loop : public ProbeAxis {
   public:
-    Loop(std::string spec = "") : ProbeAxis(spec) {
+    Loop(std::string spec = "", ProbePlacement p = ProbePlacement::NONE) : 
+      ProbeAxis(spec, p) {
     }
 };
 
 class BasicBlock : public ProbeAxis {
   public:
-    BasicBlock(std::string spec = "") : ProbeAxis(spec) {
+    BasicBlock(std::string spec = "", ProbePlacement p = ProbePlacement::NONE) :
+      ProbeAxis(spec, p) {
     }
 };
 
 class Offset : public ProbeAxis {
   public:
-    Offset(std::string spec = "") : ProbeAxis(spec) {
+    Offset(std::string spec = "", ProbePlacement p = ProbePlacement::NONE) :
+      ProbeAxis(spec, p) {
     }
 };
 
 class InstructionType : public ProbeAxis {
   public:
-    InstructionType(std::string spec = "") : ProbeAxis(spec) {
+    InstructionType(std::string spec = "", ProbePlacement p = ProbePlacement::NONE) :
+      ProbeAxis(spec, p) {
     } 
 };
 
+/*
 class ProbeGroup {
   public:
     ProbeGroupId id;
@@ -150,6 +163,7 @@ class ProbeGroup {
     Offset offset;
     ProbePlacement placement;
 };
+*/
 
 /// Opaque identifier for uniquely identifying a probe group
 typedef uint64_t ProbeGroupId;
@@ -160,15 +174,17 @@ typedef void (*InstrumentationFunction) ();
 
 class InstrumentationProvider {
   public:
+    InstrumentationId id;
+
     InstrumentationProvider(std::string name, InstrumentationFunction entry, 
         InstrumentationFunction exit) : name(name), entry(entry), exit(exit) {
     }
 
-    InstrumentationFunction getEntryInstrumentation() {
+    InstrumentationFunction getEntryInstrumentation() const {
       return entry;
     }
 
-    InstrumentationFunction getExitInstrumentation() {
+    InstrumentationFunction getExitInstrumentation() const {
       return exit;
     }
 
@@ -217,17 +233,17 @@ class Coordinates {
     }
 
     Coordinates& setProbePlacement(ProbePlacement placement) {
-      if (!ins_type.getSpec().compare("")) {
+      if (ins_type.getSpec().compare("")) {
         ins_type.setPlacement(placement);
-      } else if (!offset.getSpec().compare("")) {
+      } else if (offset.getSpec().compare("")) {
         offset.setPlacement(placement);
-      } else if (!basic_block.getSpec().compare("")) {
+      } else if (basic_block.getSpec().compare("")) {
         basic_block.setPlacement(placement);
-      } else if (!loop.getSpec().compare("")) {
+      } else if (loop.getSpec().compare("")) {
         loop.setPlacement(placement);
-      } else if (!function.getSpec().compare("")) {
+      } else if (function.getSpec().compare("")) {
         function.setPlacement(placement);
-      } else if (!module.getSpec().compare("")) {
+      } else if (module.getSpec().compare("")) {
         module.setPlacement(placement);
       } else {
         throw std::invalid_argument("At least one probe coordinate must be" 
@@ -275,7 +291,8 @@ class ProbeGroupInfo {
     std::string name;
     utils::Address start;
 
-    ProbeGroupInfo(ProbeGroupId id, std::string name) : id(id), name(name) {
+    ProbeGroupInfo(ProbeGroupId id, std::string name, utils::Address start) 
+      : id(id), name(name), start(start) {
     }
 };
 
@@ -317,7 +334,7 @@ class ProbeRegistration {
 ///
 /// These methods can be called by accessing the owning ProbeProvider
 /// through the ProbeMetadata pointer itself.
-typedef void (*Callback) (const ProbeMetaData* pmd);
+typedef void (*Callback) (const ProbeInfo* pi);
 
 /// probeId -> probeGroupId
 ///   
@@ -338,11 +355,13 @@ class ProbeProvider {
       ProviderEntry pe(instrumentation.getName());
       auto it = i_providers.find(pe);
       if (it != i_providers.end()) {
+        printf("Error adding provider..\n");
         throw std::invalid_argument("Provider with the same name already " 
             "exists");
       } else {
         lock.lock();
         pe.provider_id = i_provider_counter++;
+        instrumentation.id = pe.provider_id;
         i_providers.insert(
             std::pair<ProviderEntry, InstrumentationProvider>(pe, 
               instrumentation));
@@ -351,12 +370,28 @@ class ProbeProvider {
       }
     }
 
+    const InstrumentationProvider& getInstrumentationProvider(
+        std::string name) {
+      ProviderEntry pe(name);
+      auto it = i_providers.find(pe);
+      if (it != i_providers.end()) {
+        return it->second;
+      } else {
+        throw std::invalid_argument("Provider with the given name does not" 
+            "exist");
+      }
+    }
+
     virtual ProbeRegistration registerProbes(Coordinates coords, 
         std::string instrumentation_provider) = 0;
 
     // Per probe operations
-    virtual bool activate(ProbeContext ctx) = 0;
-    virtual bool deactivate(ProbeContext ctx) = 0;
+    virtual bool activate(ProbeInfo probe) = 0;
+    virtual bool deactivate(ProbeInfo probe) = 0;
+
+    // Per probe group operations
+    virtual bool activate(ProbeGroupInfo pg) = 0;
+    virtual bool deactivate(ProbeGroupInfo pg) = 0;
 
     // Bulk operations
     virtual bool activate(ProbeRegistration registration) = 0;
@@ -393,6 +428,8 @@ class ProbeProvider {
     utils::concurrency::SpinLock lock;
 
 };
+
+ProbeProvider* initializeGlobalProbeProvider(ProviderType type, Callback cb);
 
 
 } /* End liteinst */

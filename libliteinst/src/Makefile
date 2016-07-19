@@ -11,7 +11,7 @@ override CFLAGS += --std=c++11 -g -Wall $(EXTRA_WARNS)
 
 # Setup build macros from env variables
 
-ARGS= -I.. -I$(ROOT)/include -I$(ROOT)/utils/include -I$(ROOT)/deps/distorm/include # -I$(ROOT)/deps/elph/include
+ARGS= -I. -I.. -I./liteprobes -I$(ROOT)/include -I$(ROOT)/utils/include -I$(ROOT)/deps/distorm/include -I$(ROOT)/deps/elph/include
 
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 POINTPATCH = $(INSTALL)/libpointpatch.a 
@@ -52,7 +52,7 @@ libliteinst.a: build
 	$(RM) -rf temp
 
 libliteinst.so: build 
-	$(CXX+) $(LIBS) -shared -Wl,-soname,libliteinst.so -Wl,-init,boostrap -Wl,-init,init_point_patcher -o libliteinst.so $(OBJ) $(DEPS) 
+	$(CXX+) $(LIBS) -shared -Wl,-soname,libliteinst.so  -Wl,-init,init_point_patcher -o libliteinst.so $(OBJ) $(DEPS) # -Wl,-init,boostrap
 
 install: libliteinst.a libliteinst.so
 	(cp libliteinst.so $(INSTALL))
@@ -63,4 +63,4 @@ install: libliteinst.a libliteinst.so
 
 clean:
 	$(FIND) . \( -name '*.o' -o -name '*.a' -o -name '*.so' \) -type f -delete
-	$(RM) $(INSTALL)/libliteinst.*
+	$(RM) -f $(INSTALL)/libliteinst.*

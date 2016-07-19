@@ -14,7 +14,7 @@ namespace range {
 class RangeComparator {
   public:
     bool operator() (const Range& lhs, const Range& rhs) const {
-      return !((Range)lhs).overlapsWith(rhs);
+      return !((Range)lhs).overlapsWith(rhs, Range::INCLUSIVE);
     }
 };
 

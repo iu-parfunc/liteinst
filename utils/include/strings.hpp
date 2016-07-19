@@ -2,6 +2,11 @@
 #ifndef _STRINGS_HPP_
 #define _STRINGS_HPP_
 
+#include <string>
+#include <sstream>
+#include <vector>
+#include <iomanip>
+
 namespace utils {
 namespace strings {
 
@@ -38,22 +43,16 @@ template< typename T >
 std::string int_to_hex_str(T i) {
   std::stringstream stream;
   stream << "0x" 
-         << std::setfill ('0') << std::setw(sizeof(T)*2) 
+         // << std::setfill ('0') << std::setw(sizeof(T)*2) 
          << std::hex << i;
   return stream.str();
 }
 
-template<typename T2, typename T1>
-inline T2 lexical_cast(const T1 &in) {
-  T2 out;
-  std::stringstream ss;
-  ss << in;
-  ss >> out;
-  return out;
-}
-
-int64_t hex_str_to_int(std::string str) {
-  return lexical_cast<int64_t>(str);
+uint64_t hex_str_to_int(std::string str) {
+  std::stringstream converter(str);
+  unsigned int value;
+  converter >> std::hex >> value;
+  return value;
 }
 
 } /* End strings */

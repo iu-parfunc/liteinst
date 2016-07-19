@@ -48,6 +48,8 @@ class Disassembler {
         utils::Address end);
     virtual int findInstructionIndex(utils::Address instruction, 
         const Sequence* seq);
+    virtual int isControlTransferInstruction(const Sequence* seq,
+        int index);
 
 };
 
