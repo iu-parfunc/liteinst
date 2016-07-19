@@ -150,7 +150,7 @@ namespace liteprobes {
 	  new_offset = distance + offset; 
 
 	  // double check if this is correct 
-	  uint64_t jmp_target = (uint64_t) start + src_offset + offset;
+	  uint64_t jmp_target = (uint64_t)start + src_offset + offset;
 	  
 	  if ( jmp_target >= (uint64_t)start && jmp_target < (uint64_t)end) { 
 	    // jmp is within relocation, do nothing special 
