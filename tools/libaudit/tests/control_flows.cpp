@@ -79,9 +79,6 @@ extern "C" void audit();
 
 int main() {
 
-  // readMappedRegions();
-  audit();
-
   // Do nothing.. 
 
 }

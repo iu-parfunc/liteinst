@@ -1,5 +1,5 @@
 
-LIBS = libbar.a
+DEPS= libbar.a
 
 EXTRA_WARNS= -pedantic
 CFLAGS += --std=c++11 -g -Wall $(EXTRA_WARNS)
@@ -16,7 +16,7 @@ bar:
 	ar rc libbar.a bar.o
 
 foo: bar
-	$(CXX+) $(LIBS) -shared -Wl,-soname,libfoo.so -Wl,-init,foo -o libfoo.so foo.o $(DEPS)
+	$(CXX+) -shared -Wl,-soname,libfoo.so -Wl,-init,foo -o libfoo.so foo.o -Wl,--whole-archive $(DEPS) -Wl,--no-whole-archive
 
 build: $(OBJ) foo
 	$(CXX+) -o app.exe app.cpp  
