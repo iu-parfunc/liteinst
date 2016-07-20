@@ -15,7 +15,7 @@
 #include "defs.hpp"
 
 // TODO: Make this work for x86
-#define LITEINST_SET_PROBE_CONTEXT (ctx) \
+#define LITEINST_SET_PROBE_CONTEXT (pi) \
   do { \
     asm ("movq %%rdi, %0\n" \
          "movq %%rsi, %1\n" \
@@ -23,8 +23,8 @@
          "movq %%r10, %3\n" \
          "movq %%r8, %4\n" \
          "movq %%r9, %5\n" \
-       : "=m"(ctx.pg_id), "=m"(ctx.i_id), "=m"(ctx.p_id), "=m"(ctx.placement), \
-         "=m"(ctx.u_regs) \
+       : "=m"(pi.ctx.pg_id), "=m"(pi.ctx.i_id), "=m"(pi.ctx.p_id), "=m"(pi.ctx.placement), \
+         "=m"(pi.ctx.u_regs), "=m"(pi.address) \
   } while (0) 
 
 namespace liteinst {
