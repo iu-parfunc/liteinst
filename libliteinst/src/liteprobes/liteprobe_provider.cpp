@@ -1,7 +1,9 @@
 
 #include "liteprobe_provider.hpp"
 #include "liteprobe_injector.hpp"
+#include "control_flow_router.hpp"
 #include "strings.hpp"
+#include "patcher.h"
 #include <string>
 #include <stack>
 #include <map>
@@ -333,27 +335,61 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
 }
 
 bool LiteProbeProvider::activate(ProbeInfo ctx) {
+  Address addr = ctx.address;
+  Springboard* sb = ControlFlowRouter::getContainingSpringboard(addr);
 
+  Callout* c = sb->getCalloutForProbe(addr);
+
+  assert(c != nullptr);
+
+  Address patch_addr = c->short_circuit.target;
+  patch_64(patch_addr, c->short_circuit.on_state);
+
+  /*
+  sb->lock.lock();
+  if (*reinterpret_cast<uint64_t*>(sb->base) == sb->original) {
+    patch_64(sb->base, sb->punned);
+  }
+  sb->lock.unlock();
+  */
 }
 
 bool LiteProbeProvider::deactivate(ProbeInfo ctx) {
+  Address addr = ctx.address;
+  Springboard* sb = ControlFlowRouter::getContainingSpringboard(addr);
 
+  Callout* c = sb->getCalloutForProbe(addr);
+
+  assert(c != nullptr);
+
+  Address patch_addr = c->short_circuit.target;
+  patch_64(patch_addr, c->short_circuit.off_state);
 }
 
-bool LiteProbeProvider::activate(ProbeGroupInfo pg) {
-
+bool LiteProbeProvider::activate(ProbeGroupInfo pgi) {
+  ProbeGroup* pg = probe_groups[pgi.id].get();
+  for (auto it : pg->probes) {
+    ProbeInfo probe_info;
+    probe_info.address = it.second->address;
+    activate(probe_info);
+  }
 }
 
-bool LiteProbeProvider::deactivate(ProbeGroupInfo pg) {
-
+bool LiteProbeProvider::deactivate(ProbeGroupInfo pgi) {
+  ProbeGroup* pg = probe_groups[pgi.id].get();
+  for (auto it : pg->probes) {
+    ProbeInfo probe_info;
+    probe_info.address = it.second->address;
+    deactivate(probe_info);
+  }
 }
 
 bool LiteProbeProvider::activate(ProbeRegistration registration) {
-
+  // To be done later
 }
 
 bool LiteProbeProvider::deactivate(ProbeRegistration registraiton) {
-
+  // To be done later
 }
 
 } /* End liteprobe */

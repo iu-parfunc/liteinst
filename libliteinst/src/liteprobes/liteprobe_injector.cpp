@@ -187,52 +187,6 @@ list<CoalescedProbes> LiteProbeInjector::coalesceProbes(
     cps.push_back(cp);
   }
 
-  /*
-  // Handle the last probe separately because it might need more space
-  // if it happens to be near the end of the function.
-  Address last = addrs.back();
-  int index = disas.findInstructionIndex(last, seq);
-
-  Address last_probe_start = last;
-  while (fn->end - last_probe_start < 5 && index >= 0) {
-    last_probe_start -= decoded[--index].size;
-  }
-
-  // Handles the case where part of the probe belonging to this instruction may
-  // already have been punned already when instrumenting an instruction 
-  // following this instruction. In that case the probe end should include the 
-  // current probe length for proper springboard processing later on.
-  int last_index = disas.findInstructionIndex(last, seq);
-  int probe_size = 0;
-  while (probe_size < 5 && last_index < seq->n_instructions) {
-    probe_size += decoded[last_index].size;
-    last_index++; 
-  }
-
-  Address last_probe_end = last + probe_size;
-
-  // If an existing coalesced probe (has to be the first one since we are 
-  // at the end of the function and we are inserting probes in reverse order of
-  // addresses) overlaps with the last probes range coalesce 
-  // it with that coalsced probe. If not just create a new coalesced probe.
-  if (cps.front().range.withinRange(last_probe_start, true)) {
-    cps.front().range.end = last + decoded[index].size;
-    Probe* p = probes_by_addr.find(last)->second;
-    cps.front().probes.emplace(last, p);
-  } else {
-    CoalescedProbes cp;
-    map<Address, Probe*> probes;
-
-    Probe* p = probes_by_addr.find(last)->second;
-    probes.emplace(last, p);
-
-    cp.range = Range(last_probe_start, last_probe_end);
-    cp.probes = probes;
-    // Add it to the front since we want later probes first
-    cps.push_front(cp);
-  }
-  */
-  
   ControlFlowRouter router;
   // Now do a second iteration of coalescing of any existing springboards 
   // which are overlapping with the coalesced probes.
@@ -247,15 +201,19 @@ list<CoalescedProbes> LiteProbeInjector::coalesceProbes(
 
   // Finally coalesce all the coalesced probes which may now be overlapping 
   // with each other due to coalescing with springboards.
-  for (auto it = cps.begin(); it != cps.end(); ) {
-    CoalescedProbes& cp = *it;
-    while (++it != cps.end() && (*it).range.overlapsWith(cp.range, 
-          Range::EXCLUSIVE)) {
-     cp.range.unionRange((*it).range); 
-     cp.probes.insert((*it).probes.begin(), (*it).probes.end());
-     cp.springboards.insert(cp.springboards.end(), (*it).springboards.begin(), 
-         (*it).springboards.end());
-     cps.erase(it++);
+  auto it = cps.begin();
+  CoalescedProbes& current = *it;
+  while (++it != cps.end()) {
+    CoalescedProbes& next = *it;
+
+    if (current.range.overlapsWith(next.range, Range::EXCLUSIVE)) {
+      current.range.unionRange(next.range); 
+      current.probes.insert(next.probes.begin(), next.probes.end());
+      current.springboards.insert(current.springboards.end(), 
+        next.springboards.begin(), next.springboards.end());
+      cps.erase(it++);
+    } else {
+      current = next;
     }
   }
 
@@ -354,11 +312,19 @@ bool LiteProbeInjector::injectProbes(map<Address, ProbeContext>& locs,
 
     init_patch_site(sb->base, (sb->displaced.end - sb->displaced.start));
 
+    uint64_t original = *reinterpret_cast<uint64_t*>(sb->base);
+    uint64_t mask = 0x000000FFFFFFFFFF;
+    uint64_t punned_masked = sb->punned & mask;
+    uint64_t original_masked = original & ~mask;
+
+    uint64_t punned = original_masked | punned_masked; 
+
     // patch in the the springboard jump 
-    patch_64(sb->base, sb->punned);
+    patch_64(sb->base, punned);
     // *reinterpret_cast<uint64_t*>(sb->base) = sb->punned;
 
-    assert(*reinterpret_cast<uint64_t*>(sb->base) == sb->punned);
+    assert(*reinterpret_cast<uint64_t*>(sb->base) == punned);
+    printf("PUNNED : %p\n", punned);
 
     CoalescedProbes cp;
     auto res = cps_map.find(sb->base);

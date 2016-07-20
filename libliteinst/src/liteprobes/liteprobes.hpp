@@ -20,8 +20,10 @@ typedef int offset_t;
 
 struct ShortCircuit {
   utils::Address start;
+  utils::Address target;
   int size;
-  int jump_length;
+  uint64_t off_state;
+  uint64_t on_state;
 };
 
 struct ContextSave {
@@ -120,6 +122,16 @@ class Springboard {
     std::map<utils::Address, std::unique_ptr<Callout>> callouts;
     Return control_return;
     // PatchPoint patch_point;
+    int active_probes;
+    utils::concurrency::SpinLock lock;
+
+    Callout* getCalloutForProbe(utils::Address addr) {
+      auto it = callouts.find(addr);
+      if (it != callouts.end()) {
+        return it->second.get();
+      } 
+      return nullptr;
+    }
 
     Springboard() {
     }

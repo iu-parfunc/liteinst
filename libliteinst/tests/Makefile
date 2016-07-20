@@ -37,7 +37,7 @@ liteinst:
 
 resources:
 	(cd resources; $(CXX+) $(CFLAGS) -O0 test_app_0.cpp -o test_app_0_O0.exe -L.. -ltests) #-L.. -ltests)
-	(cd resources; $(CXX+) $(CFLAGS) -O0 test_app_1.cpp -o test_app_1_O0.exe -L.. -ltests) #-L.. -ltests)
+	(cd resources; $(CXX+) $(CFLAGS) -O3 test_app_1.cpp -o test_app_1_O0.exe -L.. -ltests) #-L.. -ltests)
 	# $(CXX+) $(CFLAGS) -O3 $(RESOURCES)/test_app_0.cpp -o $(RESOURCES)/test_app_0_O3.exe # -L$(BUILD)/ -lliteinst
 
 build: $(OBJ) liteinst 
@@ -52,4 +52,4 @@ test: build resources
 	$(CXX+) $(CFLAGS) $(ARGS) -fPIC -c -Wall -o $@ $<
 
 clean:
-	rm -rf *.o *.exe *.so *.a core.* resources/*.exe resources/core.* resources/vgcore.*
+	rm -rf *.o *.exe *.so *.a core* resources/*.exe resources/core* resources/vgcore.*
