@@ -102,9 +102,11 @@ void liteprobesInfectMain() {
   }
   c_program_path[len] = '\0';
 
+
   ELF *bin = elf64_read(c_program_path);
   unsigned int nb_sym = bin->symtab_num;
   Elf64_Sym **tab = bin->symtab;
+
   Elf64_Half strtab_idx = get_section_idx(bin, ".strtab");
   Elf64_Off strtab_offset = bin->shr[strtab_idx]->sh_offset;
 
@@ -219,8 +221,8 @@ extern "C" void boostrap();
 // __attribute__((visibility("default")))
 __attribute__((constructor))
 void boostrap() {
-  liteinst::liteprobes::liteprobesInfectMain();
   printf("Inside boostrap\n");
+  liteinst::liteprobes::liteprobesInfectMain();
 }
 
 void dummy() {

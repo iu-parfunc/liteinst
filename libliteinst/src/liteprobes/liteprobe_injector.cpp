@@ -152,7 +152,7 @@ list<CoalescedProbes> LiteProbeInjector::coalesceProbes(
     cp.range.end = addrs[i] + decoded[index].size ;
     Address start = addrs[i];
     while (i > 0 && addrs[i] - addrs[i-1] <= 5) {
-      p = probes_by_addr.find(addrs[i])->second;
+      p = probes_by_addr.find(addrs[i-1])->second;
       probes.emplace(addrs[i-1], p);
       start = addrs[i-1];
       i--;
@@ -202,18 +202,19 @@ list<CoalescedProbes> LiteProbeInjector::coalesceProbes(
   // Finally coalesce all the coalesced probes which may now be overlapping 
   // with each other due to coalescing with springboards.
   auto it = cps.begin();
-  CoalescedProbes& current = *it;
+  CoalescedProbes* current = &(*it);
   while (++it != cps.end()) {
-    CoalescedProbes& next = *it;
+    CoalescedProbes* next = &(*it);
 
-    if (current.range.overlapsWith(next.range, Range::EXCLUSIVE)) {
-      current.range.unionRange(next.range); 
-      current.probes.insert(next.probes.begin(), next.probes.end());
-      current.springboards.insert(current.springboards.end(), 
-        next.springboards.begin(), next.springboards.end());
+    if (current->range.overlapsWith(next->range, Range::EXCLUSIVE)) {
+      current->range.unionRange(next->range); 
+      current->probes.insert(next->probes.begin(), next->probes.end());
+      current->springboards.insert(current->springboards.end(), 
+        next->springboards.begin(), next->springboards.end());
       cps.erase(it++);
     } else {
-      current = next;
+      current = next; // Due to this assignment we have to use pointers instead 
+                      // of regular references that we get from the iterator
     }
   }
 

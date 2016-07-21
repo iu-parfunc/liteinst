@@ -1,9 +1,34 @@
 
+#include "liteinst.hpp"
 #include "control_flow_router.hpp"
 #include "signals.hpp"
 
-// namespace liteinst {
-// namespace liteprobes {
+static liteinst::ProbeProvider* p = nullptr;
+
+volatile sig_atomic_t entry_counter = 0;
+volatile sig_atomic_t exit_counter = 0;
+
+void entryInstrumentation1() {
+  // printf("Entry..\n");
+  entry_counter++;
+  return;
+}
+
+void exitInstrumentation1() {
+  // printf("Exit..\n");
+  exit_counter++;
+}
+
+__attribute__((destructor))
+void teardown() {
+  // assert(entry_counter == 269932720);
+  // assert(exit_counter == 269932720);
+
+  printf("DONE..\n");
+}
+
+namespace liteinst {
+namespace liteprobes {
 
 using namespace utils::signals;
 
@@ -19,8 +44,29 @@ void init() {
 
   SignalHandlerRegistry::registerSignalHandler(reg);
 
-  printf("Hello.. World..\n");
+  printf("Installed signal handler..\n");
+
+  if (p == nullptr) {
+    p = initializeGlobalProbeProvider(ProviderType::LITEPROBES,
+      nullptr);
+  }
+
+  InstrumentationProvider i_provider("i_2", entryInstrumentation1, 
+      exitInstrumentation1);
+
+  p->registerInstrumentationProvider(i_provider);
+  printf("Registered probe provider..\n");
+
+  Coordinates coords;
+  coords.setFunction(liteinst::Function("*"));
+  coords.setProbePlacement(ProbePlacement::BOUNDARY);
+
+  ProbeRegistration pr = p->registerProbes(coords, "i_2"); 
+
+  printf("Registered probes..\n");
+
+  // CHECK(pr.getProbedFunctions().size() == process.getFunctions().size());
 }
 
-// }
-// }
+}
+}

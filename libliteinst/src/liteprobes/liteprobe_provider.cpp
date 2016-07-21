@@ -313,11 +313,18 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
   // Probe injection for each function
   for (auto it = pr->pg_by_function.begin(); it != pr->pg_by_function.end(); 
       it++) {
+
     vector<ProbeGroupInfo> pgis = it->second;
     map<Address, ProbeContext> locs;
     for (ProbeGroupInfo pgi : pgis) {
+
       printf("Injecting probes for %s\n", pgi.name.c_str());
       ProbeGroup* pg = probe_groups[pgi.id].get();
+
+      if (pg->fn->end - pg->fn->start < 5) {
+        printf("Skipping small function %s\n", pg->fn->name.c_str());
+        goto outer;
+      }
 
       for (auto it : pg->probe_sites) {
         ProbeContext context;
@@ -329,6 +336,9 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
 
       lpi.injectProbes(locs, instrumentation);
     }
+
+outer:
+    ;
   }   
 
   return *pr;
