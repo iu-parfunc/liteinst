@@ -225,6 +225,6 @@ void boostrap() {
   liteinst::liteprobes::liteprobesInfectMain();
 }
 
-void dummy() {
+extern "C" void dummy() {
   printf("Dummy..\n");
 }

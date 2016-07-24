@@ -1,5 +1,6 @@
 
 #include "liteinst.hpp"
+#include "process.hpp"
 #include "control_flow_router.hpp"
 #include "signals.hpp"
 
@@ -24,6 +25,7 @@ void teardown() {
   // assert(entry_counter == 269932720);
   // assert(exit_counter == 269932720);
 
+  printf("ENTRY : %lu EXIT : %lu\n", entry_counter, exit_counter);
   printf("DONE..\n");
 }
 
@@ -58,7 +60,7 @@ void init() {
   printf("Registered probe provider..\n");
 
   Coordinates coords;
-  coords.setFunction(liteinst::Function("*"));
+  coords.setFunction("*");
   coords.setProbePlacement(ProbePlacement::BOUNDARY);
 
   ProbeRegistration pr = p->registerProbes(coords, "i_2"); 

@@ -2,7 +2,7 @@
 #include <cstdio>
 #include "tests.hpp"
 
-extern void dummy();
+extern "C" void dummy();
 
 long  for_func() {
   int sum = 0;

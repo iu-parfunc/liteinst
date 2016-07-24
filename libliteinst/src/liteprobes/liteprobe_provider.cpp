@@ -3,8 +3,10 @@
 #include "liteprobe_injector.hpp"
 #include "control_flow_router.hpp"
 #include "strings.hpp"
+#include "process.hpp"
 #include "patcher.h"
 #include <string>
+#include <regex>
 #include <stack>
 #include <map>
 #include <list>
@@ -12,8 +14,10 @@
 #include <vector>
 #include <iterator>
 #include <stdexcept>
+#include <set>
 #include <algorithm>
 #include <atomic>
+#include <iostream>
 
 namespace liteinst {
 namespace liteprobes {
@@ -23,13 +27,19 @@ using namespace utils::strings;
 
 using std::string;
 using std::stack;
+using std::regex;
+using std::smatch;
+using std::regex_search;
 using std::list;
 using std::vector;
+using std::set;
 using std::copy;
+using std::inserter;
 using std::map;
 using std::invalid_argument;
 using std::move;
 using std::sort;
+using std::set_difference;
 using std::unique_ptr;
 using std::back_insert_iterator;
 using std::memory_order_relaxed; 
@@ -59,6 +69,98 @@ ProbeGroupByName LiteProbeProvider::pg_by_name;
 ProbeRegistrationVec LiteProbeProvider::probe_registrations;
 
 typedef map<Function, list<ProbeGroup*>> ProbeGroupsByFunction; 
+
+set<utils::process::Function*> getMatchingFunctions(
+    vector<utils::process::Function*> fns, string pattern) {
+  regex include("[^~].+");
+  regex exclude("[~].+");
+  regex both("[^~].+[~].+");
+
+  vector<string> include_patterns;
+  vector<string> exclude_patterns;
+
+  if (pattern.find("*") == 0) {
+    pattern = "." + pattern; // Make it regex friendly
+  }
+
+  printf("PATTERN : %s\n", pattern.c_str());
+  smatch match;
+  if (regex_search(pattern, match, both,
+        std::regex_constants::match_continuous)) {
+    printf("Pattern : %s\n", pattern.c_str());
+    if (match.size() > 0) {
+      vector<string> tokens;
+      tokenize(pattern, tokens, "~");
+
+      tokenize(tokens[0], include_patterns, "/");
+      tokenize(tokens[1], exclude_patterns, "/");
+    }
+  } else if (regex_search(pattern, match, include,
+        std::regex_constants::match_continuous)) {
+    if (match.size() > 0) {
+      tokenize(pattern, include_patterns, "/");
+    }
+  } else if (regex_search(pattern, match, exclude,
+        std::regex_constants::match_continuous)) {
+    if (match.size() > 0) {
+      tokenize(pattern, exclude_patterns, "/");
+    }
+  }
+
+  set<utils::process::Function*> all;
+  set<utils::process::Function*> included;
+  set<utils::process::Function*> excluded;
+
+  for (utils::process::Function* fn : fns) {
+    all.insert(fn);
+    for (string& include_pattern : include_patterns) {
+      if (!include_pattern.compare("*")) {
+        include_pattern = ".*"; // Make it regex friendly
+      }
+      regex include(include_pattern);
+      if(regex_match(fn->name, include, 
+            std::regex_constants::match_continuous)) {
+        included.insert(fn);
+      }
+    }
+
+    for (string& exclude_pattern : exclude_patterns) {
+      if (!exclude_pattern.compare("*")) {
+        exclude_pattern = ".*"; // Make it regex friendly
+      }
+      regex exclude(exclude_pattern);
+      printf("Matching %s with pattern %s\n", fn->name.c_str(), 
+          exclude_pattern.c_str());
+      if(regex_match(fn->name, exclude, 
+            std::regex_constants::match_continuous)) {
+        excluded.insert(fn);
+      }
+    }
+  }
+
+  printf("INCLUDED : \n");
+  for (utils::process::Function* fn : included) {
+    printf("%s\n", fn->name.c_str());
+  }
+
+  printf("EXCLUDED : \n");
+  for (utils::process::Function* fn : excluded) {
+    printf("%s\n", fn->name.c_str());
+  }
+
+  set<utils::process::Function*> result;
+  if (included.size() > 0 && excluded.size() > 0) {
+    set_difference(included.begin(), included.end(), excluded.begin(), 
+        excluded.end(), inserter(result, result.begin()));
+  } else if (excluded.size() > 0) {
+    set_difference(all.begin(), all.end(), excluded.begin(),
+        excluded.end(), inserter(result, result.begin()));
+  } else {
+    return included;
+  }
+
+  return result;
+}
 
 ProbeGroup* LiteProbeProvider::generateProbeGroupForBasicBlock(
     utils::process::Function* fn, utils::process::BasicBlock* bb, 
@@ -160,10 +262,16 @@ list<ProbeGroup*> LiteProbeProvider::generateProbeGroups(Coordinates original,
   utils::process::Process p;
   list<ProbeGroup*> pg_list;
   switch (type) {
-    case CoordinateType::FUNCTION:
-      if (!original.getFunction().getSpec().compare("*")) {
+    case CoordinateType::FUNCTION: {
         vector<utils::process::Function*> fns = p.getFunctions();
-        for (utils::process::Function* fn : fns) {
+        string spec = original.getFunction().getSpec();
+
+        set<utils::process::Function*> filtered = getMatchingFunctions(fns, 
+            spec); 
+
+        printf("FILTERED SIZE : %lu\n", filtered.size());
+
+        for (utils::process::Function* fn : filtered) {
           string name = probe_group_name;
           Coordinates new_specific = specific;
           Function f = original.getFunction();
@@ -181,22 +289,6 @@ list<ProbeGroup*> LiteProbeProvider::generateProbeGroups(Coordinates original,
             std::copy(fn_pg_list.begin(), fn_pg_list.end(),
               std::back_insert_iterator<std::list<ProbeGroup*>>(pg_list));
           }
-        }
-      } else {
-        utils::process::Function* fn = p.getFunction(original.getFunction().
-            getSpec());
-        specific.setFunction(original.getFunction());
-        probe_group_name += "func(" + original.getFunction().getSpec() + ")";
-
-        if (block_coords.empty()) {
-          ProbeGroup* pg = generateProbeGroupForFunction(fn, specific,
-            probe_group_name);
-          pg_list.push_back(pg);
-        } else {
-          list<ProbeGroup*> fn_pg_list = generateProbeGroups(original, 
-            specific, block_coords, probe_group_name);
-          std::copy(fn_pg_list.begin(), fn_pg_list.end(),
-            std::back_insert_iterator<std::list<ProbeGroup*>>(pg_list));
         }
       }
       break;

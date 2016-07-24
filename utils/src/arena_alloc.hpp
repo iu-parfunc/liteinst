@@ -64,11 +64,6 @@ class ArenaPool {
 class ArenaAllocator : public Allocator {
   friend AllocatorFactory;
 
-  private:
-    static utils::concurrency::ConcurrentMap<utils::Address,
-      std::shared_ptr<ArenaPool>> pools;  // putIfAbsent
-    int prot;
-
   public:
 
     /** \brief Creates an arena allocator
@@ -93,6 +88,11 @@ class ArenaAllocator : public Allocator {
     *  allocated memory will be deallocated at destructionof the allocator.
     */
    bool removeAllocation(utils::Address address);
+
+  private:
+    static utils::concurrency::ConcurrentMap<utils::Address,
+      std::shared_ptr<ArenaPool>> pools;  // putIfAbsent
+    int prot;
 
 };
 

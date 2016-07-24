@@ -2,7 +2,7 @@
 #include <cstdio>
 #include "tests.hpp"
 
-extern void dummy();
+extern "C" void dummy();
 
 void __attribute__ ((noinline)) five_bytes_func() {
   __asm(".int 0x00401f0f");

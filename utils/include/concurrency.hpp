@@ -97,11 +97,14 @@ class SpinLock {
 class ReadWriteLock {
   public:
     inline void readLock() {
-      /*
       if (tx_lock.isSet() && tx_lock.isOwner()) {
         // Short circuit. We already have the exclusive lock.
         return;
-      }*/
+      }
+
+      if (w_lock.isSet() && w_lock.isOwner()) {
+        return;
+      }
 
       r_lock.lock();
       while (num_writers != 0); 
@@ -117,11 +120,10 @@ class ReadWriteLock {
     }
 
     inline void readUnlock() {
-      /*
       if (tx_lock.isSet() && tx_lock.isOwner()) {
         // Short circuit. We already have the exclusive lock.
         return;
-      }*/
+      }
 
       r_lock.lock();
       num_readers--;
@@ -133,11 +135,10 @@ class ReadWriteLock {
     }
 
     inline void writeLock() {
-      /*
       if (tx_lock.isSet() && tx_lock.isOwner()) {
         // Short circuit. We already have the exclusive lock.
         return;
-      }*/
+      }
 
       w_lock.lock();
       assert(w_lock.isOwner());
@@ -151,11 +152,10 @@ class ReadWriteLock {
     }
 
     inline void writeUnlock() {
-      /*
       if (tx_lock.isSet() && tx_lock.isOwner()) {
         // Short circuit. We already have the exclusive lock.
         return;
-      }*/
+      }
 
       num_writers--;
       assert(num_writers == 0);
@@ -168,26 +168,27 @@ class ReadWriteLock {
     }
 
     inline bool isSet() {
-      return r_lock.isSet() && w_lock.isSet();
+      return tx_lock.isSet() || r_lock.isSet() || w_lock.isSet();
     }
 
-    /*
+    inline bool isOwner() {
+      return tx_lock.isOwner() || r_lock.isOwner() || w_lock.isOwner();
+    }
+
     inline void exclusiveLock() {
       w_lock.lock();
       tx_lock.lock();
     }
 
-    inline void exclusiveLock() {
+    inline void exclusiveUnlock() {
       tx_lock.unlock();
       w_lock.unlock();
     }
 
-    */
-
   private:
     SpinLock r_lock;
     SpinLock w_lock;
-    // SpinLock tx_lock(true);
+    SpinLock tx_lock;
     int32_t num_readers = 0;
     int32_t num_writers = 0;
 };
@@ -200,12 +201,16 @@ class ConcurrentMap {
     typedef typename std::map<Key, T, Compare>::iterator Iterator;
     typedef typename std::pair<Iterator, bool> InsertResult;
 
+    ConcurrentMap() {
+      printf("CAAAAAAAAAAAAAAAAAAAAAAAME HERRRRRRRRREEEEEEEEeE...\n");
+    }
+
     void acquireUpdateLock() {
-      rw_lock.writeLock();
+      rw_lock.exclusiveLock();
     }
 
     void releaseUpdateLock() {
-      rw_lock.writeUnlock();
+      rw_lock.exclusiveUnlock();
     }
 
     // TODO: Make a proper wrapper. Currently this exposes 

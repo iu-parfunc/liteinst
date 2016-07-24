@@ -56,6 +56,13 @@ Address punAddress(Address addr, int64_t size,
     i++; clobbered_instruction_count++;
   }
 
+  if (clobbered_instruction_count == 1) {
+    unique_ptr<Allocator> allocator = AllocatorFactory::getAllocator(
+        AllocatorType::ARENA);
+    Address target = allocator->getAllocation(addr, size); 
+    return target;
+  }
+
   assert(probe_size >= 5);
 
   int32_t rel_addr = 0x0;
@@ -69,6 +76,8 @@ Address punAddress(Address addr, int64_t size,
   Range heap = p.getHeap();
   Range text = p.getText();
   Address target = nullptr;
+  unique_ptr<Allocator> allocator = AllocatorFactory::getAllocator(
+      AllocatorType::FIXED);
   for (int i = invalid_opcodes.size() - 1; i >= 0 ; i--) {
     for (int j = clobbered_instruction_count - 2; j >= 0 ; j--) {
       int32_t rel_copy = rel_addr;
@@ -83,10 +92,7 @@ Address punAddress(Address addr, int64_t size,
       if ((int64_t) target > 0 && target > text.end) {
         if (!(stack.withinRange(target, Range::INCLUSIVE) 
             || heap.withinRange(target, Range::INCLUSIVE))) {
-          // fprintf(stderr, "[Allocator] Trying : %p\n", target);
-          unique_ptr<Allocator> allocator = 
-            AllocatorFactory::getAllocator(AllocatorType::FIXED);
-
+          fprintf(stderr, "[Allocator] Trying : %p\n", target);
           target = allocator->getAllocation(target, size);
           if (target != nullptr) {
             printf("Trampoline at : %p\n", target);
@@ -286,8 +292,13 @@ bool LiteProbeInjector::injectProbes(map<Address, ProbeContext>& locs,
   map<Address, const CoalescedProbes> cps_map;
   for (const CoalescedProbes& cp : cps) {
 
+    printf("Creating spring board for function %s at %p\n", fn->name.c_str(),
+        cp.range.start);
     // Create the new springboard for this coalesced probe
     unique_ptr<Springboard> sb = makeSpringboard(cp, seq, provider);
+
+    printf("Created spring board for function %s at %p\n", fn->name.c_str(),
+        sb.get());
 
     if (sb == nullptr) {
       // Release all the created springboards

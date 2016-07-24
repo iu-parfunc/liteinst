@@ -9,8 +9,8 @@ INSTALL= $(ROOT)/build/lib
 #  gcc --std=gnu99
 #  icc -- ?????
 # it seems that icc also accepts the flag std=gnu99, good.
-CC ?= icc
-CXX ?= icpc
+CC= gcc
+CXX= g++ 
 
 CODE = patcher.c
 OBJ0 = $(CODE:.cpp=.o)

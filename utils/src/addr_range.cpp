@@ -42,11 +42,11 @@ vector<Range> Range::getBlockedRange(int32_t block_size, bool aligned) {
   vector<Range> ranges;
   if (aligned ) { 
     Address initial_block_start = start - (uint64_t) start % block_size;
-    Address final_block_end;
-    if ((end - start) > block_size) {
-      final_block_end = end - (uint64_t) end % block_size;
-    } else {
-      final_block_end = initial_block_start + block_size;
+
+    Address final_block_end = end;
+    int64_t end_offset = (int64_t) end % block_size;
+    if (end_offset > 0) { 
+      final_block_end = end + (block_size - end_offset);
     }
 
     Address start_ptr = initial_block_start;
@@ -58,13 +58,14 @@ vector<Range> Range::getBlockedRange(int32_t block_size, bool aligned) {
       r.end = end_ptr;
 
       ranges.push_back(r);
+      start_ptr = end_ptr;
     }
   } else {
     Address ptr = start;
     while (ptr < end) {
-      Address next = ptr + block_size;
-      Range r = (next < end) ? Range(ptr, next) : Range(ptr, end);
-      ptr += block_size;
+      Address next = ptr + (block_size - (int64_t) ptr % block_size);
+      Range r = (next <= end) ? Range(ptr, next) : Range(ptr, end);
+      ptr = next;
 
       ranges.push_back(r);
     }

@@ -34,11 +34,15 @@ CODE = $(wildcard liteprobes/*.cpp)
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 
-.PHONY: all build install clean
+.PHONY: all build install clean init
+
+init:
+	$(CXX) --version || echo OK
+	# if [ $(CXX) --version != *"5.3.0"* ]]; then exit 1; fi
 
 all: build
 
-build: $(OBJ) deps
+build: init $(OBJ) deps
 
 deps: 
 	if [ ! -d $(UTILS) ]; then (cd $(ROOT)/utils/src; make install); fi
