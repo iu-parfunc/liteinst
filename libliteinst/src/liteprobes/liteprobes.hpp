@@ -137,8 +137,6 @@ class Springboard {
     }
 
     ~Springboard() {
-      printf("Destroying springboard..\n");
-      fflush(stdout);
     }
 };
 

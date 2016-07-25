@@ -397,10 +397,16 @@ class ProbeProvider {
     virtual bool activate(ProbeRegistration registration) = 0;
     virtual bool deactivate(ProbeRegistration registraiton) = 0;
 
+    static ProbeProvider* getGlobalProbeProvider(ProviderType type, 
+      Callback callback);
+
   protected:
     Callback callback;
 
   private:
+    static std::unique_ptr<ProbeProvider> p;
+    static utils::concurrency::SpinLock lock;
+
     class ProviderEntry {
       public:
         int provider_id;
@@ -425,12 +431,7 @@ class ProbeProvider {
     std::unordered_map<ProviderEntry, InstrumentationProvider, 
       ProviderEntryHasher> i_providers;
     int32_t i_provider_counter;
-    utils::concurrency::SpinLock lock;
-
 };
-
-ProbeProvider* initializeGlobalProbeProvider(ProviderType type, Callback cb);
-
 
 } /* End liteinst */
 

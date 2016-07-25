@@ -4,7 +4,6 @@
 #include "control_flow_router.hpp"
 #include "signals.hpp"
 
-/*
 static liteinst::ProbeProvider* p = nullptr;
 
 volatile sig_atomic_t entry_counter = 0;
@@ -73,5 +72,3 @@ void init() {
 
 }
 }
-
-*/

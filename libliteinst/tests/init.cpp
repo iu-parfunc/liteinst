@@ -16,6 +16,7 @@ namespace liteprobes {
 using namespace utils::signals;
 using utils::Address;
 
+/*
 void liteprobes_sigill_handler(int signum, siginfo_t* siginfo, void* context) {
   printf("In SIGILL..\n");
   // Get the interrupted instruction
@@ -29,6 +30,7 @@ void liteprobes_sigill_handler(int signum, siginfo_t* siginfo, void* context) {
   printf("Rerouting to : %p\n", reroute_addr);
   ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t)reroute_addr;
 }
+*/
 
 void init() {
 
@@ -52,23 +54,6 @@ void init() {
   if(context.shouldExit()) { 
     return;  
   }
-
-  // printf("HEllow wordl!\n");
-
-  /*
-  struct sigaction act;
-  memset( &act, 0, sizeof act);
-  act.sa_sigaction= & trap_handler;
-  act.sa_flags = SA_SIGINFO;
-  sigemptyset(& (act.sa_mask));
-
-  sigaction(SIGINT, &act, NULL);
-
-  int counter = 1;
-  while(counter--) {
-    sleep(1);
-  }
-  */
 }
 
 }

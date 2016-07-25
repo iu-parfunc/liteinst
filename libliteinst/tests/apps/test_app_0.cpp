@@ -2,8 +2,6 @@
 #include <cstdio>
 #include "tests.hpp"
 
-extern "C" void dummy();
-
 long  for_func() {
   int sum = 0;
   for (int i=0; i < 10; i++) {
@@ -81,7 +79,7 @@ int main() {
   // Do nothing.. 
   printf("Inside main..\n");
 
-  dummy();
+  // dummy();
 
   printf("do_while_func..\n");
   do_while_func();
@@ -96,7 +94,7 @@ int main() {
   printf("while_func..\n");
   while_func();
 
-  flag = 1;
+  raise(SIGUSR1);
 
   // boostrap();
 }

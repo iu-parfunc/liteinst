@@ -2,8 +2,6 @@
 #include <cstdio>
 #include "tests.hpp"
 
-extern "C" void dummy();
-
 void __attribute__ ((noinline)) five_bytes_func() {
   __asm(".int 0x00401f0f");
   return;
@@ -81,6 +79,8 @@ int main() {
   tweleve_bytes_func();
 
   printf("Exiting main..\n");
+
+  raise(SIGUSR1);
 
   // boostrap();
 }
