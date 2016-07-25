@@ -52,6 +52,9 @@ build: $(OBJ) liteinst apps
 	$(CXX+) $(LIBS) -shared -Wl,-soname,libtests_deact.so -o libtests_deact.so \
 	 	$(DEACTIVATION_OBJ) -Wl,--whole-archive $(DEPS) -Wl,--no-whole-archive # -Wl,-init,boostrap
 
+test: build
+	python tests.py
+
 .cpp.o:
 	$(CXX+) $(CFLAGS) $(ARGS) -fPIC -c -Wall -o $@ $<
 
