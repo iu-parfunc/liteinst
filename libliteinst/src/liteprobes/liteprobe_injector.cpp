@@ -122,15 +122,54 @@ unique_ptr<Springboard> makeSpringboard(const CoalescedProbes& cp,
   Address target = punAddress(addr, springboard_size, seq, index);
   if (target != nullptr) {
     int32_t relative = target - addr - 5;
-    uint64_t punned = *reinterpret_cast<uint64_t*>(addr);
+    uint64_t punned = 0;
     *reinterpret_cast<uint8_t*>(&punned) = 0xe9; 
-    *reinterpret_cast<uint32_t*>(&(reinterpret_cast<uint8_t*>(&punned)[1])) = 
+    *reinterpret_cast<int32_t*>(&(reinterpret_cast<uint8_t*>(&punned)[1])) = 
       relative; 
     
     unique_ptr<Springboard> sb = cj.emitSpringboard(cp, target, provider);
     sb->punned = punned;
-    sb->original = *reinterpret_cast<uint64_t*>(addr);
+    // Only save first 5 bytes that we overwrite
+    sb->original = *reinterpret_cast<uint64_t*>(addr) & 0x000000FFFFFFFFFF;
+    sb->n_probes = cp.probes.size();
+    sb->active_probes = cp.probes.size();
 
+    map<Address, uint8_t> saved_probe_heads;
+    // Save original (supposedly) values of probe heads before we overwrite 
+    // them with illegal instructions. It might be the case these probe heads
+    // have alredy been overwritten by an existing springboard which covers it.
+    // In that case we are getting the overwritten value. But those will be 
+    // replaced next when we add the saved probe heads of springboards that 
+    // this coalesced probe cover 
+    for (const auto& it : cp.probes) {
+      Address probe_addr = it.first;
+      saved_probe_heads[probe_addr] = *probe_addr; 
+    }
+
+    // Now overwrite with data from existing spring boards 
+    for (Springboard* sb : cp.springboards) {
+      for (const auto& it : sb->saved_probe_heads) {
+        saved_probe_heads[it.first] = it.second;
+      }
+    }
+
+    sb->saved_probe_heads = saved_probe_heads;
+
+    uint64_t marked_probe_heads = *reinterpret_cast<uint64_t*>(sb->base);
+    Address ip = cp.range.start;
+    
+    // We replace a whole word at probe site. Hence 
+    // we need to account for 8 bytes 
+    while (ip < sb->base + 8 && ip < cp.range.end) { 
+      auto it = sb->probes.find(ip);
+      if (it != sb->probes.end()) {
+        int offset = ip - cp.range.start;
+        reinterpret_cast<uint8_t*>(&marked_probe_heads)[offset] = 0x62;
+      }
+      ip += decoded[++index].size;
+    }
+
+    sb->marked_probe_heads = marked_probe_heads;
     return move(sb);
     // patch addr
     //
@@ -371,7 +410,10 @@ bool LiteProbeInjector::injectProbes(map<Address, ProbeContext>& locs,
       no_springboards = (it == subsumed.end()) ? true : false;
       if (no_springboards) {
         while (ip < cp.range.end && index < seq->n_instructions) {
-          *ip = 0x62; // Single byte write. Should be safe. 
+          auto it = sb->probes.find(ip); 
+          if (it != sb->probes.end()) {
+            *ip = 0x62; // Single byte write. Should be safe. 
+          }
           ip += decoded[index++].size;
         }
 
@@ -380,19 +422,22 @@ bool LiteProbeInjector::injectProbes(map<Address, ProbeContext>& locs,
       }
  
       while (ip < (*it)->base) {
-        *ip = 0x62; // Single byte write. Should be safe. 
-        ip += decoded[++index].size;
+        auto it = sb->probes.find(ip); 
+        if (it != sb->probes.end()) {
+          *ip = 0x62; // Single byte write. Should be safe. 
+        }
+        ip += decoded[index++].size;
       }
 
       assert(ip == (*it)->base);
 
-      *ip = 0x62; // Single byte write. Should be safe. 
+      patch_64(ip, (*it)->marked_probe_heads);
+
+      // *ip = 0x62; // Single byte write. Should be safe. 
 
       // Remove the springboard from the consideration of router
       router.removeSpringboard(*it);
 
-      // Skip the spring board punned probe
-      ip += (*it)->probe_length;
       ++it;
     }
   }

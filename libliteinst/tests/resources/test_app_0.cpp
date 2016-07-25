@@ -83,11 +83,17 @@ int main() {
 
   dummy();
 
+  printf("do_while_func..\n");
   do_while_func();
+  printf("for_func..\n");
   for_func();
+  printf("go_to_begin_func..\n");
   go_to_begin_func();
+  printf("go_to_end_func..\n");
   go_to_end_func();
+  printf("if_func..\n");
   if_func();
+  printf("while_func..\n");
   while_func();
 
   flag = 1;

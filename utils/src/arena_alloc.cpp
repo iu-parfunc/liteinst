@@ -102,7 +102,7 @@ Arena::Arena(Address addr, int prot) {
   int page_size = sysconf(_SC_PAGE_SIZE); 
   arena_size = (arena_size / page_size) * page_size + page_size; 
   // Calculate a approximate allocation target address
-  Address mid = addr + (2LL << 32) / 2;
+  Address mid = addr + (1LL << 32) / 2;
   start = (Address) mmap(mid, arena_size, prot, MAP_PRIVATE | MAP_ANONYMOUS, 
       -1, 0);
 
@@ -110,7 +110,7 @@ Arena::Arena(Address addr, int prot) {
     throw std::bad_alloc();
   }
 
-  Range r = Range(addr, addr + (2LL << 32));
+  Range r = Range(addr, addr + (1LL << 32));
   if (!r.withinRange(start, Range::INCLUSIVE)) {
     munmap(start, arena_size);
     throw std::bad_alloc();
