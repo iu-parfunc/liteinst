@@ -50,7 +50,7 @@ microbench : lib
 test: quicktest
 
 # Only the fast-running tests:
-quicktest: lib utils_tests # pointpatch_tests liteinst_tests
+quicktest: lib utils_tests liteinst_tests # pointpatch_tests 
 # pointpatch_tests ... need to make these fast!
 # prof_tests -- RRN: What's the deal with this one?
 

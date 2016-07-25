@@ -48,10 +48,8 @@ void init() {
 
   printf("Installed signal handler..\n");
 
-  if (p == nullptr) {
-    p = initializeGlobalProbeProvider(ProviderType::LITEPROBES,
+  ProbeProvider *p = ProbeProvider::getGlobalProbeProvider(ProviderType::LITEPROBES,
       nullptr);
-  }
 
   InstrumentationProvider i_provider("i_2", entryInstrumentation1, 
       exitInstrumentation1);
