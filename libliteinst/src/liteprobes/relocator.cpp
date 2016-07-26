@@ -163,19 +163,21 @@ namespace liteprobes {
 	    break; 
 	  } else { 
 	    // jmp is to outside of relocation.
-	    // This needs to be improved if displacement is huge 
+	    // This needs to be improved if displacement is huge (or small) 
 	    int displacement_size = bytesNeeded(new_offset);   
-	    if (displacement_size == 1) { 
-	      r.n_instructions = 0; 
-	      delete(r.relocation_offsets); 
-	      r.relocation_offsets = NULL; 
-	      return r;	      
-	    } else if (displacement_size == 2) { 
-	      r.n_instructions = 0; 
-	      delete(r.relocation_offsets); 
-	      r.relocation_offsets = NULL; 
-	      return r;	      
-	    } else if (displacement_size == 4) { 
+	    // if (displacement_size == 1) { 
+	    //   r.n_instructions = 0; 
+	    //   delete(r.relocation_offsets); 
+	    //   r.relocation_offsets = NULL; 
+	    //   return r;	      
+	    // } else if (displacement_size == 2) { 
+	    //   r.n_instructions = 0; 
+	    //   delete(r.relocation_offsets); 
+	    //   r.relocation_offsets = NULL; 
+	    //   return r;	      
+	    
+	    // For now rejit as a size 4Bytes offset.  
+	    if (displacement_size < 8) { 
 	      unsigned char *np = (unsigned char*)&new_offset; 
 	      unsigned char newjmp[5] = {0xe9,np[0],np[1],np[2],np[3]}; 
 	      memcpy(target + dst_offset,newjmp,decodedInstructions[i].size);
@@ -197,11 +199,9 @@ namespace liteprobes {
 	  return r;
 	}
 	break; 
-
-	//case I_RET: 
-	// No special treatment 
-	 
+     		 
       default: 
+       		
 	memcpy(target + dst_offset,start+src_offset,decodedInstructions[i].size);
 
 	dst_offset += decodedInstructions[i].size;
