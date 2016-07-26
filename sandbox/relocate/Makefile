@@ -2,10 +2,15 @@ ROOT= ../../
 INSTALL= $(ROOT)/build/lib
 DEPS_ROOT= $(ROOT)/deps
 
-TARG = relocate_tests.exe
-EXTRA_WARNS= -pedantic 
+EXTRA_WARNS= 
+# -pedantic 
 
-CFLAGS = --std=c++11 -g -Wall $(EXTRA_WARNS) -I$(ROOT)/include -I$(ROOT)/libliteinst/src/liteprobes 
+CFLAGS = --std=c++11 -fpermissive -g -Wall $(EXTRA_WARNS) -I$(ROOT)/include -I$(ROOT)/libliteinst/src/liteprobes -I$(ROOT)/utils/include 
+
+
+TARG = relocate_tests.exe\
+       testcall.exe
+
 
 all: $(TARG)
 
