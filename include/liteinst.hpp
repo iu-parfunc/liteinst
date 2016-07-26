@@ -402,7 +402,9 @@ class ProbeProvider {
     virtual bool activate(ProbeRegistration registration) = 0;
     virtual bool deactivate(ProbeRegistration registraiton) = 0;
 
-    static ProbeProvider* getGlobalProbeProvider(ProviderType type, 
+    static ProbeProvider* getGlobalProbeProvider();
+
+    static ProbeProvider* initializeGlobalProbeProvider(ProviderType type, 
       Callback callback, InitCallback init);
 
     InitCallback init_callback;

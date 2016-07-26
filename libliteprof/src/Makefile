@@ -7,7 +7,7 @@ EXTRA_WARNS= -pedantic
 ARGS= -g -Wall $(EXTRA_WARNS) -I$(ROOT)/include -I$(ROOT)/utils/include -I.
 LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 DEPS = $(INSTALL)/libliteinst.a
-LIBS = 
+LIBS = -pthread
 
 CC+  = $(CC) $(ARGS)
 CXX+ = $(CXX) -std=c++11 $(ARGS)
