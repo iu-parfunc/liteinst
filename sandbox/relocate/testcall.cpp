@@ -60,16 +60,15 @@ int main() {
   unsigned char *fun_data = (unsigned char*)malloc(10000); 
 
   //set_page_rwe(foo, 1024); 
-  set_page_rwe(&fun_data[0], 1024); 
+  if (!set_page_rwe(&fun_data[0], 1024)) { 
+    printf("Setting page Executable failed!\n");
+  }					       
 
   int a = foo(); 
- 
-  // unsigned int count = 64;
-
   
   r.relocate((utils::Address)foo, (utils::Address)foo+65,(utils::Address)fun_data); 
   
-  bar(); 
+  bar();  /* just to have something to easily hook a bp to */ 
   
   printf("After relocation\n"); 
 
