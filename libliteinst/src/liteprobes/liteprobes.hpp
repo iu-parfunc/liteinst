@@ -20,7 +20,6 @@ typedef int offset_t;
 
 struct ShortCircuit {
   utils::Address start;
-  utils::Address target;
   int size;
   uint64_t off_state;
   uint64_t on_state;
@@ -107,21 +106,22 @@ class Springboard {
   public:
     SpringboardType type;
     utils::Address base;
-    int32_t relative_jump;
     int32_t probe_length;    
     bool is_probe_ready;
     std::map<utils::Address, Probe*> probes;
+    std::map<utils::Address, uint8_t> saved_probe_heads;
     utils::range::Range displaced;
     utils::range::Range range;
     uint64_t punned;
     uint64_t original;
-    uint8_t instruction_marked_bytes[8];
+    uint64_t marked_probe_heads;
     int n_relocated;
     int* relocation_offsets;
     int* instruction_offsets;
     std::map<utils::Address, std::unique_ptr<Callout>> callouts;
     Return control_return;
     // PatchPoint patch_point;
+    int n_probes;
     int active_probes;
     utils::concurrency::SpinLock lock;
 
@@ -137,8 +137,6 @@ class Springboard {
     }
 
     ~Springboard() {
-      printf("Destroying springboard..\n");
-      fflush(stdout);
     }
 };
 

@@ -1,7 +1,7 @@
 
 #include "doctest.h"
 #include "concurrency.hpp"
-#include "concurrent_map_test.hpp"
+// #include "concurrent_map_test.hpp"
 
 #include <string>
 #include <iostream>
@@ -9,6 +9,7 @@
 
 using std::cout;
 using std::pair;
+using std::to_string;
 using std::string;
 using std::thread;
 using utils::concurrency::ConcurrentMap;

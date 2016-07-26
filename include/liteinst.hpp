@@ -336,6 +336,10 @@ class ProbeRegistration {
 /// through the ProbeMetadata pointer itself.
 typedef void (*Callback) (const ProbeInfo* pi);
 
+/// Initialization call back function which willl be called when probe provider
+/// gets initialized
+typedef void (*InitCallback) (void);
+
 /// probeId -> probeGroupId
 ///   
 
@@ -345,7 +349,8 @@ typedef void (*Callback) (const ProbeInfo* pi);
 /// /* $exit != offset1&offset2 & $granularity == LOOP*/
 class ProbeProvider {
   public:
-    ProbeProvider(Callback cb) : callback(cb) {
+    ProbeProvider(Callback cb, InitCallback init) : 
+      callback(cb), init_callback(init) {
       // probe_meta_data = new ProbeVec;
     }
 
@@ -397,10 +402,18 @@ class ProbeProvider {
     virtual bool activate(ProbeRegistration registration) = 0;
     virtual bool deactivate(ProbeRegistration registraiton) = 0;
 
+    static ProbeProvider* getGlobalProbeProvider(ProviderType type, 
+      Callback callback, InitCallback init);
+
+    InitCallback init_callback;
+
   protected:
     Callback callback;
 
   private:
+    static std::unique_ptr<ProbeProvider> p;
+    static utils::concurrency::SpinLock lock;
+
     class ProviderEntry {
       public:
         int provider_id;
@@ -425,12 +438,7 @@ class ProbeProvider {
     std::unordered_map<ProviderEntry, InstrumentationProvider, 
       ProviderEntryHasher> i_providers;
     int32_t i_provider_counter;
-    utils::concurrency::SpinLock lock;
-
 };
-
-ProbeProvider* initializeGlobalProbeProvider(ProviderType type, Callback cb);
-
 
 } /* End liteinst */
 

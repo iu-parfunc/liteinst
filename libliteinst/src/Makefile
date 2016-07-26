@@ -55,12 +55,22 @@ libliteinst.a: build
 	$(AR) rc libliteinst.a  $(OBJ) temp/*.o
 	$(RM) -rf temp
 
+INIT = liteprobes/init.o
+
+libliteinst.test.a: build
+	if [ -d libliteinst.test.a ]; then $(RM) -f libliteinst.test.a; fi
+	if [ -d temp ]; then $(RM) -rf temp; fi
+	mkdir temp;cd temp; $(foreach dep,$(DEPS),$(AR) -x ../$(dep);) 
+	$(AR) rc libliteinst.test.a  $(filter-out $(INIT),$(OBJ)) temp/*.o
+	$(RM) -rf temp
+
 libliteinst.so: build 
 	$(CXX+) $(LIBS) -shared -Wl,-soname,libliteinst.so  -Wl,-init,init_point_patcher -o libliteinst.so $(OBJ) $(DEPS) # -Wl,-init,boostrap
 
-install: libliteinst.a libliteinst.so
+install: libliteinst.a libliteinst.test.a libliteinst.so
 	(cp libliteinst.so $(INSTALL))
 	(cp libliteinst.a $(INSTALL))
+	(cp libliteinst.test.a $(INSTALL))
 
 .cpp.o:
 	$(CXX+) -fPIC -c -Wall -o $@ $<

@@ -6,9 +6,10 @@ UTILS=$(ROOT)/utils
 BUILD=$(ROOT)/build/lib
 LITEINST=../src
 LITEPROBES=$(LITEINST)/liteprobes
-RESOURCES=resources
+APPS=apps
 CFLAGS = --std=c++11 -g -Wall $(EXTRA_WARNS) 
-DEPS = $(BUILD)/libliteinst.a
+CCFLAGS = -g -Wall $(EXTRA_WARNS) 
+DEPS = $(BUILD)/libliteinst.test.a
 
 LIBS = -pthread
 
@@ -28,28 +29,34 @@ OBJ  = $(OBJ0:.c=.o)
 # override OBJ  += $(filter-out $LITEPROBES/init.o, $(wildcard $(LITEPROBES)/*.o))
 # override OBJ  += $(wildcard $(UTILS)/src/*.o)
 
-.PHONY: all build install clean
+REG_OBJ = init.o liteprobes_reg_test.o
+ACTIVATION_OBJ = init.o liteprobes_activation_test.o
+DEACTIVATION_OBJ = init.o liteprobes_deactivation_test.o
+
+.PHONY: all build install clean apps
 
 all: build
 
 liteinst:
 	(cd $(LITEINST); make install);
 
-resources:
-	(cd resources; $(CXX+) $(CFLAGS) -O0 test_app_0.cpp -o test_app_0_O0.exe -L.. -ltests) #-L.. -ltests)
-	(cd resources; $(CXX+) $(CFLAGS) -O3 test_app_1.cpp -o test_app_1_O0.exe -L.. -ltests) #-L.. -ltests)
-	# $(CXX+) $(CFLAGS) -O3 $(RESOURCES)/test_app_0.cpp -o $(RESOURCES)/test_app_0_O3.exe # -L$(BUILD)/ -lliteinst
+apps:
+	(cd $(APPS); $(CC+) $(CCFLAGS) -O0 test_app_0.cpp -o test_app_0_O0.exe) #-L.. -ltests)
+	(cd $(APPS); $(CC+) $(CCFLAGS) -O3 test_app_1.cpp -o test_app_1_O3.exe) #-L.. -ltests)
 
-build: $(OBJ) liteinst 
-	$(CXX+) $(LIBS) -shared -Wl,-soname,libtests.so -o libtests.so $(OBJ) -Wl,--whole-archive $(DEPS) -Wl,--no-whole-archive # -Wl,-init,boostrap
+build: $(OBJ) liteinst apps 
+	$(CXX+) $(LIBS) -shared -Wl,-soname,libtests_reg.so -o libtests_reg.so \
+		$(REG_OBJ) -Wl,--whole-archive $(DEPS) -Wl,--no-whole-archive # -Wl,-init,boostrap
+	$(CXX+) $(LIBS) -shared -Wl,-soname,libtests_act.so -o libtests_act.so \
+		$(ACTIVATION_OBJ) -Wl,--whole-archive $(DEPS) -Wl,--no-whole-archive # -Wl,-init,boostrap
+	$(CXX+) $(LIBS) -shared -Wl,-soname,libtests_deact.so -o libtests_deact.so \
+	 	$(DEACTIVATION_OBJ) -Wl,--whole-archive $(DEPS) -Wl,--no-whole-archive # -Wl,-init,boostrap
 
-test: build resources
-	# LD_PRELOAD=`pwd`/libtests.so ./$(RESOURCES)/test_app_0_O0.exe
-	# LD_LIBRARY_PATH=`pwd`/ ./$(RESOURCES)/test_app_0_O0.exe
-	LD_LIBRARY_PATH=`pwd`/ ./$(RESOURCES)/test_app_1_O0.exe
+test: build
+	python tests.py
 
 .cpp.o:
 	$(CXX+) $(CFLAGS) $(ARGS) -fPIC -c -Wall -o $@ $<
 
 clean:
-	rm -rf *.o *.exe *.so *.a core* resources/*.exe resources/core* resources/vgcore.*
+	rm -rf *.o $(APPS)/*.exe *.exe *.so *.a core* $(APPS)/core* $(APPS)/vgcore.*

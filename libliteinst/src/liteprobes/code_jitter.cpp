@@ -18,7 +18,7 @@ using std::memcpy;
 using utils::Address;
 using utils::range::Range;
 
-uint8_t g_short_circuit_near[] = { 0x0f, 0x1f, 0x00 }; /* nop */ 
+uint8_t g_short_circuit_near[] = { 0x66, 0x90 }; /* nop */ 
 int g_short_circuit_near_size = sizeof(g_short_circuit_near) /sizeof(uint8_t); 
 
 uint8_t g_short_circuit_far[] = { 0x0f, 0x1f, 0x44, 0x00, 0x00 }; /* nop */ 
@@ -250,6 +250,19 @@ unique_ptr<Springboard> CodeJitter::emitSpringboard(const CoalescedProbes& cp,
 
     ContextRestore cr = emitContextRestore(tramp_ip);
     tramp_ip += cr.size;
+
+    int8_t jump_distance = tramp_ip - sc.start - sc.size;
+
+    assert(jump_distance < 128);
+
+    uint64_t original = *reinterpret_cast<uint64_t*>(sc.start);
+    uint64_t mask = 0xFFFFFFFFFFFF0000;
+    uint64_t jump = 0x0;
+    uint64_t nop = 0x9066; /* nop */
+    reinterpret_cast<uint8_t*>(&jump)[0] = 0xEB;
+    reinterpret_cast<int8_t*>(&jump)[1] = jump_distance;
+    sc.off_state = (original & mask) | jump; 
+    sc.on_state = (original & mask) | nop; 
 
     Callout* callout = new Callout;
     callout->start = callout_addr;

@@ -7,29 +7,30 @@ namespace liteinst {
 using namespace liteinst;
 using namespace liteinst::liteprobes;
 
-ProbeProvider* PROBE_PROVIDER = NULL;
+using std::unique_ptr;
 
-ProbeProvider* initializeGlobalProbeProvider(ProviderType type, 
-    Callback callback) {
-  if (PROBE_PROVIDER == NULL) {
+unique_ptr<ProbeProvider> ProbeProvider::p = nullptr;
+utils::concurrency::SpinLock ProbeProvider::lock;
+
+ProbeProvider* ProbeProvider::getGlobalProbeProvider(ProviderType type, 
+    Callback callback, InitCallback init) {
+  if (p == nullptr) {
     switch(type) {
       case ProviderType::LITEPROBES:
         fprintf(stderr, "[Probe Provider] Initializing liteprobes provider.\n"); 
-        PROBE_PROVIDER = new LiteProbeProvider(callback);
-        return PROBE_PROVIDER;
+        lock.lock();
+        if (p == nullptr) {
+          p = unique_ptr<ProbeProvider>(new LiteProbeProvider(callback, init));
+        }
+        lock.unlock();
+        break;
       default:
         fprintf(stderr, "Unknown provider type.\n");
         throw -1;
     }
-  } else {
-    throw -1;
   }
 
-  throw -1;
-}
-
-ProbeProvider* getGlobalProbeProvider() {
-  return PROBE_PROVIDER;
+  return p.get();
 }
 
 }

@@ -4,6 +4,7 @@
 #include "control_flow_router.hpp"
 #include "strings.hpp"
 #include "process.hpp"
+#include "assembly.hpp"
 #include "patcher.h"
 #include <string>
 #include <regex>
@@ -24,6 +25,7 @@ namespace liteprobes {
 
 using namespace utils::process;
 using namespace utils::strings;
+using namespace utils::assembly;
 
 using std::string;
 using std::stack;
@@ -408,6 +410,7 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
 
     vector<ProbeGroupInfo> pgis = it->second;
     map<Address, ProbeContext> locs;
+    map<Address, Probe*> probes;
     for (ProbeGroupInfo pgi : pgis) {
 
       printf("Injecting probes for %s\n", pgi.name.c_str());
@@ -427,6 +430,11 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
       }
 
       lpi.injectProbes(locs, instrumentation);
+
+      for (auto& it : locs) {
+        Probe* probe = lpi.getProbe(it.first);
+        pg->probes.emplace(it.first, probe);
+      } 
     }
 
 outer:
@@ -440,32 +448,62 @@ bool LiteProbeProvider::activate(ProbeInfo ctx) {
   Address addr = ctx.address;
   Springboard* sb = ControlFlowRouter::getContainingSpringboard(addr);
 
-  Callout* c = sb->getCalloutForProbe(addr);
-
-  assert(c != nullptr);
-
-  Address patch_addr = c->short_circuit.target;
-  patch_64(patch_addr, c->short_circuit.on_state);
-
-  /*
   sb->lock.lock();
-  if (*reinterpret_cast<uint64_t*>(sb->base) == sb->original) {
-    patch_64(sb->base, sb->punned);
+  if (sb->n_probes > 1) {
+    Callout* c = sb->getCalloutForProbe(addr);
+
+    assert(c != nullptr);
+
+    Address patch_addr = c->short_circuit.start;
+    patch_64(patch_addr, c->short_circuit.on_state);
   }
+
+  if (sb->active_probes == 0) {
+    Address probe_end  = sb->base + sb->probe_length;
+
+    for (const auto& it : sb->saved_probe_heads) {
+      if (it.first >= probe_end) {
+        *it.first = 0x62; // Single byte write. Should be fine.
+        assert(it.first < sb->displaced.end);
+      }
+    }
+
+    patch_64(sb->base, sb->punned | (*(reinterpret_cast<uint64_t*>(sb->base))
+          & 0xFFFFFF0000000000));
+  }
+  sb->active_probes++;
   sb->lock.unlock();
-  */
 }
 
 bool LiteProbeProvider::deactivate(ProbeInfo ctx) {
   Address addr = ctx.address;
   Springboard* sb = ControlFlowRouter::getContainingSpringboard(addr);
 
-  Callout* c = sb->getCalloutForProbe(addr);
+  sb->lock.lock();
+  if (sb->n_probes > 1) {
+    Callout* c = sb->getCalloutForProbe(addr);
 
-  assert(c != nullptr);
+    assert(c != nullptr);
 
-  Address patch_addr = c->short_circuit.target;
-  patch_64(patch_addr, c->short_circuit.off_state);
+    Address patch_addr = c->short_circuit.start;
+    patch_64(patch_addr, c->short_circuit.off_state);
+  }
+
+  if (sb->active_probes == 1) {
+    Address probe_end  = sb->base + sb->probe_length;
+
+    for (const auto& it : sb->saved_probe_heads) {
+      if (it.first >= probe_end) {
+        *it.first = it.second; // Single byte write. Should be fine.
+        assert(it.first < sb->displaced.end);
+      }
+    }
+
+    patch_64(sb->base, sb->original | (*(reinterpret_cast<uint64_t*>(sb->base))
+          & 0xFFFFFF0000000000));
+  }
+  sb->active_probes--;
+  sb->lock.unlock();
 }
 
 bool LiteProbeProvider::activate(ProbeGroupInfo pgi) {
