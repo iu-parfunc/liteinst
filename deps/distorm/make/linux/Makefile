@@ -5,7 +5,7 @@
 TARGET	= libdistorm3.so
 COBJS	= ../../src/mnemonics.o ../../src/wstring.o ../../src/textdefs.o ../../src/prefix.o ../../src/operands.o ../../src/insts.o ../../src/instructions.o ../../src/distorm.o ../../src/decoder.o
 CC	= gcc
-FLAGS	= -fPIC -O2 -Wall -DSUPPORT_64BIT_OFFSET -DDISTORM_STATIC
+FLAGS	= -fPIC -O2 -Wall -DSUPPORT_64BIT_OFFSET -DDISTORM_STATIC -Wno-missing-braces
 
 all: clib
 
