@@ -23,8 +23,7 @@ void init() {
 
   printf("Installed signal handler..\n");
 
-  ProbeProvider *p = ProbeProvider::getGlobalProbeProvider(ProviderType::LITEPROBES,
-      nullptr, nullptr);
+  ProbeProvider *p = ProbeProvider::getGlobalProbeProvider();
   if (p->init_callback != nullptr) {
     p->init_callback();
   }

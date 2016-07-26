@@ -9,10 +9,10 @@ using namespace liteinst::liteprobes;
 
 using std::unique_ptr;
 
-unique_ptr<ProbeProvider> ProbeProvider::p = nullptr;
+unique_ptr<ProbeProvider> ProbeProvider::p;
 utils::concurrency::SpinLock ProbeProvider::lock;
 
-ProbeProvider* ProbeProvider::getGlobalProbeProvider(ProviderType type, 
+ProbeProvider* ProbeProvider::initializeGlobalProbeProvider(ProviderType type, 
     Callback callback, InitCallback init) {
   if (p == nullptr) {
     switch(type) {
@@ -30,6 +30,11 @@ ProbeProvider* ProbeProvider::getGlobalProbeProvider(ProviderType type,
     }
   }
 
+  printf("Init call back : %p\n", p->init_callback);
+  return p.get();
+}
+
+ProbeProvider* ProbeProvider::getGlobalProbeProvider() {
   return p.get();
 }
 

@@ -5,24 +5,35 @@
 using namespace liteinst;
 using namespace utils::process;
 
+int64_t counter = 0;
+
 struct ProfileData {
   int64_t count;
 };
 
 ProfileData* stats;
 
+__attribute__((destructor))
+void tear_down() {
+  printf("Counter value : %lu\n", counter);
+}
+
 void entryInstrumentation() {
+  printf("Entry..\n");
+  counter++;
   stats[0].count++;
   return;
 }
 
 void exitInstrumentation() {
+  printf("Exit..\n");
+  counter++;
   stats[0].count++;
 }
 
 void initCallback() {
-  ProbeProvider* p = liteinst::ProbeProvider::getGlobalProbeProvider(
-      ProviderType::LITEPROBES, nullptr, initCallback);
+  printf("At init call back..\n");
+  ProbeProvider* p = liteinst::ProbeProvider::getGlobalProbeProvider();
 
   InstrumentationProvider i_provider("Sampling", entryInstrumentation, 
       exitInstrumentation);
@@ -49,6 +60,6 @@ void initCallback() {
 
 __attribute__((constructor))
 void initProfiler() {
-  ProbeProvider* p = liteinst::ProbeProvider::getGlobalProbeProvider(
+  ProbeProvider* p = liteinst::ProbeProvider::initializeGlobalProbeProvider(
       ProviderType::LITEPROBES, nullptr, initCallback);
 }

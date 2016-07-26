@@ -1,6 +1,8 @@
 
 #include <cstdio>
 
+// extern "C" void dummy();
+
 long  for_func() {
   int sum = 0;
   for (int i=0; i < 10; i++) {
@@ -77,6 +79,8 @@ int main() {
 
   // Do nothing.. 
   printf("Inside main..\n");
+
+  // dummy();
 
   printf("do_while_func..\n");
   do_while_func();
