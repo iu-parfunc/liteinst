@@ -336,6 +336,10 @@ class ProbeRegistration {
 /// through the ProbeMetadata pointer itself.
 typedef void (*Callback) (const ProbeInfo* pi);
 
+/// Initialization call back function which willl be called when probe provider
+/// gets initialized
+typedef void (*InitCallback) (void);
+
 /// probeId -> probeGroupId
 ///   
 
@@ -345,7 +349,8 @@ typedef void (*Callback) (const ProbeInfo* pi);
 /// /* $exit != offset1&offset2 & $granularity == LOOP*/
 class ProbeProvider {
   public:
-    ProbeProvider(Callback cb) : callback(cb) {
+    ProbeProvider(Callback cb, InitCallback init) : 
+      callback(cb), init_callback(init) {
       // probe_meta_data = new ProbeVec;
     }
 
@@ -398,7 +403,9 @@ class ProbeProvider {
     virtual bool deactivate(ProbeRegistration registraiton) = 0;
 
     static ProbeProvider* getGlobalProbeProvider(ProviderType type, 
-      Callback callback);
+      Callback callback, InitCallback init);
+
+    InitCallback init_callback;
 
   protected:
     Callback callback;

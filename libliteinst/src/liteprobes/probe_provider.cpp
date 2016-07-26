@@ -13,14 +13,14 @@ unique_ptr<ProbeProvider> ProbeProvider::p = nullptr;
 utils::concurrency::SpinLock ProbeProvider::lock;
 
 ProbeProvider* ProbeProvider::getGlobalProbeProvider(ProviderType type, 
-    Callback callback) {
+    Callback callback, InitCallback init) {
   if (p == nullptr) {
     switch(type) {
       case ProviderType::LITEPROBES:
         fprintf(stderr, "[Probe Provider] Initializing liteprobes provider.\n"); 
         lock.lock();
         if (p == nullptr) {
-          p = unique_ptr<ProbeProvider>(new LiteProbeProvider(callback));
+          p = unique_ptr<ProbeProvider>(new LiteProbeProvider(callback, init));
         }
         lock.unlock();
         break;

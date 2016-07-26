@@ -59,4 +59,4 @@ test: build
 	$(CXX+) $(CFLAGS) $(ARGS) -fPIC -c -Wall -o $@ $<
 
 clean:
-	rm -rf *.o $(APPS)/*.exe *.exe *.so *.a core* resources/*.exe resources/core* resources/vgcore.*
+	rm -rf *.o $(APPS)/*.exe *.exe *.so *.a core* $(APPS)/core* $(APPS)/vgcore.*

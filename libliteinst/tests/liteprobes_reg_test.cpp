@@ -40,7 +40,7 @@ TEST_SUITE("Lite Probe Provider Tests");
 TEST_CASE("+ Probe Registration Test") {
 
   ProbeProvider* p = liteinst::ProbeProvider::getGlobalProbeProvider(
-      ProviderType::LITEPROBES, nullptr);
+      ProviderType::LITEPROBES, nullptr, nullptr);
 
   InstrumentationProvider i_provider("i_1", entryInstrumentation, 
       exitInstrumentation);
