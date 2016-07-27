@@ -25,7 +25,9 @@ lib:
 
 #       Ugh, something above wipes the build/ directory... FIXME
 # (cd libpointpatch/src && make CC=$(CC) CXX=$(CXX) CFLAGS="$(CFLAGS) -DNDEBUG" && make install )
-	(cd libliteinst/src   && make CC=$(CC) CXX=$(CXX) CFLAGS='$(CFLAGS) -DNDEBUG' && make install )
+	(cd utils/src   && make CC=$(CC) CXX=$(CXX) && make install )
+	(cd libliteinst/src   && make CC=$(CC) CXX=$(CXX) && make install )
+	(cd libliteprof/src   && make CC=$(CC) CXX=$(CXX) && make install )
 # (cd libcallpatch/src && make CC=$(CC) CXX=$(CXX) CFLAGS="$(CFLAGS) -DNDEBUG" && make install )
 # (cd libubiprof/src   && make CC=$(CC) CXX=$(CXX) CFLAGS='$(CFLAGS) -DNDEBUG' && make install )
 
@@ -125,12 +127,14 @@ testdocker:
 clean:
 # 	(cd instrumentors/finstrument/src/ && make clean)
 # 	(cd profilers/src/ && make clean)
-	(cd libpointpatch/src/ && make clean)
-	(cd libpointpatch/tests/ && make clean)
-	(cd libfastinst/tests/ && make clean)
-	(cd libfastinst/src/ && make clean)
+	# (cd libpointpatch/src/ && make clean)
+	# (cd libpointpatch/tests/ && make clean)
+	# (cd libfastinst/tests/ && make clean)
+	# (cd libfastinst/src/ && make clean)
 # 	(cd libubiprof/tests/ && make clean)
-	(cd libubiprof/src/ && make clean)
+	(cd utils/src/ && make clean);
+	(cd libliteinst/src/ && make clean)
+	(cd libliteprof/src/ && make clean)
 
 	rm -rf ./build run-benchmarks.hi run-benchmarks.exe run-benchmarks.o
 	rm -rf ./doc ./devdoc

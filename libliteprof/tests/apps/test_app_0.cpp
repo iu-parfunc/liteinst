@@ -1,7 +1,7 @@
 
 #include <cstdio>
 
-// extern "C" void dummy();
+extern "C" void dummy();
 
 long  for_func() {
   int sum = 0;
@@ -84,14 +84,20 @@ int main() {
 
   printf("do_while_func..\n");
   do_while_func();
+  do_while_func();
   printf("for_func..\n");
+  for_func();
   for_func();
   printf("go_to_begin_func..\n");
   go_to_begin_func();
+  go_to_begin_func();
   printf("go_to_end_func..\n");
+  go_to_end_func();
   go_to_end_func();
   printf("if_func..\n");
   if_func();
+  if_func();
   printf("while_func..\n");
+  while_func();
   while_func();
 }

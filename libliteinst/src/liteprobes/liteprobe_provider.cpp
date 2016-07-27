@@ -449,13 +449,25 @@ bool LiteProbeProvider::activate(ProbeInfo ctx) {
   Springboard* sb = ControlFlowRouter::getContainingSpringboard(addr);
 
   sb->lock.lock();
+
   if (sb->n_probes > 1) {
     Callout* c = sb->getCalloutForProbe(addr);
 
     assert(c != nullptr);
 
     Address patch_addr = c->short_circuit.start;
-    patch_64(patch_addr, c->short_circuit.on_state);
+    
+    if (*reinterpret_cast<uint64_t*>(patch_addr) == c->short_circuit.on_state) {
+      sb->lock.unlock();
+      return false;
+    } else {
+      patch_64(patch_addr, c->short_circuit.on_state);
+    }
+  } else {
+    if (sb->active_probes == 1) {
+      sb->lock.unlock();
+      return false;
+    }
   }
 
   if (sb->active_probes == 0) {
@@ -463,16 +475,19 @@ bool LiteProbeProvider::activate(ProbeInfo ctx) {
 
     for (const auto& it : sb->saved_probe_heads) {
       if (it.first >= probe_end) {
-        *it.first = 0x62; // Single byte write. Should be fine.
+      *it.first = 0x62; // Single byte write. Should be fine.
         assert(it.first < sb->displaced.end);
       }
     }
 
     patch_64(sb->base, sb->punned | (*(reinterpret_cast<uint64_t*>(sb->base))
           & 0xFFFFFF0000000000));
-  }
+  }   
+  
   sb->active_probes++;
   sb->lock.unlock();
+
+  return true;
 }
 
 bool LiteProbeProvider::deactivate(ProbeInfo ctx) {
@@ -480,6 +495,12 @@ bool LiteProbeProvider::deactivate(ProbeInfo ctx) {
   Springboard* sb = ControlFlowRouter::getContainingSpringboard(addr);
 
   sb->lock.lock();
+
+  if (sb->active_probes == 0) {
+    sb->lock.unlock();
+    return false;
+  }
+
   if (sb->n_probes > 1) {
     Callout* c = sb->getCalloutForProbe(addr);
 
@@ -501,27 +522,36 @@ bool LiteProbeProvider::deactivate(ProbeInfo ctx) {
 
     patch_64(sb->base, sb->original | (*(reinterpret_cast<uint64_t*>(sb->base))
           & 0xFFFFFF0000000000));
-  }
+  }  
+  
   sb->active_probes--;
   sb->lock.unlock();
+
+  return true;
 }
 
 bool LiteProbeProvider::activate(ProbeGroupInfo pgi) {
   ProbeGroup* pg = probe_groups[pgi.id].get();
+  bool result = false;
   for (auto it : pg->probes) {
     ProbeInfo probe_info;
     probe_info.address = it.second->address;
-    activate(probe_info);
+    result |= activate(probe_info);
   }
+
+  return result;
 }
 
 bool LiteProbeProvider::deactivate(ProbeGroupInfo pgi) {
   ProbeGroup* pg = probe_groups[pgi.id].get();
+  bool result = false;
   for (auto it : pg->probes) {
     ProbeInfo probe_info;
     probe_info.address = it.second->address;
-    deactivate(probe_info);
+    result |= deactivate(probe_info);
   }
+
+  return result;
 }
 
 bool LiteProbeProvider::activate(ProbeRegistration registration) {

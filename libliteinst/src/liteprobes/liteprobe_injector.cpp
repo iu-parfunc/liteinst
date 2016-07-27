@@ -166,7 +166,7 @@ unique_ptr<Springboard> makeSpringboard(const CoalescedProbes& cp,
         int offset = ip - cp.range.start;
         reinterpret_cast<uint8_t*>(&marked_probe_heads)[offset] = 0x62;
       }
-      ip += decoded[++index].size;
+      ip += decoded[index++].size;
     }
 
     sb->marked_probe_heads = marked_probe_heads;

@@ -37,6 +37,7 @@ struct Args {
   offset_t i_id_offset;
   offset_t placement_offset;
   offset_t u_regs_offset;
+  offset_t address_offset;
   int size;
 };
 

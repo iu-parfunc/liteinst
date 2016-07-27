@@ -43,11 +43,12 @@ uint8_t g_context_save[] =
 int g_context_save_size = sizeof(g_context_save) / sizeof(uint8_t);
 
 uint8_t g_args[] =
-{ 0x48, 0xbf, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* movabs $00,%rdi */ 
-  0x48, 0xbe, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* movabs $00,%rsi */ 
-  0x66, 0xba, 0x00, 0x00, /* mov $00,%dx */
-  0x41, 0xb2, 0x00,       /* mov $00,%r10b */
-  0x49, 0xb9, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 /* movabs $00,%r9 */ 
+{ 0x48, 0xbf, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* movabs $00,%rdi - pg_id*/ 
+  0x48, 0xbe, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* movabs $00,%rsi - p_id*/ 
+  0x66, 0xba, 0x00, 0x00, /* mov $00,%dx - i_id */
+  0x41, 0xb2, 0x00,       /* mov $00,%r10b - placement */
+  0x49, 0xb8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /* movabs $00,%r8 - u_regs */ 
+  0x49, 0xb9, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 /* movabs $00,%r9 - address */ 
 };
 int g_args_size = sizeof(g_args) / sizeof(uint8_t);
 
@@ -103,7 +104,8 @@ inline ContextSave emitContextSave(Address start) {
   return cs;
 }
 
-inline Args emitArgs(Address start, const ProbeContext& context) {
+inline Args emitArgs(Address start, Address probed_addr,
+    const ProbeContext& context) {
   memcpy(start, g_args, g_args_size);
 
   Args args;
@@ -113,6 +115,7 @@ inline Args emitArgs(Address start, const ProbeContext& context) {
   args.i_id_offset = 22;
   args.placement_offset = 26;
   args.u_regs_offset = 29;
+  args.address_offset = 39; 
   args.size = g_args_size;
 
   // Now write the arguments to the trampoline buffer
@@ -122,6 +125,8 @@ inline Args emitArgs(Address start, const ProbeContext& context) {
   *reinterpret_cast<uint8_t*>(start + args.placement_offset) = 
     static_cast<uint8_t>(context.placement);
   *reinterpret_cast<uint64_t*>(start + args.u_regs_offset) = 0;
+  *reinterpret_cast<uint64_t*>(start + args.address_offset) = 
+    reinterpret_cast<uint64_t>(probed_addr);
 
   return args;
 } 
@@ -238,7 +243,7 @@ unique_ptr<Springboard> CodeJitter::emitSpringboard(const CoalescedProbes& cp,
     ContextSave cs = emitContextSave(tramp_ip);
     tramp_ip += cs.size;
 
-    Args args = emitArgs(tramp_ip, context);
+    Args args = emitArgs(tramp_ip, probed_addr, context);
     tramp_ip += args.size;
 
     const InstrumentationFunction fn = 

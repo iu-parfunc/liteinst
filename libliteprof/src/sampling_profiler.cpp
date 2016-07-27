@@ -9,31 +9,70 @@ int64_t counter = 0;
 
 struct ProfileData {
   int64_t count;
+  int64_t last_snapshot;
 };
 
 ProfileData* stats;
+ProbeProvider* p;
+unsigned int num_funcs;
 
 __attribute__((destructor))
 void tear_down() {
-  printf("Counter value : %lu\n", counter);
+  for (int i=0; i < num_funcs; i++) {
+    if (stats[i].count > 0) {
+      printf("ProbeGroupId : %lu\n", i);
+      printf("Count : %ld\n", stats[i].count);
+    }
+  }
 }
 
 void entryInstrumentation() {
+  ProbeInfo pi;
+  LITEINST_SET_PROBE_INFO(pi);
+
   printf("Entry..\n");
-  counter++;
-  stats[0].count++;
+  /*
+  printf("Probe Group ID : %lu\n", pi.ctx.pg_id);
+  printf("Probe ID : %lu\n", pi.ctx.p_id);
+  printf("Instrumentation ID : %d\n", pi.ctx.i_id);
+  printf("Probe Placement : %d\n", pi.ctx.placement);
+  printf("Register state : %p\n", pi.ctx.u_regs);
+  printf("Address : %p\n", pi.address);
+  */
+
+  stats[pi.ctx.pg_id].count++;
   return;
 }
 
 void exitInstrumentation() {
+  ProbeInfo pi;
+  LITEINST_SET_PROBE_INFO(pi);
+
   printf("Exit..\n");
-  counter++;
-  stats[0].count++;
+  /*
+  printf("Probe Group ID : %lu\n", pi.ctx.pg_id);
+  printf("Probe ID : %lu\n", pi.ctx.p_id);
+  printf("Instrumentation ID : %d\n", pi.ctx.i_id);
+  printf("Probe Placement : %d\n", pi.ctx.placement);
+  printf("Register state : %p\n", pi.ctx.u_regs);
+  printf("Address : %p\n", pi.address);
+  */
+  int64_t current_count = stats[pi.ctx.pg_id].count;
+  int64_t last_snapshot = stats[pi.ctx.pg_id].last_snapshot;
+  if (current_count - last_snapshot > 0) {
+    printf("Deactivating probe group : %lu\n", pi.ctx.pg_id);
+
+    ProbeGroupInfo pgi(pi.ctx.pg_id);
+    bool deactivated = p->deactivate(pgi);
+    if (deactivated) {
+      stats[pi.ctx.pg_id].last_snapshot = stats[pi.ctx.pg_id].count;
+    }
+  }
 }
 
 void initCallback() {
   printf("At init call back..\n");
-  ProbeProvider* p = liteinst::ProbeProvider::getGlobalProbeProvider();
+  p = liteinst::ProbeProvider::getGlobalProbeProvider();
 
   InstrumentationProvider i_provider("Sampling", entryInstrumentation, 
       exitInstrumentation);
@@ -49,12 +88,12 @@ void initCallback() {
 
   printf("Registered probes..\n");
 
-  // Process process;
+  Process process;
 
-  // unsigned int num_funcs = process.getFunctions().size();
-  // assert(pr.getProbedFunctions().size() == num_funcs);
+  num_funcs = process.getFunctions().size();
+  assert(pr.getProbedFunctions().size() == num_funcs);
 
-  stats = new ProfileData[1];
+  stats = new ProfileData[num_funcs]();
   stats[0].count = 0;
 }
 

@@ -15,17 +15,17 @@
 #include "defs.hpp"
 
 // TODO: Make this work for x86
-#define LITEINST_SET_PROBE_CONTEXT (pi) \
+#define LITEINST_SET_PROBE_INFO(pi) \
   do { \
-    asm ("movq %%rdi, %0\n" \
+    __asm volatile ("movq %%rdi, %0\n" \
          "movq %%rsi, %1\n" \
-         "movq %%rdx, %2\n" \
-         "movq %%r10, %3\n" \
+         "movw %%dx, %2\n" \
+         "movb %%r10b, %3\n" \
          "movq %%r8, %4\n" \
          "movq %%r9, %5\n" \
-       : "=m"(pi.ctx.pg_id), "=m"(pi.ctx.i_id), "=m"(pi.ctx.p_id), "=m"(pi.ctx.placement), \
-         "=m"(pi.ctx.u_regs), "=m"(pi.address) \
-  } while (0) 
+       : "=m"(pi.ctx.pg_id), "=m"(pi.ctx.p_id), "=m"(pi.ctx.i_id), "=m"(pi.ctx.placement), \
+         "=m"(pi.ctx.u_regs), "=m"(pi.address)); \
+  } while (0)
 
 namespace liteinst {
 
@@ -74,6 +74,7 @@ struct ProbeContext {
   ProbeGroupId pg_id;
   InstrumentationId i_id;
   ProbePlacement placement;
+  utils::Address u_regs;
 };
 
 struct ProbeInfo {
@@ -290,6 +291,10 @@ class ProbeGroupInfo {
     ProbeGroupId id;
     std::string name;
     utils::Address start;
+
+    ProbeGroupInfo(ProbeGroupId id) : id(id) {
+
+    }
 
     ProbeGroupInfo(ProbeGroupId id, std::string name, utils::Address start) 
       : id(id), name(name), start(start) {
