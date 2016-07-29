@@ -24,7 +24,7 @@ void init() {
   printf("Installed signal handler..\n");
 
   ProbeProvider *p = ProbeProvider::getGlobalProbeProvider();
-  if (p->init_callback != nullptr) {
+  if (p != nullptr && p->init_callback != nullptr) {
     p->init_callback();
   }
 

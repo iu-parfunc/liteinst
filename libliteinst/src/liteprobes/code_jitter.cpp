@@ -29,6 +29,7 @@ uint8_t g_context_save[] =
   0x56, /* push %rsi */
   0x57, /* push %rdi */
   0x50, /* push %rax */
+  0x53, /* push %rbx */
   0x51, /* push %rcx */
   0x52, /* push %rdx */
   0x41, 0x50, /* push %r8 */
@@ -71,6 +72,7 @@ uint8_t g_context_restore[] =
   0x41, 0x58, /* pop %r8 */
   0x5a, /* pop %rdx */
   0x59, /* pop %rcx */
+  0x5b, /* pop %rbx */
   0x58, /* pop %rax */
   0x5f, /* pop %rdi */
   0x5e, /* pop %rsi */

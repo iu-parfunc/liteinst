@@ -274,6 +274,11 @@ list<ProbeGroup*> LiteProbeProvider::generateProbeGroups(Coordinates original,
         printf("FILTERED SIZE : %lu\n", filtered.size());
 
         for (utils::process::Function* fn : filtered) {
+
+          if (fn->start == 0x0 || fn->end == 0x0) {
+            continue;
+          }
+
           string name = probe_group_name;
           Coordinates new_specific = specific;
           Function f = original.getFunction();
@@ -533,10 +538,13 @@ bool LiteProbeProvider::deactivate(ProbeInfo ctx) {
 bool LiteProbeProvider::activate(ProbeGroupInfo pgi) {
   ProbeGroup* pg = probe_groups[pgi.id].get();
   bool result = false;
-  for (auto it : pg->probes) {
-    ProbeInfo probe_info;
-    probe_info.address = it.second->address;
-    result |= activate(probe_info);
+
+  if (pg != nullptr) {
+    for (auto it : pg->probes) {
+      ProbeInfo probe_info;
+      probe_info.address = it.second->address;
+      result |= activate(probe_info);
+    }
   }
 
   return result;
