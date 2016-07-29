@@ -27,7 +27,6 @@ class Relocator {
      */
     Relocations relocate(utils::Address start, utils::Address end,
         utils::Address target);
-
 };
 
 } // End liteprobes
