@@ -10,3 +10,6 @@
 [submodule "deps/doctest"]
 	path = deps/doctest
 	url = git@github.com:onqtam/doctest.git
+[submodule "deps/distorm"]
+	path = deps/distorm
+	url = git@github.com:gdabah/distorm.git
