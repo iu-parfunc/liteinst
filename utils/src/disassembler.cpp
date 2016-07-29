@@ -40,7 +40,7 @@ inline bool isReturn(_DInst i) {
 } 
 
 inline bool isControlTransfer(_DInst i) {
-  return isJump(i) || isReturn(i) || isCall(i) || isHalt(i);
+  return isJump(i) || isReturn(i) || isHalt(i);
 }
 
 const Sequence* Disassembler::disassemble(Address start, Address end) {
