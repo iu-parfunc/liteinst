@@ -60,6 +60,7 @@ class SpinLock {
     }
 
     inline void unlock() {
+      assert(isSet());
       assert(lock_owner == std::this_thread::get_id());
       assert(lock_count != 0);
 
@@ -202,7 +203,6 @@ class ConcurrentMap {
     typedef typename std::pair<Iterator, bool> InsertResult;
 
     ConcurrentMap() {
-      printf("CAAAAAAAAAAAAAAAAAAAAAAAME HERRRRRRRRREEEEEEEEeE...\n");
     }
 
     void acquireUpdateLock() {
