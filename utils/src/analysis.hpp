@@ -31,8 +31,8 @@ class ProcessAnalyzer {
 
     /** \brief Populate function meta data of the current process.
      */
-    virtual void populateFunctions(FunctionsByAddress* fn_by_addr,
-        FunctionsByName* fn_by_name);
+    virtual void populateFunctions(FunctionsByAddress& fn_by_addr,
+        FunctionsByName& fn_by_name);
 
     /** \brief Populate the mapped region meta data within the current process.
      */

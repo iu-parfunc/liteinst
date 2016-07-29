@@ -23,11 +23,10 @@ std::unique_ptr<MappedRegion> Process::invalid_mr;
 std::unique_ptr<Function> Process::invalid_fn;
 
 /// Function start address mappings
-map<Address, Function*>* Process::fn_by_address = new map<Address, Function*>;  
+map<Address, Function*> Process::fn_by_address;
 
 /// Function name mappings
-map<string, unique_ptr<Function>>* Process::fn_by_name = 
-  new map<string, unique_ptr<Function>>;  
+map<string, unique_ptr<Function>> Process::fn_by_name; 
 
 /// Memory region start address mappings
 map<Address, unique_ptr<MappedRegion>>* Process::mapped = 
@@ -72,7 +71,7 @@ Process::Process() {
     assert(stack.start != nullptr);
 
     FunctionAnalyzer fa;
-    for (auto it : *fn_by_address) {
+    for (auto it : fn_by_address) {
       fa.analyzeFunction(*(it.second));
     }
 
@@ -96,12 +95,12 @@ Process::~Process() {
 }
 
 Function* Process::getContainedFunction(Address addr) {
-  auto it = fn_by_address->lower_bound(addr);
-  if (it != fn_by_address->end()) {
+  auto it = fn_by_address.lower_bound(addr);
+  if (it != fn_by_address.end()) {
     if (it->second->start == addr) {
       return it->second;
     } else {
-      if (it != fn_by_address->begin()) {
+      if (it != fn_by_address.begin()) {
         it--;
         return it->second;
       }
@@ -112,8 +111,8 @@ Function* Process::getContainedFunction(Address addr) {
 }
 
 Function* Process::getFunction(Address addr) {
-  auto it = fn_by_address->find(addr);
-  if (it != fn_by_address->end()) {
+  auto it = fn_by_address.find(addr);
+  if (it != fn_by_address.end()) {
     return it->second;
   } else {
     return invalid_fn.get();
@@ -121,8 +120,8 @@ Function* Process::getFunction(Address addr) {
 }
 
 Function* Process::getFunction(std::string name) {
-  auto it = fn_by_name->find(name);
-  if (it != fn_by_name->end()) {
+  auto it = fn_by_name.find(name);
+  if (it != fn_by_name.end()) {
     return it->second.get();
   } else {
     return invalid_fn.get();
@@ -131,7 +130,7 @@ Function* Process::getFunction(std::string name) {
 
 vector<Function*> Process::getFunctions() {
   vector<Function*> fns;
-  for (auto it : *fn_by_address) {
+  for (auto it : fn_by_address) {
     fns.push_back(it.second);
   }
 
@@ -139,7 +138,7 @@ vector<Function*> Process::getFunctions() {
 }
 
 int Process::getNumberOfFunctions() {
-  return fn_by_address->size();
+  return fn_by_address.size();
 }
 
 MappedRegion* Process::getMappedRegion(Address addr) {
@@ -183,7 +182,7 @@ void Process::show(FILE* fp, int nspaces) {
   fprintf(fp, "%sExecutable: %s\n", left_pad.c_str(), 
       pa.getProgramPath().c_str());
 
-  for (auto it : *fn_by_address) {
+  for (auto it : fn_by_address) {
     it.second->show(fp, nspaces + 2);
   }
 
