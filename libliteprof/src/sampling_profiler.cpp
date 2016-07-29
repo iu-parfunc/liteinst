@@ -1,6 +1,8 @@
 
 #include "liteinst.hpp"
 #include "process.hpp"
+#include <pthread.h>
+#include <time.h>
 
 using namespace liteinst;
 using namespace utils::process;
@@ -10,11 +12,28 @@ int64_t counter = 0;
 struct ProfileData {
   int64_t count;
   int64_t last_snapshot;
+  bool active;
 };
 
 ProfileData* stats;
 ProbeProvider* p;
 unsigned int num_funcs;
+
+void* monitor(void* param) {
+
+  struct timespec ts;
+  while (true) {
+    for (int i=0; i < num_funcs; i++) {
+      if(!stats[i].active) {
+        p->activate(i);
+      }
+    }
+
+    ts.tv_sec = 0;
+    ts.tv_nsec = 10000000;
+    nanosleep(&ts, NULL);
+  }
+}
 
 __attribute__((destructor))
 void tear_down() {
@@ -30,7 +49,7 @@ void entryInstrumentation() {
   ProbeInfo pi;
   LITEINST_SET_PROBE_INFO(pi);
 
-  printf("Entry..\n");
+  // printf("Entry..\n");
   /*
   printf("Probe Group ID : %lu\n", pi.ctx.pg_id);
   printf("Probe ID : %lu\n", pi.ctx.p_id);
@@ -48,7 +67,7 @@ void exitInstrumentation() {
   ProbeInfo pi;
   LITEINST_SET_PROBE_INFO(pi);
 
-  printf("Exit..\n");
+  // printf("Exit..\n");
   /*
   printf("Probe Group ID : %lu\n", pi.ctx.pg_id);
   printf("Probe ID : %lu\n", pi.ctx.p_id);
@@ -59,6 +78,7 @@ void exitInstrumentation() {
   */
   int64_t current_count = stats[pi.ctx.pg_id].count;
   int64_t last_snapshot = stats[pi.ctx.pg_id].last_snapshot;
+  /*
   if (current_count - last_snapshot > 0) {
     printf("Deactivating probe group : %lu\n", pi.ctx.pg_id);
 
@@ -66,8 +86,10 @@ void exitInstrumentation() {
     bool deactivated = p->deactivate(pgi);
     if (deactivated) {
       stats[pi.ctx.pg_id].last_snapshot = stats[pi.ctx.pg_id].count;
+      stats[pi.ctx.pg_id].active = false;
     }
   }
+  */
 }
 
 void initCallback() {
@@ -91,10 +113,12 @@ void initCallback() {
   Process process;
 
   num_funcs = process.getFunctions().size();
-  assert(pr.getProbedFunctions().size() == num_funcs);
+  // assert(pr.getProbedFunctions().size() == num_funcs);
 
   stats = new ProfileData[num_funcs]();
-  stats[0].count = 0;
+
+  pthread_t tr;
+  // pthread_create(&tr, NULL, monitor, (void*)NULL);
 }
 
 __attribute__((constructor))
