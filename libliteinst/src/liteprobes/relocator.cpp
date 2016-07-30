@@ -126,7 +126,7 @@ bool validateRewrite(const Sequence* seq, const vector<Rewrite>& rewrites,
   if (disas.isConditionalBranch(r.src_op) || disas.isNearJump(r.src_op)) {
     // Already marked for transformation. Nothing to do here.
     if (r.transformed) {
-      return true;
+      return false;
     }
 
     // Find relative offset size (can be either 8 bits or 32 bits)
