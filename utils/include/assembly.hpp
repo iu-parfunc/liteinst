@@ -37,20 +37,49 @@ class Sequence {
 /// Encodes a given sequence of instructions
 class Assembler {
   public:
-    virtual Code assemble(Sequence seq);
+    static const int JMP_REL8_OPCODE = 0xeb;
+    static const int JMP_REL32_OPCODE = 0xe9;
+
+    static const int JMP_REL8_SZ = 2;
+    static const int JMP_REL32_SZ = 5;
+
+    Code assemble(Sequence seq);
+    int emitInstruction(_DInst ins, utils::Address target);
 
 };
 
 /// Decodes a sequence of encoded instructions
 class Disassembler {
   public:
-    virtual const Sequence* disassemble(utils::Address start,
+    const Sequence* disassemble(utils::Address start,
         utils::Address end);
-    virtual int findInstructionIndex(utils::Address instruction, 
+    int findInstructionIndex(utils::Address instruction, 
         const Sequence* seq);
-    virtual int isControlTransferInstruction(const Sequence* seq,
+    int isControlTransferInstruction(const Sequence* seq,
         int index);
+    
+    // Instrospection methods
+    bool isCall(const _DInst& ins);
 
+    bool isNearCall(const _DInst& i);
+
+    bool isNearJump(const _DInst& i);
+
+    bool isFarJump(const _DInst& ins);
+
+    bool isConditionalJump(const _DInst& i);
+
+    bool isJump(const _DInst& i);
+
+    bool isUnconditionalBranch(const _DInst& i);
+
+    bool isConditionalBranch(const _DInst& ins);
+
+    bool isHalt(const _DInst& i);
+
+    bool isReturn(const _DInst& ins);
+
+    bool isControlTransfer(const _DInst& ins);
 };
 
 } // End assembly

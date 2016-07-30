@@ -9,7 +9,8 @@ LITEPROBES=$(LITEINST)/liteprobes
 APPS=apps
 CFLAGS = --std=c++11 -g -Wall $(EXTRA_WARNS) 
 CCFLAGS = -g -Wall $(EXTRA_WARNS) 
-DEPS = $(BUILD)/libliteinst.test.a
+TEST_DEPS = $(BUILD)/libliteinst.test.a
+DEPS = $(BUILD)/libliteinst.a
 
 LIBS = -pthread
 
@@ -32,6 +33,7 @@ OBJ  = $(OBJ0:.c=.o)
 REG_OBJ = init.o liteprobes_reg_test.o
 ACTIVATION_OBJ = init.o liteprobes_activation_test.o
 DEACTIVATION_OBJ = init.o liteprobes_deactivation_test.o
+STANDALNE_OBJ = liteprobes_toggling.o
 
 .PHONY: all build install clean apps
 
@@ -44,13 +46,16 @@ apps:
 	(cd $(APPS); $(CC+) $(CCFLAGS) -O0 test_app_0.cpp -o test_app_0_O0.exe) #-L.. -ltests)
 	(cd $(APPS); $(CC+) $(CCFLAGS) -O3 test_app_1.cpp -o test_app_1_O3.exe) #-L.. -ltests)
 
+standalone: build 
+	$(CXX+) $(LIBS) $(CFLAGS) liteprobes_toggling.o $(DEPS) -o liteprobes_toggling.exe
+
 build: $(OBJ) liteinst apps 
 	$(CXX+) $(LIBS) -shared -Wl,-soname,libtests_reg.so -o libtests_reg.so \
-		$(REG_OBJ) -Wl,--whole-archive $(DEPS) -Wl,--no-whole-archive # -Wl,-init,boostrap
+		$(REG_OBJ) -Wl,--whole-archive $(TEST_DEPS) -Wl,--no-whole-archive # -Wl,-init,boostrap
 	$(CXX+) $(LIBS) -shared -Wl,-soname,libtests_act.so -o libtests_act.so \
-		$(ACTIVATION_OBJ) -Wl,--whole-archive $(DEPS) -Wl,--no-whole-archive # -Wl,-init,boostrap
+		$(ACTIVATION_OBJ) -Wl,--whole-archive $(TEST_DEPS) -Wl,--no-whole-archive # -Wl,-init,boostrap
 	$(CXX+) $(LIBS) -shared -Wl,-soname,libtests_deact.so -o libtests_deact.so \
-	 	$(DEACTIVATION_OBJ) -Wl,--whole-archive $(DEPS) -Wl,--no-whole-archive # -Wl,-init,boostrap
+	 	$(DEACTIVATION_OBJ) -Wl,--whole-archive $(TEST_DEPS) -Wl,--no-whole-archive # -Wl,-init,boostrap
 
 test: build
 	python tests.py

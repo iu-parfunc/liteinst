@@ -1,11 +1,13 @@
 
 #include <stdexcept>
+#include <vector>
 #include <limits>
 #include <assert.h>
 #include <memory.h> 
 
 #include "relocator.hpp"
 #include "assembly.hpp" 
+#include "addr_range.hpp"
 
 #include "distorm.h"
 #include "mnemonics.h" 
@@ -13,19 +15,28 @@
 namespace liteinst { 
 namespace liteprobes {
 
+using namespace utils::assembly;
+using namespace utils::range;
+
+using std::vector;
 using std::invalid_argument;
 using utils::Address;
 
-struct RelocationArgs {
-  Address start;
-  Address end;
-  Address target;
-};
-
-using namespace utils::assembly;
-
+static const int MAXINT8 = std::numeric_limits<int8_t>::max();
+static const int MININT8 = std::numeric_limits<int8_t>::min();
 static const int MAXINT32 = std::numeric_limits<int32_t>::max();
 static const int MININT32 = std::numeric_limits<int32_t>::min();
+
+struct Rewrite {
+  Address src;
+  Address target;
+  _DInst src_op;
+  vector<_DInst> target_ops;
+  int size;
+  bool transformed;
+  bool opnd_changed;
+  int index;
+};
 
 int bytesNeeded(int64_t v) { 
     
@@ -37,287 +48,474 @@ int bytesNeeded(int64_t v) {
   uint64_t mask1 = 0x00000000000000FF; 
     
   if ( vabs & mask8 ) return 8; 
-    if ( vabs & mask4 ) return 4; 
-    if ( vabs & mask2 ) return 2; 
-    if ( vabs & mask1 ) return 1; 
+  if ( vabs & mask4 ) return 4; 
+  if ( vabs & mask2 ) return 2; 
+  if ( vabs & mask1 ) return 1; 
    
-    return 0; 
+  return 0; 
 }
 
-bool rewrite() {
-
-}
+Rewrite getRewriteRule(const _DInst& ins, Address address, 
+    Range relocation_bounds) {
   
-bool relocateNearCall(_DInst ins, const RelocationArgs& args, 
-    unsigned int& dst_offset, unsigned int& src_offset) {
- int offset_bits = ins.ops[0].size; 
- int type = ins.ops[0].type; 
-
- Address src = args.start + src_offset;
- Address target = args.target + dst_offset; 
-
- // Find the distance between the source and destination addresses
- // Maybe this should be an Int64_t ? 
- int64_t distance = args.start - args.target; 
-
- // Relative call
- if (type == O_PC && offset_bits == 32) { 
-   // This is an 0xE8 call instruction  
-   int32_t new_offset; 
-   int32_t offset = ins.imm.addr; 
-
-   // Compute new relative address.
-   // Is this approach ok for "both direction" ? 
-   new_offset = static_cast<int32_t>(distance + offset); 
-
-   if (new_offset <= MININT32 || new_offset > MAXINT32) {
-     printf("Int Min Value : %d Int Max Value : %d\n", MININT32, MAXINT32);
-     printf("New offset : %d Overflow : %d\n", new_offset, new_offset - MAXINT32);
-     assert(false);
-     return false;
-   }
-	  
-   // Prepare to access the bytes of the 32bit new_offset
-   uint8_t *np = reinterpret_cast<uint8_t*>(&new_offset); 
-	  
-   // Create a new call instruction with new_offset 
-   uint8_t newcall[5] = {0xe8,np[0],np[1],np[2],np[3]};
-
-   assert(target[0] == 0x00);
-
-   // TODO: Check that the decodedInstr.size really is 5 bytes. 
-   memcpy(target, newcall, ins.size);
-
-   // update dst and src pointers 
-   dst_offset += ins.size;
-   src_offset += ins.size; 
-
-  } else if (type == O_REG) { // Indirect call  
-    if (ins.flags & FLAG_RIP_RELATIVE) {
-      int64_t new_displacement;
-      int32_t displacement = ins.disp;
-
-      new_displacement = distance + displacement;
-
-      if (new_displacement <= MININT32 || new_displacement > MAXINT32) {
-        assert(false);
-        return false;
+  Disassembler disas;
+  if (disas.isConditionalBranch(ins) || disas.isNearJump(ins)) {
+    // Find relative offset size (can be either 8 bits or 32 bits)
+    int offset_size = 0;
+    for (int i= 0; i < OPERANDS_NO; i++) {
+      if (ins.ops[i].type == O_PC) {
+        offset_size = ins.ops[i].size / 8;
+        break;
       }
-
-      assert(target[0] == 0x00);
-
-      // Copy the original instruction to the target
-      memcpy(target, src, ins.size);
-
-      // Now fix the displacement
-
-      // Find the size of the immediate, if one exists
-      uint8_t imm_size = 0;
-      for (int i = 0; i < OPERANDS_NO; i++) {
-        if (ins.ops[i].type == O_IMM) {
-          imm_size = ins.ops[i].size / 8;
-          break;
-        }
-      }
-
-      // Patch the address of relative displacement obtained relative to end of 
-      // the instruction (target + ins.size) and subtracing imm_size and 
-      // displacement (4), to contain the new value  
-      *reinterpret_cast<int32_t*>(target + ins.size - imm_size - 4) = 
-        static_cast<int32_t>(new_displacement);
-
-      // update dst and src pointers 
-      dst_offset += ins.size;
-      src_offset += ins.size; 
-
-    } else { 
-      // Some other register than RIP
-      // Just copy it since rest of the register state remains unchanged at 
-      // relocated site
-      assert(target[0] == 0x00);
-
-      memcpy(target, src, ins.size);
-
-      // update dst and src pointers 
-      dst_offset += ins.size;
-      src_offset += ins.size; 
     }
-  } else {
-    // TODO: Make a show instance of _DInst and print the instruction info to the
-    // exception string 
-    throw invalid_argument("Unknown near CALL instruction..\n");
+
+    assert(offset_size > 0);
+
+    int offset = ins.imm.addr;
+    Address jmp_target = address + ins.size + offset;
+
+    // If the offset size is one byte we might have to do a rewrite 
+    if (offset_size == 1) {
+      if (!relocation_bounds.withinRange(jmp_target, Range::INCLUSIVE)) {
+        Rewrite r;
+        r.src = address;
+
+        // Original instruction
+        r.src_op = ins;
+
+        // Now the rewrite the original with following instructions
+        // Starts off with the original short JMP instruction
+        r.target_ops.push_back(ins);
+
+        // Then follow up with an unconditional jmp
+        _DInst jmp;
+        jmp.opcode = I_JMP;
+
+        _Operand opnd;
+        opnd.size = 32; 
+        jmp.ops[0] = opnd;
+        jmp.size = Assembler::JMP_REL32_SZ;
+
+        r.target_ops.push_back(jmp);     
+
+        int size = 0;
+        for (_DInst op : r.target_ops) {
+          size += op.size;
+        }
+
+        r.size = size;
+        r.transformed = true;
+        return r;
+      }
+    } 
   }
 
-  return true;
+  Rewrite r;
+  r.src = address;
+  r.src_op = ins;
+  r.transformed = false;
+  r.size = ins.size;
+  return r;
 }
 
-bool relocateNearJump(_DInst ins, const RelocationArgs& args,  
-    unsigned int& dst_offset, unsigned int& src_offset) {
-	int offset_bits = ins.ops[0].size; 
-	int type   = ins.ops[0].type;
+bool validateRewrite(const Sequence* seq, const vector<Rewrite>& rewrites,
+    Rewrite& r) {
+  Disassembler disas;
+  Range relocation_bounds(seq->start, seq->end);
 
-   Address src = args.start + src_offset;
-   Address target = args.target + dst_offset; 
+  if (disas.isConditionalBranch(r.src_op) || disas.isNearJump(r.src_op)) {
+    // Already marked for transformation. Nothing to do here.
+    if (r.transformed) {
+      return true;
+    }
 
-  // Find the distance between the source and destination addresses
-  // Maybe this should be an Int64_t ? 
-  int distance = args.start - args.target; 
+    // Find relative offset size (can be either 8 bits or 32 bits)
+    int offset_size = 0;
+    for (int i= 0; i < OPERANDS_NO; i++) {
+      if (r.src_op.ops[i].type == O_PC) {
+        offset_size = r.src_op.ops[i].size / 8;
+        break;
+      }
+    }
 
-	uint32_t offset; 
-	uint32_t new_offset; 
-	// 32 bit displacement jmp ? 
-	if ( type == O_PC && offset_bits == 32) {  // Near jump
-	  offset = ins.imm.addr; 
-	  new_offset = distance + offset; 
-	  uint8_t *np = reinterpret_cast<uint8_t*>(&new_offset); 
-	  uint8_t newjmp[5] = {0xe9,np[0],np[1],np[2],np[3]}; 
+    assert(offset_size > 0);
 
-    assert(target[0] == 0x00);
+    int32_t offset = r.src_op.imm.addr;
+    Address jmp_target = r.src + r.src_op.size + offset;
 
-	  memcpy(target, newjmp, ins.size);
+    // If the offset size is one byte we might have to do a rewrite 
+    if (offset_size == 1) {
+      if (relocation_bounds.withinRange(jmp_target, Range::INCLUSIVE)) {
+        int target_index = disas.findInstructionIndex(jmp_target, seq);
+        int low = (target_index < r.index) ? target_index : r.index;
+        int high = (target_index >= r.index) ? target_index : r.index;
 
-	  dst_offset += ins.size;
-	  src_offset += ins.size;
+        bool changed_in_middle = false;
+        // Now let's find if any instructions got transformed between 
+        // this instruction and it's target
+        int32_t new_offset = 0;
+        for (int i=low; i <= high; i++) {
+          new_offset += rewrites[i].size;
+          if (rewrites[i].transformed) {
+            // If the jmp target is higher and if it changed as well we don't 
+            // have a problem with it since that would not change the target
+            // offset of the current instruction
+            if (i == target_index && jmp_target > r.src) {
+              continue;
+            }
+            changed_in_middle = true;
+          }
+        }
 
-	} else if (type == O_PC && offset_bits == 8) {  // Short jump
+        if (r.src < jmp_target) {
+          new_offset -= rewrites[target_index].size;
+        } else {
+          new_offset *= -1;
+        }
+
+        if (changed_in_middle) {
+          assert(r.target_ops.size() == 0);
+ 
+          if (new_offset >= MININT8 && new_offset < MAXINT8) {
+            // Offset is still within -127 and 127. So we can still get away 
+            // without transforming this short jump. We just need to change 
+            // the offset
+            r.opnd_changed = true;
+          } else {
+            // Out of luck. Now we have to rewrite this short jump.
+            // Starts off with the original short JMP instruction
+            r.target_ops.push_back(r.src_op);
+
+            // Then follow up with an unconditional jmp
+            _DInst jmp;
+            jmp.opcode = I_JMP;
+
+            _Operand opnd;
+            opnd.size = 32; 
+            jmp.ops[0] = opnd;
+            jmp.size = Assembler::JMP_REL32_SZ;
+
+            r.target_ops.push_back(jmp);     
+
+            int size = 0;
+            for (_DInst op : r.target_ops) {
+              size += op.size;
+            }
+
+            r.size = size;
+            r.transformed = true;
+            r.opnd_changed = false; // Just clear flag in case this jump was 
+                                    // marked for an operand change earlier 
+             return true;
+          }
+        }
+      }
+    } 
+  }
+
+  return false;
+}
+
+vector<Rewrite> rewriteSequence(const Sequence* seq, Address target) {
+  _DInst *decoded = static_cast<_DInst*>(seq->instructions);
+  vector<Rewrite> rewrites;
+  rewrites.reserve(seq->n_instructions);
+
+  Range relocation_bounds(seq->start, seq->end);
+
+  // Do a first pass to get the rewrites. Don't write out things yet
+  Address src_ip = seq->start;
+  for (int i=0; i < seq->n_instructions; i++) {
+    Rewrite r = getRewriteRule(decoded[i], src_ip, relocation_bounds); 
+    r.index = i;
+    rewrites.push_back(r);
+    src_ip += decoded[i].size;
+  }
+
+  // Now keep transforming until it stabilizes without more transformations
+  bool newly_transformed;
+  do {
+    newly_transformed = false; // reset
+    for (Rewrite& r : rewrites) {
+      newly_transformed |= validateRewrite(seq, rewrites, r);
+    }
+  } while (newly_transformed);
+
+  // Do another pass to fix the relocated instruction addresses
+  Address ip = target;
+  for (Rewrite& r : rewrites) {
+    r.target = ip;
+    ip += r.size;
+  }
+
+  // Finally we can do the actual rewriting
+  Assembler a;
+  for (const Rewrite& r : rewrites) {
+    Address target_ip = r.target;
+    if (r.transformed) {
+      for (_DInst target_op : r.target_ops) {
+        int size = a.emitInstruction(target_op, target_ip);
+
+        assert(size == target_op.size);
+        target_ip += size;
+      }
+    } else {
+      // Copy the original instruction unchanged
+      memcpy(target_ip, src_ip, r.src_op.size);   
+    }
+  }
+
+  return rewrites;
+}
+
+bool fixupCall(const Sequence* seq, const Rewrite& r) {
+  int offset_bits = r.src_op.ops[0].size; 
+  int type = r.src_op.ops[0].type; 
+
+  Address src = r.src;
+  Address target = r.target; 
+
+  Range relocation_bounds(seq->start, seq->end);
+  int64_t reloc_distance = src - target;
+
+  switch (type) {
+    case O_PC: // Relative call
+    {
+      int64_t new_offset; 
+      int32_t offset = r.src_op.imm.addr; 
+
+      Address call_target = src + r.src_op.size + offset;
+
+      if (!relocation_bounds.withinRange(call_target, Range::INCLUSIVE)) {
+        // Compute new relative address.
+        // Is this approach ok for "both direction" ? 
+        new_offset = static_cast<int32_t>(reloc_distance + offset); 
+
+        if (new_offset <= MININT32 || new_offset > MAXINT32) {
+          printf("Int Min Value : %d Int Max Value : %d\n", MININT32, MAXINT32);
+          printf("New offset : %d Overflow : %d\n", new_offset, new_offset - MAXINT32);
+          assert(false);
+          return false;
+        }
 	  
-	  //	  fprintf(stderr,"8 bit displacement JMP detected\nNew displacement size needed: %d Bytes", displacement_size);
-
-	  offset = ins.imm.addr; 
-	  new_offset = distance + offset; 
-
-	  // double check if this is correct 
-	  uint64_t jmp_target = reinterpret_cast<uint64_t>(src) + offset;
+        // Prepare to access the bytes of the 32bit new_offset
+        uint8_t *np = reinterpret_cast<uint8_t*>(&new_offset); 
 	  
-	  if (jmp_target >= reinterpret_cast<uint64_t>(args.start) &&
-        jmp_target < reinterpret_cast<uint64_t>(args.end)) { 
-	    // jmp is within relocation, do nothing special 
-
-      assert(target[0] == 0x00);
-
-	    memcpy(target, src, ins.size);
-
-	    dst_offset += ins.size;
-	    src_offset += ins.size;
-	  } else { 
-	    // jmp is to outside of relocation.
-	    // This needs to be improved if displacement is huge (or small) 
-	    int displacement_size = bytesNeeded(new_offset);   
-	    // if (displacement_size == 1) { 
-	    //   r.n_instructions = 0; 
-	    //   delete(r.relocation_offsets); 
-	    //   r.relocation_offsets = NULL; 
-	    //   return r;	      
-	    // } else if (displacement_size == 2) { 
-	    //   r.n_instructions = 0; 
-	    //   delete(r.relocation_offsets); 
-	    //   r.relocation_offsets = NULL; 
-	    //   return r;	      
-	    
-	    // For now rejit as a size 4Bytes offset.  
-	    if (displacement_size < 8) { 
-	      unsigned char *np = (unsigned char*)&new_offset; 
-	      unsigned char newjmp[5] = {0xe9,np[0],np[1],np[2],np[3]}; 
+        // Create a new call instruction with new_offset 
+        uint8_t newcall[5] = {0xe8,np[0],np[1],np[2],np[3]};
 
         assert(target[0] == 0x00);
 
-	      memcpy(target, newjmp, ins.size);
-	      
-	      dst_offset += 5; 
-	      src_offset += ins.size;
-	    } else if (displacement_size == 8) { 
-        return false;
-	    }
-	  }
-	  
-	} else if (type == O_REG) { // Indirect jump
-    if (ins.flags & FLAG_RIP_RELATIVE) {
-      int64_t new_displacement;
-      int32_t displacement = ins.disp;
-
-      new_displacement = distance + displacement;
-
-      if (new_displacement <= MININT32 || new_displacement > MAXINT32) {
-        assert(false);
-        return false;
+        // TODO: Check that the decodedInstr.size really is 5 bytes. 
+        memcpy(target, newcall, r.src_op.size);
+      } else {
+        throw invalid_argument("[Relocator] Relocation crosses a function "
+            " boundary..\n");
       }
 
-      assert(target[0] == 0x00);
-
-      // Copy the original instruction to the target
-      memcpy(target, src, ins.size);
-
-      // Now fix the displacement
-
-      // Find the size of the immediate, if one exists
-      uint8_t imm_size = 0;
-      for (int i = 0; i < OPERANDS_NO; i++) {
-        if (ins.ops[i].type == O_IMM) {
-          imm_size = ins.ops[i].size / 8;
-          break;
-        }
-      }
-
-      // Patch the address of relative displacement obtained relative to end of 
-      // the instruction (target + ins.size) and subtracing imm_size and 
-      // displacement (4), to contain the new value  
-      *reinterpret_cast<int32_t*>(target + ins.size - imm_size - 4) = 
-        static_cast<int32_t>(new_displacement);
-
-      // update dst and src pointers 
-      dst_offset += ins.size;
-      src_offset += ins.size; 
-
-    } else { 
-
-      assert(target[0] == 0x00);
-
-      // Some other register than RIP
-      // Just copy it since rest of the register state remains unchanged at 
-      // relocated site
-      memcpy(target, src, ins.size);
-
-      // update dst and src pointers 
-      dst_offset += ins.size;
-      src_offset += ins.size; 
+      break;
     }
-  } else {
-    // TODO: Make a show instance of _DInst and print the instruction info to the
-    // exception string 
-    throw invalid_argument("Unknown near JMP instruction..\n");
+    case O_SMEM: // Indirect call  
+      if (r.src_op.flags & FLAG_RIP_RELATIVE) {
+        int64_t new_displacement;
+        int32_t displacement = r.src_op.disp;
+
+        Address call_target = r.src + r.src_op.size + displacement;
+
+        if (relocation_bounds.withinRange(call_target, Range::INCLUSIVE)) {
+          throw invalid_argument("[Relocator] Relocation crosses a function "
+              " boundary..\n");
+        }
+
+        new_displacement = reloc_distance + displacement;
+
+        if (new_displacement <= MININT32 || new_displacement > MAXINT32) {
+          assert(false);
+          return false;
+        }
+
+        assert(target[0] == 0x00);
+
+        // Copy the original instruction to the target
+        memcpy(target, src, r.src_op.size);
+
+        // Now fix the displacement
+
+        // Find the size of the immediate, if one exists
+        uint8_t imm_size = 0;
+        for (int i = 0; i < OPERANDS_NO; i++) {
+          if (r.src_op.ops[i].type == O_IMM) {
+            imm_size = r.src_op.ops[i].size / 8;
+            break;
+          }
+        }
+
+        // Patch the address of relative displacement obtained relative to end 
+        // of the instruction (target + ins.size) and subtracing imm_size and 
+        // displacement (4), to contain the new value  
+        *reinterpret_cast<int32_t*>(target + r.src_op.size - imm_size - 4) = 
+           static_cast<int32_t>(new_displacement);
+      } else { 
+        // Some other register than RIP
+        // Just copy it since rest of the register state remains unchanged at 
+        // relocated site
+        assert(target[0] == 0x00);
+
+        memcpy(target, src, r.src_op.size);
+      }
+
+      break;
+    default:
+      // TODO: Make a show instance of _DInst and print the instruction info to the
+      // exception string 
+      throw invalid_argument("[Relocator] Unknown near CALL instruction..\n");
   }
 
   return true;
 }
 
-bool relocateGeneric(_DInst ins, const RelocationArgs& args,  
-    unsigned int& dst_offset, unsigned int& src_offset) {
+bool fixupBranch(const Sequence* seq, const vector<Rewrite>& rewrites,
+    const Rewrite& r) {
+  int type   = r.src_op.ops[0].type;
 
-	int type   = ins.ops[0].type;
+  Address src = r.src;
+  Address target = r.target;
+  int64_t reloc_distance = src - target;
 
-  Address src = args.start + src_offset;
-  Address target = args.target + dst_offset; 
+  switch (type) {
+    case O_PC: // Relative jump
+    {
+      int32_t offset = r.src_op.imm.addr;
+      int offset_bits = r.src_op.ops[0].size; 
 
-  // Find the distance between the source and destination addresses
-  // Maybe this should be an Int64_t ? 
-  int distance = args.start - args.target; 
+	    if (offset_bits == 32) {  // JMP/Jcc rel32 (Near jmp)
+	      int64_t new_offset = reloc_distance + offset; 
 
-  if (src == (Address) 0x0000000000403b80) {
-    printf("INSTRUCTION RELATIVE AT %p with operand type of %d : %d\n", src, type, 
-        ins.flags & FLAG_RIP_RELATIVE);
-    // assert(false);
+        if (new_offset <= MININT32 || new_offset > MAXINT32) {
+          assert(false);
+        }
+
+	      uint8_t *np = reinterpret_cast<uint8_t*>(&new_offset); 
+	      uint8_t newoff[4] = {np[0],np[1],np[2],np[3]}; 
+
+        assert(target[0] == 0x00);
+
+        // Skips over the opcode (1/2 byte(s)) to write to the offset
+        // 32 bit offset version of conditional jumps featues a two byte opcode
+        // 32 bit offset version of unconditional jumps has only one byte for 
+        // opcode
+        if (META_GET_FC(r.src_op.meta) == FC_CND_BRANCH) {
+	        memcpy(target + 2, newoff, r.src_op.size);
+        } else if (META_GET_FC(r.src_op.meta) == FC_UNC_BRANCH) {
+	        memcpy(target + 1, newoff, r.src_op.size);
+        } else {
+          assert(false);
+        }
+      } else if (offset_bits == 8) {  // JMP/Jcc rel8 (Short jmp)
+	  
+        Address orig_jmp_target = src + r.src_op.size + offset;
+
+        if (r.transformed) {
+          // Skip over the short jump. It points to the near jump 
+          // which immediately follows
+          Address jmp_addr = r.target + Assembler::JMP_REL8_SZ; 
+
+          // Then fixup the near jump target to point to the instruction
+          // being pointed to  by the original short jump
+          int32_t new_offset = orig_jmp_target - jmp_addr - 
+            Assembler::JMP_REL32_SZ;
+  	      uint8_t *np = reinterpret_cast<uint8_t*>(&new_offset); 
+  	      uint8_t newjmp[5] = {0xe9,np[0],np[1],np[2],np[3]}; 
+
+          assert(target[0] == 0x00);
+
+	        memcpy(jmp_addr, newjmp, Assembler::JMP_REL32_SZ); 
+        } else if (r.opnd_changed) {
+          Disassembler disas;
+          const int target_index = disas.findInstructionIndex(orig_jmp_target, seq);
+          Address new_target = rewrites[target_index].target; 
+          int32_t new_offset = new_target - r.target - r.src_op.size;
+
+          if (new_offset <= MININT8 || new_offset > MAXINT8) {
+            assert(false);
+          }
+
+          uint8_t newoff = static_cast<uint8_t>(new_offset);
+
+          // Skips over the opcode (1 byte) to write to the offset
+          memcpy(r.target + 1, &newoff, 1);
+        } else {
+          // Just copy it since no changes are necessary
+ 	        memcpy(target, src, r.src_op.size);
+        }
+      }
+
+      break;
+    }
+    case O_SMEM: // Indirect jump
+      if (r.src_op.flags & FLAG_RIP_RELATIVE) {
+        int64_t new_displacement;
+        int32_t displacement = r.src_op.disp;
+
+        new_displacement = reloc_distance + displacement;
+
+        if (new_displacement <= MININT32 || new_displacement > MAXINT32) {
+          assert(false);
+          return false;
+        }
+
+        assert(target[0] == 0x00);
+
+        // Copy the original instruction to the target
+        memcpy(target, src, r.src_op.size);
+
+        // Now fix the displacement
+
+        // Find the size of the immediate, if one exists
+        uint8_t imm_size = 0;
+        for (int i = 0; i < OPERANDS_NO; i++) {
+          if (r.src_op.ops[i].type == O_IMM) {
+            imm_size = r.src_op.ops[i].size / 8;
+            break;
+          }
+        }
+
+        // Patch the address of relative displacement obtained relative to end of 
+        // the instruction (target + ins.size) and subtracing imm_size and 
+        // displacement (4), to contain the new value  
+        *reinterpret_cast<int32_t*>(target + r.src_op.size - imm_size - 4) = 
+          static_cast<int32_t>(new_displacement);
+      } else { 
+
+        assert(target[0] == 0x00);
+
+        // Some other register than RIP
+        // Just copy it since rest of the register state remains unchanged at 
+        // relocated site
+        memcpy(target, src, r.src_op.size);
+      }
+
+      break;
+    default:
+      // TODO: Make a show instance of _DInst and print the instruction info to the
+      // exception string 
+      throw invalid_argument("Unknown near JMP/Jcc instruction..\n");
   }
 
-  if (ins.flags & FLAG_RIP_RELATIVE) { // RIP relative
-    if (src == (Address) 0x0000000000401fc5) {
-      printf("INSTRUCTION RELATIVE AT %p : %d\n", src, ins.flags & FLAG_RIP_RELATIVE);
-      assert(false);
-    }
-    
-    int64_t new_displacement;
-    int32_t displacement = ins.disp;
+  return true;
+}
 
-    new_displacement = distance + displacement;
+bool fixupGeneric(const Sequence* seq, const Rewrite& r) {  
+  Address src = r.src;
+  Address target = r.target; 
+
+  int64_t reloc_distance = src - target; 
+
+  if (r.src_op.flags & FLAG_RIP_RELATIVE) { // RIP relative
+    int64_t new_displacement;
+    int32_t displacement = r.src_op.disp;
+
+    new_displacement = reloc_distance + displacement;
 
     if (new_displacement <= MININT32 || new_displacement > MAXINT32) {
       assert(false);
@@ -327,19 +525,19 @@ bool relocateGeneric(_DInst ins, const RelocationArgs& args,
     assert(target[0] == 0x00);
 
     // Copy the original instruction to the target
-    memcpy(target, src, ins.size);
+    memcpy(target, src, r.src_op.size);
 
     // Now fix the displacement
 
     // Find the size of the immediate, if one exists
     uint8_t imm_size = 0;
     for (int i = 0; i < OPERANDS_NO; i++) {
-      if (ins.ops[i].type == O_IMM) {
-        imm_size = ins.ops[i].size / 8;
+      if (r.src_op.ops[i].type == O_IMM) {
+        imm_size = r.src_op.ops[i].size / 8;
 
-        // Hack around distorm bug
-        if (ins.size == 10) {
-          imm_size = 4;
+        if (r.src_op.size == 10) {
+          assert(imm_size == 4);
+          // imm_size = 4;
         }
         break;
       }
@@ -348,105 +546,72 @@ bool relocateGeneric(_DInst ins, const RelocationArgs& args,
     // Patch the address of relative displacement obtained relative to end of 
     // the instruction (target + ins.size) and subtracing imm_size and 
     // displacement (4), to contain the new value  
-    *reinterpret_cast<int32_t*>(target + ins.size - imm_size - 4) = 
+    *reinterpret_cast<int32_t*>(target + r.src_op.size - imm_size - 4) = 
       static_cast<int32_t>(new_displacement);
-
-    // update dst and src pointers 
-    dst_offset += ins.size;
-    src_offset += ins.size; 
   } else {
 
     assert(target[0] == 0x00);
 
     // Just copy it. Hoping it would not fire missles unintentionally.
-	  memcpy(target ,src, ins.size);
-
-	  dst_offset += ins.size;
-	  src_offset += ins.size;
+	  memcpy(target, src, r.src_op.size);
   }
 
   return true;
 }
-  
-  Relocations  Relocator::relocate(Address start, Address end, Address target) { 
-    
-    Disassembler disas;
  
-    //disassemble the range of interest.     
-    const Sequence *seq = disas.disassemble(start, end); 
+bool fixup(const Sequence* seq, const vector<Rewrite>& rewrites) {
 
-    Relocations r; 
-    r.relocation_offsets = new int [seq->n_instructions];
+  assert(seq->n_instructions == rewrites.size());
+
+  Disassembler disas;
+  Address src_ip = seq->start;
+  bool success = true;
+  for (Rewrite r : rewrites) { 
+    if (disas.isConditionalBranch(r.src_op) || disas.isNearJump(r.src_op)) {
+      success = fixupBranch(seq, rewrites, r);
+    } else if (disas.isNearCall(r.src_op)) {
+      success = fixupCall(seq, r);
+    } else {
+      success = fixupGeneric(seq, r);
+    }
     
+    // Fail fast if we cannot fixup an instruction of the given sequence
+    if (!success) {
+      return false;
+    }
+  } 
+}
+
+Relocations Relocator::relocate(Address start, Address end, Address target) { 
     
-    // break the abstraction and get at the _DInst representation 
-    _DInst *decodedInstructions = static_cast<_DInst*>(seq->instructions);
-      
-    unsigned int dst_offset = 0; 
-    unsigned int src_offset = 0; 
-    
-    // We may need to check the magnitude of this distance 
-    // as it will influence how to jit new jmps.
-    // For example some jmps will will need to be converted
-    // from 8 bit offset -> 16 bit -> 32 bit ???
+  Disassembler disas;
+ 
+  //disassemble the range of interest.     
+  const Sequence *seq = disas.disassemble(start, end); 
 
+  vector<Rewrite> rewrites = rewriteSequence(seq, target);
+  bool success = fixup(seq, rewrites);
 
-    // ///////////////////////////////////////////////////////
-    // Relocator loop 
-    //  Copy instructions from src to dst as much as possible. 
-    //  Some instructions that need changes in displacements. 
-    //  These are handled by specific cases. 
-    
-    int curr_instr_offset = 0; 
+  Relocations relocations; 
+  if (success) {
+    relocations.n_instructions = seq->n_instructions;
+    relocations.relocation_offsets = new int [seq->n_instructions];
 
-    bool success = true;
-    RelocationArgs args = {start, end, target};
+    int index = 0;
+    int offset = 0;
+    for (const Rewrite& r : rewrites) {
+      relocations.relocation_offsets[index] = offset;
+      offset += r.size;
+      index++;
+    }
+  } else {
+    // Return a result that indicates failure to relocate 
+    relocations.n_instructions = 0; 
+    relocations.relocation_offsets = NULL; 
+  }
 
-    for (int i = 0; i < seq->n_instructions; i ++) { 
-      
-      r.relocation_offsets[i] = curr_instr_offset; 
-      curr_instr_offset += decodedInstructions[i].size; 
-    
-      switch (decodedInstructions[i].opcode) { 
-	
-	// //////////////////////////////////////////////////
-	// CALL 
-	// //////////////////////////////////////////////////
-      case I_CALL: 
-        success = relocateNearCall(decodedInstructions[i], args, 
-            dst_offset, src_offset);
-      	break; 
-
-	// //////////////////////////////////////////////////
-	// JMP
-	// //////////////////////////////////////////////////
-      case I_JMP:
-       success = relocateNearJump(decodedInstructions[i], args,
-           dst_offset, src_offset);
-	      break; 
-      default: 
-        success = relocateGeneric(decodedInstructions[i], args,
-           dst_offset, src_offset);
-      	break; 
-      } // end opcode switch 
-
-      // Fail fast if we cannot relocate an instruction of the given sequence
-      if (!success) {
-        // Return a result that indicates failure to relocate 
-	      r.n_instructions = 0; 
-	      delete(r.relocation_offsets); 
-	      r.relocation_offsets = NULL; 
-	      return r;
-      }
-    } // end for 
-    
-    // this is somewhat cheating. 
-    // if it is ok for the relocator to just relocate a 
-    // sub-part of the range, it should be reflected in the 
-    // return value here. 
-    r.n_instructions = seq->n_instructions; 
-    return r; 
-  } // end relocate 
+  return relocations;
+} // end relocate 
  
 } // end liteprobes 
 } // end liteinst 

@@ -8,11 +8,23 @@ namespace assembly {
 
 using utils::Address;
 
-inline bool isCall(_DInst i) {
+bool Disassembler::isCall(const _DInst& i) {
   return (i.opcode == I_CALL || i.opcode == I_CALL_FAR);
 }
 
-inline bool isRelativeJump(_DInst i) {
+bool Disassembler::isNearCall(const _DInst& i) {
+  return i.opcode == I_CALL;
+}
+
+bool Disassembler::isNearJump(const _DInst& i) {
+  return i.opcode == I_JMP;
+}
+
+bool Disassembler::isFarJump(const _DInst& i) {
+  return (i.opcode == I_JMP_FAR);
+}
+
+bool Disassembler::isConditionalJump(const _DInst& i) {
   return (i.opcode == I_JA || i.opcode == I_JAE || 
     i.opcode == I_JB || i.opcode == I_JBE || i.opcode == I_JCXZ || 
     i.opcode == I_JECXZ || i.opcode == I_JG || i.opcode == I_JGE || 
@@ -23,23 +35,34 @@ inline bool isRelativeJump(_DInst i) {
     i.opcode == I_JZ);
 }
 
-inline bool isFarJump(_DInst i) {
-  return (i.opcode == I_JMP_FAR);
+bool Disassembler::isJump(const _DInst& i) {
+  return isConditionalJump(i) || isFarJump(i) || isNearJump(i);
 }
 
-inline bool isJump(_DInst i) {
-  return isRelativeJump(i) || isFarJump(i);
+bool Disassembler::isUnconditionalBranch(const _DInst& i) {
+  return (i.opcode == I_JMP || i.opcode == I_JMP_FAR);
 }
 
-inline bool isHalt(_DInst i) {
+bool Disassembler::isConditionalBranch(const _DInst& i) {
+  return (i.opcode == I_JA || i.opcode == I_JAE || 
+    i.opcode == I_JB || i.opcode == I_JBE || i.opcode == I_JCXZ || 
+    i.opcode == I_JECXZ || i.opcode == I_JG || i.opcode == I_JGE || 
+    i.opcode == I_JL || i.opcode == I_JLE || i.opcode == I_JNO ||
+    i.opcode == I_JNP || i.opcode == I_JNS || i.opcode == I_JNZ ||
+    i.opcode == I_JO || i.opcode == I_JP || i.opcode == I_JRCXZ ||
+    i.opcode == I_JS || i.opcode == I_JZ || i.opcode == I_LOOP || 
+    i.opcode == I_LOOPZ || i.opcode == I_LOOPNZ);
+}
+
+bool Disassembler::isHalt(const _DInst& i) {
   return (i.opcode == I_HLT);
 }
 
-inline bool isReturn(_DInst i) {
+bool Disassembler::isReturn(const _DInst& i) {
  return (i.opcode == I_RET);
 } 
 
-inline bool isControlTransfer(_DInst i) {
+bool Disassembler::isControlTransfer(const _DInst& i) {
   return isJump(i) || isReturn(i) || isHalt(i);
 }
 
