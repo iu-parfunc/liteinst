@@ -42,10 +42,6 @@ all: build
 liteinst:
 	(cd $(LITEINST); make install);
 
-apps:
-	(cd $(APPS); $(CC+) $(CCFLAGS) -O0 test_app_0.cpp -o test_app_0_O0.exe) #-L.. -ltests)
-	(cd $(APPS); $(CC+) $(CCFLAGS) -O3 test_app_1.cpp -o test_app_1_O3.exe) #-L.. -ltests)
-
 standalone: build 
 	$(CXX+) $(LIBS) $(CFLAGS) liteprobes_toggling.o $(DEPS) -o liteprobes_toggling.exe
 
@@ -57,7 +53,11 @@ build: $(OBJ) liteinst apps
 	$(CXX+) $(LIBS) -shared -Wl,-soname,libtests_deact.so -o libtests_deact.so \
 	 	$(DEACTIVATION_OBJ) -Wl,--whole-archive $(TEST_DEPS) -Wl,--no-whole-archive # -Wl,-init,boostrap
 
-test: build
+apps: build
+	(cd $(APPS); $(CXX+) $(CCFLAGS) -O0 test_app_0.cpp -o test_app_0_O0.exe) # -L.. -ltests_reg)
+	(cd $(APPS); $(CC+) $(CCFLAGS) -O3 test_app_1.cpp -o test_app_1_O3.exe) #-L.. -ltests)
+
+test: apps
 	python tests.py
 
 .cpp.o:

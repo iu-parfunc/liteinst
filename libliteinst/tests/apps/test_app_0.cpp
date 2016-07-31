@@ -2,6 +2,8 @@
 #include <cstdio>
 #include "tests.hpp"
 
+extern void dummy();
+
 long  for_func() {
   int sum = 0;
   for (int i=0; i < 10; i++) {

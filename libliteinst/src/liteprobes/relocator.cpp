@@ -250,6 +250,7 @@ vector<Rewrite> rewriteSequence(const Sequence* seq, Address target) {
 
   // Finally we can do the actual rewriting
   Assembler a;
+  src_ip = seq->start;
   for (const Rewrite& r : rewrites) {
     Address target_ip = r.target;
     if (r.transformed) {
@@ -263,6 +264,7 @@ vector<Rewrite> rewriteSequence(const Sequence* seq, Address target) {
       // Copy the original instruction unchanged
       memcpy(target_ip, src_ip, r.src_op.size);   
     }
+    src_ip += r.src_op.size;
   }
 
   return rewrites;
@@ -304,7 +306,7 @@ bool fixupCall(const Sequence* seq, const Rewrite& r) {
         // Create a new call instruction with new_offset 
         uint8_t newcall[5] = {0xe8,np[0],np[1],np[2],np[3]};
 
-        assert(target[0] == 0x00);
+        // assert(target[0] == 0x00);
 
         // TODO: Check that the decodedInstr.size really is 5 bytes. 
         memcpy(target, newcall, r.src_op.size);
@@ -334,7 +336,7 @@ bool fixupCall(const Sequence* seq, const Rewrite& r) {
           return false;
         }
 
-        assert(target[0] == 0x00);
+        // assert(target[0] == 0x00);
 
         // Copy the original instruction to the target
         memcpy(target, src, r.src_op.size);
@@ -359,7 +361,7 @@ bool fixupCall(const Sequence* seq, const Rewrite& r) {
         // Some other register than RIP
         // Just copy it since rest of the register state remains unchanged at 
         // relocated site
-        assert(target[0] == 0x00);
+        // assert(target[0] == 0x00);
 
         memcpy(target, src, r.src_op.size);
       }
@@ -398,7 +400,7 @@ bool fixupBranch(const Sequence* seq, const vector<Rewrite>& rewrites,
 	      uint8_t *np = reinterpret_cast<uint8_t*>(&new_offset); 
 	      uint8_t newoff[4] = {np[0],np[1],np[2],np[3]}; 
 
-        assert(target[0] == 0x00);
+        // assert(target[0] == 0x00);
 
         // Skips over the opcode (1/2 byte(s)) to write to the offset
         // 32 bit offset version of conditional jumps featues a two byte opcode
@@ -427,7 +429,7 @@ bool fixupBranch(const Sequence* seq, const vector<Rewrite>& rewrites,
   	      uint8_t *np = reinterpret_cast<uint8_t*>(&new_offset); 
   	      uint8_t newjmp[5] = {0xe9,np[0],np[1],np[2],np[3]}; 
 
-          assert(target[0] == 0x00);
+          // assert(target[0] == 0x00);
 
 	        memcpy(jmp_addr, newjmp, Assembler::JMP_REL32_SZ); 
         } else if (r.opnd_changed) {
@@ -464,7 +466,7 @@ bool fixupBranch(const Sequence* seq, const vector<Rewrite>& rewrites,
           return false;
         }
 
-        assert(target[0] == 0x00);
+        // assert(target[0] == 0x00);
 
         // Copy the original instruction to the target
         memcpy(target, src, r.src_op.size);
@@ -487,7 +489,7 @@ bool fixupBranch(const Sequence* seq, const vector<Rewrite>& rewrites,
           static_cast<int32_t>(new_displacement);
       } else { 
 
-        assert(target[0] == 0x00);
+        // assert(target[0] == 0x00);
 
         // Some other register than RIP
         // Just copy it since rest of the register state remains unchanged at 
@@ -522,7 +524,7 @@ bool fixupGeneric(const Sequence* seq, const Rewrite& r) {
       return false;
     }
 
-    assert(target[0] == 0x00);
+    // assert(target[0] == 0x00);
 
     // Copy the original instruction to the target
     memcpy(target, src, r.src_op.size);
@@ -550,7 +552,7 @@ bool fixupGeneric(const Sequence* seq, const Rewrite& r) {
       static_cast<int32_t>(new_displacement);
   } else {
 
-    assert(target[0] == 0x00);
+    // assert(target[0] == 0x00);
 
     // Just copy it. Hoping it would not fire missles unintentionally.
 	  memcpy(target, src, r.src_op.size);
@@ -580,6 +582,8 @@ bool fixup(const Sequence* seq, const vector<Rewrite>& rewrites) {
       return false;
     }
   } 
+
+  return success;
 }
 
 Relocations Relocator::relocate(Address start, Address end, Address target) { 
