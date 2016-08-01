@@ -47,6 +47,8 @@ void SignalHandlerRegistry::registerSignalHandler(HandlerRegistration& reg,
       entry->async_handlers.reserve(MAX_HANDLERS);
 
       for (int i=0; i < MAX_HANDLERS; i++) {
+        entry->sync_handlers.push_back(SigHandlerEntry());
+        entry->async_handlers.push_back(SigHandlerEntry());
         entry->sync_handlers[i].used = false;
         entry->async_handlers[i].used = false;
       }
@@ -88,7 +90,7 @@ void SignalHandlerRegistry::registerSignalHandler(HandlerRegistration& reg,
       }
     } else {
       entry->reg_lock.clear(memory_order_release);
-     ostringstream out;  
+      ostringstream out;  
       out << "Maximum number of asynchrounous handlers exceeded"
         " for signal" << reg.signum << "\n";
       throw range_error(out.str());
@@ -133,6 +135,10 @@ void SignalHandlerRegistry::registerSignalHandler(HandlerRegistration& reg,
   act.sa_flags = reg.act.sa_flags|SA_SIGINFO; // Check if reg.act.sa_flags are valid first
 
   int ret = sigaction(reg.signum, &act, NULL);
+
+  printf("REGISTERED handler for %d\n", reg.signum);
+  printf("NUMBER OF REGISTERED HANDLERS : %d\n",
+      sig_entries[reg.signum].sync_handlers.size());
 
   // Release lock
   entry->reg_lock.clear(memory_order_release);

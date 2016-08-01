@@ -120,22 +120,28 @@ bool FixedAllocator::allocationCallback(std::vector<BlockEntry*> entries,
           MAP_PRIVATE | MAP_ANONYMOUS, -1,0);
 
       if (addr == MAP_FAILED) {
-        perror(string("[mmap]").c_str());
+        // perror(string("[mmap]").c_str());
+        /*
         fprintf(stderr, "[mmap] Failed allocating range at : [%p-%p]\n", 
             be->entry_range.start, be->entry_range.end); 
+            */
         return false;
       } else {
         if (addr != be->entry_range.start) {
+          /*
           fprintf(stderr, "[mmap] Got different stub address requested: %p  " 
               " recieved : %p\n", be->entry_range.start, addr);
+              */
 
           // Rollback. 
           int ret = munmap(addr, 
               (be->entry_range.end - be->entry_range.end));
           if (ret == -1) {
-            perror(string("[munmap]").c_str());
+            // perror(string("[munmap]").c_str());
+            /*
             fprintf(stderr, "[munmap] Failed rolling back faulty allocation "
                 "at : [%p-%p]\n", be->entry_range.start, be->entry_range.end);
+                */
           }
           return false;
         }

@@ -3,6 +3,7 @@
 #define ASSEMBLY_H 
 
 #include <cstdint>
+#include <unordered_map>
 #include <vector>
 
 #include "defs.hpp"
@@ -37,15 +38,16 @@ class Sequence {
 /// Encodes a given sequence of instructions
 class Assembler {
   public:
-    static const int JMP_REL8_OPCODE = 0xeb;
-    static const int JMP_REL32_OPCODE = 0xe9;
-
     static const int JMP_REL8_SZ = 2;
     static const int JMP_REL32_SZ = 5;
+    static const int COND_JMP8_SZ = 2;
+    static const int COND_JMP32_SZ = 5;
+
+    Assembler();
+    ~Assembler();
 
     Code assemble(Sequence seq);
     int emitInstruction(_DInst ins, utils::Address target);
-
 };
 
 /// Decodes a sequence of encoded instructions

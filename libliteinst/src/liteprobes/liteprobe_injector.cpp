@@ -92,10 +92,10 @@ Address punAddress(Address addr, int64_t size,
       if ((int64_t) target > 0 && target > text.end) {
         if (!(stack.withinRange(target, Range::INCLUSIVE) 
             || heap.withinRange(target, Range::INCLUSIVE))) {
-          fprintf(stderr, "[Allocator] Trying : %p\n", target);
+          // fprintf(stderr, "[Allocator] Trying : %p\n", target);
           target = allocator->getAllocation(target, size);
           if (target != nullptr) {
-            printf("Trampoline at : %p\n", target);
+            // printf("Trampoline at : %p\n", target);
             goto exit;
           }
         }
@@ -331,13 +331,17 @@ bool LiteProbeInjector::injectProbes(map<Address, ProbeContext>& locs,
   map<Address, const CoalescedProbes> cps_map;
   for (const CoalescedProbes& cp : cps) {
 
+    /*
     printf("Creating spring board for function %s at %p\n", fn->name.c_str(),
         cp.range.start);
+        */
     // Create the new springboard for this coalesced probe
     unique_ptr<Springboard> sb = makeSpringboard(cp, seq, provider);
 
+    /*
     printf("Created spring board for function %s at %p\n", fn->name.c_str(),
         sb.get());
+        */
 
     if (sb == nullptr) {
       // Release all the created springboards
@@ -375,7 +379,7 @@ bool LiteProbeInjector::injectProbes(map<Address, ProbeContext>& locs,
     // *reinterpret_cast<uint64_t*>(sb->base) = sb->punned;
 
     assert(*reinterpret_cast<uint64_t*>(sb->base) == punned);
-    printf("PUNNED : %p\n", punned);
+    // printf("PUNNED : %p\n", punned);
 
     CoalescedProbes cp;
     auto res = cps_map.find(sb->base);

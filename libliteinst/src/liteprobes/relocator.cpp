@@ -83,7 +83,7 @@ Rewrite getRewriteRule(const _DInst& ins, Address address,
         // Original instruction
         r.src_op = ins;
 
-        // Now the rewrite the original with following instructions
+        // Now rewrite the original with following instructions
         // Starts off with the original short JMP instruction
         r.target_ops.push_back(ins);
 
@@ -93,6 +93,7 @@ Rewrite getRewriteRule(const _DInst& ins, Address address,
 
         _Operand opnd;
         opnd.size = 32; 
+        opnd.type = O_PC;
         jmp.ops[0] = opnd;
         jmp.size = Assembler::JMP_REL32_SZ;
 
@@ -192,6 +193,7 @@ bool validateRewrite(const Sequence* seq, const vector<Rewrite>& rewrites,
 
             _Operand opnd;
             opnd.size = 32; 
+            opnd.type = O_PC;
             jmp.ops[0] = opnd;
             jmp.size = Assembler::JMP_REL32_SZ;
 
@@ -256,7 +258,6 @@ vector<Rewrite> rewriteSequence(const Sequence* seq, Address target) {
     if (r.transformed) {
       for (_DInst target_op : r.target_ops) {
         int size = a.emitInstruction(target_op, target_ip);
-
         assert(size == target_op.size);
         target_ip += size;
       }
@@ -403,7 +404,7 @@ bool fixupBranch(const Sequence* seq, const vector<Rewrite>& rewrites,
         // assert(target[0] == 0x00);
 
         // Skips over the opcode (1/2 byte(s)) to write to the offset
-        // 32 bit offset version of conditional jumps featues a two byte opcode
+        // 32 bit offset version of conditional jumps features a two byte opcode
         // 32 bit offset version of unconditional jumps has only one byte for 
         // opcode
         if (META_GET_FC(r.src_op.meta) == FC_CND_BRANCH) {
@@ -616,6 +617,46 @@ Relocations Relocator::relocate(Address start, Address end, Address target) {
 
   return relocations;
 } // end relocate 
+
+int64_t Relocator::getRelocationSize(utils::Address start, utils::Address end, 
+        utils::Address target) {
+  Disassembler disas;
+ 
+  //disassemble the range of interest.     
+  const Sequence *seq = disas.disassemble(start, end); 
+
+  _DInst *decoded = static_cast<_DInst*>(seq->instructions);
+  vector<Rewrite> rewrites;
+  rewrites.reserve(seq->n_instructions);
+
+  Range relocation_bounds(seq->start, seq->end);
+
+  // Do a first pass to get the rewrites
+  Address src_ip = seq->start;
+  for (int i=0; i < seq->n_instructions; i++) {
+    Rewrite r = getRewriteRule(decoded[i], src_ip, relocation_bounds); 
+    r.index = i;
+    rewrites.push_back(r);
+    src_ip += decoded[i].size;
+  }
+
+  // Now keep transforming until it stabilizes without more transformations
+  bool newly_transformed;
+  do {
+    newly_transformed = false; // reset
+    for (Rewrite& r : rewrites) {
+      newly_transformed |= validateRewrite(seq, rewrites, r);
+    }
+  } while (newly_transformed);
+
+  // Now get the total size of the relocated code
+  int64_t size = 0;
+  for (const Rewrite& r : rewrites) {
+    size += r.size;
+  }
+
+  return size;
+}
  
 } // end liteprobes 
 } // end liteinst 

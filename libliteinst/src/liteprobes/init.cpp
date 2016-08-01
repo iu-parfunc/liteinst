@@ -9,7 +9,7 @@ namespace liteprobes {
 
 using namespace utils::signals;
 
-void init() {
+void premain() {
 
   // Register the SIGILL handler
   struct sigaction act;

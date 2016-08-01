@@ -79,6 +79,7 @@ uint8_t g_saved_main_prolog[sizeof(g_rip_indirect_jump)/
   sizeof(g_rip_indirect_jump[0])];
 
 extern void init();
+extern void premain();
 
 void initializeLiteprobes() {
 
@@ -86,7 +87,7 @@ void initializeLiteprobes() {
   memcpy(g_main_ptr, (const void*) g_saved_main_prolog,
      sizeof(g_rip_indirect_jump)/sizeof(g_rip_indirect_jump[0]));
 
-  init();
+  premain();
 }
 
 void liteprobesInfectMain() {

@@ -131,8 +131,10 @@ set<utils::process::Function*> getMatchingFunctions(
         exclude_pattern = ".*"; // Make it regex friendly
       }
       regex exclude(exclude_pattern);
+      /*
       printf("Matching %s with pattern %s\n", fn->name.c_str(), 
           exclude_pattern.c_str());
+          */
       if(regex_match(fn->name, exclude, 
             std::regex_constants::match_continuous)) {
         excluded.insert(fn);
@@ -140,15 +142,21 @@ set<utils::process::Function*> getMatchingFunctions(
     }
   }
 
+  /*
   printf("INCLUDED : \n");
   for (utils::process::Function* fn : included) {
     printf("%s\n", fn->name.c_str());
   }
+  */
 
+  /*
   printf("EXCLUDED : \n");
   for (utils::process::Function* fn : excluded) {
     printf("%s\n", fn->name.c_str());
   }
+  
+  */
+  
 
   set<utils::process::Function*> result;
   if (included.size() > 0 && excluded.size() > 0) {
@@ -234,7 +242,7 @@ ProbeGroup* LiteProbeProvider::generateProbeGroupForFunction(
       throw invalid_argument("Unrecognized probe placement..\n");
   }
 
-  printf("Generating probe groups for : %s\n", probe_group_name.c_str());
+  // printf("Generating probe groups for : %s\n", probe_group_name.c_str());
 
   auto it = pg_by_name.find(probe_group_name);
   if (it != pg_by_name.end()) {
@@ -271,7 +279,7 @@ list<ProbeGroup*> LiteProbeProvider::generateProbeGroups(Coordinates original,
         set<utils::process::Function*> filtered = getMatchingFunctions(fns, 
             spec); 
 
-        printf("FILTERED SIZE : %lu\n", filtered.size());
+        // printf("FILTERED SIZE : %lu\n", filtered.size());
 
         for (utils::process::Function* fn : filtered) {
 
@@ -418,7 +426,7 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
     map<Address, Probe*> probes;
     for (ProbeGroupInfo pgi : pgis) {
 
-      printf("Injecting probes for %s\n", pgi.name.c_str());
+      // printf("Injecting probes for %s\n", pgi.name.c_str());
       ProbeGroup* pg = probe_groups[pgi.id].get();
 
       if (pg->fn->end - pg->fn->start < 5) {

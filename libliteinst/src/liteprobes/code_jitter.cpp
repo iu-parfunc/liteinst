@@ -316,9 +316,21 @@ unique_ptr<Springboard> CodeJitter::emitSpringboard(const CoalescedProbes& cp,
 }
 
 int64_t CodeJitter::getSpringboardSize(const CoalescedProbes& cp) {
-  int64_t relocation_size = cp.range.end - cp.range.start;
-
+  Relocator r;
   map<Address, Probe*> probes = cp.probes;
+
+  // Gets the size of all relocated regions for this springboard
+  int64_t relocation_size = 0; 
+  Address start = cp.range.start;
+  Address end;
+  for (const auto& it : probes) {
+    end = it.first;
+    relocation_size += r.getRelocationSize(start, end, nullptr);
+    start = it.first;   
+  }
+
+  relocation_size += r.getRelocationSize(start, cp.range.end, nullptr);
+
   for (Springboard* sb : cp.springboards) {
     probes.insert(sb->probes.begin(), sb->probes.end());
   }
