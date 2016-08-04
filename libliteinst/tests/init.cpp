@@ -16,7 +16,19 @@ namespace liteprobes {
 using namespace utils::signals;
 using utils::Address;
 
-void init() {
+void noop(int signum, siginfo_t* sig, void* context) {
+  ucontext_t *ucontext = (ucontext_t*)context;
+  Address interrupted_addr = (Address)(ucontext->uc_mcontext.gregs[REG_RIP]);
+
+  printf("Interrupted addr : %p\n", interrupted_addr);
+  
+  // Reroute to the new address within a springboard
+  // Address reroute_addr = liteinst::liteprobes::
+  //  ControlFlowRouter::getRerouteAddress(interrupted_addr);
+  ucontext->uc_mcontext.gregs[REG_RIP] = (greg_t) interrupted_addr + 1;
+}
+
+void premain() {
 
   // Register the SIGILL handler
   struct sigaction act;

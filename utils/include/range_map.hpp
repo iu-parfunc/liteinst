@@ -65,7 +65,7 @@ UpdateEntriesCallback;
 
 /// BlockRangeMap is a concurrent map holding information about ranges partitioned 
 /// according to a given block size.   
-class BlockRangeMap {
+class BlockRangeMap : public Show {
   public:
     BlockRangeMap(int32_t block_size);
 
@@ -77,6 +77,9 @@ class BlockRangeMap {
      *  given callback.
      */
     bool updateRangeEntries(Range r, UpdateEntriesCallback cb);   
+
+    void show(FILE* fp, int nspaces);
+
     ~BlockRangeMap();
 
   private:

@@ -27,6 +27,7 @@ class FixedAllocator : public Allocator {
   static utils::range::BlockRangeMap allocations; 
 
   FixedAllocator();
+  ~FixedAllocator();
 
   public:
   /** \brief Gets memory chunk of given size allocated at the given address.

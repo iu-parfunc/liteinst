@@ -83,21 +83,31 @@ Rewrite getRewriteRule(const _DInst& ins, Address address,
         // Original instruction
         r.src_op = ins;
 
-        // Now rewrite the original with following instructions
-        // Starts off with the original short JMP instruction
-        r.target_ops.push_back(ins);
+        _DInst short_jmp;
+        short_jmp.opcode = I_JMP;
+
+        _Operand opnd;
+        opnd.size = 8; 
+        opnd.type = O_PC;
+        short_jmp.ops[0] = opnd;
+        short_jmp.size = Assembler::JMP_REL8_SZ;
+
+        r.target_ops.push_back(short_jmp);     
 
         // Then follow up with an unconditional jmp
         _DInst jmp;
         jmp.opcode = I_JMP;
 
-        _Operand opnd;
         opnd.size = 32; 
         opnd.type = O_PC;
         jmp.ops[0] = opnd;
         jmp.size = Assembler::JMP_REL32_SZ;
 
         r.target_ops.push_back(jmp);     
+
+        // Now rewrite the original with following instructions
+        // Starts off with the original short JMP instruction
+        r.target_ops.push_back(ins);
 
         int size = 0;
         for (_DInst op : r.target_ops) {
@@ -319,6 +329,7 @@ bool fixupCall(const Sequence* seq, const Rewrite& r) {
       break;
     }
     case O_SMEM: // Indirect call  
+    case O_REG:
       if (r.src_op.flags & FLAG_RIP_RELATIVE) {
         int64_t new_displacement;
         int32_t displacement = r.src_op.disp;
@@ -423,6 +434,8 @@ bool fixupBranch(const Sequence* seq, const vector<Rewrite>& rewrites,
           // which immediately follows
           Address jmp_addr = r.target + Assembler::JMP_REL8_SZ; 
 
+          *(r.target + 1) = 0x5; // SKips the near jump
+
           // Then fixup the near jump target to point to the instruction
           // being pointed to  by the original short jump
           int32_t new_offset = orig_jmp_target - jmp_addr - 
@@ -433,6 +446,10 @@ bool fixupBranch(const Sequence* seq, const vector<Rewrite>& rewrites,
           // assert(target[0] == 0x00);
 
 	        memcpy(jmp_addr, newjmp, Assembler::JMP_REL32_SZ); 
+
+          Address short_jmp = jmp_addr + Assembler::JMP_REL32_SZ;
+          *reinterpret_cast<int8_t*>(short_jmp + 1) = -7; // Jumps back to near
+            // jmp
         } else if (r.opnd_changed) {
           Disassembler disas;
           const int target_index = disas.findInstructionIndex(orig_jmp_target, seq);
@@ -604,15 +621,18 @@ Relocations Relocator::relocate(Address start, Address end, Address target) {
 
     int index = 0;
     int offset = 0;
+    relocations.relocation_size = 0;
     for (const Rewrite& r : rewrites) {
       relocations.relocation_offsets[index] = offset;
       offset += r.size;
+      relocations.relocation_size += r.size;
       index++;
     }
   } else {
     // Return a result that indicates failure to relocate 
     relocations.n_instructions = 0; 
     relocations.relocation_offsets = NULL; 
+    relocations.relocation_size = 0;
   }
 
   return relocations;

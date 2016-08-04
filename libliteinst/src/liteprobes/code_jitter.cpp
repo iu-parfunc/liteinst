@@ -233,7 +233,7 @@ unique_ptr<Springboard> CodeJitter::emitSpringboard(const CoalescedProbes& cp,
       relocation_ptr += relocations.n_instructions;
     }
 
-    tramp_ip += (probed_addr - code_ip);
+    tramp_ip += relocations.relocation_size;
     code_ip = probed_addr;
 
     // The address where the callout for the probe really begins

@@ -127,14 +127,26 @@ void SignalHandlerRegistry::registerSignalHandler(HandlerRegistration& reg,
     }    
   }
 
+  /*
   // Do the actual signal registration
   struct sigaction act;
   memset( &act, 0, sizeof act);
   act.sa_sigaction = &handler_dispatcher;
-  act.sa_mask = reg.act.sa_mask;
-  act.sa_flags = reg.act.sa_flags|SA_SIGINFO; // Check if reg.act.sa_flags are valid first
+  // act.sa_mask = reg.act.sa_mask;
+  sigemptyset(& (act.sa_mask));
+  act.sa_flags = SA_SIGINFO; // Check if reg.act.sa_flags are valid first
 
   int ret = sigaction(reg.signum, &act, NULL);
+  */
+
+  struct sigaction act;
+  memset( &act, 0, sizeof act);
+  act.sa_flags = SA_SIGINFO; 
+  act.sa_sigaction = reg.act.sa_sigaction;
+
+  sigemptyset(& (act.sa_mask));
+  int ret = sigaction(SIGILL, &act, NULL);
+
 
   printf("REGISTERED handler for %d\n", reg.signum);
   printf("NUMBER OF REGISTERED HANDLERS : %d\n",

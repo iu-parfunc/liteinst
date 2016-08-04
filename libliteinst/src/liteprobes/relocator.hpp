@@ -13,6 +13,8 @@ class Relocations {
     int* relocation_offsets; ///< Offsets of the start address of each 
                              ///< relocated instruction from the start of the
                              ///< relocation buffer
+    int relocation_size; ///< Size of the relocated code. This may be bigger 
+                         ///< than the original code due to transformations
 };
   
 class Relocator {

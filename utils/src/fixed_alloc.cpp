@@ -22,6 +22,12 @@ using utils::Address;
 BlockRangeMap FixedAllocator::allocations(sysconf(_SC_PAGESIZE));
 
 FixedAllocator::FixedAllocator() : Allocator() {
+  printf("CREATING FIXED ALLOCATOR.\n");
+}
+
+FixedAllocator::~FixedAllocator() {
+  printf("DESTROYING FIXED ALLOCATOR.\n");
+  allocations.show(stderr, 0);
 }
 
 /*

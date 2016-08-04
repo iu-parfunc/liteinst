@@ -1,5 +1,7 @@
 
+#include <string>
 #include <cstdio>
+#include <unordered_set>
 #include <cassert>
 
 #include "range_map.hpp"
@@ -7,9 +9,11 @@
 namespace utils { 
 namespace range {
 
+using std::string;
 using std::vector;
 using std::pair;
 using utils::Address;
+using std::unordered_set;
 
 // RangeEntries RangeMap::entries;
 // UpdateEntriesCallback RangeMap::cb;
@@ -17,6 +21,17 @@ using utils::Address;
 BlockRangeMap::BlockRangeMap(int32_t block_size) : block_size(block_size), 
   entries() { 
   fprintf(stderr, "[rangemap] BLOCK SIZE : %d\n", block_size);
+}
+
+void BlockRangeMap::show(FILE* fp, int nspaces) {
+  unordered_set<Range, RangeHash> ranges;
+  for (auto it : entries) {
+    ranges.insert(it.second->entry_range);
+  }
+
+  string left_pad = getPadding(nspaces);
+  fprintf(fp, "%sENTRIES : %ld\n", left_pad.c_str(), entries.size());
+  fprintf(fp, "%sBLOCKS  : %ld\n", left_pad.c_str(), ranges.size());
 }
 
 BlockRangeMap::~BlockRangeMap() {

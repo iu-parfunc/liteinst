@@ -83,13 +83,22 @@ class Range {
 
     bool operator>(const Range& r);
 
-    bool operator==(const Range& r);
+    bool operator==(const Range& r) const;
 
     bool operator!=(const Range& r);
 
     bool operator<=(const Range& r);
 
     bool operator>=(const Range& r);
+};
+
+class RangeHash {
+  public:
+    std::size_t operator()(const Range& r) const {
+      // From : http://goo.gl/VcV6w0
+      return ((std::hash<utils::Address>()(r.start) ^
+              (std::hash<utils::Address>()(r.end) << 1)) >> 1);
+    }
 };
 
 } // End range 

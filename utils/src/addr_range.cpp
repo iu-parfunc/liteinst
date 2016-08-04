@@ -111,7 +111,7 @@ bool Range::operator>(const Range& r) {
   return (this->start > r.end) ? true : false;
 }
 
-bool Range::operator==(const Range& r) {
+bool Range::operator==(const Range& r) const {
   return (this->start == r.start && this->end == r.end) ? true : false;
 }
 
