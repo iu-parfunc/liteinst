@@ -49,7 +49,7 @@ int main() {
   // Setting up the probe provider and the instrumentation
   ProbeProvider* p = liteinst::ProbeProvider::initializeGlobalProbeProvider(
       ProviderType::LITEPROBES, nullptr, nullptr);
-  InstrumentationProvider i_provider("i_1", foo, 
+  InstrumentationProvider i_provider("Counter", foo, 
       nullptr);
 
   p->registerInstrumentationProvider(i_provider);
@@ -61,7 +61,7 @@ int main() {
     setProbePlacement(ProbePlacement::ENTRY);
 
   // Register probe meta data and inject them.
-  pr = p->registerProbes(coords, "i_1"); 
+  pr = p->registerProbes(coords, "Counter"); 
 
   printf("Registered probes..\n");
 
