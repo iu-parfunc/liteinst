@@ -43,7 +43,7 @@ liteinst:
 	(cd $(LITEINST); make install);
 
 standalone: build 
-	$(CXX+) $(LIBS) $(CFLAGS) liteprobes_toggling.o $(DEPS) -o liteprobes_toggling.exe
+	$(CXX+) $(LIBS) $(CFLAGS) liteprobes_toggling.o -L$(BUILD) -lliteinst -o liteprobes_toggling.exe
 
 build: $(OBJ) liteinst apps 
 	$(CXX+) $(LIBS) -shared -Wl,-soname,libtests_reg.so -o libtests_reg.so \
@@ -56,6 +56,7 @@ build: $(OBJ) liteinst apps
 apps: build
 	(cd $(APPS); $(CXX+) $(CCFLAGS) -O0 test_app_0.cpp -o test_app_0_O0.exe) # -L.. -ltests_reg)
 	(cd $(APPS); $(CC+) $(CCFLAGS) -O3 test_app_1.cpp -o test_app_1_O3.exe) #-L.. -ltests)
+	(cd $(APPS); $(CC+) $(CCFLAGS) -O3 test_sig.cpp -o test_sig.exe) #-L.. -ltests_reg)
 
 test: apps
 	python tests.py
