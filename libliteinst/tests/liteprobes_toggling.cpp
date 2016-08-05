@@ -8,6 +8,9 @@ using namespace utils::process;
 int64_t foo_count = 0;
 
 void foo() {
+  ProbeInfo pi;
+  LITEINST_SET_PROBE_INFO(pi);
+
   foo_count++;
 }
 
