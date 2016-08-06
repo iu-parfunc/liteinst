@@ -172,6 +172,7 @@ inline Return emitControlReturn(Address start, Address target) {
 
 unique_ptr<Springboard> CodeJitter::emitSpringboard(const CoalescedProbes& cp, 
     Address target, const InstrumentationProvider& provider) {
+
   map<Address, Probe*> probes = cp.probes;
   for (Springboard* sb : cp.springboards) {
     probes.insert(sb->probes.begin(), sb->probes.end());
@@ -297,7 +298,7 @@ unique_ptr<Springboard> CodeJitter::emitSpringboard(const CoalescedProbes& cp,
     relocation_ptr += relocations.n_instructions;
   }
 
-  tramp_ip += (cp.range.end - code_ip);
+  tramp_ip += relocations.relocation_size;
 
   assert(relocation_ptr == seq->n_instructions);
 

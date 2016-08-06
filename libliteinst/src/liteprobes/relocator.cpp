@@ -59,23 +59,23 @@ Rewrite getRewriteRule(const _DInst& ins, Address address,
     Range relocation_bounds) {
   
   Disassembler disas;
-  if (disas.isConditionalBranch(ins) || disas.isNearJump(ins)) {
-    // Find relative offset size (can be either 8 bits or 32 bits)
+  if (disas.isConditionalBranch(ins) || disas.isShortJump(ins)) {
+    int offset = ins.imm.addr;
+    Address jmp_target = address + ins.size + offset;
+
+    bool is_short_jump = false;
     int offset_size = 0;
     for (int i= 0; i < OPERANDS_NO; i++) {
       if (ins.ops[i].type == O_PC) {
         offset_size = ins.ops[i].size / 8;
-        break;
+
+        if (offset_size == 1) {
+          is_short_jump = true;
+        }
       }
     }
 
-    assert(offset_size > 0);
-
-    int offset = ins.imm.addr;
-    Address jmp_target = address + ins.size + offset;
-
-    // If the offset size is one byte we might have to do a rewrite 
-    if (offset_size == 1) {
+    if (is_short_jump) {
       if (!relocation_bounds.withinRange(jmp_target, Range::INCLUSIVE)) {
         Rewrite r;
         r.src = address;
@@ -118,8 +118,8 @@ Rewrite getRewriteRule(const _DInst& ins, Address address,
         r.transformed = true;
         return r;
       }
-    } 
-  }
+    }
+  } 
 
   Rewrite r;
   r.src = address;
@@ -134,7 +134,7 @@ bool validateRewrite(const Sequence* seq, const vector<Rewrite>& rewrites,
   Disassembler disas;
   Range relocation_bounds(seq->start, seq->end);
 
-  if (disas.isConditionalBranch(r.src_op) || disas.isNearJump(r.src_op)) {
+  if (disas.isConditionalBranch(r.src_op) || disas.isShortJump(r.src_op)) {
     // Already marked for transformation. Nothing to do here.
     if (r.transformed) {
       return false;
@@ -328,8 +328,9 @@ bool fixupCall(const Sequence* seq, const Rewrite& r) {
 
       break;
     }
-    case O_SMEM: // Indirect call  
-    case O_REG:
+    case O_MEM: // Indirect call  
+    case O_REG: 
+    case O_SMEM:
       if (r.src_op.flags & FLAG_RIP_RELATIVE) {
         int64_t new_displacement;
         int32_t displacement = r.src_op.disp;
@@ -419,9 +420,9 @@ bool fixupBranch(const Sequence* seq, const vector<Rewrite>& rewrites,
         // 32 bit offset version of unconditional jumps has only one byte for 
         // opcode
         if (META_GET_FC(r.src_op.meta) == FC_CND_BRANCH) {
-	        memcpy(target + 2, newoff, r.src_op.size);
+	        memcpy(target + 2, newoff, 4);
         } else if (META_GET_FC(r.src_op.meta) == FC_UNC_BRANCH) {
-	        memcpy(target + 1, newoff, r.src_op.size);
+	        memcpy(target + 1, newoff, 4);
         } else {
           assert(false);
         }
@@ -472,7 +473,9 @@ bool fixupBranch(const Sequence* seq, const vector<Rewrite>& rewrites,
 
       break;
     }
-    case O_SMEM: // Indirect jump
+    case O_MEM: // Indirect jump
+    case O_REG:
+    case O_SMEM:
       if (r.src_op.flags & FLAG_RIP_RELATIVE) {
         int64_t new_displacement;
         int32_t displacement = r.src_op.disp;
@@ -587,7 +590,7 @@ bool fixup(const Sequence* seq, const vector<Rewrite>& rewrites) {
   Address src_ip = seq->start;
   bool success = true;
   for (Rewrite r : rewrites) { 
-    if (disas.isConditionalBranch(r.src_op) || disas.isNearJump(r.src_op)) {
+    if (disas.isBranch(r.src_op)) {
       success = fixupBranch(seq, rewrites, r);
     } else if (disas.isNearCall(r.src_op)) {
       success = fixupCall(seq, r);

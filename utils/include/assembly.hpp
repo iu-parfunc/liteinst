@@ -65,7 +65,11 @@ class Disassembler {
 
     bool isNearCall(const _DInst& i);
 
+    bool isShortJump(const _DInst& i);
+    
     bool isNearJump(const _DInst& i);
+
+    bool isRelativeJump(const _DInst& i);
 
     bool isFarJump(const _DInst& ins);
 
@@ -75,7 +79,9 @@ class Disassembler {
 
     bool isUnconditionalBranch(const _DInst& i);
 
-    bool isConditionalBranch(const _DInst& ins);
+    bool isConditionalBranch(const _DInst& i);
+
+    bool isBranch(const _DInst& i);
 
     bool isHalt(const _DInst& i);
 

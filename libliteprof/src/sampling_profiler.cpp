@@ -1,6 +1,7 @@
 
 #include "liteinst.hpp"
 #include "process.hpp"
+#include <assert.h>
 #include <pthread.h>
 #include <time.h>
 
@@ -103,7 +104,7 @@ void initCallback() {
   printf("Registered probe provider..\n");
 
   Coordinates coords;
-  coords.setFunction(liteinst::Function("*"));
+  coords.setFunction(liteinst::Function("*~_ZnwmPv"));
   coords.setProbePlacement(ProbePlacement::BOUNDARY);
 
   ProbeRegistration pr = p->registerProbes(coords, "Sampling"); 
@@ -116,6 +117,8 @@ void initCallback() {
   // assert(pr.getProbedFunctions().size() == num_funcs);
 
   stats = new ProfileData[num_funcs]();
+
+  printf("Stats at : %p\n", stats);
 
   pthread_t tr;
   // pthread_create(&tr, NULL, monitor, (void*)NULL);

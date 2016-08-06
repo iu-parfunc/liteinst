@@ -181,7 +181,20 @@ BlockBoundaries generateBlockBoundaries(Address start, Address end,
 
       } else if (isJump(decoded[i])) {
 
-        if (isRelativeJump(decoded[i])) {
+        // We are just being conservative and assuming that indirect jumps do 
+        // not induce new basic blocks at the jump target. But obviously this
+        // may be wrong depending on the runtime value of the registers.
+        if (decoded[i].ops[0].type == O_MEM ||
+            decoded[i].ops[0].type == O_SMEM || 
+            decoded[i].ops[0].type == O_REG) { // Indirect jump
+
+            ControlReturn* r = new ControlReturn;
+            r->addr = ip;
+            r->target = nullptr;
+            r->type = ReturnType::TAIL_CALL;
+
+            returns.push_back(r);
+        } else if (isRelativeJump(decoded[i])) {
           Address addr = extractJumpTarget(ip, decoded[i]);
           // If the jmp target is not within the function then it must be a 
           // tail call

@@ -427,6 +427,7 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
     for (ProbeGroupInfo pgi : pgis) {
 
       printf("Injecting probes for %s\n", pgi.name.c_str());
+
       ProbeGroup* pg = probe_groups[pgi.id].get();
 
       if (pg->fn->end - pg->fn->start < 5) {

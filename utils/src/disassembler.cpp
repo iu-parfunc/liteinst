@@ -3,6 +3,21 @@
 
 #include <cassert>
 
+/**
+ * _DInst operand representation of indirect jumps or calls.
+ *  
+ *  jmpq/callq *0x200(%rax,%rax,4)     : O_MEM (complex memory dereference (optional fields: s/i/b/disp))
+ *  jmpq/callq *%cs:0x200(%rax,%rax,4) : O_MEM
+ *  jmpq/callq *0x200(%rax)            : O_SMEM (simple memory dereference with optional displacement 
+ *                                         (a single register memory dereference))
+ *  jmpq/callq   *%rax                 : O_REG (index holds global register index)
+ *  jmpq/callq   *(%rax)               : O_SMEM
+ *  jmpq/callq  *-0x5(%rip)            : O_SMEM
+ *
+ *  NOTE:
+ *    O_MEM not allowed for RIP base addressing. Only O_SMEM.
+ */
+
 namespace utils {
 namespace assembly {
 
@@ -16,8 +31,42 @@ bool Disassembler::isNearCall(const _DInst& i) {
   return i.opcode == I_CALL;
 }
 
+bool Disassembler::isShortJump(const _DInst& i) {
+  int offset_size = 0;
+  if (i.opcode == I_JMP) {
+    for (int j= 0; j < OPERANDS_NO; j++) {
+      if (i.ops[j].type == O_PC) {
+        offset_size = i.ops[j].size / 8;
+
+        if (offset_size == 1) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
 bool Disassembler::isNearJump(const _DInst& i) {
-  return i.opcode == I_JMP;
+  int offset_size = 0;
+  if (i.opcode == I_JMP) {
+    for (int j= 0; j < OPERANDS_NO; j++) {
+      if (i.ops[j].type == O_PC) {
+        offset_size = i.ops[j].size / 8;
+
+        if (offset_size == 4) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+bool Disassembler::isRelativeJump(const _DInst& i) {
+  return isShortJump(i) || isNearJump(i);
 }
 
 bool Disassembler::isFarJump(const _DInst& i) {
@@ -36,7 +85,7 @@ bool Disassembler::isConditionalJump(const _DInst& i) {
 }
 
 bool Disassembler::isJump(const _DInst& i) {
-  return isConditionalJump(i) || isFarJump(i) || isNearJump(i);
+  return (i.opcode == I_JMP);
 }
 
 bool Disassembler::isUnconditionalBranch(const _DInst& i) {
@@ -52,6 +101,10 @@ bool Disassembler::isConditionalBranch(const _DInst& i) {
     i.opcode == I_JO || i.opcode == I_JP || i.opcode == I_JRCXZ ||
     i.opcode == I_JS || i.opcode == I_JZ || i.opcode == I_LOOP || 
     i.opcode == I_LOOPZ || i.opcode == I_LOOPNZ);
+}
+
+bool Disassembler::isBranch(const _DInst& i) {
+  return isUnconditionalBranch(i) || isConditionalBranch(i);
 }
 
 bool Disassembler::isHalt(const _DInst& i) {
