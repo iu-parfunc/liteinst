@@ -2,9 +2,9 @@
 
 NUM_FUNCS=1000
 ROOT=../../..
-CFLAGS = -finstrument-functions -fno-inline -fno-optimize-sibling-calls
+CFLAGS = #-finstrument-functions -fno-inline -fno-optimize-sibling-calls
 
-LIBS = -L$(ROOT)/build/lib -lfastinst -lrt -ldl
+LIBS = -L$(ROOT)/build/lib -lliteinst -lrt -ldl 
 
 CXX=g++
 
@@ -13,7 +13,7 @@ all: toggle_cost.exe
 toggle_cost.exe: 
 	./make_source.sh $(NUM_FUNCS)
 	$(CXX) --std=c++11 -g -c $(CFLAGS) funcs.cpp -o funcs.o 
-	$(CXX) --std=c++11 -g -c -I$(ROOT)/include -I$(ROOT)/common/include -I. toggle_cost.cpp -o toggle_cost.o 
+	$(CXX) --std=c++11 -g -c -I$(ROOT)/include -I$(ROOT)/utils/include -I$(ROOT)/common/include -I. toggle_cost.cpp -o toggle_cost.o 
 	$(CXX) --std=c++11 -g toggle_cost.o funcs.o -o toggle_cost.exe  $(LIBS)
 
 run: toggle_cost.exe
