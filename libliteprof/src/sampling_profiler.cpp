@@ -26,12 +26,13 @@ void* monitor(void* param) {
   while (true) {
     for (int i=0; i < num_funcs; i++) {
       if(!stats[i].active) {
+        // printf("Activating probe group : %d\n", i);
         p->activate(i);
       }
     }
 
     ts.tv_sec = 0;
-    ts.tv_nsec = 10000000;
+    ts.tv_nsec = 100000000;
     nanosleep(&ts, NULL);
   }
 }
@@ -79,9 +80,8 @@ void exitInstrumentation() {
   */
   int64_t current_count = stats[pi.ctx.pg_id].count;
   int64_t last_snapshot = stats[pi.ctx.pg_id].last_snapshot;
-  /*
-  if (current_count - last_snapshot > 0) {
-    printf("Deactivating probe group : %lu\n", pi.ctx.pg_id);
+  if (current_count - last_snapshot > 1000) {
+    // printf("Deactivating probe group : %lu\n", pi.ctx.pg_id);
 
     ProbeGroupInfo pgi(pi.ctx.pg_id);
     bool deactivated = p->deactivate(pgi);
@@ -90,7 +90,6 @@ void exitInstrumentation() {
       stats[pi.ctx.pg_id].active = false;
     }
   }
-  */
 }
 
 void initCallback() {
@@ -113,15 +112,19 @@ void initCallback() {
 
   Process process;
 
-  num_funcs = process.getFunctions().size();
+  num_funcs = pr.getProbedFunctions().size();
   // assert(pr.getProbedFunctions().size() == num_funcs);
 
   stats = new ProfileData[num_funcs]();
 
+  for (int i=0; i < num_funcs; i++) {
+    stats[i].active = true;
+  }
+
   printf("Stats at : %p\n", stats);
 
   pthread_t tr;
-  // pthread_create(&tr, NULL, monitor, (void*)NULL);
+  pthread_create(&tr, NULL, monitor, (void*)NULL);
 }
 
 __attribute__((constructor))
