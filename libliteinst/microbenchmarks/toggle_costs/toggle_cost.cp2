@@ -1,6 +1,6 @@
 
-  deactivation_costs = new ticks[max_probe_id]();
-  activation_costs   = new ticks[max_probe_id]();
+  deactivation_costs = new ticks[2*max_probe_id]();
+  activation_costs   = new ticks[2*max_probe_id]();
 
   ticks start, end;  
   ticks deactivation_sum = 0;
@@ -12,6 +12,7 @@
   int i = 0; 
   
   for (const auto& it : pr.pg_by_function) { 
+
     for (ProbeGroupInfo pgi : it.second) {
       start = getticks();
       p->deactivate(pgi); 
@@ -20,7 +21,7 @@
       deactivation_costs[i] = (end - start);
 
       // Filtering out outliers
-      if (deactivation_costs[i] < 10000) {
+      if (deactivation_costs[i] < OUTLIER) {
         deactivation_sum += deactivation_costs[i];
         fprintf(fp1, "%d, %llu\n", i, deactivation_costs[i]);
       }
@@ -38,22 +39,23 @@
       activation_costs[i] = (end - start);
     
       // Filtering out outliers
-      if (activation_costs[i] < 10000) {
+      if (activation_costs[i] < OUTLIER) {
         activation_sum += activation_costs[i];
         fprintf(fp2, "%d, %llu\n", i, activation_costs[i]);
       }
-      i ++;
+      i++;
     }
   }
 
   fprintf(stderr, "Number of functions : %ld\n", NUM_FUNCS);
 
+// multiply by 2 because of activating/deactivating two probes per fun
   fprintf(stderr, "Probe deactivation cost estimate (cycles) : %llu\n", 
-      deactivation_sum / max_probe_id);
+	  deactivation_sum / (2 * max_probe_id));
 
   fprintf(stderr, "Probe activation cost estimate (cycles) : %llu\n", 
-      activation_sum / max_probe_id);
-
+	  activation_sum / (2 * max_probe_id));
+ 
   fclose(fp1);
   fclose(fp2);
 

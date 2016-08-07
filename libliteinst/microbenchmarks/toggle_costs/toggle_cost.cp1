@@ -17,6 +17,7 @@ using namespace std;
 using namespace utils::process;
 using namespace liteinst;
 
+#define OUTLIER 1000000
 
 long invoke_count = 0;
 long invoke_exit_count = 0;
@@ -109,7 +110,7 @@ int main(int argc, char* argv[]) {
   printf("Registered probe provider..\n");
   
   Coordinates coords;
-  coords.setFunction(liteinst::Function("emptyFunc"));
+  coords.setFunction(liteinst::Function("_Z10emptyFunc0v"));
   coords.setProbePlacement(ProbePlacement::BOUNDARY);
 
   ProbeRegistration pr = p->registerProbes(coords, "instr"); 
@@ -117,6 +118,7 @@ int main(int argc, char* argv[]) {
   Process process; 
 
   printf("getProbedFunctions: %d\n", pr.getProbedFunctions().size()); 
+  max_probe_id = pr.getProbedFunctions().size();
   
   assert(pr.getProbedFunctions().size() == NUM_FUNCS); // process.getFunctions().size());
 
