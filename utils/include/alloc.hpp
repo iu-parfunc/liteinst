@@ -41,6 +41,8 @@ class Allocator {
      */
     virtual bool removeAllocation(utils::Address address) = 0;
 
+    virtual void showStatistics(FILE* fp, int nspaces) = 0;
+
 };
 
 /// Creates memory allocators

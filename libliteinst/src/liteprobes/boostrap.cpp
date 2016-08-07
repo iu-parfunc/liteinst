@@ -13,6 +13,7 @@
 #include "elf64_shr.h"
 
 #include "defs.hpp"
+#include "alloc.hpp"
 
 // #include "control_flow_router.hpp"
 // #include "process.hpp"
@@ -20,7 +21,7 @@
 namespace liteinst {
 namespace liteprobes {
 
-// using namespace utils::process;
+// using namespace utils::alloc;
 
 using std::map;
 using utils::Address;
@@ -224,6 +225,15 @@ __attribute__((constructor))
 void boostrap() {
   printf("Inside boostrap\n");
   liteinst::liteprobes::liteprobesInfectMain();
+}
+
+__attribute__((destructor))
+void cleanup() {
+  printf("Inside cleanup\n");
+
+  utils::alloc::AllocatorFactory::getAllocator(
+      utils::alloc::AllocatorType::FIXED)->showStatistics(stderr, 0);
+  // utils::alloc::Allocator::showStatistics(stderr, 0);
 }
 
 extern "C" void dummy() {

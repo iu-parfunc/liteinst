@@ -22,12 +22,12 @@ using utils::Address;
 BlockRangeMap FixedAllocator::allocations(sysconf(_SC_PAGESIZE));
 
 FixedAllocator::FixedAllocator() : Allocator() {
-  printf("CREATING FIXED ALLOCATOR.\n");
+  // printf("CREATING FIXED ALLOCATOR.\n");
 }
 
 FixedAllocator::~FixedAllocator() {
-  printf("DESTROYING FIXED ALLOCATOR.\n");
-  allocations.show(stderr, 0);
+  // printf("DESTROYING FIXED ALLOCATOR.\n");
+  // allocations.show(stderr, 0);
 }
 
 /*
@@ -173,6 +173,10 @@ bool FixedAllocator::allocationCallback(std::vector<BlockEntry*> entries,
   }
 
   return true;
+}
+
+void FixedAllocator::showStatistics(FILE* fp, int nspaces) {
+  allocations.show(stderr, 0);
 }
 
 } // End alloc 
