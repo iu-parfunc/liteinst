@@ -64,6 +64,10 @@ bool ArenaAllocator::removeAllocation(Address address) {
       "arena allocator.\n");
 }
 
+void ArenaAllocator::showStatistics(FILE* fp, int nspaces) {
+
+}
+
 /** ArenaPool Implementation **/
 
 ArenaPool::ArenaPool(Address addr, int prot) : base(addr), prot(prot) {

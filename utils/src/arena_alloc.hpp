@@ -89,6 +89,8 @@ class ArenaAllocator : public Allocator {
     */
    bool removeAllocation(utils::Address address);
 
+   void showStatistics(FILE* fp, int nspaces);
+
   private:
     static utils::concurrency::ConcurrentMap<utils::Address,
       std::shared_ptr<ArenaPool>> pools;  // putIfAbsent
