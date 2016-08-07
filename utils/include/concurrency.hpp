@@ -26,6 +26,8 @@ class SpinLock {
         if (locked) {
           lock_count++;
         }
+
+        lock_owner = std::this_thread::get_id();
         return locked;
       }
 
@@ -54,6 +56,7 @@ class SpinLock {
         }
 
         lock_owner = std::this_thread::get_id();
+        // printf("[Lock %p] Assigned owner to : %ld\n", this, lock_owner);
       }
 
       lock_count++;
@@ -61,18 +64,24 @@ class SpinLock {
 
     inline void unlock() {
       assert(isSet());
-      assert(lock_owner == std::this_thread::get_id());
+      
+      // printf("[Unlock %p] Lock owner : %ld\n", this, lock_owner);
+      // printf("[Unlock %p] Current thread : %ld\n", this, std::this_thread::get_id());
+      // assert(lock_owner == std::this_thread::get_id());
       assert(lock_count != 0);
 
       --lock_count;
 
-      // There can be a window of is_latched locked but without any owner due 
-      // to non atomicity of this update. But that doesn't negatively affect 
-      // the correctness of the lock.      
-      lock_owner = lock_is_free;
       if (lock_count == 0) {
+        // There can be a window of is_latched locked but without any owner due 
+        // to non atomicity of this update. But that doesn't negatively affect 
+        // the correctness of the lock.      
+        lock_owner = lock_is_free;
+
         is_latched.store(false, std::memory_order_release);
       }
+
+      // printf("[Unlock %p] Unlock done with lock owner : %ld\n\n", this, lock_owner);
     }
 
     inline bool isOwner() {
