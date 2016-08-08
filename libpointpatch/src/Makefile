@@ -16,6 +16,8 @@ CODE = patcher.c
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 
+CFLAGS = -g
+
 COMMON = $(wildcard $(ROOT)/common/src/patch/*.c)
 COMMON_OBJ = $(COMMON:.c=.o)
 
