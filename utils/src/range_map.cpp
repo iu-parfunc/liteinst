@@ -30,8 +30,25 @@ void BlockRangeMap::show(FILE* fp, int nspaces) {
   }
 
   string left_pad = getPadding(nspaces);
-  fprintf(fp, "%sENTRIES : %ld\n", left_pad.c_str(), entries.size());
-  fprintf(fp, "%sBLOCKS  : %ld\n", left_pad.c_str(), ranges.size());
+  fprintf(fp, "%sBlock size : %ld\n", left_pad.c_str(), block_size);
+  fprintf(fp, "%sEntries : %ld\n", left_pad.c_str(), entries.size());
+  fprintf(fp, "%sBlocks : %ld\n", left_pad.c_str(), ranges.size());
+  fprintf(fp, "%sAllocted : %ld KB\n", left_pad.c_str(), ranges.size() * 
+      block_size / 1024);
+}
+
+BlockStatistics BlockRangeMap::getBlockStatistics() {
+  unordered_set<Range, RangeHash> ranges;
+  for (auto it : entries) {
+    ranges.insert(it.second->entry_range);
+  }
+
+  BlockStatistics stats;
+  stats.n_entries = entries.size();
+  stats.n_blocks = ranges.size();
+  stats.kbs = ranges.size() * block_size / 1024;
+
+  return stats;
 }
 
 BlockRangeMap::~BlockRangeMap() {

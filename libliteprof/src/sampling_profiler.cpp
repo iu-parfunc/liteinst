@@ -27,7 +27,8 @@ void* monitor(void* param) {
     for (int i=0; i < num_funcs; i++) {
       if(!stats[i].active) {
         // printf("Activating probe group : %d\n", i);
-        p->activate(i);
+        ProbeGroupInfo pgi(i);
+        p->activate(pgi);
       }
     }
 

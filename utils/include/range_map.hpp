@@ -63,6 +63,12 @@ typedef std::map<utils::Address, BlockEntry*> BlockEntries;
 typedef std::function<bool(std::vector<BlockEntry*>, Range range)> 
 UpdateEntriesCallback;
 
+struct BlockStatistics {
+  int64_t n_entries;
+  int64_t n_blocks;
+  int64_t kbs;
+};
+
 /// BlockRangeMap is a concurrent map holding information about ranges partitioned 
 /// according to a given block size.   
 class BlockRangeMap : public Show {
@@ -79,6 +85,8 @@ class BlockRangeMap : public Show {
     bool updateRangeEntries(Range r, UpdateEntriesCallback cb);   
 
     void show(FILE* fp, int nspaces);
+
+    BlockStatistics getBlockStatistics();
 
     ~BlockRangeMap();
 

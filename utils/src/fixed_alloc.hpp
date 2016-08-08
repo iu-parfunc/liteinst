@@ -54,7 +54,9 @@ class FixedAllocator : public Allocator {
   bool allocationCallback(std::vector<utils::range::BlockEntry*> entries, 
       utils::range::Range range); 
 
-  void showStatistics(FILE* fp, int nspaces);
+  void show(FILE* fp, int nspaces);
+
+  MemStatistics getAllocationStatistics();
 
 };
 

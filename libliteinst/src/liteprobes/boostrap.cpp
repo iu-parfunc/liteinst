@@ -231,8 +231,23 @@ __attribute__((destructor))
 void cleanup() {
   printf("Inside cleanup\n");
 
-  utils::alloc::AllocatorFactory::getAllocator(
-      utils::alloc::AllocatorType::FIXED)->showStatistics(stderr, 0);
+  utils::alloc::MemStatistics fixed = utils::alloc::AllocatorFactory::
+    getAllocator(utils::alloc::AllocatorType::FIXED)->getAllocationStatistics();
+
+  utils::alloc::MemStatistics arena = utils::alloc::AllocatorFactory::
+    getAllocator(utils::alloc::AllocatorType::ARENA)->getAllocationStatistics();
+
+  fprintf(stderr, "\n[Fixed Allocator]\n");
+  fprintf(stderr, "  Pages : %ld\n", fixed.n_pages);
+  fprintf(stderr, "  Allocated : %ld kB\n", fixed.kbs);
+
+  fprintf(stderr, "\n[Arena Allocator]\n");
+  fprintf(stderr, "  Pages : %ld\n", arena.n_pages);
+  fprintf(stderr, "  Allocated : %ld kB\n", arena.kbs);
+
+  fprintf(stderr, "\nTOTAL_PAGES : %ld\n", fixed.n_pages + arena.n_pages);
+  fprintf(stderr, "TOTAL_ALLOCATED : %ld\n\n", fixed.kbs + arena.kbs);
+
   // utils::alloc::Allocator::showStatistics(stderr, 0);
 }
 

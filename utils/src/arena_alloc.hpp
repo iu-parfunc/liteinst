@@ -31,7 +31,11 @@ class Arena {
 
 };
 
+// Forward declaration
+class ArenaAllocator;
+
 class ArenaPool {
+  friend ArenaAllocator;
   public:
     /** \brief Creates an ArenaPool for the given memory region starting from 
      *    given address spanning length bytes which contains memory arenas with 
@@ -89,7 +93,9 @@ class ArenaAllocator : public Allocator {
     */
    bool removeAllocation(utils::Address address);
 
-   void showStatistics(FILE* fp, int nspaces);
+   void show(FILE* fp, int nspaces);
+
+   MemStatistics getAllocationStatistics();
 
   private:
     static utils::concurrency::ConcurrentMap<utils::Address,

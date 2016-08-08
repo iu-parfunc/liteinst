@@ -16,8 +16,13 @@ enum class AllocatorType {
   ARENA  ///< Arena allocator
 };
 
+struct MemStatistics {
+  int64_t n_pages;
+  int64_t kbs; 
+};
+
 /// A memory allocation strategy.
-class Allocator {
+class Allocator : public Show {
   friend class AllocatorFactory;
 
   public:
@@ -41,8 +46,9 @@ class Allocator {
      */
     virtual bool removeAllocation(utils::Address address) = 0;
 
-    virtual void showStatistics(FILE* fp, int nspaces) = 0;
+    virtual void show(FILE* fp, int nspaces) = 0;
 
+    virtual MemStatistics getAllocationStatistics() = 0;
 };
 
 /// Creates memory allocators

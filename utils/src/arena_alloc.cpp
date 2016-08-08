@@ -19,6 +19,7 @@ using namespace utils::process;
 
 using std::string;
 using std::vector;
+using std::deque;
 using std::shared_ptr;
 using std::make_shared;
 using std::invalid_argument;
@@ -64,8 +65,39 @@ bool ArenaAllocator::removeAllocation(Address address) {
       "arena allocator.\n");
 }
 
-void ArenaAllocator::showStatistics(FILE* fp, int nspaces) {
+void ArenaAllocator::show(FILE* fp, int nspaces) {
+  int64_t total_alloc = 0;
+  for (const auto& it : pools) {
+    shared_ptr<ArenaPool> pool = it.second;
+    deque<shared_ptr<Arena>> arenas = pool->arenas;
 
+    for (auto it : arenas) {
+      total_alloc += it->size;
+    }
+  }
+
+  string left_pad = getPadding(nspaces);
+  fprintf(fp, "%sAllocated : %ld KB\n", left_pad.c_str(), total_alloc/ 1024);
+  fprintf(fp, "%sPages     : %ld \n", left_pad.c_str(), total_alloc/ 
+      sysconf(_SC_PAGE_SIZE)); 
+}
+
+MemStatistics ArenaAllocator::getAllocationStatistics() {
+  int64_t total_alloc = 0;
+  for (const auto& it : pools) {
+    shared_ptr<ArenaPool> pool = it.second;
+    deque<shared_ptr<Arena>> arenas = pool->arenas;
+
+    for (auto it : arenas) {
+      total_alloc += it->size;
+    }
+  }
+
+  MemStatistics stats;
+  stats.n_pages = total_alloc / sysconf(_SC_PAGE_SIZE);
+  stats.kbs = total_alloc / 1024;
+
+  return stats;
 }
 
 /** ArenaPool Implementation **/

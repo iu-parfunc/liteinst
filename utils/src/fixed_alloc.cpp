@@ -175,8 +175,18 @@ bool FixedAllocator::allocationCallback(std::vector<BlockEntry*> entries,
   return true;
 }
 
-void FixedAllocator::showStatistics(FILE* fp, int nspaces) {
-  allocations.show(stderr, 0);
+void FixedAllocator::show(FILE* fp, int nspaces) {
+  allocations.show(stderr, nspaces);
+}
+
+MemStatistics FixedAllocator::getAllocationStatistics() {
+  BlockStatistics stats = allocations.getBlockStatistics();
+
+  MemStatistics mem;
+  mem.n_pages = stats.n_blocks;
+  mem.kbs = stats.kbs;
+
+  return mem;
 }
 
 } // End alloc 

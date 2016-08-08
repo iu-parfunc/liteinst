@@ -271,6 +271,10 @@ class ConcurrentMap {
       rw_lock.writeUnlock();
     }
 
+    Iterator begin() {
+      return map.begin();
+    }
+
     Iterator end() {
       return map.end();
     }
