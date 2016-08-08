@@ -110,7 +110,7 @@ int main(int argc, char* argv[]) {
   printf("Registered probe provider..\n");
   
   Coordinates coords;
-  coords.setFunction(liteinst::Function("_Z10emptyFunc0v"));
+  coords.setFunction(liteinst::Function("*~_ZnwmPv/.*instrumentation.*"));
   coords.setProbePlacement(ProbePlacement::BOUNDARY);
 
   ProbeRegistration pr = p->registerProbes(coords, "instr"); 
