@@ -35,6 +35,7 @@ using std::regex_search;
 using std::list;
 using std::vector;
 using std::set;
+using std::remove;
 using std::copy;
 using std::inserter;
 using std::map;
@@ -412,18 +413,20 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
           });
   }
 
-  printf("After generating probe registration..\n");
+  printf("After generating probe registration..\n\n");
 
   LiteProbeInjector lpi;
   InstrumentationProvider instrumentation = getInstrumentationProvider(
       instrumentation_provider);
   // Probe injection for each function
+  int64_t num_probes = 0;
   for (auto it = pr->pg_by_function.begin(); it != pr->pg_by_function.end(); 
       it++) {
 
-    vector<ProbeGroupInfo> pgis = it->second;
+    vector<ProbeGroupInfo>& pgis = it->second;
     map<Address, ProbeContext> locs;
     map<Address, Probe*> probes;
+    vector<ProbeGroupInfo> failed;
     for (ProbeGroupInfo pgi : pgis) {
 
       printf("Injecting probes for %s\n", pgi.name.c_str());
@@ -432,7 +435,9 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
 
       if (pg->fn->end - pg->fn->start < 5) {
         printf("Skipping small function %s\n", pg->fn->name.c_str());
-        goto outer;
+        failed.push_back(pgi);
+        continue;
+        // goto outer;
       }
 
       for (auto it : pg->probe_sites) {
@@ -443,17 +448,34 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
         locs.emplace(it.first, context);
       }
 
-      lpi.injectProbes(locs, instrumentation);
+      bool success = lpi.injectProbes(locs, instrumentation);
+      
+      if (success) {
+        num_probes += locs.size();
 
-      for (auto& it : locs) {
-        Probe* probe = lpi.getProbe(it.first);
-        pg->probes.emplace(it.first, probe);
-      } 
+        for (auto& it : locs) {
+          Probe* probe = lpi.getProbe(it.first);
+          pg->probes.emplace(it.first, probe);
+        } 
+      } else {
+        printf("Failed instrumenting probe group at function %s\n", pg->fn->name.c_str());
+        failed.push_back(pgi);
+      }
     }
 
 outer:
-    ;
+    int before_size = pgis.size();
+    for (ProbeGroupInfo f : failed) {
+      pgis.erase(remove(pgis.begin(), pgis.end(), f), pgis.end());
+    }
+    int after_size = pgis.size();
+    assert(failed.size() == (before_size - after_size));
   }   
+
+  printf("\nNUM_FUNCS: %ld\n", pr->getProbedFunctions().size());
+  printf("NUM_PROBES: %ld\n\n", num_probes);
+
+  printf("After injecting probes..\n");
 
   return *pr;
 }
