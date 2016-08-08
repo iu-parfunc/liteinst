@@ -174,6 +174,7 @@ unique_ptr<Springboard> makeSpringboard(const CoalescedProbes& cp,
     // patch addr
     //
   } else {
+    printf("Failed pun at %p\n", addr);
     return nullptr;
   }
 }
@@ -365,7 +366,9 @@ bool LiteProbeInjector::injectProbes(map<Address, ProbeContext>& locs,
     Springboard* sb = springboard.get();
     router.addSpringboard(move(springboard));
 
-    init_patch_site(sb->base, (sb->displaced.end - sb->displaced.start));
+    int modified_buf_length = (sb->displaced.end - sb->displaced.start) > 8 ?
+      (sb->displaced.end - sb->displaced.start) : 8;
+    init_patch_site(sb->base, modified_buf_length);
 
     uint64_t original = *reinterpret_cast<uint64_t*>(sb->base);
     uint64_t mask = 0x000000FFFFFFFFFF;

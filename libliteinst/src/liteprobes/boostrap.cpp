@@ -245,8 +245,8 @@ void cleanup() {
   fprintf(stderr, "  Pages : %ld\n", arena.n_pages);
   fprintf(stderr, "  Allocated : %ld kB\n", arena.kbs);
 
-  fprintf(stderr, "\nTOTAL_PAGES : %ld\n", fixed.n_pages + arena.n_pages);
-  fprintf(stderr, "TOTAL_ALLOCATED : %ld\n\n", fixed.kbs + arena.kbs);
+  fprintf(stderr, "\nTOTAL_PAGES: %ld\n", fixed.n_pages + arena.n_pages);
+  fprintf(stderr, "TOTAL_ALLOCATED: %ld\n\n", fixed.kbs + arena.kbs);
 
   // utils::alloc::Allocator::showStatistics(stderr, 0);
 }

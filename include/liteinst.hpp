@@ -299,6 +299,10 @@ class ProbeGroupInfo {
     ProbeGroupInfo(ProbeGroupId id, std::string name, utils::Address start) 
       : id(id), name(name), start(start) {
     }
+
+    bool operator == (const ProbeGroupInfo& pgi) {
+      return (id == pgi.id);
+    }
 };
 
 class ProbeRegistration {
