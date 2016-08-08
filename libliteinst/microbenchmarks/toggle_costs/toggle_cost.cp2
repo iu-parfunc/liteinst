@@ -1,6 +1,6 @@
 
-  deactivation_costs = new ticks[max_probe_id]();
-  activation_costs   = new ticks[max_probe_id]();
+  deactivation_costs = new ticks[2*max_probe_id]();
+  activation_costs   = new ticks[2*max_probe_id]();
 
   ticks start, end;  
   ticks deactivation_sum = 0;
@@ -8,43 +8,54 @@
 
   FILE* fp1 = fopen("toggle_cost_deactivation.csv", "w");
   FILE* fp2 = fopen("toggle_cost_activation.csv", "w");
- 
-  for (int i=0; i<max_probe_id; i++) {
-    start = getticks();
-    p->deactivate(i);
-    end = getticks();
 
-    deactivation_costs[i] = (end - start);
+  int i = 0; 
+  
+  for (const auto& it : pr.pg_by_function) { 
 
-    // Filtering out outliers
-    if (deactivation_costs[i] < 10000) {
-      deactivation_sum += deactivation_costs[i];
-      fprintf(fp1, "%d, %llu\n", i, deactivation_costs[i]);
+    for (ProbeGroupInfo pgi : it.second) {
+      start = getticks();
+      p->deactivate(pgi); 
+      end = getticks();
+
+      deactivation_costs[i] = (end - start);
+
+      // Filtering out outliers
+      if (deactivation_costs[i] < OUTLIER) {
+        deactivation_sum += deactivation_costs[i];
+        fprintf(fp1, "%d, %llu\n", i, deactivation_costs[i]);
+      }
+      i++;
     }
   }
+ 
+  i = 0; 
+  for (const auto& it : pr.pg_by_function) {
+    for (ProbeGroupInfo pgi : it.second) { 
+      start = getticks();
+      p->activate(pgi);
+      end = getticks();
 
-  for (int i=0; i<max_probe_id; i++) {
-    start = getticks();
-    p->activate(i, instrumentation);
-    end = getticks();
-
-    activation_costs[i] = (end - start);
+      activation_costs[i] = (end - start);
     
-    // Filtering out outliers
-    if (activation_costs[i] < 10000) {
-      activation_sum += activation_costs[i];
-      fprintf(fp2, "%d, %llu\n", i, activation_costs[i]);
+      // Filtering out outliers
+      if (activation_costs[i] < OUTLIER) {
+        activation_sum += activation_costs[i];
+        fprintf(fp2, "%d, %llu\n", i, activation_costs[i]);
+      }
+      i++;
     }
   }
 
   fprintf(stderr, "Number of functions : %ld\n", NUM_FUNCS);
 
+// multiply by 2 because of activating/deactivating two probes per fun
   fprintf(stderr, "Probe deactivation cost estimate (cycles) : %llu\n", 
-      deactivation_sum / max_probe_id);
+	  deactivation_sum / (2 * max_probe_id));
 
   fprintf(stderr, "Probe activation cost estimate (cycles) : %llu\n", 
-      activation_sum / max_probe_id);
-
+	  activation_sum / (2 * max_probe_id));
+ 
   fclose(fp1);
   fclose(fp2);
 
