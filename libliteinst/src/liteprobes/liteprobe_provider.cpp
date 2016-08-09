@@ -418,23 +418,33 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
   LiteProbeInjector lpi;
   InstrumentationProvider instrumentation = getInstrumentationProvider(
       instrumentation_provider);
+
+  list<string> failed_funcs;
   // Probe injection for each function
   int64_t num_probes = 0;
+  int64_t failed_probes = 0;
+  int64_t skipped_probes = 0;
+  int64_t counter = 0;
+  int64_t num_funcs = pr->pg_by_function.size();
+  int64_t skipped_funcs = 0;
+  int probed = num_funcs;
   for (auto it = pr->pg_by_function.begin(); it != pr->pg_by_function.end(); 
       it++) {
 
+    counter++;
     vector<ProbeGroupInfo>& pgis = it->second;
     map<Address, ProbeContext> locs;
-    map<Address, Probe*> probes;
     vector<ProbeGroupInfo> failed;
     for (ProbeGroupInfo pgi : pgis) {
 
-      printf("Injecting probes for %s\n", pgi.name.c_str());
+      // printf("Injecting probes for %s\n", pgi.name.c_str());
 
       ProbeGroup* pg = probe_groups[pgi.id].get();
 
       if (pg->fn->end - pg->fn->start < 5) {
         printf("Skipping small function %s\n", pg->fn->name.c_str());
+        skipped_funcs++;
+        skipped_probes += pg->probe_sites.size();
         failed.push_back(pgi);
         continue;
         // goto outer;
@@ -449,7 +459,7 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
       }
 
       bool success = lpi.injectProbes(locs, instrumentation);
-      
+
       if (success) {
         num_probes += locs.size();
 
@@ -460,7 +470,10 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
       } else {
         printf("Failed instrumenting probe group at function %s\n", pg->fn->name.c_str());
         failed.push_back(pgi);
+        failed_probes += locs.size();
       }
+
+      locs.clear();
     }
 
 outer:
@@ -470,10 +483,30 @@ outer:
     }
     int after_size = pgis.size();
     assert(failed.size() == (before_size - after_size));
+
+    if (after_size == 0) {
+      probed--;
+      failed_funcs.push_back(it->first);
+    }
   }   
 
-  printf("\nNUM_FUNCS: %ld\n", pr->getProbedFunctions().size());
-  printf("NUM_PROBES: %ld\n\n", num_probes);
+  for (string failed : failed_funcs) {
+    pr->pg_by_function.erase(failed);
+  }
+
+  int64_t num_funcs_probed = pr->pg_by_function.size();
+
+  assert(probed == num_funcs_probed);
+
+  printf("COUNTER : %ld\n", counter);
+  printf("\nNUM_FUNCS: %ld\n", num_funcs);
+  printf("NUM_FUNCS_PROBED: %ld\n", num_funcs_probed);
+  printf("NUM_FUNCS_SKIPPED: %ld\n", skipped_funcs);
+  printf("NUM_FUNCS_FAILED: %ld\n", num_funcs - num_funcs_probed - 
+      skipped_funcs);
+  printf("PROBED: %ld\n", num_probes);
+  printf("FAILED_PROBES: %ld\n", failed_probes);
+  printf("SKIPPED_PROBES: %ld\n\n", skipped_probes);
 
   printf("After injecting probes..\n");
 

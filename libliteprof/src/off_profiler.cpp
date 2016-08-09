@@ -40,6 +40,7 @@ void* monitor(void* param) {
 
 __attribute__((destructor))
 void tear_down() {
+  printf("Inside Profiler teardown..\n");
   for (int i=0; i < num_funcs; i++) {
     if (stats[i].count > 0) {
       printf("ProbeGroupId : %lu\n", i);
