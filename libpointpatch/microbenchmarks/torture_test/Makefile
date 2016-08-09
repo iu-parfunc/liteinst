@@ -12,7 +12,7 @@ DEPS =  $(UBIROOT)/deps/distorm/distorm3.a $(LIBDIR)/libpointpatch.a -lpthread
 
 
 installLib: 
-	(cd ../../src && make install CC=$(CC) CXX=$(CXX) CFLAGS=$(CFLAGS))  
+	(cd ../../src && make install CC=$(CC) CXX=$(CXX) EXTRA_FLAGS=$(EXTRA_FLAGS))  
 
 #clean: 
 #	(cd ../../tests && make clean)  

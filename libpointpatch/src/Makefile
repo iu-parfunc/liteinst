@@ -16,6 +16,7 @@ CODE = patcher.c
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
 
+EXTRA_FLAGS = 
 CFLAGS = -g
 
 COMMON = $(wildcard $(ROOT)/common/src/patch/*.c)
@@ -50,13 +51,13 @@ install: libpointpatch.so libpointpatch.a
 	(cp libpointpatch.a $(INSTALL))
 
 .c.o:
-	  $(CC) -std=gnu99 $(INCLUDES) $(CFLAGS) $(OPTS) -fPIC -c -Wall  -o $@ $<
+	  $(CC) -std=gnu99 $(INCLUDES) $(EXTRA_FLAGS) $(CFLAGS) $(OPTS) -fPIC -c -Wall  -o $@ $<
 
 utils:
 	if [ ! -d $(BUILD)/lib/libutils.a ]; then (cd utils/src; make install); fi
 
-distorm:
-	(cd ../../deps/distorm/make/linux/ && make clean && make CC=$(CC));
+distorm: 
+	(cd ../../deps/distorm/make/linux/ && make clean && make) # CC=$(CC));
 
 test:
 	(cd ../tests; make test)

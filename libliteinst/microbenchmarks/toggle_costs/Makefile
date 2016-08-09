@@ -1,6 +1,6 @@
 .PHONY: clean all
 
-NUM_FUNCS=10
+NUM_FUNCS=10000
 ROOT=../../..
 CFLAGS = #-finstrument-functions -fno-inline -fno-optimize-sibling-calls
 

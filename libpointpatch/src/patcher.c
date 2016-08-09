@@ -16,6 +16,7 @@
 #include "patcher.h"
 
 #include "patchlist.h"
+#include "patch_utils.h"
 
 #include <stdlib.h>
 #include <memory.h>

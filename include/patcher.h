@@ -29,7 +29,7 @@
 #include <limits.h> 
 #include <assert.h> 
 
-#include "patch_utils.h"
+// #include "patch_utils.h"
 #include "distorm.h" 
 #include "mnemonics.h" 
 
