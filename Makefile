@@ -22,12 +22,12 @@ deps:
 lib:
 	$(CXX) --version || echo ok
 	$(CC) --version || echo ok
-
-#       Ugh, something above wipes the build/ directory... FIXME
-# (cd libpointpatch/src && make CC=$(CC) CXX=$(CXX) CFLAGS="$(CFLAGS) -DNDEBUG" && make install )
 	(cd utils/src   && make CC=$(CC) CXX=$(CXX) && make install )
+	(cd libpointpatch/src && make CC=$(CC) CXX=$(CXX) CFLAGS="$(CFLAGS) -DNDEBUG -DWAIT_SPIN_RDTSC" && make install )
 	(cd libliteinst/src   && make CC=$(CC) CXX=$(CXX) && make install )
 	(cd libliteprof/src   && make CC=$(CC) CXX=$(CXX) && make install )
+
+#       Ugh, something above wipes the build/ directory... FIXME
 # (cd libcallpatch/src && make CC=$(CC) CXX=$(CXX) CFLAGS="$(CFLAGS) -DNDEBUG" && make install )
 # (cd libubiprof/src   && make CC=$(CC) CXX=$(CXX) CFLAGS='$(CFLAGS) -DNDEBUG' && make install )
 
