@@ -251,6 +251,6 @@ void cleanup() {
   // utils::alloc::Allocator::showStatistics(stderr, 0);
 }
 
-extern "C" void dummy() {
+extern "C" void liteprobes_dummy() {
   printf("Dummy..\n");
 }
