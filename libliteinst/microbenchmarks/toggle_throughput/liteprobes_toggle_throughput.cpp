@@ -210,7 +210,7 @@ int main(int argc, char* argv[]) {
   printf("[main] Passed simple test of %d calls with foo instrumentation\n",
       trials);
 
-  g_foo_addresses = (long**)calloc(sizeof(long), num_runners);
+  g_foo_addresses = new long*[num_runners](); // (sizeof(long), num_runners);
 
   // Thread fork
   pthread_t runners[num_runners]; 
@@ -286,8 +286,8 @@ int main(int argc, char* argv[]) {
 
   printf("SELFTIMED: %f\n", total_foo_calls / elapsed_time);
 
-  delete(ids);
-  delete(p);
+  delete[] ids;
+  delete[] g_foo_addresses;
 
   exit(EXIT_SUCCESS);
 
