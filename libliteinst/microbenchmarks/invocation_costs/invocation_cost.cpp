@@ -1,7 +1,7 @@
 
 /*
   Benchmark description:
-  Measures toggle throughput for active/ active patching via fastinst API
+  Measures probe invocation costs 
  */
 
 #include <pthread.h>
