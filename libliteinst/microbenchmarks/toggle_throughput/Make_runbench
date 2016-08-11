@@ -12,6 +12,7 @@ endif
 
 RUNID=$(shell hostname -s)_$(shell date "+%s")
 
+# SELFTIMED is CALLS/SECOND 
 # We have hacked SELFTIMED = TOTAL_CALLS, so taking the median of five trials makes sense:
 TRIALS = 9
 
@@ -22,7 +23,7 @@ TABLE=ONOFF_THROUGHPUT_FASTINST
 all: benchharness library
 
 library:
-	(cd ../../src && make CC=gcc CXX=g++ CFLAGS=-O3 install)
+	(cd ../../../ && make lib)
 
 microbench.exe: benchharness
 
