@@ -27,4 +27,4 @@ run: toggle_throughput.exe
 	LD_LIBRARY_PATH=$(ROOT)/build/lib:$(LD_LIBRARY_PATH) ./toggle_throughput.exe $(RUN_ARGS)
 
 clean:
-	rm -f *.o *.exe *.out *.audit *.txt
+	rm -f *.o toggle_throughput.exe *.out *.audit *.txt
