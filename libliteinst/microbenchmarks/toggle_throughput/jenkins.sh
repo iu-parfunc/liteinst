@@ -8,7 +8,11 @@ export PATH=/opt/jdk/1.8.0_60/bin/:$PATH
 
 source /etc/profile.d/modules-local.sh
 module load gcc
-alias cc=gcc
+
+echo "COMPILER VERSIONS"
+echo $(gcc --version)
+echo $(g++ --version) 
+echo $(cc --version) 
 
 here=`pwd`
 
