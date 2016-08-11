@@ -5,6 +5,8 @@
 
 export PATH=/opt/jdk/1.8.0_60/bin/:$PATH
 
+module load gcc
+
 here=`pwd`
 
 cd ../../../
