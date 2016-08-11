@@ -18,7 +18,7 @@ TRIALS = 9
 
 TOP=$(shell pwd)
 
-TABLE=ONOFF_THROUGHPUT_FASTINST
+TABLE=LITEINST_TOGGLE_THROUGHPUT
 
 all: benchharness library
 
