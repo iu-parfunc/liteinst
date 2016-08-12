@@ -54,6 +54,7 @@ minGitDepth = 1576
 -- minGitDepth = 1558
 -- Some patch_64 ones are older: 1558,1570,1576
 
+-- This is a waste by now... wont use it. 
 extractToggleRate :: NamedRecord -> Maybe NamedRecord
 extractToggleRate r =
      if received >= 0.99 * asked && passFilters
@@ -94,12 +95,16 @@ extract r = new_r
   where new_r = insert "Executor Threads" (B.pack $ show threads) $
                 insert "Toggle Freq" (B.pack $ show freq) $
                 insert "Total Calls" (B.pack $ show total_calls) $
+                insert "min"         (B.pack $ show mincalls) $
+                insert "max"         (B.pack $ show maxcalls) $ 
                 namedRecord [] 
 
         threads = (read $ B.unpack $ get_threads $ B.words (r ! "ARGS")) :: Int 
         freq    = (read $ B.unpack $ get_freq $ B.words (r ! "ARGS")) :: Int
 
-        total_calls = (read $ B.unpack $ r ! "TOTAL_CALLS") :: Double 
+        total_calls = (read $ B.unpack $ r ! "TOTAL_CALLS") :: Double
+        mincalls = (read $ B.unpack $ r ! "MINTIME") :: Double  
+        maxcalls = (read $ B.unpack $ r ! "MAXTIME") :: Double
         get_threads [t,_,_] = t
         get_freq    [_,_,f] = f
         
