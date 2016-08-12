@@ -12,6 +12,9 @@ module load gcc
 export CC=gcc
 #alias cc=gcc
 
+# we want a core file in case of core dump 
+ulimit -c unlimited 
+
 echo "COMPILER VERSIONS"
 echo $(gcc --version)
 echo $(g++ --version) 
