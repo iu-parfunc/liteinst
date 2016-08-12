@@ -108,7 +108,7 @@ extract r = new_r
         get_threads [t,_,_] = t
         get_freq    [_,_,f] = f
         
-newHead = V.fromList ["Executor Threads", "Toggle Freq", "Total Calls"]
+newHead = V.fromList ["Executor Threads", "Toggle Freq", "Total Calls", "min", "max"]
 
 main :: IO ()
 main =
