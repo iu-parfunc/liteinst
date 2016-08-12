@@ -91,7 +91,7 @@ void exitInstrumentation() {
   int64_t current_count = g_liteprof_stats[pi.ctx.pg_id].count;
   int64_t last_snapshot = g_liteprof_stats[pi.ctx.pg_id].last_snapshot;
   if (current_count - last_snapshot > g_liteprof_sample_sz) {
-    // printf("Deactivating probe group : %lu\n", pi.ctx.pg_id);
+    printf("Deactivating probe group : %lu\n", pi.ctx.pg_id);
 
     ProbeGroupInfo pgi(pi.ctx.pg_id);
     bool deactivated = g_liteprof_p->deactivate(pgi);
@@ -134,6 +134,7 @@ void initCallback() {
 
   for (int i=0; i < g_liteprof_num_funcs; i++) {
     g_liteprof_stats[i].active = true;
+    g_liteprof_stats[i].count = 0;
   }
 
   printf("Stats at : %p\n", g_liteprof_stats);
