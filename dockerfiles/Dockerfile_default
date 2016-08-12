@@ -10,9 +10,35 @@ RUN apt-get update && apt-get install -y \
      gcc g++ \
      libpapi-dev \
      make
+RUN apt-get install -y libelf-dev:amd64
 
-ADD . ubiprof_src/
+ADD . /src/
 
-RUN cd ubiprof_src &&  \
-    make lib && \
-    make devdoc doc
+# A finer grained version to ignore junk:
+# ADD deps/distorm      /src/deps/distorm
+# ADD deps/elph         /src/deps/elph
+# ADD include           /src/include
+# ADD utils/src         /src/utils/src
+# ADD utils/include     /src/utils/include
+# ADD libpointpatch/src /src/libpointpatch/src
+# ADD libliteinst/src   /src/libliteinst/src
+# ADD libliteprof/src   /src/libliteprof/src
+# ADD Makefile          /src/Makefile
+
+RUN cd /src &&  \
+    make lib 
+#    make devdoc doc
+
+
+# For benchmarking only:
+# ----------------------------------------
+# Install stack from the FPComplete repositories.
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 575159689BEFB442 && \
+    echo 'deb http://download.fpcomplete.com/ubuntu trusty main' > /etc/apt/sources.list.d/fpco.list && \
+    apt-get update && \
+    apt-get install -y stack
+
+RUN git clone git@github.com:rrnewton/criterion-external.git && \
+    cd criterion-external/ && \
+    stack --install-ghc install && \
+    cd .. && rm -rf criterion-external/
