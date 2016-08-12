@@ -137,41 +137,26 @@ with invocation cost.
 Ah, that's actually the cost of an empty function call!  The actual
 instrumentation overhead is:
 
-    Finally, here is some human-readable output, not for HSBencher:
-    Number of invocations : 67789000
-    Cost per invocation (cycles) : 9
+     Finally, here is some human-readable output, not for HSBencher:
+     Number of invocations : 5629000
+     Cost per invocation (cycles) : 64
 
-    Finally, here is some human-readable output, not for HSBencher:
-    Number of invocations : 67789000
-    Cost per invocation (cycles) : 6
-    Inside cleanup
+     Finally, here is some human-readable output, not for HSBencher:
+     Number of invocations : 5629000
+     Cost per invocation (cycles) : 43
+     Inside cleanup
+     time                 47.71 μs   (41.93 μs .. 53.64 μs)
+                          0.749 R²   (0.628 R² .. 0.836 R²)
+     mean                 3.838 ms   (2.655 ms .. 5.879 ms)
+     std dev              8.818 ms   (5.639 ms .. 14.13 ms)
+     cycles:              0.749 R²   (0.631 R² .. 0.823 R²)
+       iters              124033.259 (107913.113 .. 138935.968)
+       y                  3.778e8    (3.601e8 .. 3.974e8)
+     cpuTime:             0.415 R²   (0.253 R² .. 0.556 R²)
+       iters              6.087e-8   (4.895e-8 .. 7.139e-8)
+       y                  6.018e-4   (5.841e-4 .. 6.221e-4)
 
-    [Fixed Allocator]
-      Pages : 1
-      Allocated : 4 kB
-
-    [Arena Allocator]
-      Pages : 0
-      Allocated : 0 kB
-
-    TOTAL_PAGES: 1
-    TOTAL_ALLOCATED: 4
-
-    time                 6.323 μs   (6.057 μs .. 6.770 μs)
-                         0.957 R²   (0.944 R² .. 0.967 R²)
-    mean                 1.543 ms   (1.062 ms .. 2.351 ms)
-    std dev              4.334 ms   (2.669 ms .. 7.536 ms)
-    cycles:              0.957 R²   (0.945 R² .. 0.967 R²)
-      iters              16438.918  (15754.533 .. 17611.130)
-      y                  2.292e8    (2.223e8 .. 2.357e8)
-    cpuTime:             0.547 R²   (0.486 R² .. 0.612 R²)
-      iters              5.635e-9   (4.835e-9 .. 7.066e-9)
-      y                  4.559e-4   (4.452e-4 .. 4.669e-4)
-    variance introduced by outliers: 99% (severely inflated)
 
 Then divide those regression values by 2000 for the per-invocation
 cost.  I've pumped it up by 1000, and it runs twice.
-
-
-
 
