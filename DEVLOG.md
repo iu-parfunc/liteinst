@@ -116,4 +116,62 @@ And had install problems or kernel version problems with all of them.
 DTrace is definitely the easiest to get working
 
 
-.
+[2016.08.12] {Micro-benchmarking the new libliteinst}
+-----------------------------------------------------
+
+I'm using `criterion-external` to run microbenhmarks (RRN), starting
+with invocation cost.   
+
+    time                 6.303 μs   (6.058 μs .. 6.752 μs)
+                         0.961 R²   (0.947 R² .. 0.972 R²)
+    mean                 1.538 ms   (1.079 ms .. 2.423 ms)
+    std dev              4.332 ms   (2.721 ms .. 6.945 ms)
+    cycles:              0.961 R²   (0.948 R² .. 0.972 R²)
+      iters              16386.094  (15735.024 .. 17530.907)
+      y                  2.296e8    (2.233e8 .. 2.355e8)
+    cpuTime:             0.629 R²   (0.580 R² .. 0.687 R²)
+      iters              5.902e-9   (5.157e-9 .. 7.152e-9)
+      y                  4.519e-4   (4.426e-4 .. 4.605e-4)
+    variance introduced by outliers: 99% (severely inflated)
+
+Ah, that's actually the cost of an empty function call!  The actual
+instrumentation overhead is:
+
+    Finally, here is some human-readable output, not for HSBencher:
+    Number of invocations : 67789000
+    Cost per invocation (cycles) : 9
+
+    Finally, here is some human-readable output, not for HSBencher:
+    Number of invocations : 67789000
+    Cost per invocation (cycles) : 6
+    Inside cleanup
+
+    [Fixed Allocator]
+      Pages : 1
+      Allocated : 4 kB
+
+    [Arena Allocator]
+      Pages : 0
+      Allocated : 0 kB
+
+    TOTAL_PAGES: 1
+    TOTAL_ALLOCATED: 4
+
+    time                 6.323 μs   (6.057 μs .. 6.770 μs)
+                         0.957 R²   (0.944 R² .. 0.967 R²)
+    mean                 1.543 ms   (1.062 ms .. 2.351 ms)
+    std dev              4.334 ms   (2.669 ms .. 7.536 ms)
+    cycles:              0.957 R²   (0.945 R² .. 0.967 R²)
+      iters              16438.918  (15754.533 .. 17611.130)
+      y                  2.292e8    (2.223e8 .. 2.357e8)
+    cpuTime:             0.547 R²   (0.486 R² .. 0.612 R²)
+      iters              5.635e-9   (4.835e-9 .. 7.066e-9)
+      y                  4.559e-4   (4.452e-4 .. 4.669e-4)
+    variance introduced by outliers: 99% (severely inflated)
+
+Then divide those regression values by 2000 for the per-invocation
+cost.  I've pumped it up by 1000, and it runs twice.
+
+
+
+

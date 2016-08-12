@@ -85,18 +85,21 @@ dyninst_inst_test:
 # Docker concerns:
 # --------------------------------------------------------------------------------
 
+DOCKERTAG=parfunc/liteprof:0.1
+
 docker: clean
 # Check what's there and build our new one:
 	docker images
 # Dockerfile's "build -f" seems basically broken in 1.8.  Hence this hackery:
 	cp -f dockerfiles/Dockerfile_default ./Dockerfile
-	docker build -t iu-parfunc/ubiprof .
-# Remove any dangling ones as a general cleanup measure:
-	docker rmi $(docker images -q --filter "dangling=true") || echo ok
+	docker build -t $(DOCKERTAG) .
 	rm -f Dockerfile
 # Finally, you can hop in the image with:
 # docker run -it iu-parfunc/ubiprof
 
+docker_cleanup:
+# Remove any dangling ones as a general cleanup measure:
+	docker rmi $(docker images -q --filter "dangling=true") || echo ok
 
 # This verison builds on top of an image that includes DynInst.  It's
 # MUCH bigger.
