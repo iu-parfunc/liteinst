@@ -16,12 +16,9 @@ AR = ar
 RM = rm
 OPTS =
 
-CODE = sampling_profiler.cpp off_profiler.cpp
+CODE = profiler.cpp 
 OBJ0 = $(CODE:.cpp=.o)
 OBJ  = $(OBJ0:.c=.o)
-
-SAMPLING = sampling_profiler.o
-OFFPROF   = off_profiler.o
 
 .PHONY: all build install clean libliteprof.a libliteprof.so
 
@@ -33,30 +30,16 @@ libliteprof.a: build
 	if [ -d libliteprof.a ]; then $(RM) -f libliteprof.a; fi
 	if [ -d temp ]; then $(RM) -rf temp; fi
 	mkdir temp;cd temp; $(AR) -x ../$(DEPS)
-	$(AR) rc libliteprof.a  $(SAMPLING) $(COMMON_OBJ) temp/*.o
+	$(AR) rc libliteprof.a  $(OBJ) temp/*.o
 	$(RM) -rf temp
 
 libliteprof.so: build
-	$(CXX+) $(LIBS) -shared -Wl,-soname,libliteprof.so -o libliteprof.so $(SAMPLING) \
+	$(CXX+) $(LIBS) -shared -Wl,-soname,libliteprof.so -o libliteprof.so $(OBJ) \
 	 -Wl,--whole-archive $(DEPS) -Wl,--no-whole-archive	
 
-liboffprof.a: build
-	if [ -d liboffprof.a ]; then $(RM) -f liboffprof.a; fi
-	if [ -d temp ]; then $(RM) -rf temp; fi
-	mkdir temp;cd temp; $(AR) -x ../$(DEPS)
-	$(AR) rc liboffprof.a  $(OFFPROF) $(COMMON_OBJ) temp/*.o
-	$(RM) -rf temp
-
-liboffprof.so: build
-	$(CXX+) $(LIBS) -shared -Wl,-soname,liboffprof.so -o liboffprof.so $(OFFPROF) \
-	 -Wl,--whole-archive $(DEPS) -Wl,--no-whole-archive	
-
-
-install: libliteprof.a libliteprof.so liboffprof.a liboffprof.so
+install: libliteprof.a libliteprof.so 
 	(mv libliteprof.so $(INSTALL))
 	(mv libliteprof.a $(INSTALL))
-	(mv liboffprof.so $(INSTALL))
-	(mv liboffprof.a $(INSTALL))
 
 .cpp.o:
 	$(CXX+) $(CFLAGS) $(ARGS) -fPIC -c -Wall -o $@ $<
