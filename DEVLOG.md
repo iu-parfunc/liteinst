@@ -116,4 +116,47 @@ And had install problems or kernel version problems with all of them.
 DTrace is definitely the easiest to get working
 
 
-.
+[2016.08.12] {Micro-benchmarking the new libliteinst}
+-----------------------------------------------------
+
+I'm using `criterion-external` to run microbenhmarks (RRN), starting
+with invocation cost.   
+
+    time                 6.303 μs   (6.058 μs .. 6.752 μs)
+                         0.961 R²   (0.947 R² .. 0.972 R²)
+    mean                 1.538 ms   (1.079 ms .. 2.423 ms)
+    std dev              4.332 ms   (2.721 ms .. 6.945 ms)
+    cycles:              0.961 R²   (0.948 R² .. 0.972 R²)
+      iters              16386.094  (15735.024 .. 17530.907)
+      y                  2.296e8    (2.233e8 .. 2.355e8)
+    cpuTime:             0.629 R²   (0.580 R² .. 0.687 R²)
+      iters              5.902e-9   (5.157e-9 .. 7.152e-9)
+      y                  4.519e-4   (4.426e-4 .. 4.605e-4)
+    variance introduced by outliers: 99% (severely inflated)
+
+Ah, that's actually the cost of an empty function call!  The actual
+instrumentation overhead is:
+
+     Finally, here is some human-readable output, not for HSBencher:
+     Number of invocations : 5629000
+     Cost per invocation (cycles) : 64
+
+     Finally, here is some human-readable output, not for HSBencher:
+     Number of invocations : 5629000
+     Cost per invocation (cycles) : 43
+     Inside cleanup
+     time                 47.71 μs   (41.93 μs .. 53.64 μs)
+                          0.749 R²   (0.628 R² .. 0.836 R²)
+     mean                 3.838 ms   (2.655 ms .. 5.879 ms)
+     std dev              8.818 ms   (5.639 ms .. 14.13 ms)
+     cycles:              0.749 R²   (0.631 R² .. 0.823 R²)
+       iters              124033.259 (107913.113 .. 138935.968)
+       y                  3.778e8    (3.601e8 .. 3.974e8)
+     cpuTime:             0.415 R²   (0.253 R² .. 0.556 R²)
+       iters              6.087e-8   (4.895e-8 .. 7.139e-8)
+       y                  6.018e-4   (5.841e-4 .. 6.221e-4)
+
+
+Then divide those regression values by 2000 for the per-invocation
+cost.  I've pumped it up by 1000, and it runs twice.
+

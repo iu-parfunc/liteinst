@@ -39,6 +39,7 @@ void func() {
 
 // Instrumentation function
 void foo() {
+  // printf("Instrumentation called...\n"); 
 }
 
 double run_experiment() {
@@ -50,7 +51,7 @@ double run_experiment() {
 
   t2 = t1;
   for(int i=0; i<n_invocations; i++) {
-    foo();
+    func();
   }
 
   long end = getticks();
@@ -70,7 +71,8 @@ int main(int argc, char* argv[]) {
     //    "\nRunning with default settings # threads : %ld # iterations %ld..\n", num_runners, target_rate
     return 1;
   } else {
-    n_invocations  = atoi(argv[1]);
+    unsigned long arg = atoi(argv[1]);
+    n_invocations = 1000 * arg;
   }
 
   // Setting up the probe provider and the instrumentation
