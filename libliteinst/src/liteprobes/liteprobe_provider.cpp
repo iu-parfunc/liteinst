@@ -6,6 +6,7 @@
 #include "process.hpp"
 #include "assembly.hpp"
 #include "patcher.h"
+#include "cycle.h"
 #include <string>
 #include <regex>
 #include <stack>
@@ -86,7 +87,7 @@ set<utils::process::Function*> getMatchingFunctions(
     pattern = "." + pattern; // Make it regex friendly
   }
 
-  printf("PATTERN : %s\n", pattern.c_str());
+  // printf("PATTERN : %s\n", pattern.c_str());
   smatch match;
   if (regex_search(pattern, match, both,
         std::regex_constants::match_continuous)) {
@@ -386,7 +387,7 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
   Coordinates specific;
   list<ProbeGroup*> pgs = generateProbeGroups(coords, specific, block_coords); 
 
-  printf("After generating probe groups..\n");
+  // printf("After generating probe groups..\n");
 
   ProbeRegistration* pr = new ProbeRegistration;
   for (ProbeGroup* pg : pgs) {
@@ -413,7 +414,13 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
           });
   }
 
-  printf("After generating probe registration..\n\n");
+  FILE* fp = fopen("probes.out", "w");
+
+  if (fp == nullptr) {
+    assert(false);
+  } 
+
+  // printf("After generating probe registration..\n\n");
 
   LiteProbeInjector lpi;
   InstrumentationProvider instrumentation = getInstrumentationProvider(
@@ -421,17 +428,24 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
 
   list<string> failed_funcs;
   // Probe injection for each function
+  ticks total = 0; // Total probe injection cost
+  ticks punning_costs = 0;
+  ticks injection_costs = 0;
+  ticks start = 0;
+  ticks end = 0;
+  InjectionResult ir;
   int64_t num_probes = 0;
   int64_t failed_probes = 0;
   int64_t skipped_probes = 0;
-  int64_t counter = 0;
   int64_t num_funcs = pr->pg_by_function.size();
   int64_t skipped_funcs = 0;
   int probed = num_funcs;
   for (auto it = pr->pg_by_function.begin(); it != pr->pg_by_function.end(); 
       it++) {
 
-    counter++;
+    ticks fn_punning_cost = 0;
+    ticks fn_injection_cost = 0; 
+    ticks fn_probing_cost = 0;
     vector<ProbeGroupInfo>& pgis = it->second;
     map<Address, ProbeContext> locs;
     vector<ProbeGroupInfo> failed;
@@ -451,6 +465,7 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
       }
 
       for (auto it : pg->probe_sites) {
+        fprintf(fp, "%04x,", it.first); 
         ProbeContext context;
         context.pg_id = pg->pg_id;
         context.i_id = instrumentation.id;
@@ -458,7 +473,15 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
         locs.emplace(it.first, context);
       }
 
-      bool success = lpi.injectProbes(locs, instrumentation);
+      start = getticks();
+      ir = lpi.injectProbes(locs, instrumentation);
+      end = getticks();
+
+      fn_probing_cost += (end - start);
+      fn_injection_cost += ir.injection_costs;
+      fn_punning_cost += ir.punning_costs;
+
+      bool success = ir.success;
 
       if (success) {
         num_probes += locs.size();
@@ -468,7 +491,7 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
           pg->probes.emplace(it.first, probe);
         } 
       } else {
-        printf("Failed instrumenting probe group at function %s\n", pg->fn->name.c_str());
+        // printf("Failed instrumenting probe group at function %s\n", pg->fn->name.c_str());
         failed.push_back(pgi);
         failed_probes += locs.size();
       }
@@ -487,8 +510,14 @@ outer:
     if (after_size == 0) {
       probed--;
       failed_funcs.push_back(it->first);
+    } else if (failed.size() == 0) {
+      total += fn_probing_cost;
+      punning_costs += fn_punning_cost;
+      injection_costs += fn_injection_cost;
     }
   }   
+
+  fclose(fp);
 
   for (string failed : failed_funcs) {
     pr->pg_by_function.erase(failed);
@@ -498,7 +527,7 @@ outer:
 
   assert(probed == num_funcs_probed);
 
-  printf("COUNTER : %ld\n", counter);
+  /*
   printf("\nNUM_FUNCS: %ld\n", num_funcs);
   printf("NUM_FUNCS_PROBED: %ld\n", num_funcs_probed);
   printf("NUM_FUNCS_SKIPPED: %ld\n", skipped_funcs);
@@ -509,6 +538,22 @@ outer:
   printf("SKIPPED_PROBES: %ld\n\n", skipped_probes);
 
   printf("After injecting probes..\n");
+  */
+
+  if (failed_probes > 0) {
+    pr->failures = true;
+  } else {
+    pr->failures = false;
+  }
+
+  pr->num_probed_pgs = num_funcs_probed;
+  pr->num_skipped_pgs = skipped_funcs; 
+  pr->num_failed_pgs = num_funcs - num_funcs_probed - skipped_funcs;
+  pr->discoverd_pgs = num_funcs;
+  pr->probing_costs = total;
+  pr->meta_data_costs = total - punning_costs - injection_costs;
+  pr->injection_costs = injection_costs;
+  pr->punning_costs = punning_costs;
 
   return *pr;
 }
@@ -542,15 +587,15 @@ bool LiteProbeProvider::activate(ProbeInfo ctx) {
   if (sb->active_probes == 0) {
     Address probe_end  = sb->base + sb->probe_length;
 
+    patch_64(sb->base, sb->punned | (*(reinterpret_cast<uint64_t*>(sb->base))
+          & 0xFFFFFF0000000000));
+
     for (const auto& it : sb->saved_probe_heads) {
       if (it.first >= probe_end) {
-      *it.first = 0x62; // Single byte write. Should be fine.
+        *it.first = 0x62; // Single byte write. Should be fine.
         assert(it.first < sb->displaced.end);
       }
     }
-
-    patch_64(sb->base, sb->punned | (*(reinterpret_cast<uint64_t*>(sb->base))
-          & 0xFFFFFF0000000000));
   }   
   
   sb->active_probes++;
@@ -582,15 +627,15 @@ bool LiteProbeProvider::deactivate(ProbeInfo ctx) {
   if (sb->active_probes == 1) {
     Address probe_end  = sb->base + sb->probe_length;
 
+    patch_64(sb->base, sb->original | (*(reinterpret_cast<uint64_t*>(sb->base))
+          & 0xFFFFFF0000000000));
+
     for (const auto& it : sb->saved_probe_heads) {
       if (it.first >= probe_end) {
         *it.first = it.second; // Single byte write. Should be fine.
         assert(it.first < sb->displaced.end);
       }
     }
-
-    patch_64(sb->base, sb->original | (*(reinterpret_cast<uint64_t*>(sb->base))
-          & 0xFFFFFF0000000000));
   }  
   
   sb->active_probes--;

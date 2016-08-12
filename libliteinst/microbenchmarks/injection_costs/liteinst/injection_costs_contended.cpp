@@ -7,6 +7,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <sched.h>
+#include <assert.h>
 #include <limits.h>
 
 #include "liteinst.hpp"
@@ -61,10 +62,11 @@ void* runner(void* arg) {
   __sync_add_and_fetch(&g_thread_registration_count, 1);
 
 loop:
-  while (!g_run);
 
   fn_ptr fn = g_funcs[g_stride * NUM_CORES + tid];
   __sync_add_and_fetch(&g_ready, 1);
+
+  while (g_ready < NUM_CORES);
 
   while (g_run) {
     fn();
@@ -134,9 +136,9 @@ int main(int argc, char* argv[]) {
   // Instrument function entries. This should generate trampolines
   int n_failures = 0;
   while (g_stride < n_strides) {
-    g_run = 1;
+    __sync_bool_compare_and_swap(&g_run, g_run, 1);
 
-    // while (g_ready < NUM_CORES);
+    // while (g_ready < NUM_CORES) printf("g_ready %d\n", g_ready);
 
     for (int i=0; i < NUM_CORES; i++) {
       // Specifying probe coordinates
@@ -154,11 +156,12 @@ int main(int argc, char* argv[]) {
         n_failures++;
       }
     }
-    g_ready = 0;
-    g_run = 0;
+
+    __sync_add_and_fetch(&g_stride, 1);
+    __sync_bool_compare_and_swap(&g_ready, g_ready, 0);
+    __sync_bool_compare_and_swap(&g_run, g_run, 0);
 
     // printf("Done stride : %d\n", g_stride);
-    __sync_add_and_fetch(&g_stride, 1);
   }
 
   printf("[Trampoline-Injection] Failures : %d\n", n_failures);

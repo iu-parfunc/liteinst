@@ -107,9 +107,11 @@ exit:
   return target;
 }
 
-unique_ptr<Springboard> makeSpringboard(const CoalescedProbes& cp, 
+JITResult makeSpringboard(const CoalescedProbes& cp, 
      const Sequence* seq, const InstrumentationProvider& provider) {
 
+  JITResult jr;
+  jr.punning_cost = 0;
   Address addr = cp.range.start;
 
   Disassembler disas;
@@ -119,7 +121,12 @@ unique_ptr<Springboard> makeSpringboard(const CoalescedProbes& cp,
   CodeJitter cj;
   int64_t springboard_size = cj.getSpringboardSize(cp);
 
+  ticks start = getticks();
   Address target = punAddress(addr, springboard_size, seq, index);
+  ticks end = getticks();
+
+  jr.punning_cost = (end - start);
+
   if (target != nullptr) {
     int32_t relative = target - addr - 5;
     uint64_t punned = 0;
@@ -170,12 +177,14 @@ unique_ptr<Springboard> makeSpringboard(const CoalescedProbes& cp,
     }
 
     sb->marked_probe_heads = marked_probe_heads;
-    return move(sb);
+    jr.sb = move(sb);
+    return jr;
     // patch addr
     //
   } else {
-    printf("Failed pun at %p\n", addr);
-    return nullptr;
+    // printf("Failed pun at %p\n", addr);
+    jr.sb = nullptr;
+    return jr;
   }
 }
 
@@ -278,8 +287,15 @@ list<CoalescedProbes> LiteProbeInjector::coalesceProbes(
 
 }
 
-bool LiteProbeInjector::injectProbes(map<Address, ProbeContext>& locs,
+InjectionResult LiteProbeInjector::injectProbes(map<Address, ProbeContext>& locs,
     const InstrumentationProvider& provider) {
+
+  InjectionResult ir;
+  ir.injection_costs = 0;
+  ir.punning_costs = 0;
+  ir.meta_data_costs = 0;
+  ticks start = 0;
+  ticks end = 0;
   vector<Address> addrs;
   for(auto it = locs.begin(); it != locs.end(); it++) {
     Address addr = it->first;
@@ -287,7 +303,8 @@ bool LiteProbeInjector::injectProbes(map<Address, ProbeContext>& locs,
     addrs.push_back(addr);
     auto it1 = probes_by_addr.find(addr);
     if (it1 != probes_by_addr.end()) {
-      return false;
+      ir.success = false;
+      return ir;
     }
   }
 
@@ -318,7 +335,8 @@ bool LiteProbeInjector::injectProbes(map<Address, ProbeContext>& locs,
   } 
 
   if ((start_probe_fn->end - start_probe_fn->start) < 5) {
-    return false;
+    ir.success = false;
+    return ir;
   }
 
   utils::process::Function* fn = start_probe_fn;
@@ -337,22 +355,24 @@ bool LiteProbeInjector::injectProbes(map<Address, ProbeContext>& locs,
         cp.range.start);
         */
     // Create the new springboard for this coalesced probe
-    unique_ptr<Springboard> sb = makeSpringboard(cp, seq, provider);
+    JITResult jr = makeSpringboard(cp, seq, provider);
+
+    ir.punning_costs += jr.punning_cost;
 
     /*
     printf("Created spring board for function %s at %p\n", fn->name.c_str(),
         sb.get());
         */
 
-    if (sb == nullptr) {
+    if (jr.sb == nullptr) {
       // Release all the created springboards
       goto fail; // Fail fast. Either we probe all of them or none.
       // For the backtracking implementation gather the failed springboards and
       // then try to do back tracking while also considering current coalesced
       // probes.
     } else {
-      Springboard* temp_ptr = sb.get();
-      sbs.push_back(move(sb));
+      Springboard* temp_ptr = jr.sb.get();
+      sbs.push_back(move(jr.sb));
       cps_map.insert(pair<Address, const CoalescedProbes>(temp_ptr->base, cp));
     }
   }
@@ -369,6 +389,8 @@ bool LiteProbeInjector::injectProbes(map<Address, ProbeContext>& locs,
     int modified_buf_length = (sb->displaced.end - sb->displaced.start) > 8 ?
       (sb->displaced.end - sb->displaced.start) : 8;
     init_patch_site(sb->base, modified_buf_length);
+
+    start = getticks();
 
     uint64_t original = *reinterpret_cast<uint64_t*>(sb->base);
     uint64_t mask = 0x000000FFFFFFFFFF;
@@ -419,7 +441,7 @@ bool LiteProbeInjector::injectProbes(map<Address, ProbeContext>& locs,
         while (ip < cp.range.end && index < seq->n_instructions) {
           auto it = sb->probes.find(ip); 
           if (it != sb->probes.end()) {
-            *ip = 0x62; // Single byte write. Should be safe. 
+            // *ip = 0x62; // Single byte write. Should be safe. 
           }
           ip += decoded[index++].size;
         }
@@ -440,20 +462,25 @@ bool LiteProbeInjector::injectProbes(map<Address, ProbeContext>& locs,
 
       patch_64(ip, (*it)->marked_probe_heads);
 
-      // *ip = 0x62; // Single byte write. Should be safe. 
+      *ip = 0x62; // Single byte write. Should be safe. 
 
       // Remove the springboard from the consideration of router
       router.removeSpringboard(*it);
 
       ++it;
     }
+    end = getticks();
+    
+    ir.injection_costs += (end - start);
   }
 
-  return true;
+  ir.success = true;
+  return ir;
 
 fail:
+  ir.success = false;
   // Release all springboards
-  return false;
+  return ir;
 
     // Check function boundaries
     // Backtrack if necessary
