@@ -99,6 +99,8 @@ void exitInstrumentation() {
       g_liteprof_stats[pi.ctx.pg_id].last_snapshot =
         g_liteprof_stats[pi.ctx.pg_id].count;
       g_liteprof_stats[pi.ctx.pg_id].active = false;
+    } else {
+      printf("Failed deactivating probe group : %lu\n", pi.ctx.pg_id);
     }
   }
 }
