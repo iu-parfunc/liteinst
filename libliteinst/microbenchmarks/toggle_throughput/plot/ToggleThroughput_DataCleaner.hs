@@ -103,18 +103,18 @@ extract r = new_r
         get_threads [t,_,_] = t
         get_freq    [_,_,f] = f
         
-        
+newHead = V.fromList ["Executor Threads", "Toggle Freq", "Total Calls"]
 
 main :: IO ()
 main =
   do [file] <- getArgs
      bstr   <- BL.readFile file
      let Right (hdr,vec) = CSV.decodeByName bstr
-         hdr' = if V.any (== "TOTAL_CALLS") hdr
-                   then hdr
-                   else hdr V.++ V.singleton "TOTAL_CALLS"
-         hdr'' = hdr' V.++ V.singleton "REQUESTED_TOGGLE_RATE"
-         bstr2 = CSV.encodeByName hdr''
+--         hdr' = if V.any (== "TOTAL_CALLS") hdr
+ --                  then hdr
+  --                 else hdr V.++ V.singleton "TOTAL_CALLS"
+   --      hdr'' = hdr' V.++ V.singleton "REQUESTED_TOGGLE_RATE"
+         bstr2 = CSV.encodeByName newHead -- hdr''
                                   (P.map extract $ catMaybes $
                                    P.map extractToggleRate $ V.toList vec)
                                   
