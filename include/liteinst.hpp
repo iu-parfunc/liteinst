@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <unordered_map>
 
+#include "cycle.h"
 #include "concurrency.hpp"
 #include "defs.hpp"
 
@@ -310,6 +311,15 @@ class ProbeRegistration {
     RegistrationId reg_id;
     std::map<std::string, std::vector<ProbeGroupInfo>> pg_by_function;
     std::list<ProbeGroupInfo> conflicts;
+    bool failures;
+    int num_probed_pgs;
+    int num_skipped_pgs;
+    int num_failed_pgs;
+    int discoverd_pgs;
+    ticks probing_costs;
+    ticks meta_data_costs;
+    ticks injection_costs;
+    ticks punning_costs;
 
     std::vector<ProbeGroupInfo> getProbeGroupsForFunction(std::string name) {
       auto it = pg_by_function.find(name);

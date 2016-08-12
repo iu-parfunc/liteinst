@@ -4,6 +4,7 @@
 
 #include "liteprobes.hpp"
 #include "concurrency.hpp"
+#include "cycle.h"
 #include "assembly.hpp"
 #include "addr_range.hpp"
 #include "process.hpp"
@@ -15,16 +16,23 @@
 namespace liteinst {
 namespace liteprobes {
 
-
-struct PunningResult {
+struct JITResult {
   public:
-    utils::Address target;
-    uint8_t punned_bytes[8];
+    std::unique_ptr<Springboard> sb;
+    ticks punning_cost;
+};
+
+struct InjectionResult {
+  public:
+    bool success;
+    ticks meta_data_costs;
+    ticks punning_costs;
+    ticks injection_costs;
 };
 
 class LiteProbeInjector {
   public:
-    bool injectProbes(std::map<utils::Address, ProbeContext>& locs, 
+    InjectionResult injectProbes(std::map<utils::Address, ProbeContext>& locs, 
         const InstrumentationProvider& provider);
     bool disableProbe(utils::Address addr);
     bool enableProbe(utils::Address addr);
