@@ -68,13 +68,14 @@ extractToggleRate r =
   asked    = read $ B.unpack $ P.last $ B.words (r ! "ARGS")
   received = read $ B.unpack $ r ! "NUMBER_OF_TOGGLES"
 
-  r' = case H.lookup "TOTAL_CALLS" r of
-         Just x | x /= "" -> r
-         _ -> insert "TOTAL_CALLS"
-                     (B.pack $ show
-                      (read (B.unpack $ r ! "TOTAL_FOO_CALLS") +
-                       read (B.unpack $ r ! "TOTAL_BAR_CALLS") :: Double))
-                     r
+  r' = r 
+     -- case H.lookup "TOTAL_CALLS" r of
+     --     Just x | x /= "" -> r
+     --     _ -> insert "TOTAL_CALLS"
+     --                 (B.pack $ show
+     --                  (read (B.unpack $ r ! "TOTAL_FOO_CALLS") +
+     --                   read (B.unpack $ r ! "TOTAL_BAR_CALLS") :: Double))
+     --                 r
 
   -- Any filters to apply to the dataset:
   passFilters =
@@ -88,6 +89,22 @@ padZero num bs =
          then B.append (B.pack $ P.replicate (num-len) '0')bs
          else bs
 
+extract :: NamedRecord -> NamedRecord
+extract r = new_r 
+  where new_r = insert "Executor Threads" (B.pack $ show threads) $
+                insert "Toggle Freq" (B.pack $ show freq) $
+                insert "Total Calls" (B.pack $ show total_calls) $
+                namedRecord [] 
+
+        threads = (read $ B.unpack $ get_threads $ B.words (r ! "ARGS")) :: Int 
+        freq    = (read $ B.unpack $ get_freq $ B.words (r ! "ARGS")) :: Int
+
+        total_calls = (read $ B.unpack $ r ! "TOTAL_CALLS") :: Double 
+        get_threads [t,_,_] = t
+        get_freq    [_,_,f] = f
+        
+        
+
 main :: IO ()
 main =
   do [file] <- getArgs
@@ -98,8 +115,9 @@ main =
                    else hdr V.++ V.singleton "TOTAL_CALLS"
          hdr'' = hdr' V.++ V.singleton "REQUESTED_TOGGLE_RATE"
          bstr2 = CSV.encodeByName hdr''
-                                  (catMaybes $
+                                  (P.map extract $ catMaybes $
                                    P.map extractToggleRate $ V.toList vec)
+                                  
          outfile  = "./3_cleaned/" ++ takeFileName file
      P.putStrLn $ "Processing "++file++" into "++outfile
      T.mktree "./3_cleaned"
