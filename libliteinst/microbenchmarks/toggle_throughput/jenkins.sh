@@ -22,9 +22,11 @@ echo $(cc --version)
 
 here=`pwd`
 
-cd ../../../
-make
-source env_vars
+
+# this makes lib I guess.. but Make_runbench does that as well. 
+#  cd ../../../
+## make
+## source env_vars
 
 cd $here
 make all -f Make_runbench
