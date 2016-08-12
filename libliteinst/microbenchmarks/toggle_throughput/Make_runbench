@@ -23,7 +23,7 @@ TABLE=LITEINST_TOGGLE_THROUGHPUT
 all: benchharness library
 
 library:
-	(cd ../../../ && make lib)
+	(cd ../../../ && make clean && make lib)
 
 microbench.exe: benchharness
 
