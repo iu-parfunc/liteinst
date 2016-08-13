@@ -1,7 +1,7 @@
 
 # A separate Makefile concerned with running benchmarks.
 
-.phony: all benchharnesses plotter clean distclean run-full
+.phony: all benchharnesses plotter clean distclean run-micro run-full
 
 # Configuration stuff
 # ----------------------------------------
@@ -71,26 +71,36 @@ all: benchharnesses
 # Build the benchmarks:
 #----------------------------------------
 
-full-liteprof-benchmarks.exe: benchharnesses
+run-micro-benchmarks.exe: benchharnesses
+full-ubiprof-benchmarks.exe: benchharnesses
 
 benchharnesses:
 	which -a $(STACK)
 	$(STACK) --version
 	$(STACK) --install-ghc install
 	echo "Listing available benchmarks."
-	./full-liteprof-benchmarks.exe -l
-
+	./full-ubiprof-benchmarks.exe -l
+	./run-micro-benchmarks.exe -l
 
 # Run the benchmarks:
 #----------------------------------------
 
+run-micro: benchharnesses
+	./run-micro-benchmarks.exe --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --name=$(TABLE) --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
+
 run-full: benchharnesses
-	./full-liteprof-benchmarks.exe --retry=10 --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --name=$(TABLE) --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
+	./full-ubiprof-benchmarks.exe --retry=10 --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --name=$(TABLE) --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
 
 #----------------------------------------
 
+
+# Old, ignoring for now [2015.10.07]:
+plotter: run-benchmarks.exe
+	(cd ./Plotting && $(CABAL) sandbox init --sandbox=$(TOP)/.cabal-sandbox/)
+	(cd ./Plotting && $(CABAL) install --bindir=. . ../HSBencher/hsbencher-analytics --force-reinstalls --disable-documentation)
+
 clean:
-	rm -rf ./full-liteprof-benchmarks.exe
+	rm -rf ./run-micro-benchmarks.exe ./full-ubiprof-benchmarks.exe
 	rm -rf ./build
 
 distclean: clean
