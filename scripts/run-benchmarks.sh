@@ -53,6 +53,11 @@ echo $PATH
 # Make sure the module bash function is available:
 source /etc/profile.d/modules-local.sh
 
+#Fixes for CUTTER
+module add gcc
+
+export CC=gcc
+
 #./.jenkins_script.sh
 case $LIBCOMPILER in
     icc)
