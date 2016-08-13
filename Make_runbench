@@ -59,11 +59,15 @@ endif
 #   cross modifcation application benchmarks
 #    PATCHING - Run applications with different pointpatch/ callpatch patching methods
 #    PROBES   - Run applications with different probe toggling schemes
-ifeq ($(BENCH_RUNS), PATCHING)
-  TABLE=CrossModification_PATCHING
-else ifeq ($(BENCH_RUNS), PROBES)
-  TABLE=CrossModification_PROBES
-endif
+# ifeq ($(BENCH_RUNS), PATCHING)
+#   TABLE=CrossModification_PATCHING
+# else ifeq ($(BENCH_RUNS), PROBES)
+#   TABLE=CrossModification_PROBES
+# endif
+
+#TABLE NAME 
+TABLE=LITEINST_BENCHMARKS 
+
 
 all: benchharnesses
 
@@ -85,7 +89,9 @@ benchharnesses:
 #----------------------------------------
 
 run-full: benchharnesses
-	./full-liteprof-benchmarks.exe --retry=10 --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --name=$(TABLE) --fusion-upload --clientid=$(CID) --clientsecret=$(SEC) $(WHICHBENCH) $(BENCHARGS)
+	./full-liteprof-benchmarks.exe --retry=10 --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --name=$(TABLE)  $(WHICHBENCH) $(BENCHARGS)
+
+# --fusion-upload --clientid=$(CID) --clientsecret=$(SEC)
 
 #----------------------------------------
 
