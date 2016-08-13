@@ -11,6 +11,8 @@
 namespace utils {
 namespace range {
 
+// DANGER !!!!!! : This is wrong......
+// See http://stackoverflow.com/questions/37558273/stl-map-custom-comparator
 class RangeComparator {
   public:
     bool operator() (const Range& lhs, const Range& rhs) const {
