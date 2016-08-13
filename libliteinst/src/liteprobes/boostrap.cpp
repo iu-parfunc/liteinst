@@ -303,7 +303,7 @@ void cleanup() {
   fprintf(stderr, "\n[Arena Allocator]\n");
   fprintf(stderr, "ARENA_ALLOCATIONS: %ld\n", arena.allocations);
   fprintf(stderr, "ARENA_PAGES: %ld\n", arena.n_pages);
-  fprintf(stderr, "ARENA_ALLOCATED: %ld kB\n", arena.kbs);
+  fprintf(stderr, "ARENA_ALLOCATED: %ld\n", arena.kbs);
   fprintf(stderr, "ARENA_UTILIZATION: %.2f\n", arena.utilization);
 
   fprintf(stderr, "\nTOTAL_PAGES: %ld\n", fixed.n_pages + arena.n_pages);
