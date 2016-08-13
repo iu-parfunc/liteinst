@@ -7,8 +7,6 @@ echo "Run benchmarks script starting, located at: $0"
 
 rootdir=$1
 shift
-LIBCOMPILER=$1
-shift
 export BENCHARGS=$*
 set -e
 
@@ -16,12 +14,6 @@ if [ "$rootdir" == "" ] || ! [ -d "$rootdir" ];
 then echo "run-benchmarks, cannot proceed because rootdir ($rootdir) does not exist."
      exit 1
 fi
-
-if [ "$LIBCOMPILER" == "" ];
-then echo "run-benchmarks, cannot proceed because library compiler ($LIBCOMPILER) not set."
-     exit 1
-fi
-
 
 cd $rootdir
 echo "Switched to working-copy directory: "`pwd`
@@ -58,26 +50,10 @@ module add gcc
 
 export CC=gcc
 
-#./.jenkins_script.sh
-case $LIBCOMPILER in
-    icc)
-	# Temporarily using older version (cutter license problem):
-	module add intel/13.1.0/compiler
+# MAke the Library 
+make clean
+make lib CC=gcc CXX=g++
 
-	make clean
-	make lib CC=icc CXX=icpc
-	;;
-    gcc)
-# Ugh, this version of gcc has an ld that makes Haskell hostname-1.0 fail to build:
-#	module add gcc/4.9.2
-
-	make clean
-	make lib CC=gcc CXX=g++
-	;;
-    *)
-	echo "No suitable compiler for the library chosen: ABORTING!"
-        exit 1
-esac
 
 # Compiling Ubiprof is done.
 
