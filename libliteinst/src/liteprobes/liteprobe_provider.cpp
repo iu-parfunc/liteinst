@@ -4,6 +4,7 @@
 #include "control_flow_router.hpp"
 #include "strings.hpp"
 #include "process.hpp"
+#include "range.hpp"
 #include "assembly.hpp"
 #include "patcher.h"
 #include "cycle.h"
@@ -27,6 +28,7 @@ namespace liteprobes {
 using namespace utils::process;
 using namespace utils::strings;
 using namespace utils::assembly;
+using namespace utils::range;
 
 using std::string;
 using std::stack;
@@ -527,18 +529,15 @@ outer:
 
   assert(probed == num_funcs_probed);
 
-  /*
-  printf("\nNUM_FUNCS: %ld\n", num_funcs);
-  printf("NUM_FUNCS_PROBED: %ld\n", num_funcs_probed);
-  printf("NUM_FUNCS_SKIPPED: %ld\n", skipped_funcs);
-  printf("NUM_FUNCS_FAILED: %ld\n", num_funcs - num_funcs_probed - 
+  printf("FUNCS: %ld\n", num_funcs_probed);
+  printf("SKIPPED_FUNCS: %ld\n", skipped_funcs);
+  printf("FAILED_FUNCS: %ld\n", num_funcs - num_funcs_probed - 
       skipped_funcs);
-  printf("PROBED: %ld\n", num_probes);
-  printf("FAILED_PROBES: %ld\n", failed_probes);
-  printf("SKIPPED_PROBES: %ld\n\n", skipped_probes);
+  printf("PROBSITES: %ld\n", num_probes);
+  printf("FAILED_PROBESITES: %ld\n", failed_probes);
+  printf("SKIPPED_PROBESITES: %ld\n\n", skipped_probes);
 
   printf("After injecting probes..\n");
-  */
 
   if (failed_probes > 0) {
     pr->failures = true;
@@ -587,8 +586,13 @@ bool LiteProbeProvider::activate(ProbeInfo ctx) {
   if (sb->active_probes == 0) {
     Address probe_end  = sb->base + sb->probe_length;
 
-    patch_64(sb->base, sb->punned | (*(reinterpret_cast<uint64_t*>(sb->base))
+    Range r(sb->base - 8, sb->base + 24);
+    LiteProbeInjector::range_map.lockRange(r);
+
+    patch_64_plus(sb->base, sb->punned | (*(reinterpret_cast<uint64_t*>(sb->base))
           & 0xFFFFFF0000000000));
+
+    LiteProbeInjector::range_map.unlockRange(r);
 
     for (const auto& it : sb->saved_probe_heads) {
       if (it.first >= probe_end) {
@@ -627,8 +631,13 @@ bool LiteProbeProvider::deactivate(ProbeInfo ctx) {
   if (sb->active_probes == 1) {
     Address probe_end  = sb->base + sb->probe_length;
 
-    patch_64(sb->base, sb->original | (*(reinterpret_cast<uint64_t*>(sb->base))
+    Range r(sb->base - 8, sb->base + 24);
+    LiteProbeInjector::range_map.lockRange(r);
+
+    patch_64_plus(sb->base, sb->original | (*(reinterpret_cast<uint64_t*>(sb->base))
           & 0xFFFFFF0000000000));
+
+    LiteProbeInjector::range_map.unlockRange(r);
 
     for (const auto& it : sb->saved_probe_heads) {
       if (it.first >= probe_end) {
@@ -644,8 +653,7 @@ bool LiteProbeProvider::deactivate(ProbeInfo ctx) {
   return true;
 }
 
-bool LiteProbeProvider::activate(ProbeGroupInfo pgi) {
-  ProbeGroup* pg = probe_groups[pgi.id].get();
+bool LiteProbeProvider::activate(ProbeGroupInfo pgi) { ProbeGroup* pg = probe_groups[pgi.id].get();
   bool result = false;
 
   if (pg != nullptr) {

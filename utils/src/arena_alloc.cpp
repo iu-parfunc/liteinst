@@ -28,12 +28,22 @@ using utils::Address;
 utils::concurrency::ConcurrentMap<utils::Address, std::shared_ptr<ArenaPool>> 
   ArenaAllocator::pools;
 
+#ifdef AUDIT
+int64_t ArenaAllocator::allocations = 0;
+int64_t ArenaAllocator::allocation_sz = 0;
+#endif
+
 /*** ArenaAllocator Implementation **/
 
 ArenaAllocator::ArenaAllocator(int prot) : Allocator(), prot(prot) {
 }
 
 Address ArenaAllocator::getAllocation(Address addr, int32_t size) {
+#ifdef AUDIT
+  allocations++;
+  allocation_sz += size;
+#endif
+
   Address mem_chunk = (Address)((uint64_t)addr >> 32);
   auto it = pools.find(mem_chunk);  
   if (it != pools.end()) {
@@ -54,6 +64,10 @@ Address ArenaAllocator::getAllocation(Address addr, int32_t size) {
       pools.releaseUpdateLock();
       return (*it).second->getFreeMemorySlot(size);
     } else {
+#ifdef AUDIT
+      allocations--;
+      allocation_sz -= size;
+#endif
       pools.releaseUpdateLock();
       return NULL;
     }
@@ -96,6 +110,8 @@ MemStatistics ArenaAllocator::getAllocationStatistics() {
   MemStatistics stats;
   stats.n_pages = total_alloc / sysconf(_SC_PAGE_SIZE);
   stats.kbs = total_alloc / 1024;
+  stats.allocations = allocations;
+  stats.utilization = (double) allocation_sz / total_alloc;
 
   return stats;
 }

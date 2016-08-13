@@ -12,6 +12,7 @@
 #include "process.hpp"
 #include "addr_range.hpp"
 #include "liteinst.hpp"
+#include "patcher.h"
 
 namespace liteinst {
 namespace liteprobes {

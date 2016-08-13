@@ -17,8 +17,10 @@ enum class AllocatorType {
 };
 
 struct MemStatistics {
+  int64_t allocations;
   int64_t n_pages;
   int64_t kbs; 
+  double utilization;
 };
 
 /// A memory allocation strategy.

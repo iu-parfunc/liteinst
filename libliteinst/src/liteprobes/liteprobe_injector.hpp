@@ -6,7 +6,7 @@
 #include "concurrency.hpp"
 #include "cycle.h"
 #include "assembly.hpp"
-#include "addr_range.hpp"
+#include "range.hpp"
 #include "process.hpp"
 #include "defs.hpp"
 #include <list>
@@ -43,6 +43,7 @@ class LiteProbeInjector {
   // private:
     utils::concurrency::ReadWriteLock meta_data_lock;
 
+    static utils::range::BlockRangeMap range_map;
     static std::map<utils::Address, Probe*> probes_by_addr;
     static std::vector<std::unique_ptr<Probe>> probes;
     static std::map<utils::Address, std::unique_ptr<Springboard>> relocations;

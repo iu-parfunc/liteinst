@@ -29,6 +29,10 @@ class FixedAllocator : public Allocator {
   FixedAllocator();
   ~FixedAllocator();
 
+#ifdef AUDIT
+  static int64_t n_allocations;
+#endif
+
   public:
   /** \brief Gets memory chunk of given size allocated at the given address.
    *  \param address Fixed address to allocate memory at

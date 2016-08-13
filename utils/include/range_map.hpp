@@ -88,6 +88,22 @@ class BlockRangeMap : public Show {
 
     BlockStatistics getBlockStatistics();
 
+    /** \brief Locks the address range for mutual exclusive updates  
+     *  \param r Range to be locked
+     */
+    std::vector<BlockEntry*> lockRange(Range r);
+
+    /** \brief Unlocks the address range.
+     *  \param r Range to be unlocked
+     */
+    bool unlockRange(Range r);
+
+    int32_t getBlockSize();
+
+#ifdef AUDIT
+    BlockEntries getEntries();
+#endif
+
     ~BlockRangeMap();
 
   private:
@@ -100,16 +116,6 @@ class BlockRangeMap : public Show {
      *  \param r The range to be blocked according to block_size
      */
     std::vector<BlockRange> getBlockedRangeMetaData(Range r);
-
-    /** \brief Locks the address range for mutual exclusive updates  
-     *  \param r Range to be locked
-     */
-    std::vector<BlockEntry*> lockRange(Range r);
-
-    /** \brief Unlocks the address range.
-     *  \param r Range to be unlocked
-     */
-    bool unlockRange(Range r);
 };
 
 } // End range 

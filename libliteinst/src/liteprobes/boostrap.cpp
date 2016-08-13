@@ -18,6 +18,16 @@
 // #include "control_flow_router.hpp"
 // #include "process.hpp"
 
+#ifdef AUDIT
+#include <unordered_map>
+#include <string>
+#include "audit.hpp"
+
+using std::unordered_map;
+using std::string;
+using std::to_string;
+#endif 
+
 namespace liteinst {
 namespace liteprobes {
 
@@ -158,22 +168,28 @@ void liteprobesInfectMain() {
   memcpy(stub, (const void*) g_stub, 
       sizeof(g_stub)/sizeof(g_stub[0])); 
 
+  /*
   fprintf(stderr, "[premain] Inject trampoline fn call address to the "
       "stub..\n");
+      */
   // Inject trampoline fn call address to the stub
   int8_t trampoline_fn_offset = (sizeof(g_stub) /
       sizeof(g_stub[0])) - 8; 
+  /*
   fprintf(stderr, "[premain] Trampoline function offset : %d\n",
       trampoline_fn_offset);
+      */
   *(uint64_t*)&((uint8_t*)stub)[trampoline_fn_offset] =
     (uint64_t) initializeLiteprobes;
 
+  /*
   fprintf(stderr, "[premain] Inject return jump address to the stub..\n");
+  */
   // Inject return jump address to the stub
   int8_t return_addr_offset = (sizeof(g_stub) / sizeof(g_stub[0])) - 16; 
   *(uint64_t*)&((uint8_t*)stub)[return_addr_offset] = (uint64_t) g_main_ptr;
 
-  fprintf(stderr, "[premain] Setup the call to stub..\n");
+  // fprintf(stderr, "[premain] Setup the call to stub..\n");
   // Setup the call to stub 
   *(uint64_t*)&((uint8_t*)g_rip_indirect_jump)[6] = (uint64_t) stub;
 
@@ -210,7 +226,7 @@ void liteprobesInfectMain() {
   memcpy(g_main_ptr, (const void*) g_rip_indirect_jump, 
       sizeof(g_rip_indirect_jump)/sizeof(g_rip_indirect_jump[0])); 
 
-  fprintf(stderr, "[premain] Done patching..\n");
+  // fprintf(stderr, "[premain] Done patching..\n");
 }
 
 
@@ -231,6 +247,47 @@ __attribute__((destructor))
 void cleanup() {
   printf("Inside cleanup\n");
 
+#ifdef AUDIT
+  FILE* layouts_fp = fopen("layouts.out", "w");
+  unordered_map<string, int64_t> layout_strs;
+  for (auto it : g_liteprobes_layouts) {
+    uint64_t layout = it.first;
+    string layout_str;
+    int i=0;
+    int sz = 0;
+    while (((uint8_t*)&layout)[i] != 0 && ((uint8_t*)&layout)[i]+sz <=5) {
+      layout_str += (string("|") + to_string(((uint8_t*)&layout)[i]));
+      sz += ((uint8_t*)&layout)[i];
+      i++;
+    }
+
+    if (sz < 5) {
+      int diff = 5 - sz;
+      layout_str += (string("|") + to_string(diff));
+    }
+
+    if (layout_str.size() > 0) {
+      layout_str = layout_str.substr(1);
+    } else {
+      layout_str = "5";
+    }
+
+    auto it1 = layout_strs.find(layout_str);
+    if (it1 != layout_strs.end()) {
+      int64_t count = (*it1).second;
+      count += it.second;
+      layout_strs.erase(it1);
+      layout_strs[layout_str] = count;
+    } else {
+      layout_strs[layout_str] = it.second;
+    }
+  }
+
+  for (auto it : layout_strs) {
+    string layout_str = it.first;
+    fprintf(layouts_fp, "%s : %ld\n", layout_str.c_str(), it.second);
+  }
+
   utils::alloc::MemStatistics fixed = utils::alloc::AllocatorFactory::
     getAllocator(utils::alloc::AllocatorType::FIXED)->getAllocationStatistics();
 
@@ -238,19 +295,24 @@ void cleanup() {
     getAllocator(utils::alloc::AllocatorType::ARENA)->getAllocationStatistics();
 
   fprintf(stderr, "\n[Fixed Allocator]\n");
-  fprintf(stderr, "  Pages : %ld\n", fixed.n_pages);
-  fprintf(stderr, "  Allocated : %ld kB\n", fixed.kbs);
+  fprintf(stderr, "FIXED_ALLOCTIONS: %ld\n", fixed.allocations);
+  fprintf(stderr, "FIXED_PAGES: %ld\n", fixed.n_pages);
+  fprintf(stderr, "FIXED_ALLOCATED: %ld\n", fixed.kbs);
+  fprintf(stderr, "FIXED_UTILIZATION: %.2f\n", fixed.utilization);
 
   fprintf(stderr, "\n[Arena Allocator]\n");
-  fprintf(stderr, "  Pages : %ld\n", arena.n_pages);
-  fprintf(stderr, "  Allocated : %ld kB\n", arena.kbs);
+  fprintf(stderr, "ARENA_ALLOCATIONS: %ld\n", arena.allocations);
+  fprintf(stderr, "ARENA_PAGES: %ld\n", arena.n_pages);
+  fprintf(stderr, "ARENA_ALLOCATED: %ld kB\n", arena.kbs);
+  fprintf(stderr, "ARENA_UTILIZATION: %.2f\n", arena.utilization);
 
   fprintf(stderr, "\nTOTAL_PAGES: %ld\n", fixed.n_pages + arena.n_pages);
   fprintf(stderr, "TOTAL_ALLOCATED: %ld\n\n", fixed.kbs + arena.kbs);
 
-  // utils::alloc::Allocator::showStatistics(stderr, 0);
+#endif
+
 }
 
 extern "C" void liteprobes_dummy() {
-  printf("Dummy..\n");
+  // printf("Dummy..\n");
 }

@@ -18,6 +18,8 @@
 #include "patchlist.h"
 #include "patch_utils.h"
 
+// #include "assembly.hpp"
+
 #include <stdlib.h>
 #include <memory.h>
 #include <time.h>
@@ -32,6 +34,7 @@
 #if defined(PATCH_TRANSACTION_XBEGIN) || defined(PATCH_TRANSACTION_XBEGIN2) || defined(PATCH_TRANSACTION_XBEGIN3)
 #include <immintrin.h>
 #endif
+
 
 
 /* -----------------------------------------------------------------
@@ -334,6 +337,101 @@ inline int straddle_point_64(void *addr){
     return  g_cache_lvl3_line_size - (uint64_t)addr % g_cache_lvl3_line_size;
   else
     return 0;
+}
+
+bool patch_64_plus(void *addr, uint64_t patch_value) {
+  int offset = (uint64_t)addr % g_cache_lvl3_line_size;
+
+  /* Is this a straddler patch ? */
+  if (offset > g_cache_lvl3_line_size - 8) {
+    // fprintf(stderr,"Straddler update\n");
+    /* Here the patch site straddles a cache line and all atomicity
+       guarantees in relation to instruction fetch seems to go out the window */
+
+    unsigned int cutoff_point = g_cache_lvl3_line_size - offset;
+    uint64_t* straddle_point = (uint64_t*)((uint8_t*)addr + cutoff_point);
+    assert((uint64_t)straddle_point % g_cache_lvl3_line_size == 0);
+
+    uint64_t* before_ptr = straddle_point - 1;
+    uint64_t start_offset = (uint8_t*)addr - (uint8_t*)before_ptr;
+    uint64_t heads_marked = *before_ptr;
+
+    // Make sure we decode some what past the 8 bytes that we are going to patch
+    // in order to make sure we get disassembly right for the 8 bytes that we 
+    // are interested in 
+    Decoded d = decode_range(addr, (uint8_t*)addr + 20);
+    _DInst* decoded  = (_DInst*) d.decoded_instructions;
+    int head_offset = 0;
+    for (int i=0; i < d.n_instructions; i++) {
+      if (head_offset <= cutoff_point) {
+        int offset = start_offset + head_offset;
+        if (offset < 8) {
+          ((uint8_t*)&heads_marked)[offset] = int3;
+        } else {
+          break;
+        }
+        head_offset += decoded[i].size;
+      }
+    }
+
+    destroy_decoded(d);
+
+    /* read in 8 bytes before and after the straddle point */
+    uint64_t before = *before_ptr;
+    uint64_t after  = *straddle_point;
+
+
+    uint64_t lsb_mask = get_lsb_mask_64(cutoff_point);
+    uint64_t msb_mask = get_msb_mask_64(cutoff_point);
+
+
+    int shift_size = 8 * (8 - cutoff_point);
+
+    // fprintf(stderr, "straddle_point : %X\n", *straddle_point);
+    // fprintf(stderr, "after: %X\n", after);
+
+    /* These are the parts to keep from what was originally in memory.
+     * These calculations handle little endianness in x86. Raw memory
+     * when stored as int types will get converted to the little endian 
+     * format where leading byte becomes LSB. 
+     *
+     * toy example :
+     * char bytes[] = {1, 0, 0, 0};
+     * int n = *(int*)bytes;
+     * printf("%X\n", n);
+     *
+     * On x86 this would print 0x00000001 though in raw memory it is stored
+     * as 0x10000000 */
+    uint64_t patch_keep_before = before & (~msb_mask);
+    uint64_t patch_keep_after  = after & msb_mask;
+
+    uint64_t patch_before = patch_keep_before | ((patch_value  & lsb_mask) << shift_size);
+    uint64_t patch_after =  patch_keep_after | ((patch_value  & ~lsb_mask) >> (8 * cutoff_point));
+
+    uint8_t oldFR = ((uint8_t*)addr)[0];
+
+    if (oldFR == int3) return false;
+    else if (__sync_bool_compare_and_swap(before_ptr, before, heads_marked))     {
+      // printf("Cutoff point : %d\n", cutoff_point);
+      // printf("Location : %p Original : %llx  Heads marked : %llx\n", before_ptr, before, heads_marked);
+      //else if (__atomic_compare_exchange((uint8_t*)addr,&oldFR, &int3,false,__ATOMIC_SEQ_CST,__ATOMIC_SEQ_CST)) { 
+#ifdef PATCH_FLUSH_AFTER_INT3
+      clflush(addr);
+#endif
+      
+      WAIT();
+
+      WRITE(straddle_point,patch_after);
+      WAIT();
+      WRITE((straddle_point-1), patch_before);
+      //WRITE((uint64_t*)addr,patch_value);
+      return true;
+    }
+  }
+
+  /* if not a straddler perform a single write */
+  WRITE((uint64_t*)addr,patch_value);
+  return true;
 }
 
 /* patch 8 bytes (64 bits) in a safe way.

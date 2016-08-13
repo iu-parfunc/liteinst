@@ -20,6 +20,7 @@ using std::vector;
 using utils::Address;
 
 BlockRangeMap FixedAllocator::allocations(sysconf(_SC_PAGESIZE));
+int64_t FixedAllocator::n_allocations = 0;
 
 FixedAllocator::FixedAllocator() : Allocator() {
   // printf("CREATING FIXED ALLOCATOR.\n");
@@ -52,6 +53,12 @@ Address FixedAllocator::getAllocation(Address at, int32_t size) {
   bool success = allocations.updateRangeEntries(
       r, [this](vector<BlockEntry*> entries, Range range) 
       { return this->allocationCallback(entries, range); });
+
+#ifdef AUDIT
+  if (success) {
+    n_allocations++;
+  }
+#endif
 
   return success ? at : NULL;
 }
@@ -183,8 +190,30 @@ MemStatistics FixedAllocator::getAllocationStatistics() {
   BlockStatistics stats = allocations.getBlockStatistics();
 
   MemStatistics mem;
-  mem.n_pages = stats.n_blocks;
-  mem.kbs = stats.kbs;
+
+#ifdef AUDIT
+  BlockEntries entries = allocations.getEntries();
+  int32_t block_size = allocations.getBlockSize();
+  int64_t total_alloc_sz = 0;
+  int64_t occupied_sz = 0;
+  int64_t pages = 0;
+  for (auto it : entries) {
+    BlockEntry* be = it.second;
+    PageMetaData* meta = (PageMetaData*) be->metadata;
+    if (meta != nullptr && meta->allocated) {
+      for (Range r : meta->occupied) {
+        occupied_sz += (r.end - r.start);
+      }
+      total_alloc_sz += block_size;
+      pages++;
+    }
+  }
+
+  mem.n_pages = pages;
+  mem.kbs = total_alloc_sz / 1024;
+  mem.allocations = n_allocations;
+  mem.utilization = (double) occupied_sz / total_alloc_sz;
+#endif
 
   return mem;
 }
