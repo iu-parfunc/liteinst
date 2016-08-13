@@ -102,6 +102,11 @@ class ArenaAllocator : public Allocator {
       std::shared_ptr<ArenaPool>> pools;  // putIfAbsent
     int prot;
 
+#ifdef AUDIT
+    static int64_t allocations;
+    static int64_t allocation_sz;
+#endif
+
 };
 
 } // End alloc 

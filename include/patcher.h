@@ -42,7 +42,6 @@ typedef struct {
   unsigned int n_instructions; 
 } Decoded; 
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -66,6 +65,7 @@ bool is_straddler_64(void *addr);
 /* returns 0 on non-straddlers, otherwise an offset into the patch */
 int straddle_point_64(void *addr);
 
+bool patch_64_plus(void*, uint64_t); 
 /* Patch up to 8 byte instructions in a straddler safe way */ 
 bool patch_64(void*, uint64_t); 
 /* Patch up to 4 byte instructions in a straddler safe way */

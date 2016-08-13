@@ -51,6 +51,14 @@ BlockStatistics BlockRangeMap::getBlockStatistics() {
   return stats;
 }
 
+int32_t BlockRangeMap::getBlockSize() {
+  return block_size;
+}
+
+BlockEntries BlockRangeMap::getEntries() {
+  return entries;
+}
+
 BlockRangeMap::~BlockRangeMap() {
   for (auto it : entries) {
     delete it.second;

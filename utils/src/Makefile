@@ -5,7 +5,7 @@ DEPS_ROOT= $(ROOT)/deps
 
 EXTRA_WARNS= -pedantic 
 
-override CFLAGS += --std=c++11 -g -Wall $(EXTRA_WARNS) 
+override CFLAGS += --std=c++11 -g -Wall $(EXTRA_WARNS) -DAUDIT
 # CFLAGS=-DPROBE_TRUE_EMPTY_ON -DPROBE_CPU_TIME
 # CFLAGS=-DPROBE_HIST_ON -DPROBE_CPU_TIME
 

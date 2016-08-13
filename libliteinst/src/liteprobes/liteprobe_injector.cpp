@@ -14,6 +14,10 @@
 #include <stdexcept>
 #include <memory>
 
+#ifdef AUDIT
+#include "audit.hpp"
+#endif
+
 namespace liteinst {
 namespace liteprobes {
 
@@ -36,6 +40,9 @@ using std::invalid_argument;
 const array<uint8_t, 14> invalid_opcodes = {0x06, 0x07, 0x0E, 0x16, 0x17,
         0x1E, 0x1F, 0x27, 0x2F, 0x37, 0x3F, 0x60, 0x61, 0x62};
 
+const int probe_lock_length = 24;
+
+BlockRangeMap LiteProbeInjector::range_map(probe_lock_length);
 map<Address, Probe*> LiteProbeInjector::probes_by_addr;
 vector<unique_ptr<Probe>> LiteProbeInjector::probes;
 map<Address, unique_ptr<Springboard>> LiteProbeInjector::relocations;
@@ -56,14 +63,34 @@ Address punAddress(Address addr, int64_t size,
     i++; clobbered_instruction_count++;
   }
 
+  assert(probe_size >= 5);
+
+#ifdef AUDIT
+  int j=index, probe_sz = 0;
+  uint64_t layout = 0;
+  while (probe_sz < 5) {
+    ((uint8_t*)&layout)[j-index] = decoded[j].size;
+    probe_sz += decoded[j].size;
+    j++;
+  }
+
+  auto it = g_liteprobes_layouts.find(layout);
+  if (it != g_liteprobes_layouts.end()) {
+    int64_t count = it->second;
+    count++;
+    g_liteprobes_layouts.erase(it); // This shit is crazy
+    g_liteprobes_layouts[layout] = count;
+  } else {
+    g_liteprobes_layouts[layout] = 1;
+  } 
+#endif
+
   if (clobbered_instruction_count == 1) {
     unique_ptr<Allocator> allocator = AllocatorFactory::getAllocator(
         AllocatorType::ARENA);
     Address target = allocator->getAllocation(addr, size); 
     return target;
   }
-
-  assert(probe_size >= 5);
 
   int32_t rel_addr = 0x0;
   int32_t int3_mask = 0x62;
@@ -120,6 +147,8 @@ JITResult makeSpringboard(const CoalescedProbes& cp,
 
   CodeJitter cj;
   int64_t springboard_size = cj.getSpringboardSize(cp);
+
+  // printf("SPRINGBOARD_SIZE : %ld\n", springboard_size);
 
   ticks start = getticks();
   Address target = punAddress(addr, springboard_size, seq, index);
@@ -388,7 +417,7 @@ InjectionResult LiteProbeInjector::injectProbes(map<Address, ProbeContext>& locs
 
     int modified_buf_length = (sb->displaced.end - sb->displaced.start) > 8 ?
       (sb->displaced.end - sb->displaced.start) : 8;
-    init_patch_site(sb->base, modified_buf_length);
+    init_patch_site(sb->base-8, modified_buf_length + 8);
 
     start = getticks();
 
@@ -399,9 +428,13 @@ InjectionResult LiteProbeInjector::injectProbes(map<Address, ProbeContext>& locs
 
     uint64_t punned = original_masked | punned_masked; 
 
+    Range r(sb->base-8, sb->base+24);
+    range_map.lockRange(r);
     // patch in the the springboard jump 
-    patch_64(sb->base, punned);
+    patch_64_plus(sb->base, punned);
     // *reinterpret_cast<uint64_t*>(sb->base) = sb->punned;
+
+    range_map.unlockRange(r);
 
     assert(*reinterpret_cast<uint64_t*>(sb->base) == punned);
     // printf("PUNNED : %p\n", punned);
@@ -431,6 +464,7 @@ InjectionResult LiteProbeInjector::injectProbes(map<Address, ProbeContext>& locs
 
     Address addr = cp.range.start;
     Address ip = addr + sb->probe_length;
+
     int index = disas.findInstructionIndex(ip, seq);
     auto it = subsumed.begin();
     bool no_springboards = false;
@@ -460,7 +494,7 @@ InjectionResult LiteProbeInjector::injectProbes(map<Address, ProbeContext>& locs
 
       assert(ip == (*it)->base);
 
-      patch_64(ip, (*it)->marked_probe_heads);
+      patch_64_plus(ip, (*it)->marked_probe_heads);
 
       *ip = 0x62; // Single byte write. Should be safe. 
 
