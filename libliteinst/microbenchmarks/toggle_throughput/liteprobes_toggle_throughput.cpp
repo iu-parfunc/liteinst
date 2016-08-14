@@ -132,8 +132,13 @@ double run_experiment() {
     for(; deficit > 0; deficit-- )
     // if (deficit > 1) //
     {
-      // printf(".");fflush(stdout);
-      p->deactivate(pr);
+      if (mode == 0) {
+        // printf("_");fflush(stdout);
+        p->activate(pr);
+      } else {
+        // printf(".");fflush(stdout);
+        p->deactivate(pr);
+      }
       // mode = (mode + 1) % 10;
       mode = !mode;
       n_toggles++;
