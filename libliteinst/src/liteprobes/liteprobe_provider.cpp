@@ -542,7 +542,7 @@ outer:
   printf("SKIPPED_FUNCS: %ld\n", skipped_funcs);
   printf("FAILED_FUNCS: %ld\n", num_funcs - num_funcs_probed - 
       skipped_funcs);
-  printf("PROBSITES: %ld\n", num_probes);
+  printf("PROBESITES: %ld\n", num_probes);
   printf("FAILED_PROBESITES: %ld\n", failed_probes);
   printf("SKIPPED_PROBESITES: %ld\n\n", skipped_probes);
 
