@@ -155,6 +155,7 @@ double run_experiment() {
   for(int i=0; i<num_runners; i++) {
     // foo_count += __sync_lock_test_and_set( g_foo_addresses[i], 0);
     foo_count += *g_foo_addresses[i];
+    *g_foo_addresses[i] = 0; // reset for next run
   }
 
   printf("\nFinally, here is some human-readable output, not for HSBencher:\n");
