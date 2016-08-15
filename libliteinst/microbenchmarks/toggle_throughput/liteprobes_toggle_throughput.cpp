@@ -139,14 +139,29 @@ double run_experiment() {
     // if (deficit > 1) //
     {
       if (mode == 0) {
-        // printf("_");fflush(stdout);
-        p->activate(pr);
+        //printf("_");fflush(stdout);
+	for (const auto& it : pr.pg_by_function) {
+	  //printf("Deactivating function : %s\n", it.first.c_str());
+
+	  for (ProbeGroupInfo pgi : it.second) {
+	    p->activate(pgi);
+	  }
+	}
+        //p->activate(pr);
       } else {
-        // printf(".");fflush(stdout);
-        p->deactivate(pr);
+        //printf(".");fflush(stdout);
+	for (const auto& it : pr.pg_by_function) {
+	  //printf("Deactivating function : %s\n", it.first.c_str());
+
+	  for (ProbeGroupInfo pgi : it.second) {
+	    p->deactivate(pgi);
+	  }
+	}
+
+	//        p->deactivate(pr);
       }
       // mode = (mode + 1) % 10;
-      mode = !mode;
+      mode = (mode + 1) % 2 ;
       n_toggles++;
     }
 
@@ -164,7 +179,7 @@ double run_experiment() {
   }
 
   printf("\nFinally, here is some human-readable output, not for HSBencher:\n");
-  setlocale(LC_NUMERIC, "");
+  //setlocale(LC_NUMERIC, "");
   printf("Number of toggles : %'lu\n", n_toggles);
   printf("Foo count : %'lu\n", foo_count);
   printf("Combined count : %'lu\n", foo_count);
@@ -222,6 +237,10 @@ int main(int argc, char* argv[]) {
       trials);
 
   g_foo_addresses = new long*[num_runners](); // (sizeof(long), num_runners);
+  
+  //for (int i = 0; i < num_runners; i++) { 
+  //  g_foo_addresses[i] = 0; 
+  //}
 
   // Thread fork
   pthread_t runners[num_runners]; 
@@ -254,12 +273,9 @@ int main(int argc, char* argv[]) {
   run_experiment();
   double elapsed_time = run_experiment();
 
-  g_globally_finished = 1;
-  g_start = 1; // Just to let them get out of their waiting loop and see we're finished.
+  g_running = 0; // already done in run_experiments 
 
-  for (int i = 0; i < num_runners; i ++) {
-    pthread_join(runners[i],NULL);
-  }
+ 
   // ----------------- Threads joined -----------------------
 
   unsigned long min_switches = ULONG_MAX;
@@ -296,6 +312,14 @@ int main(int argc, char* argv[]) {
   printf("TOTAL_CALLS: %f\n", total_foo_calls / elapsed_time);
 
   printf("SELFTIMED: %f\n", total_foo_calls / elapsed_time);
+
+
+  g_globally_finished = 1;
+  g_start = 1; // Just to let them get out of their waiting loop and see we're finished.
+
+  for (int i = 0; i < num_runners; i ++) {
+    pthread_join(runners[i],NULL);
+  }
 
   delete[] ids;
   delete[] g_foo_addresses;
