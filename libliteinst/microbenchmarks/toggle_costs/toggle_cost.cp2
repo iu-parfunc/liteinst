@@ -59,9 +59,8 @@
   fclose(fp1);
   fclose(fp2);
 
-  delete(p);
-  delete(deactivation_costs);
-  delete(activation_costs);
+  delete[] deactivation_costs;
+  delete[] activation_costs;
 
   exit(EXIT_SUCCESS);
 

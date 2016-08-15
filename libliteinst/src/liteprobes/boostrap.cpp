@@ -309,6 +309,9 @@ void cleanup() {
   fprintf(stderr, "\nTOTAL_PAGES: %ld\n", fixed.n_pages + arena.n_pages);
   fprintf(stderr, "TOTAL_ALLOCATED: %ld\n\n", fixed.kbs + arena.kbs);
 
+  // fprintf(stderr, "PER_PROBE_ACTIVATION_COST : %ld\n", g_activation_cost / g_activation_count);
+  // fprintf(stderr, "PER_PROBE_DEACTIVATION_COST : %ld\n", g_deactivation_cost / g_deactivation_count);
+
 #endif
 
 }

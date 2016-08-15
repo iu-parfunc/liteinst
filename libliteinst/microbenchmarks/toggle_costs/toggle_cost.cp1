@@ -120,19 +120,3 @@ int main(int argc, char* argv[]) {
 
   printf("getProbedFunctions: %d\n", pr.getProbedFunctions().size()); 
   max_probe_id = pr.getProbedFunctions().size();
-  
-  assert(pr.getProbedFunctions().size() == NUM_FUNCS); // process.getFunctions().size());
-
-/*
-  } catch (int e) {
-    fprintf(stderr, "ProbeProvider already initialized. Getting the existing"
-        " one..\n");
-    p = getGlobalProbeProvider();
-  }
-*/ 
-
-  if (p == NULL) {
-    fprintf(stderr, "Unable to initialize probe provider..\n");
-    exit(EXIT_FAILURE);
-  }
-

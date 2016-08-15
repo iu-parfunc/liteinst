@@ -22,6 +22,10 @@
 #include <atomic>
 #include <iostream>
 
+#ifdef AUDIT
+#include "audit.hpp"
+#endif
+
 namespace liteinst {
 namespace liteprobes {
 
@@ -558,6 +562,12 @@ outer:
 }
 
 bool LiteProbeProvider::activate(ProbeInfo ctx) {
+
+#ifdef AUDIT
+  ticks start = getticks();
+  g_activation_count++;
+#endif
+
   Address addr = ctx.address;
   Springboard* sb = ControlFlowRouter::getContainingSpringboard(addr);
 
@@ -583,16 +593,16 @@ bool LiteProbeProvider::activate(ProbeInfo ctx) {
     }
   }
 
+
   if (sb->active_probes == 0) {
     Address probe_end  = sb->base + sb->probe_length;
 
     Range r(sb->base - 8, sb->base + 24);
-    LiteProbeInjector::range_map.lockRange(r);
-
+    // LiteProbeInjector::range_map.lockRange(r);
+    
     patch_64_plus(sb->base, sb->punned | (*(reinterpret_cast<uint64_t*>(sb->base))
           & 0xFFFFFF0000000000));
-
-    LiteProbeInjector::range_map.unlockRange(r);
+    // LiteProbeInjector::range_map.unlockRange(r);
 
     for (const auto& it : sb->saved_probe_heads) {
       if (it.first >= probe_end) {
@@ -605,10 +615,19 @@ bool LiteProbeProvider::activate(ProbeInfo ctx) {
   sb->active_probes++;
   sb->lock.unlock();
 
+#ifdef AUDIT
+  ticks end = getticks();
+  g_activation_cost += (end - start);
+#endif
+
   return true;
 }
 
 bool LiteProbeProvider::deactivate(ProbeInfo ctx) {
+#ifdef AUDIT
+  ticks start = getticks();
+  g_deactivation_count++;
+#endif
   Address addr = ctx.address;
   Springboard* sb = ControlFlowRouter::getContainingSpringboard(addr);
 
@@ -632,12 +651,12 @@ bool LiteProbeProvider::deactivate(ProbeInfo ctx) {
     Address probe_end  = sb->base + sb->probe_length;
 
     Range r(sb->base - 8, sb->base + 24);
-    LiteProbeInjector::range_map.lockRange(r);
+    // LiteProbeInjector::range_map.lockRange(r);
 
     patch_64_plus(sb->base, sb->original | (*(reinterpret_cast<uint64_t*>(sb->base))
           & 0xFFFFFF0000000000));
 
-    LiteProbeInjector::range_map.unlockRange(r);
+    // LiteProbeInjector::range_map.unlockRange(r);
 
     for (const auto& it : sb->saved_probe_heads) {
       if (it.first >= probe_end) {
@@ -650,10 +669,15 @@ bool LiteProbeProvider::deactivate(ProbeInfo ctx) {
   sb->active_probes--;
   sb->lock.unlock();
 
+#ifdef AUDIT
+  ticks end = getticks();
+  g_deactivation_cost += (end - start);
+#endif
   return true;
 }
 
-bool LiteProbeProvider::activate(ProbeGroupInfo pgi) { ProbeGroup* pg = probe_groups[pgi.id].get();
+bool LiteProbeProvider::activate(ProbeGroupInfo pgi) { 
+  ProbeGroup* pg = probe_groups[pgi.id].get();
   bool result = false;
 
   if (pg != nullptr) {
