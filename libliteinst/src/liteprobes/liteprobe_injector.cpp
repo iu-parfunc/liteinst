@@ -105,8 +105,10 @@ Address punAddress(Address addr, int64_t size,
   Address target = nullptr;
   unique_ptr<Allocator> allocator = AllocatorFactory::getAllocator(
       AllocatorType::FIXED);
-  for (int i = invalid_opcodes.size() - 1; i >= 0 ; i--) {
-    for (int j = clobbered_instruction_count - 2; j >= 0 ; j--) {
+  for (int j =0 ; j <= clobbered_instruction_count - 2 ; j++) {
+    for (int i = invalid_opcodes.size() - 1; i >= 0 ; i--) {
+// for (int i = invalid_opcodes.size() - 1; i >= 0 ; i--) {
+//    for (int j = clobbered_instruction_count - 2 ; j >= 0  ; j--) {
       int32_t rel_copy = rel_addr;
       if (((uint8_t*)&rel_addr)[ins_boundaries[j]] == 0x62) {
         // fprintf(stderr, "\n[swap] A : %p\n", rel_addr);

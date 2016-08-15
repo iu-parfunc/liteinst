@@ -432,6 +432,7 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
   InstrumentationProvider instrumentation = getInstrumentationProvider(
       instrumentation_provider);
 
+  ticks init_start = getticks();
   list<string> failed_funcs;
   // Probe injection for each function
   ticks total = 0; // Total probe injection cost
@@ -522,6 +523,10 @@ outer:
       injection_costs += fn_injection_cost;
     }
   }   
+
+  ticks init_end = getticks();
+
+  printf("INIT: %ld\n", (init_end - init_start));
 
   fclose(fp);
 
