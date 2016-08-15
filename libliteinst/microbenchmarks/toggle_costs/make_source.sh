@@ -34,6 +34,10 @@ touch $file
 for (( j=0; j<$1; j++ ))
 do
   echo "void emptyFunc$j( void ) {">>$file
+for (( i=0; i<120; i++ ))
+do
+  echo "  __asm(\"nop\");">>$file
+done
   echo "  return; }" >> $file
 done
 
