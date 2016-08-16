@@ -7,6 +7,7 @@
 #include <sys/mman.h> // mprotect
 #include <sys/param.h> // MAXPATHLEN
 #include <assert.h>  
+#include <time.h> // clock_gettime
 
 #include "elf64.h"
 #include "sym_tab.h"
@@ -22,6 +23,11 @@
 #include <unordered_map>
 #include <string>
 #include "audit.hpp"
+#include "cycle.h"
+
+#define BILLION 1000000000L
+
+uint64_t  g_premain_cost = 0;
 
 using std::unordered_map;
 using std::string;
@@ -94,11 +100,17 @@ extern void premain();
 
 void initializeLiteprobes() {
 
+  ticks start = getticks();
+
   // Restore the prolog of main
   memcpy(g_main_ptr, (const void*) g_saved_main_prolog,
      sizeof(g_rip_indirect_jump)/sizeof(g_rip_indirect_jump[0]));
 
   premain();
+
+  ticks end = getticks();
+
+  printf("INIT_COST: %ld\n", g_premain_cost + (end - start));
 }
 
 void liteprobesInfectMain() {
@@ -239,8 +251,12 @@ extern "C" void boostrap();
 // __attribute__((visibility("default")))
 __attribute__((constructor))
 void boostrap() {
+
+  ticks start = getticks();
   printf("Inside boostrap\n");
   liteinst::liteprobes::liteprobesInfectMain();
+  ticks end = getticks();
+  g_premain_cost = (end - start);
 }
 
 __attribute__((destructor))
