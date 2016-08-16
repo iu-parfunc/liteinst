@@ -55,8 +55,10 @@ benches =
     , (var_name,variant) <-variants]
 
   where
-    variants =  [("liteprof",setVariant),("noprof",setVariant),("unprofiled",setVariant)]
-    setVariant = Or [And [Set (Variant "OPTLEVEL") (CompileEnv "OPTLEVEL" olevel)] | olevel <- ["-O0","-O3"]]
+    variants =  [ (v,setVariant v) | v <- [ "liteprof", "unprofiled" ] ] -- "noprof"
+    setVariant v = Or [And [Set (Variant (v++olevel)) (CompileEnv "OPTLEVEL" olevel)] 
+                           | olevel <- ["-O0"]] -- -O3"
+                   
   
 --------------------------------------------------------------------------------
 -- OLD UBIPROF SCRIPT 
