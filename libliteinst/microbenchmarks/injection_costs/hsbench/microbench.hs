@@ -32,8 +32,17 @@ benches =
 
     setVariant v = And [Set (Variant v) (RuntimeEnv "DUMMY" "nada")]
     
- 
-
+------------------------------------------------------------
+-- Harvesters 
+------------------------------------------------------------
+harv = customTagHarvesterInt "PROBING_COST" `mappend`
+       customTagHarvesterInt "INSERTION_COST" `mappend`
+       customTagHarvesterInt "METADATA_COST" `mappend`
+       customTagHarvesterInt "PUNNING_COST" `mappend`
+       customTagHarvesterInt "COST_RESUMING" `mappend`
+       customTagHarvesterInt "ATTACH_COST"  
+       
+       
 ------------------------------------------------------------
 -- MAIN
 ------------------------------------------------------------
@@ -46,7 +55,7 @@ main = do
     conf { benchlist = benches
          , runTimeOut = Just 600
          , plugIns = [SomePlugin defaultDribblePlugin]
-         , harvesters = harvesters conf
+         , harvesters = harv `mappend` harvesters conf
          } 
 
   
