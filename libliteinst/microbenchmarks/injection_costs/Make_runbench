@@ -1,0 +1,33 @@
+.phony: all benchharness library
+
+ifeq ($(STACK),)
+     STACK=stack
+endif
+
+
+ifeq ($(MACHINECLASS),)
+     MACHINECLASS=$(HOSTNAME)
+endif
+
+RUNID=$(shell hostname -s)_$(shell date "+%s")
+
+TOP=$(shell pwd)
+
+TABLE=LITEINST_INJECTION_COSTS
+
+all: benchharness library
+
+library:
+	(cd ../../../ && make clean && make lib)
+
+microbench.exe: benchharness
+
+benchharness:
+	which -a $(STACK)
+	$(STACK) --version
+	$(STACK) --install-ghc install
+	echo "Listing available benchmarks."
+	./microbench.exe -l
+
+run:
+	./microbench.exe --hostname=$(MACHINECLASS) --runid=$(RUNID) --keepgoing --trials=$(TRIALS) --name=$(TABLE)  $(WHICHBENCH) $(BENCHARGS)
