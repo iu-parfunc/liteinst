@@ -17,8 +17,8 @@ enum ProfilerType {
   EMPTY
 };
 
-ProfilerType g_liteprof_type = BACKOFF;
-int64_t g_liteprof_sample_sz = 1000;
+ProfilerType g_liteprof_type = SAMPLING;
+int64_t g_liteprof_sample_sz = 10;
 
 struct ProfileData {
   int64_t count;
@@ -125,7 +125,6 @@ void initCallback() {
     } else if (!strcmp(prof_type, "NOPROF")) {
       g_liteprof_type = NOPROF;
     } else if (!strcmp(prof_type, "EMPTY")) {
-      printf("Prof type is : %s\n", prof_type);
       g_liteprof_type = EMPTY;
     } else {
       g_liteprof_type = NOPROF;
@@ -150,12 +149,12 @@ void initCallback() {
   }
 
   if (g_liteprof_type == EMPTY) {
-    InstrumentationProvider i_provider("Sampling", emptyEntry, 
+    InstrumentationProvider i_provider("IProvider", emptyEntry, 
       emptyExit);
     g_liteprof_p->registerInstrumentationProvider(i_provider);
     printf("Registered probe provider..\n");
   } else {
-    InstrumentationProvider i_provider("Sampling", entryInstrumentation, 
+    InstrumentationProvider i_provider("IProvider", entryInstrumentation, 
       exitInstrumentation);
     g_liteprof_p->registerInstrumentationProvider(i_provider);
     printf("Registered probe provider..\n");
@@ -165,7 +164,7 @@ void initCallback() {
   coords.setFunction(liteinst::Function("*~_ZnwmPv"));
   coords.setProbePlacement(ProbePlacement::BOUNDARY);
 
-  ProbeRegistration pr = g_liteprof_p->registerProbes(coords, "Sampling"); 
+  ProbeRegistration pr = g_liteprof_p->registerProbes(coords, "IProvider"); 
 
   printf("Registered probes..\n");
 
