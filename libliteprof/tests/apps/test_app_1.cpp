@@ -60,7 +60,7 @@ int main() {
   // Do nothing.. 
   printf("Inside main..\n");
 
-  dummy();
+  // dummy();
 
   printf("FIVE byte func..\n");
   five_bytes_func();
