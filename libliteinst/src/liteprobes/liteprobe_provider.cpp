@@ -526,7 +526,7 @@ outer:
 
   ticks init_end = getticks();
 
-  printf("INIT: %ld\n", (init_end - init_start));
+  // printf("INIT: %ld\n", (init_end - init_start));
 
   fclose(fp);
 

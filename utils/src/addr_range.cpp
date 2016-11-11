@@ -21,6 +21,13 @@ Range::Range(Address start_addr, Address end_addr) :
 
 }
 
+bool Range::includes(Address from, Address to) {
+  if (from >= start && to <= end) {
+    return true;
+  }
+  return false;
+}
+
 bool Range::withinRange(Address addr, uint8_t inclusive) {
   bool start_inclusive = false;
   bool end_inclusive = false;
@@ -50,7 +57,7 @@ vector<Range> Range::getBlockedRange(int32_t block_size, bool aligned) {
     }
 
     Address start_ptr = initial_block_start;
-    Address end_ptr;
+    Address end_ptr   = nullptr;
     while (end_ptr != final_block_end) {
       end_ptr = start_ptr + block_size;
       Range r;
@@ -116,7 +123,7 @@ bool Range::operator==(const Range& r) const {
 }
 
 bool Range::operator!=(const Range& r) {
-  return !(*this == r) ? true : false;
+  return (this->start != r.start || this->end != r.end) ? true : false;
 }
 
 bool Range::operator<=(const Range& r) {

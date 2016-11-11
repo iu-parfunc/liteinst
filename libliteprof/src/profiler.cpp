@@ -97,6 +97,7 @@ void exitInstrumentation() {
   printf("Register state : %p\n", pi.ctx.u_regs);
   printf("Address : %p\n", pi.address);
   */
+  /*
   int64_t current_count = g_liteprof_stats[pi.ctx.pg_id].count;
   int64_t last_snapshot = g_liteprof_stats[pi.ctx.pg_id].last_snapshot;
   if (current_count - last_snapshot > g_liteprof_sample_sz) {
@@ -112,6 +113,7 @@ void exitInstrumentation() {
       printf("Failed deactivating probe group : %lu\n", pi.ctx.pg_id);
     }
   }
+  */
 }
 
 void initCallback() {
@@ -161,7 +163,7 @@ void initCallback() {
   }
 
   Coordinates coords;
-  coords.setFunction(liteinst::Function("*~_ZnwmPv"));
+  coords.setFunction(liteinst::Function(".*~_ZnwmPv"));
   coords.setProbePlacement(ProbePlacement::BOUNDARY);
 
   ProbeRegistration pr = g_liteprof_p->registerProbes(coords, "IProvider"); 

@@ -85,6 +85,12 @@ class ArenaAllocator : public Allocator {
     */
     utils::Address getAllocation(utils::Address address, int32_t size);
 
+    utils::Address searchAndAllocate(utils::Address from, enum Constraints c[], 
+        int32_t size);
+
+    utils::Address getAllocationFor(utils::Address address, 
+        utils::Address for_page, int32_t size);
+
    /** \brief Singly removal of an allocated memory is not supported. 
     *  
     *  This will throw an expection if invoked since explicit removal of an 

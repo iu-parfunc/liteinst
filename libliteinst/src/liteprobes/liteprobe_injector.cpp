@@ -51,20 +51,6 @@ Address punAddress(Address addr, int64_t size,
     const Sequence* seq, int index) {
   _DInst* decoded = static_cast<_DInst*>(seq->instructions);
 
-  int8_t probe_size = 0;
-  uint8_t ins_boundaries[5] = {0};
-  int64_t i = index;
-  uint8_t clobbered_instruction_count = 0;
-  uint8_t current_boundary = 0;
-  while (probe_size < 5 && i < seq->n_instructions) {
-    probe_size += decoded[i].size;
-    ins_boundaries[i - index] = current_boundary + decoded[i].size - 1;
-    current_boundary += decoded[i].size;
-    i++; clobbered_instruction_count++;
-  }
-
-  assert(probe_size >= 5);
-
 #ifdef AUDIT
   int j=index, probe_sz = 0;
   uint64_t layout = 0;
@@ -85,13 +71,71 @@ Address punAddress(Address addr, int64_t size,
   } 
 #endif
 
+  if (addr == (Address) 0x4007e2) {
+    printf("INSIDE MAIN..\n");
+  }
+
+  int8_t probe_size = 0;
+  uint8_t ins_boundaries[5] = {0};
+  enum Constraints c[5] = {Constraints::UNCONSTRAINED};
+  int64_t i = index;
+  uint8_t clobbered_instruction_count = 0;
+  uint8_t current_boundary = 0;
+
+  // Finds the instruction boundaries of pun site (first five bytes)
+  while (probe_size < 5 && i < seq->n_instructions) {
+    probe_size += decoded[i].size;
+    if (probe_size >= 5) {
+      clobbered_instruction_count++;
+      break;
+    }
+    ins_boundaries[i - index + 1] = current_boundary + decoded[i].size;
+    current_boundary += decoded[i].size;
+    i++; clobbered_instruction_count++;
+  }
+
+  assert(probe_size >= 5);
+
+  int ins_index = 1;
+  if (clobbered_instruction_count > 1) {
+    for (int i=0; i < 5; i++) {
+      if (i == ins_boundaries[ins_index]) {
+        c[i] = Constraints::ILLOP;
+        ins_index++;
+      }
+    }
+
+    assert(ins_index == clobbered_instruction_count);
+  }
+
+  Address target = nullptr;
   if (clobbered_instruction_count == 1) {
     unique_ptr<Allocator> allocator = AllocatorFactory::getAllocator(
         AllocatorType::ARENA);
-    Address target = allocator->getAllocation(addr, size); 
-    return target;
+    target = allocator->getAllocation(addr, size); 
+    if (target) {
+      printf("[ALLOC] Arena allocated for : %p at : %p\n", 
+          addr + 5, target);
+    } else {
+      printf("[ALLOC] Failed arena allocation for : %p\n",
+          addr + 5);
+    }
+  } else {
+    unique_ptr<Allocator> allocator = AllocatorFactory::getAllocator(
+        AllocatorType::FIXED);
+    target =  allocator->searchAndAllocate(addr, c, size);
+    if (target) {
+      printf("[ALLOC] Allocated for : %p at target : %p\n", 
+          addr + 5, target);
+    } else {
+      printf("[ALLOC] Allocation failed for : %p\n", 
+          addr + 5);
+    }
   }
 
+  return target;
+
+  /*
   int32_t rel_addr = 0x0;
   int32_t int3_mask = 0x62;
   for (int i=0; i < clobbered_instruction_count - 1; i++) { 
@@ -134,6 +178,7 @@ Address punAddress(Address addr, int64_t size,
 
 exit:
   return target;
+  */
 }
 
 JITResult makeSpringboard(const CoalescedProbes& cp, 
@@ -153,13 +198,14 @@ JITResult makeSpringboard(const CoalescedProbes& cp,
   // printf("SPRINGBOARD_SIZE : %ld\n", springboard_size);
 
   ticks start = getticks();
+  // We calculate the target from addr + 5
   Address target = punAddress(addr, springboard_size, seq, index);
   ticks end = getticks();
 
   jr.punning_cost = (end - start);
 
   if (target != nullptr) {
-    int32_t relative = target - addr - 5;
+    int32_t relative = target - addr -5; // We calculate the target from addr + 5
     uint64_t punned = 0;
     *reinterpret_cast<uint8_t*>(&punned) = 0xe9; 
     *reinterpret_cast<int32_t*>(&(reinterpret_cast<uint8_t*>(&punned)[1])) = 
@@ -477,7 +523,7 @@ InjectionResult LiteProbeInjector::injectProbes(map<Address, ProbeContext>& locs
         while (ip < cp.range.end && index < seq->n_instructions) {
           auto it = sb->probes.find(ip); 
           if (it != sb->probes.end()) {
-            // *ip = 0x62; // Single byte write. Should be safe. 
+            *ip = 0x62; // Single byte write. Should be safe. 
           }
           ip += decoded[index++].size;
         }

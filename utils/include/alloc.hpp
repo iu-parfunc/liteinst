@@ -16,6 +16,12 @@ enum class AllocatorType {
   ARENA  ///< Arena allocator
 };
 
+/// Describes the constraints on a given punnable byte
+enum class Constraints {
+  UNCONSTRAINED,  ///< Any value can be used for this byte
+  ILLOP           ///< The byte must be an illegal instruction
+};
+
 struct MemStatistics {
   int64_t allocations;
   int64_t n_pages;
@@ -41,6 +47,9 @@ class Allocator : public Show {
     virtual utils::Address getAllocation(utils::Address address, 
         int32_t size) = 0;
 
+    virtual utils::Address getAllocationFor(utils::Address address, 
+        utils::Address for_page, int32_t size) = 0;
+
     /** \brief Frees allocated memory. 
      *  \param address Address to release the previously allocated memory 
      *   from.
@@ -49,6 +58,9 @@ class Allocator : public Show {
     virtual bool removeAllocation(utils::Address address) = 0;
 
     virtual void show(FILE* fp, int nspaces) = 0;
+
+    virtual Address searchAndAllocate(Address from, enum Constraints c[], 
+        int32_t size) = 0;
 
     virtual MemStatistics getAllocationStatistics() = 0;
 };

@@ -66,11 +66,12 @@ BlockRangeMap::~BlockRangeMap() {
   // Let RAII take care of the map itself
 }
 
-bool BlockRangeMap::updateRangeEntries(Range r, UpdateEntriesCallback cb) {
+bool BlockRangeMap::updateRangeEntries(Range r, RangeMetaData* m, 
+    UpdateEntriesCallback cb) {
   vector<BlockEntry*> block_entries = lockRange(r);
   bool result = false;
   if (block_entries.size() > 0) {
-    result = cb(block_entries, r);
+    result = cb(block_entries, r, m);
   }
 
   bool unlocked = unlockRange(r);
@@ -86,9 +87,11 @@ std::vector<BlockRange> BlockRangeMap::getBlockedRangeMetaData(Range r) {
   vector<Range> partitions = r.getBlockedRange(block_size, true);
 
   vector<BlockRange> blocks;
+  blocks.reserve(partitions.size());
   for (Range partition : partitions) {
     BlockRange rb;
-    rb.range = partition;;
+    rb.range = partition;
+    rb.entry_present = false;
 
     blocks.push_back(rb);
   }
@@ -105,7 +108,7 @@ vector<BlockEntry*> BlockRangeMap::lockRange(Range r) {
   // We are using the ordered nature of stl map to avoid multiple finds here.
   auto it = entries.lower_bound(range_blocks[0].range.start);
   uint32_t block_ptr = 0;
-  for (; it != entries.end(); ++it) {
+  for (; it != entries.end(); it++) {
     BlockEntry* entry = it->second;
     while (range_blocks[block_ptr].range != entry->entry_range &&
         block_ptr < range_blocks.size()) {

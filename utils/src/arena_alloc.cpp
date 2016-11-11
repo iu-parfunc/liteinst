@@ -74,6 +74,16 @@ Address ArenaAllocator::getAllocation(Address addr, int32_t size) {
   }
 }
 
+Address ArenaAllocator::getAllocationFor(Address address, 
+        utils::Address for_page, int32_t size) {
+  return nullptr;
+}
+
+Address ArenaAllocator::searchAndAllocate(Address from, enum Constraints c[], 
+    int32_t size) {
+  return nullptr;
+}
+
 bool ArenaAllocator::removeAllocation(Address address) {
   throw invalid_argument("Explicit removal of allocated memory not supported "
       "arena allocator.\n");

@@ -13,6 +13,10 @@
 namespace utils { 
 namespace range { 
 
+class RangeMetaData {
+
+};
+
 /// Range information corresponding to a block with some additional meta data
 /// added for RangeMap internal use. 
 class BlockRange {
@@ -40,6 +44,10 @@ class BlockEntry {
   Range entry_range;
   BlockMetaData* metadata = NULL;
 
+  bool operator<(const BlockEntry& b) {
+    return this->entry_range.start < b.entry_range.start;
+  }
+
   BlockEntry(){}
   ~BlockEntry(){
     if (metadata != NULL) {
@@ -60,8 +68,8 @@ class BlockEntry {
 typedef std::map<utils::Address, BlockEntry*> BlockEntries;
 
 /// Callback type for updating block entries corresponding to a given range.
-typedef std::function<bool(std::vector<BlockEntry*>, Range range)> 
-UpdateEntriesCallback;
+typedef std::function<bool(std::vector<BlockEntry*>, Range range, 
+    RangeMetaData* m)> UpdateEntriesCallback;
 
 struct BlockStatistics {
   int64_t n_entries;
@@ -82,7 +90,8 @@ class BlockRangeMap : public Show {
      *  Guanrantees that block entries will be updated atomically with the 
      *  given callback.
      */
-    bool updateRangeEntries(Range r, UpdateEntriesCallback cb);   
+    bool updateRangeEntries(Range r, RangeMetaData* m, 
+        UpdateEntriesCallback cb);   
 
     void show(FILE* fp, int nspaces);
 

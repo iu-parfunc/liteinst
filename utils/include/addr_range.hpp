@@ -66,6 +66,8 @@ class Range {
      */
     bool overlapsWith(const Range r, uint8_t inclusive);
 
+    bool includes(utils::Address from, utils::Address to);
+
     /** \brief Unions the given range with the current one. 
      *  \param r The range to be unioned to the current one.
      *

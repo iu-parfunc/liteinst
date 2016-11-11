@@ -3,6 +3,8 @@
 #define FIXED_ALLOC_H 
 
 #include <vector>
+#include <unordered_map>
+#include <set>
 
 #include "alloc.hpp"
 #include "range.hpp"
@@ -10,11 +12,26 @@
 namespace utils { 
 namespace alloc {
 
+class FixedAllocMetaData : public utils::range::RangeMetaData {
+  public:
+    Address for_page;
+    uint16_t prefix;
+};
+
+struct RangeSort {
+  inline bool operator() (const utils::range::Range& r1, 
+      const utils::range::Range& r2) {
+    return (r1.start < r2.start);
+  }
+};
+
 /// Memory page allocation meta data
 class PageMetaData : public utils::range::BlockMetaData {
   public:
-    bool allocated; ///< If this page has been mapped yet
-    std::vector<utils::range::Range> occupied; 
+    bool allocated;  ///< If this page has been mapped yet
+    uint16_t prefix; ///< Invalid opcode prefix used to calculate the 
+                     ///< displacement while allocating this page.
+    std::set<utils::range::Range, RangeSort> occupied; 
                                         /**< Occupied sub ranges within the
                                          *   memory page*/
 };
@@ -25,6 +42,17 @@ class FixedAllocator : public Allocator {
 
   private:
   static utils::range::BlockRangeMap allocations; 
+  static std::unordered_map<Address, std::set<utils::range::BlockEntry*>> page_map;
+  static long zone_size;
+
+  utils::Address allocate(utils::Address to, utils::Address page, int alloc_sz);
+  bool ifAllocatableRange(Address to, int alloc_sz);
+  utils::Address newAllocationForPage(utils::Address page, utils::Address from,
+      enum Constraints c[], int size);
+  utils::Address findAllocationWithinExisting(utils::Address from, 
+      std::set<utils::range::BlockEntry*>& entries, enum Constraints c[], 
+      int32_t size);
+
 
   FixedAllocator();
   ~FixedAllocator();
@@ -45,6 +73,9 @@ class FixedAllocator : public Allocator {
    */
   utils::Address getAllocation(utils::Address address, int32_t size);
 
+  utils::Address getAllocationFor(utils::Address address, 
+        utils::Address for_page, int32_t size);
+
   /** \brief Free the alllocated memory.    
    *  \param address Address to release the previously allocated memory 
    *  from.
@@ -55,8 +86,10 @@ class FixedAllocator : public Allocator {
    *  \param entries Memory page blocks the given range occupies
    *  \param range   The memory address range to be allocated
    */ 
-  bool allocationCallback(std::vector<utils::range::BlockEntry*> entries, 
-      utils::range::Range range); 
+  bool allocationCallback(std::vector<utils::range::BlockEntry*> entries,
+      utils::range::Range range, utils::range::RangeMetaData* m); 
+
+  Address searchAndAllocate(Address from, enum Constraints c[], int32_t size);
 
   void show(FILE* fp, int nspaces);
 
