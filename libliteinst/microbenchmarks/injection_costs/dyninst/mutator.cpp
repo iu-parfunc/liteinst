@@ -86,16 +86,14 @@ int main (int argc, const char* argv[]) {
 
       ticks elapsed1 = end - start;
 
-      /*
       start = getticks();
       proc->deleteSnippet(handle);
       end = getticks();
 
       ticks elapsed2 = end - start;
-      */
 
       insert_timings[i] = elapsed1; 
-      // deletion_timings[i] = elapsed2; 
+      deletion_timings[i] = elapsed2; 
 
     }
 
@@ -112,13 +110,16 @@ int main (int argc, const char* argv[]) {
 
     fprintf(stderr, "\n\n");
 
-    /*
-    for (int i=0; i< N; i++) {
+    total = 0;
+    for (int i=0; i< n_funcs; i++) {
+      total += deletion_timings[i];
+      /*
       fprintf(stderr, "Instrumentation  deletion %d cost : %lu percentage : %lf\n", i, deletion_timings[i], 
           ((double)deletion_timings[i] / deletion_timings[0]) * 100);
+          */
     }
-    */
 
+    printf("DELETION_COST : %ld\n", total / n_funcs);
 
     /*
     ticks start = getticks();

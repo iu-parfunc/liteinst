@@ -26,6 +26,7 @@ lib:
 	(cd libpointpatch/src && make CC=$(CC) CXX=$(CXX) CFLAGS="$(CFLAGS) -DNDEBUG -DWAIT_SPIN_RDTSC" && make install )
 	(cd libliteinst/src   && make CC=$(CC) CXX=$(CXX) && make install )
 	(cd libliteprof/src   && make CC=$(CC) CXX=$(CXX) && make install )
+	(cd libcallpatch/src  && make CC=$(CC) CXX=$(CXX) CFLAGS="$(CFLAGS) -DNDEBUG" && make install )
 
 #       Ugh, something above wipes the build/ directory... FIXME
 # (cd libcallpatch/src && make CC=$(CC) CXX=$(CXX) CFLAGS="$(CFLAGS) -DNDEBUG" && make install )

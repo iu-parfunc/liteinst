@@ -1,8 +1,8 @@
 .PHONY: clean all
 
-NUM_FUNCS=10000
+NUM_FUNCS=1024
 ROOT=../../..
-CFLAGS = #-finstrument-functions -fno-inline -fno-optimize-sibling-calls
+CFLAGS = -O0 #-finstrument-functions -fno-inline -fno-optimize-sibling-calls
 
 LIBS = -L$(ROOT)/build/lib -lliteinst -lrt -ldl 
 
@@ -16,7 +16,7 @@ toggle_cost.exe:
 	$(CXX) --std=c++11 -g -c -I$(ROOT)/include -I$(ROOT)/utils/include -I$(ROOT)/common/include -I. toggle_cost.cpp -o toggle_cost.o 
 	$(CXX) --std=c++11 -g toggle_cost.o funcs.o -o toggle_cost.exe  $(LIBS)
 
-run: toggle_cost.exe
+run: # toggle_cost.exe
 	(readelf -s toggle_cost.exe |grep FUNC | awk -F '[[:space:]]+' '{print $$3 "," $$9}' > functions.txt)
 	LD_LIBRARY_PATH=$(ROOT)/build/lib:$(LD_LIBRARY_PATH) ./toggle_cost.exe $(NUM_FUNCS)
 

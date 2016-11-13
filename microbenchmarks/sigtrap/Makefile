@@ -1,6 +1,6 @@
 
 CC  = cc
-CFLAGS = -O2 $(NUMNOPS)
+CFLAGS = -O0 $(NUMNOPS)
 
 default: sigtime
 

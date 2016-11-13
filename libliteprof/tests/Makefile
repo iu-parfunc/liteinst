@@ -34,7 +34,7 @@ liteprof:
 	(cd $(LITEPROF); make install);
 
 apps:
-	(cd $(APPS); $(CC+) $(CCFLAGS) -O0 test_app_0.cpp -o test_app_0_O0.exe) # -L../$(BUILD) -lliteprof)
+	(cd $(APPS); $(CC+) $(CCFLAGS) -O0 test_app_0.cpp -o test_app_0_O0.exe -L../$(BUILD) -lliteprof)
 	(cd $(APPS); $(CC+) $(CCFLAGS) -O3 test_app_1.cpp -o test_app_1_O3.exe) # -L../$(BUILD) -lliteprof)
 	(cd $(APPS); $(CC+) $(CCFLAGS) -O0 stress.cpp -o stress.exe) # -L../$(BUILD) -lliteprof)
 

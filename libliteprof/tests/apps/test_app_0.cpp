@@ -1,7 +1,7 @@
 
 #include <cstdio>
 
-extern "C" void dummy();
+extern "C" void liteprobes_dummy();
 
 long  for_func() {
   int sum = 0;
@@ -80,9 +80,10 @@ int main() {
   // Do nothing.. 
   printf("Inside main..\n");
 
-  // dummy();
+  liteprobes_dummy();
 
   printf("do_while_func..\n");
+  do_while_func();
   do_while_func();
   do_while_func();
   printf("for_func..\n");
