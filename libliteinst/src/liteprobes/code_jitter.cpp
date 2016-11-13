@@ -215,26 +215,26 @@ unique_ptr<Springboard> CodeJitter::emitSpringboard(const CoalescedProbes& cp,
   Address tramp_ip = target;
   Address code_ip = cp.range.start;
 
-  Relocations relocations;
+  Relocations* relocations;
   for (auto it = probes.begin();  it != probes.end(); ++it) {
     Address probed_addr = it->first;
     ProbeContext context = it->second->context;  
 
     relocations = relocator.relocate(code_ip, probed_addr, tramp_ip);
 
-    if (relocations.n_instructions > 0) {
+    if (relocations->n_instructions > 0) {
       int offset_from_start = tramp_ip - target;
 
-      for (int i=0; i < relocations.n_instructions; i++) {
-        relocations.relocation_offsets[i] += offset_from_start;
+      for (int i=0; i < relocations->n_instructions; i++) {
+        relocations->relocation_offsets[i] += offset_from_start;
       }
-    
-      memcpy(&relocation_offsets[relocation_ptr], relocations.relocation_offsets, 
-          relocations.n_instructions * sizeof(int));
-      relocation_ptr += relocations.n_instructions;
+      
+      memcpy(&relocation_offsets[relocation_ptr], relocations->relocation_offsets, 
+          relocations->n_instructions * sizeof(int));
+      relocation_ptr += relocations->n_instructions;
     }
 
-    tramp_ip += relocations.relocation_size;
+    tramp_ip += relocations->relocation_size;
     code_ip = probed_addr;
 
     // The address where the callout for the probe really begins
@@ -281,24 +281,26 @@ unique_ptr<Springboard> CodeJitter::emitSpringboard(const CoalescedProbes& cp,
     callout->ctx_restore = cr;
 
     sb->callouts.emplace(probed_addr, unique_ptr<Callout>(callout));
+
+    delete relocations;
   }
 
   // Finish relocating the last part of the code
   relocations = relocator.relocate(code_ip, cp.range.end, tramp_ip);
 
-  if (relocations.n_instructions > 0) { 
+  if (relocations->n_instructions > 0) { 
     int offset_from_start = tramp_ip - target;
 
-    for (int i=0; i < relocations.n_instructions; i++) {
-      relocations.relocation_offsets[i] += offset_from_start;
+    for (int i=0; i < relocations->n_instructions; i++) {
+      relocations->relocation_offsets[i] += offset_from_start;
     }
 
-    memcpy(&relocation_offsets[relocation_ptr], relocations.relocation_offsets, 
-        relocations.n_instructions * sizeof(int));
-    relocation_ptr += relocations.n_instructions;
+    memcpy(&relocation_offsets[relocation_ptr], relocations->relocation_offsets, 
+        relocations->n_instructions * sizeof(int));
+    relocation_ptr += relocations->n_instructions;
   }
 
-  tramp_ip += relocations.relocation_size;
+  tramp_ip += relocations->relocation_size;
 
   assert(relocation_ptr == seq->n_instructions);
 
@@ -312,6 +314,9 @@ unique_ptr<Springboard> CodeJitter::emitSpringboard(const CoalescedProbes& cp,
 
   sb->relocation_offsets = relocation_offsets;
   sb->range = Range(target, tramp_ip);
+
+  delete seq;
+  delete relocations;
 
   return unique_ptr<Springboard>(sb);
 }

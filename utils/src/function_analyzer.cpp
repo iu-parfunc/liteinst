@@ -371,6 +371,8 @@ void FunctionAnalyzer::analyzeFunction(Function& func) {
   const Sequence* seq = disas.disassemble(func.start, func.end);
   populateStructuralInformation(func, seq);
   populateProbeReadinessInformation(func, seq);
+
+  delete seq;
 }
 
 /********************** End public API implementation *************************/

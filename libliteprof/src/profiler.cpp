@@ -29,6 +29,7 @@ struct ProfileData {
 ProfileData* g_liteprof_stats;
 ProbeProvider* g_liteprof_p;
 unsigned int g_liteprof_num_funcs;
+pthread_t* g_monitor_thread;;
 
 void* monitor(void* param) {
 
@@ -194,9 +195,10 @@ void initCallback() {
 
   printf("Stats at : %p\n", g_liteprof_stats);
 
+  g_monitor_thread = (pthread_t*) calloc(1, sizeof(pthread_t));
   if (g_liteprof_type == SAMPLING) {
-    pthread_t tr;
-    pthread_create(&tr, NULL, monitor, (void*)NULL);
+    pthread_create(g_monitor_thread, NULL, monitor, (void*)NULL);
+    pthread_detach(*g_monitor_thread);
   }
 }
 
@@ -204,4 +206,9 @@ __attribute__((constructor))
 void initProfiler() {
   g_liteprof_p = liteinst::ProbeProvider::initializeGlobalProbeProvider(
       ProviderType::LITEPROBES, nullptr, initCallback);
+}
+
+__attribute__((destructor))
+void tearDownProfiler() {
+  free(g_monitor_thread);
 }

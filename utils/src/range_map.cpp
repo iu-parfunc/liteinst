@@ -110,8 +110,7 @@ vector<BlockEntry*> BlockRangeMap::lockRange(Range r) {
   uint32_t block_ptr = 0;
   for (; it != entries.end(); it++) {
     BlockEntry* entry = it->second;
-    while (range_blocks[block_ptr].range != entry->entry_range &&
-        block_ptr < range_blocks.size()) {
+    while (block_ptr < range_blocks.size() && range_blocks[block_ptr].range != entry->entry_range ) {
       block_ptr++;
     }
 

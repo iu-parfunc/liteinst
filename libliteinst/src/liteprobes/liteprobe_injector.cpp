@@ -114,8 +114,8 @@ Address punAddress(Address addr, int64_t size,
         AllocatorType::ARENA);
     target = allocator->getAllocation(addr, size); 
     if (target) {
-      printf("[ALLOC] Arena allocated for : %p at : %p\n", 
-          addr + 5, target);
+      // printf("[ALLOC] Arena allocated for : %p at : %p\n", 
+      //     addr + 5, target);
     } else {
       printf("[ALLOC] Failed arena allocation for : %p\n",
           addr + 5);
@@ -125,8 +125,8 @@ Address punAddress(Address addr, int64_t size,
         AllocatorType::FIXED);
     target =  allocator->searchAndAllocate(addr, c, size);
     if (target) {
-      printf("[ALLOC] Allocated for : %p at target : %p\n", 
-          addr + 5, target);
+      // printf("[ALLOC] Allocated for : %p at target : %p\n", 
+      //    addr + 5, target);
     } else {
       printf("[ALLOC] Allocation failed for : %p\n", 
           addr + 5);
@@ -557,9 +557,12 @@ InjectionResult LiteProbeInjector::injectProbes(map<Address, ProbeContext>& locs
   }
 
   ir.success = true;
+  
+  delete seq;
   return ir;
 
 fail:
+  delete seq;
   ir.success = false;
   // Release all springboards
   return ir;

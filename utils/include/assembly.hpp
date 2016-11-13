@@ -28,10 +28,10 @@ class Sequence {
     utils::Address start;
     utils::Address end;
 
-    Sequence(){};
+    Sequence() : instructions(nullptr) {};
 
     ~Sequence(){ 
-      free(instructions); 
+      delete[] static_cast<_DInst*>(instructions); 
     }
 };
 

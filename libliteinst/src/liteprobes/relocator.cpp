@@ -607,7 +607,7 @@ bool fixup(const Sequence* seq, const vector<Rewrite>& rewrites) {
   return success;
 }
 
-Relocations Relocator::relocate(Address start, Address end, Address target) { 
+Relocations* Relocator::relocate(Address start, Address end, Address target) { 
     
   Disassembler disas;
  
@@ -617,26 +617,28 @@ Relocations Relocator::relocate(Address start, Address end, Address target) {
   vector<Rewrite> rewrites = rewriteSequence(seq, target);
   bool success = fixup(seq, rewrites);
 
-  Relocations relocations; 
+  Relocations* relocations = new Relocations; 
   if (success) {
-    relocations.n_instructions = seq->n_instructions;
-    relocations.relocation_offsets = new int [seq->n_instructions];
+    relocations->n_instructions     = seq->n_instructions;
+    relocations->relocation_offsets = new int [seq->n_instructions]();
 
     int index = 0;
     int offset = 0;
-    relocations.relocation_size = 0;
+    relocations->relocation_size = 0;
     for (const Rewrite& r : rewrites) {
-      relocations.relocation_offsets[index] = offset;
+      relocations->relocation_offsets[index] = offset;
       offset += r.size;
-      relocations.relocation_size += r.size;
+      relocations->relocation_size += r.size;
       index++;
     }
   } else {
     // Return a result that indicates failure to relocate 
-    relocations.n_instructions = 0; 
-    relocations.relocation_offsets = NULL; 
-    relocations.relocation_size = 0;
+    relocations->n_instructions = 0; 
+    relocations->relocation_offsets = NULL; 
+    relocations->relocation_size = 0;
   }
+
+  delete seq;
 
   return relocations;
 } // end relocate 
@@ -677,6 +679,8 @@ int64_t Relocator::getRelocationSize(utils::Address start, utils::Address end,
   for (const Rewrite& r : rewrites) {
     size += r.size;
   }
+
+  delete seq;
 
   return size;
 }

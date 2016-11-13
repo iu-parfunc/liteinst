@@ -5,6 +5,7 @@
 #include <string.h>  // memcpy
 #include <unistd.h>  // sysconf
 #include <sys/mman.h> // mprotect
+#include <execinfo.h>
 #include <sys/param.h> // MAXPATHLEN
 #include <assert.h>  
 #include <time.h> // clock_gettime
@@ -140,13 +141,16 @@ void liteprobesInfectMain() {
 
       if (!strcmp(s_name, "main")) {
         g_main_ptr = (Address) tab[i]->st_value; 
+        free(s_name);
         break;
       }
+      free(s_name);
     }
   }
 
-  // free(bin->file);
-  free(bin);
+  free(c_program_path);
+  fclose(bin->file);
+  free_elf64(bin);
 
   assert(g_main_ptr != nullptr);
 
@@ -332,6 +336,30 @@ void cleanup() {
 
 }
 
+#define BT_BUF_SIZE 108000
+
 extern "C" void liteprobes_dummy() {
-  // printf("Dummy..\n");
+  int j, nptrs;
+  void *buffer[BT_BUF_SIZE];
+  char **strings;
+
+  nptrs = backtrace(buffer, BT_BUF_SIZE);
+  printf("backtrace() returned %d addresses\n", nptrs);
+
+  /* The call backtrace_symbols_fd(buffer, nptrs, STDOUT_FILENO)
+  *  would produce similar output to the following: */
+
+  strings = backtrace_symbols(buffer, nptrs);
+  if (strings == NULL) {
+    perror("backtrace_symbols");
+    exit(EXIT_FAILURE);
+  }
+
+  for (j = 0; j < nptrs; j++) {
+    printf("%s\n", strings[j]);
+  }
+
+  printf("\n\n");
+
+  free(strings);
 }

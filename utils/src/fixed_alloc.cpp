@@ -425,6 +425,7 @@ Address FixedAllocator::getAllocationFor(Address at, Address for_page,
     success = allocations.updateRangeEntries(
         r, m, [this](vector<BlockEntry*> entries, Range range, RangeMetaData* m) 
         { return this->allocationCallback(entries, range, m); });
+    delete m;
   } else {
     Range r = Range(at, at+size);
     success = allocations.updateRangeEntries(

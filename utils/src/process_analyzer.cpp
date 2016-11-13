@@ -99,7 +99,8 @@ void ProcessAnalyzer::populateFunctions(FunctionsByAddress& fn_by_addr,
 
   for (unsigned int i=0; i < nb_sym; i++) {
     if ((tab[i]->st_info & 0x0F) == STT_FUNC) {
-      string name = string(get_sym_name(bin->file, tab[i], strtab_offset));
+      char* s_name = get_sym_name(bin->file, tab[i], strtab_offset);
+      string name  = string(s_name);
 
       fn_by_name.insert(pair<string, unique_ptr<Function>>(
         name, unique_ptr<Function>(new Function())));
@@ -113,11 +114,13 @@ void ProcessAnalyzer::populateFunctions(FunctionsByAddress& fn_by_addr,
       fn->name = name;
 
       fn_by_addr.insert(pair<Address, Function*>(fn->start, fn));
+
+      free(s_name);
     }
   }
 
   fclose(bin->file);
-  free(bin);
+  free_elf64(bin);
 }
 
 void ProcessAnalyzer::populateMappedRegions(MappedRegionsByAddress* mapped) {
@@ -143,9 +146,11 @@ void ProcessAnalyzer::populateMappedRegions(MappedRegionsByAddress* mapped) {
 
     unique_ptr<MappedRegion> mr_ptr(mr);
     mapped->insert(pair<Address, unique_ptr<MappedRegion>>(mr->start, move(mr_ptr)));
-
+    
     // mapped.emplace(mr->start, unique_ptr<MappedRegion>(mr));
   }
+
+  free(line);
 
   delete[] filename;
 }
@@ -163,6 +168,7 @@ string ProcessAnalyzer::getProgramPath() {
     }
     c_program_path[len] = '\0';
     program_path = string(c_program_path);
+    free(c_program_path);
   }
   return program_path;
 }

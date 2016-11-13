@@ -15,6 +15,20 @@ class Relocations {
                              ///< relocation buffer
     int relocation_size; ///< Size of the relocated code. This may be bigger 
                          ///< than the original code due to transformations
+
+    Relocations() : relocation_offsets(nullptr) {
+
+    }
+
+    Relocations(const Relocations& r) {
+      n_instructions     = r.n_instructions;
+      relocation_offsets = r.relocation_offsets;
+      relocation_size    = relocation_size;
+    }
+
+    ~Relocations() {
+      delete[] relocation_offsets;
+    }
 };
   
 class Relocator {
@@ -27,7 +41,7 @@ class Relocator {
      *  /param target  Relocation buffer
      *  /return        Relocation information 
      */
-    Relocations relocate(utils::Address start, utils::Address end,
+    Relocations* relocate(utils::Address start, utils::Address end,
         utils::Address target);
 
     /** /brief Gets the size of the relocated code for the given target address
