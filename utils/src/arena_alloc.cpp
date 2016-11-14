@@ -121,7 +121,11 @@ MemStatistics ArenaAllocator::getAllocationStatistics() {
   stats.n_pages = total_alloc / sysconf(_SC_PAGE_SIZE);
   stats.kbs = total_alloc / 1024;
   stats.allocations = allocations;
-  stats.utilization = (double) allocation_sz / total_alloc;
+  if (total_alloc > 0) {
+    stats.utilization = (double) allocation_sz / total_alloc;
+  } else {
+    stats.utilization = 0;
+  }
 
   return stats;
 }

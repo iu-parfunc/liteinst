@@ -620,7 +620,11 @@ MemStatistics FixedAllocator::getAllocationStatistics() {
   mem.n_pages = pages;
   mem.kbs = total_alloc_sz / 1024;
   mem.allocations = n_allocations;
-  mem.utilization = (double) occupied_sz / total_alloc_sz;
+  if (total_alloc_sz > 0) {
+    mem.utilization = (double) occupied_sz / total_alloc_sz;
+  } else {
+    mem.utilization = 0;
+  }
 
   printf("FAIL COUNT : %d\n", g_fail_count);
   printf("NEW FAILS  : %d\n", g_new_fails);
