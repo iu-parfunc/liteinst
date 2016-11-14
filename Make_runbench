@@ -66,8 +66,11 @@ endif
 # endif
 
 #TABLE NAME 
-TABLE=LITEINST_BENCHMARKS 
-
+ifeq ($(PERF), PERF)
+  TABLE=LITEINST_PERF 
+else 
+  TABLE=LITEINST 
+endif
 
 all: benchharnesses
 

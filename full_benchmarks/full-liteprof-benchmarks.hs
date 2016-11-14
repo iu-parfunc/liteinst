@@ -43,7 +43,12 @@ main = do
                         customTagHarvesterDouble "ARENA_UTILIZATION" `mappend`
                         customTagHarvesterInt "TOTAL_PAGES" `mappend`
                         customTagHarvesterInt "TOTAL_ALLOCATED" `mappend`
-                        customTagHarvesterDouble "INIT" `mappend`
+                        customTagHarvesterDouble "INIT_COST" `mappend`
+                        customTagHarvesterInt "CACHE_MISSES" `mappend`
+                        customTagHarvesterInt "L1_ICACHE_MISSES" `mappend`
+                        customTagHarvesterInt "DTLB_MISSES" `mappend`
+                        customTagHarvesterInt "ITLB_MISSES" `mappend`
+                        customTagHarvesterInt "RES_SIZE" `mappend`
                         harvesters conf
          }
 
@@ -57,7 +62,7 @@ benches =
   where
     variants =  [ (v,setVariant v) | v <- [ "liteprof", "unprofiled" ] ] -- "noprof"
     setVariant v = Or [And [Set (Variant (v++olevel)) (CompileEnv "OPTLEVEL" olevel)] 
-                           | olevel <- ["-O0"]] -- -O3"
+                           | olevel <- ["-O3"]] -- -O3"
                    
   
 --------------------------------------------------------------------------------
