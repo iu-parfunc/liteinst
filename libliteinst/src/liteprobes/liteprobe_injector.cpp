@@ -71,10 +71,6 @@ Address punAddress(Address addr, int64_t size,
   } 
 #endif
 
-  if (addr == (Address) 0x4007e2) {
-    printf("INSIDE MAIN..\n");
-  }
-
   int8_t probe_size = 0;
   uint8_t ins_boundaries[5] = {0};
   enum Constraints c[5] = {Constraints::UNCONSTRAINED};

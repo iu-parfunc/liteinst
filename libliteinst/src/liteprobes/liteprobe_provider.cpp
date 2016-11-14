@@ -280,7 +280,8 @@ list<ProbeGroup*> LiteProbeProvider::generateProbeGroups(Coordinates original,
   utils::process::Process p;
   list<ProbeGroup*> pg_list;
   switch (type) {
-    case CoordinateType::FUNCTION: {
+    case CoordinateType::FUNCTION: 
+    {
         vector<utils::process::Function*> fns = p.getFunctions();
         string spec = original.getFunction().getSpec();
 
@@ -313,27 +314,30 @@ list<ProbeGroup*> LiteProbeProvider::generateProbeGroups(Coordinates original,
               std::back_insert_iterator<std::list<ProbeGroup*>>(pg_list));
           }
         }
-      }
       break;
+    }
     case CoordinateType::BASIC_BLOCK:
+    {
       assert(block_coords.empty());
       if (!original.getBasicBlock().getSpec().compare("*")) {
-        utils::process::Function* fn = p.getFunction( // TODO : Get function by name at Process
-            specific.getFunction().getSpec());
-        vector<utils::process::BasicBlock*> bbs = fn->getBasicBlocks();
-        string name = probe_group_name;
-        for (utils::process::BasicBlock* bb : bbs) {
-          Coordinates new_specific = specific;
-          BasicBlock b = original.getBasicBlock();
-          b.setSpec(int_to_hex_str(bb->start));
-          // BasicBlock b(""); // TODO : Fix this
-          new_specific.setBasicBlock(b);
-          name += "bb(" + b.getSpec() + ")";
+        vector<utils::process::Function*> fns = p.getFunctions();
 
-          ProbeGroup* pg = generateProbeGroupForBasicBlock(fn, bb, new_specific,
-              name);
-          pg_list.push_back(pg);
-        } 
+        for (utils::process::Function* fn : fns) {
+          vector<utils::process::BasicBlock*> bbs = fn->getBasicBlocks();
+          string name = probe_group_name;
+          for (utils::process::BasicBlock* bb : bbs) {
+            Coordinates new_specific = specific;
+            BasicBlock b = original.getBasicBlock();
+            b.setSpec(int_to_hex_str(bb->start));
+            // BasicBlock b(""); // TODO : Fix this
+            new_specific.setBasicBlock(b);
+            name += "bb(" + b.getSpec() + ")";
+
+            ProbeGroup* pg = generateProbeGroupForBasicBlock(fn, bb, new_specific,
+                name);
+            pg_list.push_back(pg);
+          } 
+        }
       } else {
         utils::process::Function* fn = p.getFunction( // TODO : Get function by name at Process
             specific.getFunction().getSpec());
@@ -349,6 +353,7 @@ list<ProbeGroup*> LiteProbeProvider::generateProbeGroups(Coordinates original,
         pg_list.push_back(pg);
       }
       break;
+    }
     case CoordinateType::LOOP:
       throw invalid_argument("Loop based coordinates not yet implemented..\n");
     default:

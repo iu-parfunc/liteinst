@@ -165,6 +165,7 @@ void initCallback() {
 
   Coordinates coords;
   coords.setFunction(liteinst::Function(".*~_ZnwmPv"));
+  // coords.setBasicBlock(liteinst::BasicBlock("*"));
   coords.setProbePlacement(ProbePlacement::BOUNDARY);
 
   ProbeRegistration pr = g_liteprof_p->registerProbes(coords, "IProvider"); 
