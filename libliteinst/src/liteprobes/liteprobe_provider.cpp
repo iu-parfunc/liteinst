@@ -531,8 +531,6 @@ outer:
 
   ticks init_end = getticks();
 
-  // printf("INIT: %ld\n", (init_end - init_start));
-
   fclose(fp);
 
   for (string failed : failed_funcs) {
@@ -543,6 +541,8 @@ outer:
 
   assert(probed == num_funcs_probed);
 
+#ifdef INFO
+
   printf("FUNCS: %ld\n", num_funcs_probed);
   printf("SKIPPED_FUNCS: %ld\n", skipped_funcs);
   printf("FAILED_FUNCS: %ld\n", num_funcs - num_funcs_probed - 
@@ -550,8 +550,7 @@ outer:
   printf("PROBESITES: %ld\n", num_probes);
   printf("FAILED_PROBESITES: %ld\n", failed_probes);
   printf("SKIPPED_PROBESITES: %ld\n\n", skipped_probes);
-
-  printf("After injecting probes..\n");
+#endif
 
   if (failed_probes > 0) {
     pr->failures = true;

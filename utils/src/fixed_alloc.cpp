@@ -626,9 +626,6 @@ MemStatistics FixedAllocator::getAllocationStatistics() {
     mem.utilization = 0;
   }
 
-  printf("FAIL COUNT : %d\n", g_fail_count);
-  printf("NEW FAILS  : %d\n", g_new_fails);
-  printf("EXISTING FAILS  : %d\n", g_existing_fails);
 #endif
 
   return mem;
