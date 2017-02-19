@@ -13,7 +13,8 @@ void trap_handler(int signum, siginfo_t* siginfo, void* context) {
   signalled = 1;
 }
 
-/******** Tests *********/
+/*
+
 TEST_SUITE("Signal Handling Tests");
 
 TEST_CASE("+ Synchronous signal handler registration test") {
@@ -42,6 +43,8 @@ TEST_CASE("+ Synchronous signal handler registration test") {
   CHECK(newact.sa_handler == SIG_DFL);
 
 }
+
+*/
 
 // + Asynchronous signal handler registration test
 // + Multiple synchronous handler registration test

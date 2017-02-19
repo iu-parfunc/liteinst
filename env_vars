@@ -1,6 +1,0 @@
-
-# Source this file from the containing directory to set up your environment:
-
-export UBIPROF_ROOT=`pwd`
-
-export LD_LIBRARY_PATH="$UBIPROF_ROOT/build/lib":$LD_LIBRARY_PATH
