@@ -20,10 +20,10 @@ build:
 	$(info --------------------------------------------)
 	(make lib)
 	$(info )
-	(cd benchmarks; make bench)
+	(cd apps/benchmarks; make bench)
 
 run:
-	(cd benchmarks; make run)
+	(cd apps/benchmarks; make run)
 
 lib:
 	$(CXX) --version || echo ok

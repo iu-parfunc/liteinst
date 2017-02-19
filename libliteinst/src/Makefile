@@ -17,7 +17,7 @@ LDFLAGS  = -Bsymbolic -fPIC -Wl,--hash-style=sysv -shared
 POINTPATCH = $(INSTALL)/libpointpatch.a 
 UTILS = $(INSTALL)/libutils.a 
 DEPS = $(POINTPATCH) $(UTILS) 
-LIBS = -lelf -lrt -lstdc++ -pthread
+LIBS = -lstdc++ -pthread
 
 ELPH = $(DEPS_ROOT)/elph
 

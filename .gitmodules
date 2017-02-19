@@ -1,5 +1,5 @@
 [submodule "benchmarks"]
-	path = benchmarks
+	path = apps/benchmarks
 	url = git@github.com:iu-parfunc/prof_apps.git
 [submodule "deps/asmjit"]
 	path = deps/asmjit
