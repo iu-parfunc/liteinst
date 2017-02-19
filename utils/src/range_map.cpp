@@ -20,7 +20,7 @@ using std::unordered_set;
 
 BlockRangeMap::BlockRangeMap(int32_t block_size) : block_size(block_size), 
   entries() { 
-  fprintf(stderr, "[rangemap] BLOCK SIZE : %d\n", block_size);
+  // fprintf(stderr, "[rangemap] BLOCK SIZE : %d\n", block_size);
 }
 
 void BlockRangeMap::show(FILE* fp, int nspaces) {

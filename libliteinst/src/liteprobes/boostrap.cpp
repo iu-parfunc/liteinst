@@ -260,7 +260,6 @@ __attribute__((constructor))
 void boostrap() {
 
   ticks start = getticks();
-  printf("Inside boostrap\n");
   liteinst::liteprobes::liteprobesInfectMain();
   ticks end = getticks();
   g_premain_cost = (end - start);
