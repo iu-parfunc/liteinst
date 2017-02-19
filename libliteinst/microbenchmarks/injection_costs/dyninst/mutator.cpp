@@ -178,9 +178,11 @@ int main (int argc, const char* argv[]) {
 
     // sleep(20);
 
+    /*
     while (!proc->isTerminated()) {
         bpatch.waitForStatusChange();
     }
+    */
 
     return 0;
 }

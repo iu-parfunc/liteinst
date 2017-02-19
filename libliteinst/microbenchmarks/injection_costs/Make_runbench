@@ -9,6 +9,11 @@ ifeq ($(MACHINECLASS),)
      MACHINECLASS=$(HOSTNAME)
 endif
 
+ifeq ($(TRIALS),)
+     TRIALS=3
+endif
+
+
 RUNID=$(shell hostname -s)_$(shell date "+%s")
 
 TOP=$(shell pwd)
