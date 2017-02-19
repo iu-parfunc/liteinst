@@ -19,6 +19,17 @@ deps:
 # Distorm is an in-place build:
 	(cd deps/distorm/make/linux && make)
 
+build:
+	$(info --------------------------------------------)
+	$(info  Building Liteinst                          )
+	$(info --------------------------------------------)
+	(make lib)
+	$(info )
+	(cd benchmarks; make bench)
+
+run:
+	(cd benchmarks; make run)
+
 lib:
 	$(CXX) --version || echo ok
 	$(CC) --version || echo ok

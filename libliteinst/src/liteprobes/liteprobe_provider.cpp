@@ -541,7 +541,7 @@ outer:
 
   assert(probed == num_funcs_probed);
 
-#ifdef INFO
+#ifdef AUDIT
 
   printf("FUNCS: %ld\n", num_funcs_probed);
   printf("SKIPPED_FUNCS: %ld\n", skipped_funcs);
@@ -550,7 +550,12 @@ outer:
   printf("PROBESITES: %ld\n", num_probes);
   printf("FAILED_PROBESITES: %ld\n", failed_probes);
   printf("SKIPPED_PROBESITES: %ld\n\n", skipped_probes);
+
+  FILE* stats_fp = fopen("stats.out", "a");
+  fprintf(stats_fp, "%ld", num_probes);
+  fclose(stats_fp);
 #endif
+
 
   if (failed_probes > 0) {
     pr->failures = true;

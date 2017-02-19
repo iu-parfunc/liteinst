@@ -112,6 +112,9 @@ void initializeLiteprobes() {
   ticks end = getticks();
 
   printf("INIT_COST: %ld\n", g_premain_cost + (end - start));
+  FILE* stats_fp = fopen("stats.out", "a");
+  fprintf(stats_fp, ", %ld", g_premain_cost + (end - start));
+  fclose(stats_fp);
 }
 
 void liteprobesInfectMain() {
@@ -308,6 +311,7 @@ void cleanup() {
     fprintf(layouts_fp, "%s : %ld\n", layout_str.c_str(), it.second);
   }
 
+
   utils::alloc::MemStatistics fixed = utils::alloc::AllocatorFactory::
     getAllocator(utils::alloc::AllocatorType::FIXED)->getAllocationStatistics();
 
@@ -329,6 +333,13 @@ void cleanup() {
   fprintf(stderr, "\nTOTAL_PAGES: %ld\n", fixed.n_pages + arena.n_pages);
   fprintf(stderr, "TOTAL_ALLOCATED: %ld\n\n", fixed.kbs + arena.kbs);
 
+  FILE* stats_fp = fopen("stats.out", "a");
+  fprintf(stats_fp, ", %ld, %ld, %.2f, %.2f", fixed.kbs + arena.kbs, 
+      fixed.allocations + arena.allocations, fixed.utilization, 
+      arena.utilization); 
+
+  fclose(stats_fp);
+  fclose(layouts_fp);
   // fprintf(stderr, "PER_PROBE_ACTIVATION_COST : %ld\n", g_activation_cost / g_activation_count);
   // fprintf(stderr, "PER_PROBE_DEACTIVATION_COST : %ld\n", g_deactivation_cost / g_deactivation_count);
 
@@ -339,16 +350,19 @@ void cleanup() {
 #define BT_BUF_SIZE 108000
 
 extern "C" void liteprobes_dummy() {
+  /*
   int j, nptrs;
   void *buffer[BT_BUF_SIZE];
   char **strings;
 
   nptrs = backtrace(buffer, BT_BUF_SIZE);
   printf("backtrace() returned %d addresses\n", nptrs);
+  */
 
   /* The call backtrace_symbols_fd(buffer, nptrs, STDOUT_FILENO)
   *  would produce similar output to the following: */
 
+  /*
   strings = backtrace_symbols(buffer, nptrs);
   if (strings == NULL) {
     perror("backtrace_symbols");
@@ -362,4 +376,5 @@ extern "C" void liteprobes_dummy() {
   printf("\n\n");
 
   free(strings);
+  */
 }
