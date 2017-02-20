@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
            m4\
            vim\
            gdb\
+           cmake\
            wget\
            python\
            time
@@ -35,3 +36,7 @@ COPY utils $HOME/utils
 RUN wget https://dl.dropboxusercontent.com/u/13531826/pldi17/bench-data.tar.gz -O /tmp/bench-data.tar.gz && \
       mv /tmp/bench-data.tar.gz $HOME/apps/benchmarks/ && cd $HOME/apps/benchmarks/ && \
       mkdir bench-data && tar -xzvf bench-data.tar.gz -C bench-data  && rm  -f bench-data.tar.gz
+
+RUN wget https://dl.dropboxusercontent.com/u/13531826/pldi17/dyninst-9.3.0.tar.gz -O /tmp/dyninst-9.3.0.tar.gz && \
+      mv /tmp/dyninst-9.3.0.tar.gz $HOME/../ && cd $HOME/../ && \
+      tar -xzvf dyninst-9.3.0.tar.gz -C dyninst-9.3.0  && rm  -f dyninst-9.3.0.tar.gz
