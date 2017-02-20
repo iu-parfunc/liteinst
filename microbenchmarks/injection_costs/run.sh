@@ -21,4 +21,4 @@ function run_bench() {
 }
 
 run_bench "liteinst"
-run_bench "dyninst"
+# run_bench "dyninst"
