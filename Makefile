@@ -66,3 +66,4 @@ clean:
 	(cd libliteinst/src/ && make clean)
 	(cd libliteprof/src/ && make clean)
 	(cd deps/distorm/make/linux && make clean)
+	(cd apps/benchmarks && make clean)
