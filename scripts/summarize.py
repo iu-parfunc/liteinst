@@ -3,7 +3,7 @@
 import csv
 from decimal import Decimal
 
-benches = [ "blackscholes", "bzip-1.0.3", "fluid", "h264ref-9.3", "hmmer", "hull", "nbody", "perl-5.8.7", "sjeng" ]
+benches = [ "blackscholes", "bzip", "fluid", "h264", "hmmer", "hull", "nbody", "perlbench", "sjeng" ]
 experiments = [ "Init_Costs-Table6", "Layout_Distribution-Table2", "Mem_Util-Table5" ]
 
 def format_e(n):

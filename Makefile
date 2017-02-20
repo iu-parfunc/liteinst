@@ -27,6 +27,8 @@ run:
 
 plot:
 	(cd scripts; ./summarize.py)
+	(cp scripts/layouts/layouts results/Layout_Distribution-Table2/; cd results/Layout_Distribution-Table2; \
+	 	./layouts raw/*; rm layouts)
 
 lib:
 	$(CXX) --version || echo ok
