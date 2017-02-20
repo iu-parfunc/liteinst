@@ -27,7 +27,7 @@ run:
 #	(cd apps/benchmarks; make run)
 
 plot:
-	(cd scripts; ./summarize.py)
+#	(cd scripts; ./summarize.py)
 	(cp scripts/layouts/layouts results/Layout_Distribution-Table2/; cd results/Layout_Distribution-Table2; \
 	 	./layouts raw/*; rm layouts)
 
