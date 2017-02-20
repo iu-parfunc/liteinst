@@ -1,55 +1,36 @@
 #! /bin/bash
 
-success=0;
-failed=0;
+ROOT=../..
+TRIALS=3
 
-fails="";
+function run_liteinst_bench() {
+  runners=(2 3 4 5)
+  mkdir -p $ROOT/results/Injection_Costs-Fig4
+  mkdir -p $ROOT/results/Injection_Costs-Fig4/raw
+  cd liteinst
+  make build
+  for r in "${runners[@]}";
+  do
+    (export NUM_RUNNERS=$r; make run); 
+  done
+     yes | cp -f liteinst.out $ROOT/../results/Injection_Costs-Fig4/raw/
+}
 
-# CPU on which the benchmarks are to run
-CPU=0;
+function run_bench() {
+  runners=(2 3 4 5)
+  mkdir -p $ROOT/results/Injection_Costs-Fig4
+  mkdir -p $ROOT/results/Injection_Costs-Fig4/raw
+  cd $1 
+  make build
+  for r in "${runners[@]}";
+  do
+    for i in {1..$TRIALS};
+    do
+      (export NUM_RUNNERS=$r; make run)
+    done
+  done
+  yes | cp -f $1".out" $ROOT/../results/Injection_Costs-Fig4/raw/
+}
 
-for f in *.exe ; do
-  if [ $f  =  '*.exe' ] ;
-  then echo "Build benchmarks first"
-    exit;
-  fi;
-  echo ""
-  echo ""
-
-  echo '****************************'
-  echo 'RUNNING BENCHMARK'
-  echo '****************************'
-
-  readelf -s ${f} |grep FUNC | awk -F '[[:space:]]+' '{print $3 "," $9}' > \
-    functions.txt
-
-  LD_LIBRARY_PATH=../../build/lib:$LD_LIBRARY_PATH taskset -c $CPU ./${f}
-  if [ $? -eq 0 ]; then
-    echo '**********************************'
-    echo "$f COMPLETED"
-    echo '**********************************'
-    success=$((success+1))
-  else
-    echo '***********************************'
-    echo "$f FAILED! "
-    echo '***********************************'
-
-    fails="$fails $f"
-    failed=$((failed+1))
-  fi
-   
-  rm -f functions.txt
-done;
-
-echo -e "\n***** Benchmarks summary *****"
-echo "Num completed bebchmarks: " $success
-echo "Num failed benchmarks: " $failed
-echo "Failed benchmarks: " $fails
-
-
-if [ "$failed" == "0" ];
-then
-  exit 0;
-else
-  exit 1;
-fi
+run_bench "liteinst"
+# run_bench "dyninst"

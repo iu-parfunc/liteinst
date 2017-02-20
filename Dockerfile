@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
            vim\
            gdb\
            cmake\
+           libboost-all-dev\
            wget\
            python\
            time
@@ -39,4 +40,4 @@ RUN wget https://dl.dropboxusercontent.com/u/13531826/pldi17/bench-data.tar.gz -
 
 RUN wget https://dl.dropboxusercontent.com/u/13531826/pldi17/dyninst-9.3.0.tar.gz -O /tmp/dyninst-9.3.0.tar.gz && \
       mv /tmp/dyninst-9.3.0.tar.gz $HOME/../ && cd $HOME/../ && \
-      tar -xzvf dyninst-9.3.0.tar.gz -C dyninst-9.3.0  && rm  -f dyninst-9.3.0.tar.gz
+      mkdir dyninst-9.3.0 && tar -xzvf dyninst-9.3.0.tar.gz -C dyninst-9.3.0  && rm  -f dyninst-9.3.0.tar.gz
