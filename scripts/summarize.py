@@ -27,8 +27,6 @@ def summarize_mem_table(summary):
   f = open(prefix+"/mem_util_table_5.csv", 'w')
   f.write("Benchmark, Allocated Memory(KB), #Trampolines, Fixed Util(%), Arena Util(%), Max Residency(KB), Overhead (%)\n")
   for bench in summary:
-    print bench
-    print summary[bench]
     f.write("{0}, {1}, {2}, {3:.2f}, {4:.2f}, {5}, {6:.2f}\n".format(
           bench, 
           summary[bench][2],  

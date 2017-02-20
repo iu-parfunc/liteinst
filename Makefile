@@ -1,6 +1,6 @@
 .PHONY: all lib clean deps test quicktest
 .PHONY: utils_tests pointpatch_tests 
-# ----------------------------------------
+#summary ----------------------------------------
 
 all: lib
 
@@ -24,6 +24,9 @@ build:
 
 run:
 	(cd apps/benchmarks; make run)
+
+plot:
+	(cd scripts; ./summarize.py)
 
 lib:
 	$(CXX) --version || echo ok
