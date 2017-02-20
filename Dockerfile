@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
            m4\
            vim\
            gdb\
+           wget\
            time
 
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 575159689BEFB442 && \
@@ -27,3 +28,7 @@ COPY libliteprof $HOME/libliteprof
 COPY Makefile $HOME/Makefile
 COPY README.md $HOME/README.md
 COPY utils $HOME/utils
+
+RUN wget https://dl.dropboxusercontent.com/u/13531826/pldi17/bench-data.tar.gz -O /tmp/bench-data.tar.gz && \
+      mv /tmp/bench-data.tar.gz $HOME/apps/benchmarks/ && cd $HOME/apps/benchmarks/ && \
+      mkdir bench-data && tar -xzvf bench-data.tar.gz -C bench-data  && rm  -f bench-data.tar.gz
