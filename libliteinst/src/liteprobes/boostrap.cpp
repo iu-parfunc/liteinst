@@ -333,7 +333,7 @@ void cleanup() {
   fprintf(stderr, "TOTAL_ALLOCATED: %ld\n\n", fixed.kbs + arena.kbs);
 
   FILE* stats_fp = fopen("stats.out", "a");
-  fprintf(stats_fp, ", %ld, %ld, %.2f, %.2f", fixed.kbs + arena.kbs, 
+  fprintf(stats_fp, ", %ld, %ld, %.2f, %.2f\n", fixed.kbs + arena.kbs, 
       fixed.allocations + arena.allocations, fixed.utilization, 
       arena.utilization); 
 
