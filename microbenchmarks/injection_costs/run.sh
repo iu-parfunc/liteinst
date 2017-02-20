@@ -20,5 +20,5 @@ function run_bench() {
   yes | cp -f $1".out" $ROOT/../results/Injection_Costs-Fig4/raw/
 }
 
-# run_bench "liteinst"
+run_bench "liteinst"
 run_bench "dyninst"
