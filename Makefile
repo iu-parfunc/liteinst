@@ -23,7 +23,8 @@ build:
 	(cd apps/benchmarks; make bench)
 
 run:
-	(cd apps/benchmarks; make run)
+	(cd microbenchmarks/injection_costs; ./run.sh)
+#	(cd apps/benchmarks; make run)
 
 plot:
 	(cd scripts; ./summarize.py)
