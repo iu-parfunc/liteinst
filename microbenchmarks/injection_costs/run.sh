@@ -4,7 +4,8 @@ ROOT=../..
 TRIALS=3
 
 function run_bench() {
-  runners=(2 3 4 5)
+#  runners=(2 3 4 5)
+  runners=(8 16 32 64)
   mkdir -p $ROOT/results/Injection_Costs-Fig4
   mkdir -p $ROOT/results/Injection_Costs-Fig4/raw
   cd $1 
@@ -20,5 +21,5 @@ function run_bench() {
   yes | cp -f $1".out" $ROOT/../results/Injection_Costs-Fig4/raw/
 }
 
-# run_bench "liteinst"
+run_bench "liteinst"
 run_bench "dyninst"
