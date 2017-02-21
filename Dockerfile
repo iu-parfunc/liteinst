@@ -22,6 +22,7 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 575159689BEFB442 &&
 
 COPY deps $HOME/deps
 COPY apps $HOME/apps
+COPY microbenchmarks $HOME/microbenchmarks
 RUN rm -rf $HOME/apps/benchmarks/bench-data
 COPY include $HOME/include
 COPY libliteinst $HOME/libliteinst
