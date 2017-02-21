@@ -16,20 +16,20 @@ with a subdirectory named *'raw'* within each such directory. Summarized data
 are also stored within the same directory. Summarized data are csv files.
 Plots are generated inside *'plots'* directory at top level.
 
-How To Build The Docker
+How To Build The Docker 
 -----------------------
 
 Run the following from the top level directory.
 
 ```
-  docker run -w /home/liteinst -it liteinst
+  docker build -t liteinst .
 ```
 
 To run the docker image run the following from the top level directory. The 
 shell will be placed under directory '/home/liteinst' at startup.
 
 ```
-  docker build -t liteinst .
+  docker run -w /home/liteinst -it liteinst
 ```
 
 Source Organiztion
