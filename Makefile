@@ -23,13 +23,16 @@ build:
 	(cd apps/benchmarks; make bench)
 
 run:
-	(cd microbenchmarks/injection_costs; ./run.sh)
-#	(cd apps/benchmarks; make run)
+	(cd apps/benchmarks; make run)
+#	(cd microbenchmarks/injection_costs; ./run.sh)
 
-plot:
-#	(cd scripts; ./summarize.py)
+summarize:
+	(cd scripts; ./summarize.py)
 	(cp scripts/layouts/layouts results/Layout_Distribution-Table2/; cd results/Layout_Distribution-Table2; \
 	 	./layouts raw/*; rm layouts)
+
+plot: summarize
+	(cd scripts/plotting; make run)
 
 lib:
 	$(CXX) --version || echo ok

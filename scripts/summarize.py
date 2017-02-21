@@ -4,11 +4,16 @@ import csv
 from decimal import Decimal
 
 benches = [ "blackscholes", "bzip", "fluid", "h264", "hmmer", "hull", "nbody", "perlbench", "sjeng" ]
-experiments = [ "Init_Costs-Table6", "Layout_Distribution-Table2", "Mem_Util-Table5" ]
+experiments = [ "Init_Costs-Table6", "Layout_Distribution-Table2", "Mem_Util-Table5", "Injection_Costs-Fig4" ]
 
 def format_e(n):
   a = '%e' % n
   return a.split('e')[0].rstrip('0').rstrip('.') + 'e' + a.split('e')[1]
+
+def summarize_injection_costs():
+  prefix = "../results/"+experiments[3]
+  f = open(prefix+"/injection_costs_fig4.csv", 'w');
+
 
 def summarize_init_table(summary):
   prefix = "../results/"+experiments[0]

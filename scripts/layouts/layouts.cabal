@@ -1,0 +1,19 @@
+name:                layouts
+version:             0.1.0.0
+-- synopsis:
+-- description:
+homepage:            https://github.com/githubuser/layouts#readme
+license:             BSD3
+license-file:        LICENSE
+author:              Author name here
+maintainer:          example@example.com
+copyright:           2017 Author name here
+category:            Web
+build-type:          Simple
+cabal-version:       >=1.10
+extra-source-files:  README.md
+
+executable layouts 
+  main-is:             src/Main.hs
+  build-depends:       base, split, text, containers
+  default-language:    Haskell2010
