@@ -4,27 +4,33 @@ How To Run
 
 Execute the following sequence of commands from the top level directory.
 
+```
   make build  (Builds the library sources and application benchmarks)
   make run    (Runs application benchmarks and microbenchmarks)
   make plots  (Summarizes data and plot them)
+```
 
 Raw data from make run will be stored under results directory organized by
-each plot. Raw data files ends with the file extension '.out and are stored
-with a subdirectory named 'raw' within each such directory. Summarized data 
+each plot. Raw data files ends with the file extension *.out* and are stored
+with a subdirectory named *'raw'* within each such directory. Summarized data 
 are also stored within the same directory. Summarized data are csv files.
-Plots are generated inside 'plots' directory at top level.
+Plots are generated inside *'plots'* directory at top level.
 
 How To Build The Docker
 -----------------------
 
 Run the following from the top level directory.
 
+```
   docker run -w /home/liteinst -it liteinst
+```
 
 To run the docker image run the following from the top level directory. The 
 shell will be placed under directory '/home/liteinst' at startup.
 
+```
   docker build -t liteinst .
+```
 
 Source Organiztion
 ------------------
