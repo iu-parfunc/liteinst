@@ -1,0 +1,72 @@
+
+#set terminal pdfcairo linewidth 4 rounded size 5in,3.25in
+set terminal jpeg linewidth 3 
+
+# set title "Probe Injection Costs"
+
+set key invert reverse Left outside
+set key autotitle columnheader
+#set yrange [0:7e6]
+set auto x
+
+unset xtics
+
+set xtics nomirror rotate by -45 scale 0
+
+set style data histogram 
+
+set style histogram rowstacked 
+
+
+set boxwidth 0.3 absolute
+
+#set style fill solid 4.0 border lt -1 
+
+set style fill pattern 3
+
+set xtics offset first -0.15,0
+
+#'' using ($0+0.25):2:3 with boxerrorbars title col
+# '' using 0:(100):5 with errorbars notitle
+#      
+
+
+set linetype 1 lc rgb 'purple'
+set linetype 2 lc rgb 'black'
+set linetype 3 lc rgb 'blueviolet'
+set linetype 4 lc rgb 'red'
+ 
+set xlabel "Number of Threads"
+set ylabel "Cycles"
+set datafile separator ","
+# This is probably pretty close
+plot newhistogram "", 'injection_costs_fig4.csv' using 2:xtic(1) t "Dyninst Insertion"  , \
+     newhistogram "" at 0.3, 'injection_costs_fig4.csv' using 3, for [i=4:5] '' using i t columnhead(i)
+
+#
+
+
+### THIS MAY BE A WAY... if it can be converted to work with our data
+# set style data histogram
+# set style histogram rowstacked
+# set style fill solid
+# set boxwidth 0.5
+# set key invert samplen 0.2
+# set key samplen 0.2
+# set bmargin 3
+# set offset 0,2,0,0
+
+# set title "Clusters of stacked histograms"
+
+# plot newhistogram "Machine A" lt 1, \
+#      'stack+cluster.dat' index 0 u 2:xtic(1) title "col 2", \
+#      '' index 0 u 3 title "col 3", \
+#      '' index 0 u 4 title "col 4", \
+#      '' index 0 u 5 title "col 5", \
+#      '' index 0 u 6 title "col 6", \
+#      newhistogram "Machine B" lt 1, \
+#      'stack+cluster.dat' index 1 u 2:xtic(1) notitle, \
+#      '' index 1 u 3 notitle, \
+#      '' index 1 u 4 notitle, \
+#      '' index 1 u 5 notitle, \
+#      '' index 1 u 6 notitlee

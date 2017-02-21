@@ -13,7 +13,86 @@ def format_e(n):
 def summarize_injection_costs():
   prefix = "../results/"+experiments[3]
   f = open(prefix+"/injection_costs_fig4.csv", 'w');
+  f.write("threads, Dyninst Insertion, LiteInst Patching, LiteInst Metadata, LiteInst Punning, LiteInst Total\n")
+  liteinst = list(csv.reader(open(prefix+"/raw/liteinst.out")))
+  dyninst  = list(csv.reader(open(prefix+"/raw/dyninst.out")))
 
+  liteinst_dict = {}
+  for row in liteinst:
+    n_threads = row[0]
+    if n_threads in liteinst_dict:
+      summary_data = liteinst_dict[n_threads]
+      for i, elem in enumerate(row[1:]):
+        summary_data[1][i] = int(summary_data[1][i]) + int(elem)
+      summary_data[0] += 1
+      liteinst_dict[n_threads] = summary_data
+    else:
+      liteinst_dict[n_threads] = [1, row[1:]]
+
+  liteinst_avg = []
+  for n_threads, data in liteinst_dict.iteritems():
+    t_data = []
+    t_data.append(n_threads)
+    for val in data[1]:
+      t_data.append(int(val) / data[0])
+    liteinst_avg.append(t_data)
+
+  dyninst_dict = {}
+  for row in dyninst:
+    n_threads = row[0]
+    if n_threads in dyninst_dict:
+      summary_data = dyninst_dict[n_threads]
+      for i, elem in enumerate(row[1:]):
+        summary_data[1][i] = int(summary_data[1][i]) + int(elem)
+      summary_data[0] += 1
+      dyninst_dict[n_threads] = summary_data
+    else:
+      dyninst_dict[n_threads] = [1, row[1:]]
+
+  dyninst_avg = []
+  for n_threads, data in dyninst_dict.iteritems():
+    t_data = []
+    t_data.append(n_threads)
+    for val in data[1]:
+      t_data.append(int(val) / data[0])
+    dyninst_avg.append(t_data)
+ 
+  injection_summary = []
+  for i, row in enumerate(liteinst_avg):
+    dyninst_row = dyninst_avg[i]
+    data = []
+    data.append(row[0])
+    data.append(dyninst_row[2])
+    data.append(row[2])
+    data.append(row[3])
+    data.append(row[4])
+    data.append(row[1])
+    injection_summary.append(data)
+
+  for row in injection_summary:
+    f.write("{0}, {1}, {2}, {3}, {4}, {5}\n".format(
+        row[0], row[1], row[2], row[3], row[4], row[5]))
+  f.close()
+
+  f = open(prefix+"/injection_costs_table3.csv", 'w');
+  f.write("#threads, Process Attach, Dyninst Probe Insertion, Dyninst Total Cost, LiteInst Cost, Cost Ratio (Dyn-/Liteinst)\n")
+
+  injection_comparison = []
+  for i, row in enumerate(liteinst_avg):
+    dyninst_row = dyninst_avg[i]
+    data = []
+    data.append(row[0])
+    data.append(format_e(Decimal(dyninst_row[1])))
+    data.append(format_e(Decimal(dyninst_row[2])))
+    data.append(format_e(Decimal((int(dyninst_row[1]) + int(dyninst_row[2]) + int(dyninst_row[3])))))
+    data.append(format_e(Decimal(row[1])))
+    data.append(format_e(Decimal((int(dyninst_row[1]) + int(dyninst_row[2]) + int(dyninst_row[3])) / int(row[1]))))
+    injection_comparison.append(data) 
+
+  for row in injection_comparison:
+    f.write("{0}, {1}, {2}, {3}, {4}, {5}\n".format(
+        row[0], row[1], row[2], row[3], row[4], row[5]))
+  f.close()
 
 def summarize_init_table(summary):
   prefix = "../results/"+experiments[0]
@@ -56,8 +135,9 @@ def main():
         elif cells[0] == "RES_SIZE:":
           data[0].append(cells[1])
     summary[bench] = data[0]
-  summarize_init_table(summary)
-  summarize_mem_table(summary)
+  # summarize_init_table(summary)
+  # summarize_mem_table(summary)
+  summarize_injection_costs()
 
 if __name__ == "__main__":
   main()
