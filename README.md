@@ -10,7 +10,7 @@ Execute the following sequence of commands from the top level directory.
   make plots  (Summarizes data and plot them)
 ```
 
-Raw data from make run will be stored under results directory organized by
+Raw data from `make run` will be stored under results directory organized by
 each plot. Raw data files ends with the file extension *.out* and are stored
 with a subdirectory named *'raw'* within each such directory. Summarized data 
 are also stored within the same directory. Summarized data are csv files.
