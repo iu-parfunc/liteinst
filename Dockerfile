@@ -11,8 +11,9 @@ RUN apt-get update && apt-get install -y \
            gdb\
            cmake\
            libboost-all-dev\
-           wget\
            python\
+           python-matplotlib\
+           wget\
            time
 
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 575159689BEFB442 && \
@@ -41,4 +42,5 @@ RUN wget https://dl.dropboxusercontent.com/u/13531826/pldi17/bench-data.tar.gz -
 
 RUN wget https://dl.dropboxusercontent.com/u/13531826/pldi17/dyninst-9.3.0.tar.gz -O /tmp/dyninst-9.3.0.tar.gz && \
       mv /tmp/dyninst-9.3.0.tar.gz $HOME/../ && cd $HOME/../ && \
-      mkdir dyninst-9.3.0 && tar -xzvf dyninst-9.3.0.tar.gz -C dyninst-9.3.0  && rm  -f dyninst-9.3.0.tar.gz
+      mkdir dyninst-9.3.0 && tar -xzvf dyninst-9.3.0.tar.gz -C dyninst-9.3.0  && rm  -f dyninst-9.3.0.tar.gz && \
+      cd dyninst-9.3.0/dyninst-9.3.0 && mkdir build && cd build && cmake .. && make && make install

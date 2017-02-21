@@ -135,8 +135,8 @@ def main():
         elif cells[0] == "RES_SIZE:":
           data[0].append(cells[1])
     summary[bench] = data[0]
-  # summarize_init_table(summary)
-  # summarize_mem_table(summary)
+  summarize_init_table(summary)
+  summarize_mem_table(summary)
   summarize_injection_costs()
 
 if __name__ == "__main__":
