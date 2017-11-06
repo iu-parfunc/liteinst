@@ -24,8 +24,8 @@ build:
 
 run:
 	(cd apps/benchmarks; make run)
-	(cd microbenchmarks/toggle_throughput; ./run.sh)
-	(cd microbenchmarks/injection_costs; ./run.sh)
+	# (cd microbenchmarks/toggle_throughput; ./run.sh)
+	# (cd microbenchmarks/injection_costs; ./run.sh)
 
 summarize:
 	(cd scripts; ./summarize.py)
