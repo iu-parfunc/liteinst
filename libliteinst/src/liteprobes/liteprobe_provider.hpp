@@ -17,6 +17,7 @@ enum CoordinateType {
   LOOP,
   BASIC_BLOCK,
   OFFSET,
+  ADDRESS,
   LINE_NUM,
   INS_TYPE
 };
@@ -72,6 +73,10 @@ class LiteProbeProvider : public ProbeProvider {
 
     ProbeGroup* generateProbeGroupForFunction(utils::process::Function* fn, 
         Coordinates coord, std::string probe_group_name);
+
+    ProbeGroup* generateProbeGroupForPointCoordinate(
+        utils::process::Function* fn, Coordinates coord, CoordinateType type,
+        std::string probe_group_name);
 
     ProbeGroup* generateProbeGroupForBasicBlock(utils::process::Function* fn,
         utils::process::BasicBlock* bb, Coordinates coord, 

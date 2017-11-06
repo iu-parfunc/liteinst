@@ -271,22 +271,136 @@ ProbeGroup* LiteProbeProvider::generateProbeGroupForFunction(
   }
 }
 
+ProbeGroup* LiteProbeProvider::generateProbeGroupForPointCoordinate(
+    utils::process::Function* fn,  
+    Coordinates coord, CoordinateType type, string probe_group_name) {
+
+  ProbePlacement placement;
+  switch (type) {
+    case CoordinateType::ADDRESS: 
+      placement = coord.getAddress().getPlacement();
+      break;
+    default:
+      throw invalid_argument("Other point coordinates not yet implmented..\n");
+  }
+
+  map<Address, ProbePlacement> probe_sites;
+  switch (placement) {
+    case ProbePlacement::ENTRY:
+      probe_group_name += "/ENTRY/";
+      probe_sites.emplace(coord.getAddress().getVMAddress(), placement);
+      break;
+    case ProbePlacement::EXIT:
+      probe_group_name += "/EXIT/";
+      //TODO
+      throw invalid_argument("Exit instrumentation for point coordinates not yet" 
+          " implemented..\n");
+    case ProbePlacement::BOUNDARY:
+      probe_group_name += "/BOUNDARY/";
+      probe_sites.emplace(coord.getAddress().getVMAddress(), 
+          ProbePlacement::ENTRY);
+      // TODO
+      throw invalid_argument("Boundary instrumentation for point coordinates" 
+          " not yet implemented..\n");
+    default:
+      throw invalid_argument("Unrecognized probe placement..\n");
+  }
+
+  // printf("Generating probe groups for : %s\n", probe_group_name.c_str());
+
+  auto it = pg_by_name.find(probe_group_name);
+  if (it != pg_by_name.end()) {
+    return it->second;
+  } else {
+    ProbeGroup* pg = new ProbeGroup(probe_group_name);
+    pg->fn = fn;
+    pg->probe_sites = probe_sites;
+
+    meta_data_lock.writeLock();
+    pg->pg_id = static_cast<ProbeGroupId>(probe_groups.size()); 
+    probe_groups.emplace_back(unique_ptr<ProbeGroup>(pg));
+    // Vector index is the id for efficient access
+    pg_by_name.emplace(probe_group_name, pg);
+    meta_data_lock.writeUnlock();
+
+    return pg;
+  }
+}
+
 list<ProbeGroup*> LiteProbeProvider::generateProbeGroups(Coordinates original, 
     Coordinates specific, stack<CoordinateType> block_coords, 
     string probe_group_name = "") {
+
+  list<ProbeGroup*> pg_list;
+  utils::process::Process p;
+  if (block_coords.empty()) {
+    CoordinateType point_coord;
+    bool is_point_coord_set = false;
+    if (original.getInstructionType().getSpec().compare("")) {
+      point_coord = CoordinateType::INS_TYPE;
+      is_point_coord_set = true;
+    }
+
+    if (original.getAddress().getSpec().compare("")) {
+      if (is_point_coord_set) {
+        throw invalid_argument("Only one point coordinate type can be given..\n");
+      }
+
+      point_coord = CoordinateType::ADDRESS;
+      is_point_coord_set = true;
+    }
+
+    if (original.getOffset().getSpec().compare("")) {
+      if (is_point_coord_set) {
+        throw invalid_argument("Only one point coordinate type can be given..\n");
+      }
+
+      point_coord = CoordinateType::OFFSET;
+      is_point_coord_set = true;
+    }
+
+    switch(point_coord) {
+      case CoordinateType::ADDRESS:
+      {
+        string addr_str = original.getAddress().getSpec();
+        Address addr = original.getAddress().getVMAddress();
+        utils::process::Function* fn = p.getContainedFunction(addr);
+
+        if (fn->is_valid) {
+          string name = probe_group_name;
+          Coordinates new_specific = specific;
+          Function f;
+          f.setSpec(fn->name);
+          new_specific.setFunction(f);
+          name += "func(" + f.getSpec() + ")";
+          name += "address(" + addr_str + ")";
+
+          ProbeGroup* pg = generateProbeGroupForPointCoordinate(fn, original, 
+              point_coord, name);
+          pg_list.push_back(pg);
+        } else {
+          throw invalid_argument("Probe address is not within a function..\n");
+        }
+        break;
+      }
+      default:
+        throw invalid_argument("Only address point coordinate is currently"  
+            " available..\n");
+    }
+
+    return pg_list;
+  }
+
   CoordinateType type = block_coords.top();
   block_coords.pop();
 
-  utils::process::Process p;
-  list<ProbeGroup*> pg_list;
   switch (type) {
     case CoordinateType::FUNCTION: 
     {
         vector<utils::process::Function*> fns = p.getFunctions();
         string spec = original.getFunction().getSpec();
 
-        set<utils::process::Function*> filtered = getMatchingFunctions(fns, 
-            spec); 
+        set<utils::process::Function*> filtered = getMatchingFunctions(fns, spec); 
 
         // printf("FILTERED SIZE : %lu\n", filtered.size());
 
@@ -367,21 +481,6 @@ ProbeRegistration LiteProbeProvider::registerProbes(Coordinates coords,
         string instrumentation_provider) {
 
   stack<CoordinateType> block_coords;
-  CoordinateType point_coord;
-  bool is_point_coord_set = false;
-  if (coords.getInstructionType().getSpec().compare("")) {
-    point_coord = CoordinateType::INS_TYPE;
-    is_point_coord_set = true;
-  }
-  
-  if (coords.getOffset().getSpec().compare("")) {
-    if (is_point_coord_set) {
-      throw invalid_argument("Only one point coordinate type can be given..\n");
-    }
-
-    point_coord = CoordinateType::OFFSET;
-    is_point_coord_set = true;
-  } 
 
   if (coords.getBasicBlock().getSpec().compare("")) {
     block_coords.push(CoordinateType::BASIC_BLOCK);

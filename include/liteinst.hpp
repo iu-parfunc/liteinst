@@ -59,7 +59,8 @@ enum class ProbeGroupType : uint8_t {
   BASIC_BLOCK,
   OFFSET,
   LINE_NUM, 
-  INS_TYPE
+  INS_TYPE,
+  ADDRESS
 };
 
 /// The placement of probes within a given probe grouping.
@@ -153,6 +154,25 @@ class InstructionType : public ProbeAxis {
     } 
 };
 
+class VMAddress : public ProbeAxis {
+  public:
+    VMAddress(std::string spec = "", ProbePlacement p = ProbePlacement::NONE) :
+      ProbeAxis(spec, p) {
+        if (spec.compare("")) {
+          addr = reinterpret_cast<utils::Address>(std::stol(spec, nullptr, 16));
+        } else {
+          addr = nullptr;
+        }
+    } 
+
+    utils::Address getVMAddress() {
+      return addr;
+    }
+
+  private:
+    utils::Address addr;
+};
+
 /*
 class ProbeGroup {
   public:
@@ -182,12 +202,25 @@ class InstrumentationProvider {
         InstrumentationFunction exit) : name(name), entry(entry), exit(exit) {
     }
 
+    InstrumentationProvider(std::string name, uint8_t* probe, int probe_size) : name(name), 
+      probe(probe), probe_size(probe_size) {
+    }
+
     InstrumentationFunction getEntryInstrumentation() const {
       return entry;
     }
 
     InstrumentationFunction getExitInstrumentation() const {
       return exit;
+    }
+
+    uint8_t* getInstrumentation() const {
+      return probe;
+    }
+
+    int getProbeSize() const {
+      printf("Returning probe size : %d\n", probe_size);
+      return probe_size;
     }
 
     std::string getName() {
@@ -198,6 +231,8 @@ class InstrumentationProvider {
     std::string name;
     InstrumentationFunction entry = NULL;
     InstrumentationFunction exit = NULL;
+    uint8_t* probe = nullptr;
+    int probe_size = 0;
 };
 
 class Coordinates {
@@ -234,8 +269,15 @@ class Coordinates {
       return *this;
     }
 
+    Coordinates& setAddress(VMAddress addr) {
+      address = addr;
+      return *this;
+    }
+
     Coordinates& setProbePlacement(ProbePlacement placement) {
-      if (ins_type.getSpec().compare("")) {
+      if (address.getSpec().compare("")) {
+        address.setPlacement(placement);
+      } else if (ins_type.getSpec().compare("")) {
         ins_type.setPlacement(placement);
       } else if (offset.getSpec().compare("")) {
         offset.setPlacement(placement);
@@ -278,6 +320,10 @@ class Coordinates {
       return ins_type;
     }
 
+    VMAddress getAddress(){
+      return address; 
+    }
+
   private:
     Module module;
     Function function;
@@ -285,6 +331,7 @@ class Coordinates {
     BasicBlock basic_block;
     Offset offset;
     InstructionType ins_type;
+    VMAddress address;
 };
 
 class ProbeGroupInfo {
@@ -389,6 +436,7 @@ class ProbeProvider {
         i_providers.insert(
             std::pair<ProviderEntry, InstrumentationProvider>(pe, 
               instrumentation));
+        printf("[REGISTER] Registered provider %s\n", instrumentation.getName().c_str());
         lock.unlock();
         return pe.provider_id;
       }
@@ -402,7 +450,7 @@ class ProbeProvider {
         return it->second;
       } else {
         throw std::invalid_argument("Provider with the given name does not" 
-            "exist");
+            " exist");
       }
     }
 
@@ -420,6 +468,9 @@ class ProbeProvider {
     // Bulk operations
     virtual bool activate(ProbeRegistration registration) = 0;
     virtual bool deactivate(ProbeRegistration registraiton) = 0;
+
+    // Low level instrumentation functions
+    // virtual bool instrumentAddress(Address addr, char* injected_bytes);
 
     static ProbeProvider* getGlobalProbeProvider();
 

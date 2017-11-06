@@ -86,6 +86,10 @@ uint8_t g_control_return[] =
 };
 int g_control_return_size = sizeof(g_control_return) / sizeof(uint8_t);
 
+inline void emitProbe(Address start, uint8_t* probe, int length) {
+  memcpy(start, probe, length);
+}
+
 inline ShortCircuit emitShortCircuit(Address start) {
   memcpy(start, g_short_circuit_near, 
       g_short_circuit_near_size); 
@@ -237,6 +241,7 @@ unique_ptr<Springboard> CodeJitter::emitSpringboard(const CoalescedProbes& cp,
     tramp_ip += relocations->relocation_size;
     code_ip = probed_addr;
 
+    if (provider.getInstrumentation() == NULL) {
     // The address where the callout for the probe really begins
     Address callout_addr = tramp_ip; 
 
@@ -281,6 +286,11 @@ unique_ptr<Springboard> CodeJitter::emitSpringboard(const CoalescedProbes& cp,
     callout->ctx_restore = cr;
 
     sb->callouts.emplace(probed_addr, unique_ptr<Callout>(callout));
+    } else {
+      printf("[EMIT] Emitting probe of size %d..\n", provider.getProbeSize());
+      emitProbe(tramp_ip, provider.getInstrumentation(), provider.getProbeSize());
+      tramp_ip += provider.getProbeSize();
+    }
 
     delete relocations;
   }
@@ -321,7 +331,8 @@ unique_ptr<Springboard> CodeJitter::emitSpringboard(const CoalescedProbes& cp,
   return unique_ptr<Springboard>(sb);
 }
 
-int64_t CodeJitter::getSpringboardSize(const CoalescedProbes& cp) {
+int64_t CodeJitter::getSpringboardSize(const CoalescedProbes& cp,
+    const InstrumentationProvider& provider) {
   Relocator r;
   map<Address, Probe*> probes = cp.probes;
 
@@ -342,8 +353,14 @@ int64_t CodeJitter::getSpringboardSize(const CoalescedProbes& cp) {
   }
 
   int num_trampolines = probes.size();
-  int64_t trampoline_size = g_short_circuit_near_size + g_context_save_size + 
-    g_args_size + g_call_size +  g_context_restore_size;  
+
+  int64_t trampoline_size = 0;
+  if (provider.getInstrumentation() != NULL) {
+    trampoline_size = g_short_circuit_near_size + g_context_save_size + 
+      g_args_size + g_call_size +  g_context_restore_size;  
+  } else {
+    trampoline_size = provider.getProbeSize();
+  }
   
   int64_t springboard_size = relocation_size + num_trampolines * 
     trampoline_size;

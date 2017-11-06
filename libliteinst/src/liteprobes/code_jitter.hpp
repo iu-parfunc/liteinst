@@ -13,7 +13,8 @@ class CodeJitter {
   public:
     std::unique_ptr<Springboard> emitSpringboard(const CoalescedProbes& cp, 
         utils::Address target, const InstrumentationProvider& provider);
-    int64_t getSpringboardSize(const CoalescedProbes& cp);
+    int64_t getSpringboardSize(const CoalescedProbes& cp, 
+        const InstrumentationProvider& provider);
 
 };
 

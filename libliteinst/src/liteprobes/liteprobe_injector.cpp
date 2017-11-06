@@ -189,7 +189,7 @@ JITResult makeSpringboard(const CoalescedProbes& cp,
   _DInst* decoded = static_cast<_DInst*>(seq->instructions);
 
   CodeJitter cj;
-  int64_t springboard_size = cj.getSpringboardSize(cp);
+  int64_t springboard_size = cj.getSpringboardSize(cp, provider);
 
   // printf("SPRINGBOARD_SIZE : %ld\n", springboard_size);
 
@@ -359,6 +359,153 @@ list<CoalescedProbes> LiteProbeInjector::coalesceProbes(
   return cps;
 
 }
+
+/*
+bool LiteProbeInjector::instrumentAddress(Address addr, char* injected_bytes) {
+
+  Probe* probe = new Probe;
+
+  meta_data_lock.writeLock();
+  probe->p_id = static_cast<RegistrationId>(probes.size());
+  probes.emplace_back(unique_ptr<Probe>(probe));
+  meta_data_lock.writeUnlock();
+
+  probe->address = addr;
+  probes_by_addr.emplace(addr, probe);
+
+  Process p;
+  utils::process::Function* fn = p.getContainedFunction(addr);
+
+  if (!fn->is_valid) {
+    throw invalid_argument("Probe address is not within a recognized function..");  
+  } 
+
+  if ((fn->end - fn->start) < 5) {
+    printf("Small function. Not carrying out the instrumentation..\n"); 
+    return false;
+  }
+
+  vector<Address> addrs;
+  addrs.push_back(addr);
+
+  Disassembler disas;
+  const Sequence* seq = disas.disassemble(fn->start, fn->end);
+  _DInst* decoded = static_cast<_DInst*>(seq->instructions);
+
+  list<CoalescedProbes> cps = coalesceProbes(fn, addrs, seq);
+
+  list<unique_ptr<Springboard>> sbs;
+  map<Address, const CoalescedProbes> cps_map;
+  for (const CoalescedProbes& cp : cps) {
+
+    JITResult jr = makeSpringboard(cp, seq, provider);
+
+    if (jr.sb == nullptr) {
+      // Release all the created springboards
+      goto fail; // Fail fast. Either we probe all of them or none.
+      // For the backtracking implementation gather the failed springboards and
+      // then try to do back tracking while also considering current coalesced
+      // probes.
+    } else {
+      Springboard* temp_ptr = jr.sb.get();
+      sbs.push_back(move(jr.sb));
+      cps_map.insert(pair<Address, const CoalescedProbes>(temp_ptr->base, cp));
+    }
+  }
+
+  for (auto& springboard : sbs) {
+    // Inform of this springboard to the control flow router
+    ControlFlowRouter router;
+
+    // Making a temporary non owning copy before we transfer ownership to 
+    // ControlFlowRouter
+    Springboard* sb = springboard.get();
+    router.addSpringboard(move(springboard));
+
+    int modified_buf_length = (sb->displaced.end - sb->displaced.start) > 8 ?
+      (sb->displaced.end - sb->displaced.start) : 8;
+    init_patch_site(sb->base-8, modified_buf_length + 8);
+
+    start = getticks();
+
+    uint64_t original = *reinterpret_cast<uint64_t*>(sb->base);
+    uint64_t mask = 0x000000FFFFFFFFFF;
+    uint64_t punned_masked = sb->punned & mask;
+    uint64_t original_masked = original & ~mask;
+
+    uint64_t punned = original_masked | punned_masked; 
+
+    Range r(sb->base-8, sb->base+24);
+    range_map.lockRange(r);
+    // patch in the the springboard jump 
+    patch_64_plus(sb->base, punned);
+    // *reinterpret_cast<uint64_t*>(sb->base) = sb->punned;
+
+    range_map.unlockRange(r);
+
+    assert(*reinterpret_cast<uint64_t*>(sb->base) == punned);
+    // printf("PUNNED : %p\n", punned);
+
+    CoalescedProbes cp;
+    auto res = cps_map.find(sb->base);
+    if (res != cps_map.end()) {
+      cp = res->second;
+    } else {
+      abort();
+    }
+
+    // Now we need to release any existing springboards this new sprinboard 
+    // subsumes. We need to do it carefully so as not to expose any 
+    // inconsistent state to control flow routing mechanism which may be
+    // serving many requests about this region concurrently.
+    list<Springboard*> subsumed = cp.springboards;
+
+    Address addr = cp.range.start;
+    Address ip = addr + sb->probe_length;
+
+    int index = disas.findInstructionIndex(ip, seq);
+    auto it = subsumed.begin();
+    bool no_springboards = false;
+    while (ip < cp.range.end && index < seq->n_instructions) {
+
+      no_springboards = (it == subsumed.end()) ? true : false;
+      if (no_springboards) {
+        while (ip < cp.range.end && index < seq->n_instructions) {
+          auto it = sb->probes.find(ip); 
+          if (it != sb->probes.end()) {
+            *ip = 0x62; // Single byte write. Should be safe. 
+          }
+          ip += decoded[index++].size;
+        }
+
+        assert(ip == cp.range.end);
+        break;
+      }
+ 
+      while (ip < (*it)->base) {
+        auto it = sb->probes.find(ip); 
+        if (it != sb->probes.end()) {
+          *ip = 0x62; // Single byte write. Should be safe. 
+        }
+        ip += decoded[index++].size;
+      }
+
+      assert(ip == (*it)->base);
+
+      patch_64_plus(ip, (*it)->marked_probe_heads);
+
+      *ip = 0x62; // Single byte write. Should be safe. 
+
+      // Remove the springboard from the consideration of router
+      router.removeSpringboard(*it);
+
+      ++it;
+    }
+    end = getticks();
+
+
+}
+*/
 
 InjectionResult LiteProbeInjector::injectProbes(map<Address, ProbeContext>& locs,
     const InstrumentationProvider& provider) {
