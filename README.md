@@ -6,7 +6,7 @@ Execute the following sequence of commands from the top level directory.
 
 ```
   make build  (Builds the library sources and application benchmarks)
-  make run    (Runs application benchmarks and microbenchmarks)
+  make run    (Runs application benchmarks)
   make plots  (Summarizes data and plot them)
 ```
 
