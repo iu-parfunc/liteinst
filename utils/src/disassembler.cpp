@@ -31,6 +31,31 @@ bool Disassembler::isNearCall(const _DInst& i) {
   return i.opcode == I_CALL;
 }
 
+bool Disassembler::isDirectCall(const _DInst& i) {
+  if (i.opcode == I_CALL) {
+    for (int j= 0; j < OPERANDS_NO; j++) {
+      if (i.ops[j].type == O_PC) {
+          return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+bool Disassembler::isIndirectCall(const _DInst& i) {
+  if (i.opcode == I_CALL) {
+    for (int j= 0; j < OPERANDS_NO; j++) {
+      if (i.ops[j].type == O_REG || i.ops[j].type == O_SMEM ||
+          i.ops[j].type == O_MEM) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 bool Disassembler::isShortJump(const _DInst& i) {
   int offset_size = 0;
   if (i.opcode == I_JMP) {
@@ -65,12 +90,28 @@ bool Disassembler::isNearJump(const _DInst& i) {
   return false;
 }
 
+bool Disassembler::isIndirectJump(const _DInst& i) {
+  if (i.opcode == I_JMP) {
+    for (int j= 0; j < OPERANDS_NO; j++) {
+      if (i.ops[j].type == O_REG || i.ops[j].type == O_SMEM ||
+          i.ops[j].type == O_MEM) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 bool Disassembler::isRelativeJump(const _DInst& i) {
-  return isShortJump(i) || isNearJump(i);
+  return isShortJump(i) || isNearJump(i) || isConditionalJump(i);
 }
 
 bool Disassembler::isFarJump(const _DInst& i) {
   return (i.opcode == I_JMP_FAR);
+}
+
+bool Disassembler::isUnconditionalJump(const _DInst& i) {
+  return (i.opcode == I_JMP || i.opcode == I_JMP_FAR);
 }
 
 bool Disassembler::isConditionalJump(const _DInst& i) {
@@ -85,9 +126,10 @@ bool Disassembler::isConditionalJump(const _DInst& i) {
 }
 
 bool Disassembler::isJump(const _DInst& i) {
-  return (i.opcode == I_JMP);
+  return isUnconditionalJump(i) || isConditionalJump(i);
 }
 
+/*
 bool Disassembler::isUnconditionalBranch(const _DInst& i) {
   return (i.opcode == I_JMP || i.opcode == I_JMP_FAR);
 }
@@ -106,6 +148,7 @@ bool Disassembler::isConditionalBranch(const _DInst& i) {
 bool Disassembler::isBranch(const _DInst& i) {
   return isUnconditionalBranch(i) || isConditionalBranch(i);
 }
+*/
 
 bool Disassembler::isHalt(const _DInst& i) {
   return (i.opcode == I_HLT);

@@ -156,9 +156,12 @@ class InstructionType : public ProbeAxis {
 
 class VMAddress : public ProbeAxis {
   public:
-    VMAddress(std::string spec = "", ProbePlacement p = ProbePlacement::NONE) :
+    VMAddress(std::string spec = "", utils::Address address = nullptr,
+        ProbePlacement p = ProbePlacement::NONE) :
       ProbeAxis(spec, p) {
-        if (spec.compare("")) {
+        if (address != nullptr) {
+          addr = address;
+        } else if (spec.compare("")) {
           addr = reinterpret_cast<utils::Address>(std::stol(spec, nullptr, 16));
         } else {
           addr = nullptr;
@@ -219,7 +222,6 @@ class InstrumentationProvider {
     }
 
     int getProbeSize() const {
-      printf("Returning probe size : %d\n", probe_size);
       return probe_size;
     }
 
@@ -275,7 +277,7 @@ class Coordinates {
     }
 
     Coordinates& setProbePlacement(ProbePlacement placement) {
-      if (address.getSpec().compare("")) {
+      if (address.getVMAddress() != nullptr) {
         address.setPlacement(placement);
       } else if (ins_type.getSpec().compare("")) {
         ins_type.setPlacement(placement);

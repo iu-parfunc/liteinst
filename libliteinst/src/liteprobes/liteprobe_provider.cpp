@@ -341,7 +341,7 @@ list<ProbeGroup*> LiteProbeProvider::generateProbeGroups(Coordinates original,
       is_point_coord_set = true;
     }
 
-    if (original.getAddress().getSpec().compare("")) {
+    if (original.getAddress().getVMAddress() != nullptr) {
       if (is_point_coord_set) {
         throw invalid_argument("Only one point coordinate type can be given..\n");
       }

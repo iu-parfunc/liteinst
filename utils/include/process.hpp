@@ -75,7 +75,7 @@ class ControlReturn : public Show, public Optional {
 class BasicBlock : public Show, public Optional {
   public:
     utils::Address start; ///< Start address of the basic block
-    utils::Address end;   ///< Ending address of the basic block
+    utils::Address end;   ///< Ending address of the basic block. 
 
     /** /brief Prints basic block information to given file descriptor
      */

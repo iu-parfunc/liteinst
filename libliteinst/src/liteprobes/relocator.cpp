@@ -59,7 +59,7 @@ Rewrite getRewriteRule(const _DInst& ins, Address address,
     Range relocation_bounds) {
   
   Disassembler disas;
-  if (disas.isConditionalBranch(ins) || disas.isShortJump(ins)) {
+  if (disas.isConditionalJump(ins) || disas.isShortJump(ins)) {
     int offset = ins.imm.addr;
     Address jmp_target = address + ins.size + offset;
 
@@ -134,7 +134,7 @@ bool validateRewrite(const Sequence* seq, const vector<Rewrite>& rewrites,
   Disassembler disas;
   Range relocation_bounds(seq->start, seq->end);
 
-  if (disas.isConditionalBranch(r.src_op) || disas.isShortJump(r.src_op)) {
+  if (disas.isConditionalJump(r.src_op) || disas.isShortJump(r.src_op)) {
     // Already marked for transformation. Nothing to do here.
     if (r.transformed) {
       return false;
@@ -590,7 +590,7 @@ bool fixup(const Sequence* seq, const vector<Rewrite>& rewrites) {
   Address src_ip = seq->start;
   bool success = true;
   for (Rewrite r : rewrites) { 
-    if (disas.isBranch(r.src_op)) {
+    if (disas.isJump(r.src_op)) {
       success = fixupBranch(seq, rewrites, r);
     } else if (disas.isNearCall(r.src_op)) {
       success = fixupCall(seq, r);
