@@ -8,10 +8,9 @@
 namespace analysis {
 
 using std::set;
-
 using utils::Address;
 
-Graph* IndirectControlFlowDump::run(Graph* g, FILE* fp) {
+Graph* IndirectTargetAnalysis::run(Graph* g, FILE* fp) {
 
   assert(g->cfg != nullptr);
   assert(g->cg != nullptr);
@@ -19,27 +18,33 @@ Graph* IndirectControlFlowDump::run(Graph* g, FILE* fp) {
   set<Address> addrs;
   for (Function* fn : g->cfg->functions) {
     for (IndirectCallEdge* ice : fn->indirect_call_edges) {
-      // addrs.insert(ice->address);
-      /*
+      Address start = fn->start;
+      Address end = ice->address;
+
       _DInst ins = ice->decoded;
+
       if (ins.opcode == I_CALL) {
         for (int j= 0; j < OPERANDS_NO; j++) {
           bool operand_found = false;
           switch (ins.ops[j].type) {
             case O_REG:
-              if (ins.ops[j].index ==.opcod R_RIP) {
-                //
+              if (ins.ops[j].index = R_RIP) {
+                Address target = (Address) INSTRUCTION_GET_RIP_TARGET(&ins);
+                auto it = g->cfg->fn_by_addr.find(target);
+                if (it != g->cfg->fn_by_addr.end()) {
+                  ice->targets.push_back(it->second);
+                } else {
+                  assert(false);
+                }
               } else {
-                addrs.insert(ice->address);
+                // Backward slice logic
               }
               operand_found = true;
               break;
             case O_SMEM:
-              addrs.insert(ice->address);
               operand_found = true;
               break;
             case O_MEM:
-              addrs.insert(ice->address);
               operand_found = true;
               break;
           }
@@ -49,12 +54,11 @@ Graph* IndirectControlFlowDump::run(Graph* g, FILE* fp) {
           }
         }
       }
-      */
     }
 
     for (BasicBlock* bb : fn->basic_blocks) {
-      if (bb->out_edge->is_indirect && !bb->out_edge->is_return) {
-        addrs.insert(bb->out_edge->address);
+      if (bb->out_edge->is_indirect) {
+        // addrs.insert(bb->out_edge->address);
       }
     }
   }

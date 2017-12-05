@@ -30,6 +30,7 @@ Graph* CGBuilder::run(Graph* g, FILE* fp) {
       if (disas.isIndirectCall(ins)) {
         IndirectCallEdge* ice = new IndirectCallEdge();
         ice->address = pc;
+        ice->decoded = ins;
         fn->indirect_call_edges.push_back(ice);
       } else if (disas.isDirectCall(ins)) {
         DirectCallEdge* dce = new DirectCallEdge();

@@ -9,6 +9,7 @@
 #include <map>
 #include <memory>
 
+#include "assembly.hpp"
 #include "defs.hpp"
 
 namespace analysis { 
@@ -83,8 +84,9 @@ class DirectCallEdge : public utils::Show, public utils::Optional {
 
 class IndirectCallEdge : public utils::Show, public utils::Optional {
   public:
-    utils::Address address = nullptr;          ///< Address where direct call is being made
+    utils::Address address = nullptr;          ///< Address where indirect call is being made
     std::vector<Function*> targets;  ///< Direct called function(s)
+    _DInst decoded;
 
     void show(FILE* fp, int nspaces) {
 
