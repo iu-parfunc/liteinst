@@ -10,3 +10,6 @@
 [submodule "deps/distorm"]
 	path = deps/distorm
 	url = git@github.com:gdabah/distorm.git
+[submodule "deps/asmjit"]
+	path = deps/asmjit
+	url = git@github.com:asmjit/asmjit.git
